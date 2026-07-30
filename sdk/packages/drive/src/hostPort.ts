@@ -116,6 +116,11 @@ export type DirectorOpResult = {
 	readonly showChanged?: boolean;
 	readonly plannedShows?: ShowBacklogItem[];
 	readonly plannerReasons?: string[];
+	readonly scriptBeat?: {
+		readonly beatId: string;
+		readonly say: string;
+		readonly showItemId: string | null;
+	} | null;
 	readonly errorCode?: string;
 	readonly errorMessage?: string;
 };

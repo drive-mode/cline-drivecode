@@ -576,13 +576,36 @@ export async function handleDriveRoomCommand(
 						);
 					}
 					if (planner.presented) {
+						const caption =
+							planner.scriptBeat?.showItemId === planner.presented.id
+								? planner.scriptBeat.say
+								: planner.presented.caption;
 						ctx.publish(
 							ctx.buildEvent("drive.show.presented", {
 								showItemId: planner.presented.id,
 								ownerParticipantId: planner.presented.ownerParticipantId,
 								uri: planner.presented.uri,
-								caption: planner.presented.caption,
+								caption,
 								title: planner.presented.title,
+							}),
+						);
+					}
+					if (planner.scriptBeat) {
+						const nextDirector = (
+							nextLive as {
+								director?: {
+									stickyShowIds?: string[];
+									activeScript?: { scriptId?: string } | null;
+								};
+							}
+						).director;
+						ctx.publish(
+							ctx.buildEvent("drive.script.beat", {
+								beatId: planner.scriptBeat.beatId,
+								say: planner.scriptBeat.say,
+								showItemId: planner.scriptBeat.showItemId,
+								stickyShowIds: nextDirector?.stickyShowIds ?? [],
+								activeScriptId: nextDirector?.activeScript?.scriptId ?? null,
 							}),
 						);
 					}

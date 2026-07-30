@@ -216,12 +216,21 @@ export function applyPresentedShow(
 		{ ...materialized, status: "showing" as const },
 		...room.director.showBacklog.filter((item) => item.id !== materialized.id),
 	];
+	const activeBeat = room.director.activeScript?.beats.find(
+		(beat) => beat.beatId === room.director.activeBeatId,
+	);
+	const scriptOwnsPresentedShow = activeBeat?.showItemId === materialized.id;
 	return {
 		...room,
 		director: {
 			...room.director,
 			showBacklog,
 			activeShowId: materialized.id,
+			// Presenting outside the active beat drops script-runner state so
+			// drive.script.advance cannot keep walking a stale sample/planner script.
+			...(scriptOwnsPresentedShow
+				? {}
+				: { activeScript: null, activeBeatId: null }),
 			stickyShowIds: [materialized.id, ...room.director.stickyShowIds].filter(
 				(id, index, all) => all.indexOf(id) === index,
 			),
@@ -379,6 +388,12 @@ export function presentDirectorActiveShow(
  * Heuristic show planner: enqueue template intents from a work signal.
  * Optionally ticks the show director when tickOnWork is enabled (default).
  */
+export type PlannerScriptBeat = {
+	beatId: string;
+	say: string;
+	showItemId: string | null;
+};
+
 export function runShowPlannerFromWork(input: {
 	room: DriveLiveRoom;
 	workKind: "edit" | "command" | "test_result";
@@ -389,6 +404,8 @@ export function runShowPlannerFromWork(input: {
 	planned: ShowBacklogItem[];
 	reasons: string[];
 	presented: ShowBacklogItem | null;
+	/** First beat when planner attached an arch script (parity with drive.script.attach). */
+	scriptBeat: PlannerScriptBeat | null;
 } {
 	const mode: ShowPlannerMode =
 		input.room.director.showPlannerMode === "off" ? "off" : "heuristic";
@@ -415,6 +432,7 @@ export function runShowPlannerFromWork(input: {
 			planned: [],
 			reasons: plannedResult.reasons,
 			presented: null,
+			scriptBeat: null,
 		};
 	}
 
@@ -448,7 +466,9 @@ export function runShowPlannerFromWork(input: {
 	const archItem = plannedResult.items.find(
 		(item) => item.produce.templateId === "arch.overview",
 	);
+	let attachedBeat: PlannerScriptBeat | null = null;
 	if (archItem && !room.director.activeScript) {
+		const firstSay = "Here is the architecture overview.";
 		const script = {
 			scriptId: `planner_${archItem.id}`,
 			ownerParticipantId: input.ownerParticipantId,
@@ -457,7 +477,7 @@ export function runShowPlannerFromWork(input: {
 			beats: [
 				{
 					beatId: "planner-arch-1",
-					say: "Here is the architecture overview.",
+					say: firstSay,
 					showItemId: archItem.id,
 					sticky: { mode: "hold" as const },
 					advance: "on_human" as const,
@@ -470,6 +490,11 @@ export function runShowPlannerFromWork(input: {
 					advance: "on_human" as const,
 				},
 			],
+		};
+		attachedBeat = {
+			beatId: "planner-arch-1",
+			say: firstSay,
+			showItemId: archItem.id,
 		};
 		room = {
 			...room,
@@ -497,10 +522,18 @@ export function runShowPlannerFromWork(input: {
 		presented = tick.presented;
 	}
 
+	const scriptBeat =
+		attachedBeat &&
+		room.director.activeScript &&
+		room.director.activeBeatId === attachedBeat.beatId
+			? attachedBeat
+			: null;
+
 	return {
 		room,
 		planned: plannedResult.items,
 		reasons: plannedResult.reasons,
 		presented,
+		scriptBeat,
 	};
 }

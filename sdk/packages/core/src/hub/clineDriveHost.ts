@@ -181,6 +181,9 @@ export function createClineDriveHost(
 						liveRoom: result.room,
 						plannedShows: result.plannedShows,
 						plannerReasons: result.plannerReasons,
+						beatId: result.beatId,
+						say: result.say,
+						scriptBeat: result.scriptBeat,
 					};
 				}
 				default: {

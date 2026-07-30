@@ -31,6 +31,12 @@ export type DirectorCommitResult = {
 	showChanged?: boolean;
 	plannedShows?: ShowBacklogItem[];
 	plannerReasons?: string[];
+	/** Present when planFromWork attached an arch script beat. */
+	scriptBeat?: {
+		beatId: string;
+		say: string;
+		showItemId: string | null;
+	} | null;
 	errorCode?: string;
 	errorMessage?: string;
 };
@@ -254,6 +260,7 @@ export function planFromWorkOnStore(input: {
 			planned: null,
 			plannedShows: [],
 			plannerReasons: planner.reasons,
+			scriptBeat: null,
 		};
 	}
 	const next = store.setLive(planner.room);
@@ -263,5 +270,8 @@ export function planFromWorkOnStore(input: {
 		planned: planner.planned[0] ?? null,
 		plannedShows: planner.planned,
 		plannerReasons: planner.reasons,
+		scriptBeat: planner.scriptBeat,
+		beatId: planner.scriptBeat?.beatId ?? null,
+		say: planner.scriptBeat?.say,
 	};
 }
