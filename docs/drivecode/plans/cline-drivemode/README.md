@@ -33,11 +33,15 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [12-performance.md](research/12-performance.md) | Drive compute/memory measurement and optimization architecture |
 | [13-deps-inventory.md](research/13-deps-inventory.md) | Dependency inventory and compatible upgrade matrix (U0) |
 | [14-primitives-audit.md](research/14-primitives-audit.md) | Primitives misuse / dead-code audit (P0) |
+| [15-task-satisfaction-observability.md](research/15-task-satisfaction-observability.md) | Session satisfaction via tasks; local rollups; closed loop |
+| [16-task-as-unit-models.md](research/16-task-as-unit-models.md) | Task-as-unit doctrine; next-task proposers vs deterministic cursor |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | **Active:** remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
 | [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
-| [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank loop |
 | [task-bank-drive-loop/](initiatives/task-bank-drive-loop/) | Multi-phase plan for the task-bank Drive loop |
+| [task-satisfaction-observability/](initiatives/task-satisfaction-observability/) | Task-centric session metrics + gated plan improve |
+| [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
+| [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [ard/](ard/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
 | [00-vision.md](foundation/00-vision.md) | Drive-tab north star and staged delivery (tab + room, stage/share/address, voice) |
 | [01-architecture.md](foundation/01-architecture.md) | Kernel `@cline/drive`, hub `:25463` as single writer, room-first model, Drive tab primary, events-first stage, decisions D1 through D7 |
@@ -88,6 +92,9 @@ MVP is phases 0 through 3. Future is phases 4 and 5.
 | [DRV-NARRATION](features/DRV-NARRATION.md) | Narration messages in the feed | 1 | MVP |
 | [DRV-MODE-OVERLAY](features/DRV-MODE-OVERLAY.md) | Drive mode + Ask/Agent/Plan/Debug postures | 1 | MVP |
 | [DRV-TASK-BANK](features/DRV-TASK-BANK.md) | Task bank; plans ref tasks; auto Plan↔Agent | 1–2 | MVP |
+| [DRV-CALL-SESSION](features/DRV-CALL-SESSION.md) | Call session binding for task metrics | 2+ | Planned |
+| [DRV-TASK-METRICS](features/DRV-TASK-METRICS.md) | Local session rollups (tasks / plan quality) | 2+ | Planned |
+| [DRV-PLAN-IMPROVE](features/DRV-PLAN-IMPROVE.md) | Gated planning improve from session diagnosis | 2+ | Planned |
 | [DRV-LEAVE-END](features/DRV-LEAVE-END.md) | Leave the call, end the session | 1 | MVP |
 | [DRV-PARTNER-MVP](features/DRV-PARTNER-MVP.md) | One pair partner, end to end (phase gate) | 1 | MVP |
 | [DRV-GATES](features/DRV-GATES.md) | High-impact approval + policy blocks | 1 | MVP |

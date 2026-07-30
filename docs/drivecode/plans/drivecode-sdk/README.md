@@ -21,6 +21,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [06-sdk-leverage.md](delivery/06-sdk-leverage.md) | How product code should use `createDriveHarness` vs `@cline/sdk`; gaps and migration order. |
 | [07-agent-handoff.md](delivery/07-agent-handoff.md) | Detailed session handoff for the current harness-leverage PR track (#58). |
 | [08-followon-tasks.md](delivery/08-followon-tasks.md) | Fleshed follow-ons after Phase-2: durable registry, remove-pack cascade, script/planner DirectorOps. |
+| [09-next-task-proposer.md](delivery/09-next-task-proposer.md) | Next-task proposer boundary: deterministic cursor; scorers propose only. |
 | [decisions.tsv](decisions.tsv) | The decision trail for this wave. One row per decision, with evidence pointers. |
 
 ## Reading order

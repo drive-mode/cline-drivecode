@@ -52,7 +52,9 @@ Human override format (from existing handoffs): `accept all` | `change: <id and 
 | [CHECKLIST-phase0-entry.md](CHECKLIST-phase0-entry.md) | Gate before schemas |
 | [features/DRV-GATES.md](../features/DRV-GATES.md) | Approval taxonomy + UI owner |
 | [features/DRV-ISOLATION.md](../features/DRV-ISOLATION.md) | Worktree isolation for teamOpt |
-| [prd/prd-success-metrics.md](../prd/prd-success-metrics.md) | Measurable MVP + privacy KPIs |
+| [prd/prd-success-metrics.md](../prd/prd-success-metrics.md) | Measurable MVP + privacy KPIs (phase gates) |
+| [prd/prd-task-satisfaction-observability.md](../prd/prd-task-satisfaction-observability.md) | PRD 10 — task-centric session satisfaction (local) |
+| [BRIEF-task-satisfaction.md](BRIEF-task-satisfaction.md) | Session satisfaction / closed-loop improve brief |
 | [ops/hub-drive-ops.md](../ops/hub-drive-ops.md) | Canonical hub op catalog + failure modes |
 | [schemas/README.md](../../../design/wireframes/README.md) | Phase-0 schema index |
 | [MATRIX-workflow-coverage.md](MATRIX-workflow-coverage.md) | Workflow ↔ feature coverage |

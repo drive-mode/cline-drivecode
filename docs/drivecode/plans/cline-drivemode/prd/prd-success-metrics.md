@@ -2,11 +2,12 @@
 
 **Status.** Draft for leadership acceptance  
 **Related.** [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), PRD 6, TASK-GRAPH gates  
+**Companion (session satisfaction).** [PRD 10 · task-satisfaction-observability](prd-task-satisfaction-observability.md) — call/task rollups and closed-loop improve; does **not** replace this document.  
 **Rule.** Metrics are verifiable signals, not timelines.
 
 ## Problem
 
-Without measurable definition-of-done, “MVP feels good” becomes un-reviewable opinion. Privacy and dual-registry bugs also need CI-shaped product KPIs, not only prose.
+Without measurable definition-of-done, “MVP feels good” becomes un-reviewable opinion. Privacy and dual-registry bugs also need CI-shaped product KPIs, not only prose. Session-level “did the user get tasks done?” lives in PRD 10, not here.
 
 ## Goals
 

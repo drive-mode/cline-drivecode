@@ -5,8 +5,14 @@ Product requirements for Drivecode features that sit on top of the existing driv
 | # | File | Focus |
 |---|------|--------|
 | PRD 6 | [prd-driveagent-portfolio.md](prd-driveagent-portfolio.md) | `.driveagent/` homes, per-agent knowledge graphs, recruit-into-call |
+| PRD 7 | [prd-pip-partner.md](prd-pip-partner.md) | PiP Partner companion |
+| PRD 8 | [prd-drive-as-cline-mode.md](prd-drive-as-cline-mode.md) | Drive as a Cline mode |
+| PRD 9 | [prd-task-bank-drive-loop.md](prd-task-bank-drive-loop.md) | Task bank; plans sequence tasks |
+| — | [prd-success-metrics.md](prd-success-metrics.md) | Phase gates / privacy CI (not session satisfaction) |
+| PRD 10 | [prd-task-satisfaction-observability.md](prd-task-satisfaction-observability.md) | Task-centric session satisfaction + closed-loop improve |
 
-Related plan docs: [06-platform-config.md](../foundation/06-platform-config.md), [05-workflows.md](../foundation/05-workflows.md), [../README.md](../README.md).
+Related plan docs: [06-platform-config.md](../foundation/06-platform-config.md), [05-workflows.md](../foundation/05-workflows.md), [../README.md](../README.md).  
+Session satisfaction research: [../research/15-task-satisfaction-observability.md](../research/15-task-satisfaction-observability.md), [../research/16-task-as-unit-models.md](../research/16-task-as-unit-models.md).
 
 Example agent home: [../examples/driveagent-pair-partner/](../examples/driveagent-pair-partner/).
 

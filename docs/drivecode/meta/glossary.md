@@ -29,6 +29,13 @@ Short definitions for terms that show up in PRs #1 and #2. Pair with [PR-1-2-dri
 | **Persona / narration** | How the partner talks | Senior-engineer tone; narrate decisions, not every keystroke |
 | **Interrupt / raise hand** | Pause the partner | Pause after current tool (or hard cancel per policy) |
 | **Conformance kit** | Honesty test for hosts | Fail-closed checks that a host really supports declared Drive capabilities |
+| **DriveTask** | One unit of work | Durable implementable unit in `.drive/bank/tasks/`; Drive’s satisfaction unit (not tokens) |
+| **DrivePlan** | Ordered checklist of task ids | Ephemeral sequencer over tasks; `title` ≈ session intent (no separate Goal type) |
+| **Call session** | One join→leave window | Presence bound by `callSessionId` for duration + task rollups |
+| **Session rollup** | Local scorecard for a call | Counts only: completions, churn, clean-drain, engagement — no transcripts |
+| **Task-as-unit** | Measure Drive in tasks | Product doctrine: tasks are to Drive what tokens are to LLMs; next-task cursor stays deterministic |
+| **Plan clean-drain** | Plan finished as written | Plan archives without additive mid-plan task ids |
+| **Post-success continue** | User asks for more after wins | Positive engagement: new/edited plan after completions in-session |
 
 ## Forbidden shortcuts (from the plans)
 

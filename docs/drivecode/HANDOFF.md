@@ -52,6 +52,7 @@ Branch: `cursor/drive-harness-remaining-1929`. After SDK edits: `bun run build:s
 - `docs/drivecode/plans/cline-drivemode/delivery/TASK-GRAPH.md` orders phases and acceptance gates.
 - `docs/drivecode/plans/cline-drivemode/delivery/AGENT-RUNBOOK.md` explains how the next agent should select, implement, and verify tasks.
 - `docs/drivecode/plans/cline-drivemode/prd/prd-driveagent-portfolio.md` defines Driveagent portfolios, knowledge graphs, and recruit.
+- `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ARD-0015](plans/cline-drivemode/ard/ARD-0015-task-session-observability.md) Proposed).
 - `docs/drivecode/plans/cline-drivemode/ard/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, and gated learning (see status board).
 - `docs/drivecode/plans/cline-drivemode/examples/driveagent-pair-partner/` is the concrete agent-home and graph fixture.
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
@@ -95,6 +96,7 @@ Hub-owned rooms, Show backlog wire commands, Drive webview chrome, and CLI Drive
 - Hub reconnect needs acceptance criteria and degraded-state UX under `DRV-ROOM-MVP`.
 - Revise-not-restart needs a kernel acceptance criterion that preserves useful work after an interruption.
 - Multi-room focus needs a product rule for whether an unfocused room is only a view or remains an active runtime.
+- Task-session satisfaction (PRD 10): bank event emit + `callSessionId` before local rollups; [ARD-0015](plans/cline-drivemode/ard/ARD-0015-task-session-observability.md) still **Proposed**.
 
 ## Demo
 

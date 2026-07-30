@@ -36,6 +36,7 @@
 | [ARD-0012](ARD-0012-agent-router.md) | Agent router for multi-agent rooms | **Accepted** | |
 | [ARD-0013](ARD-0013-state-partition.md) | Three-lane state partition | **Accepted** | Durable log + single live store; remote/org/audit are adapters |
 | [ARD-0014](ARD-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle (invisible auditable workers) | **Accepted** | Hub `drive.fork.*` + PromotePacket; reject CLI/checkpoint fork as worker substrate |
+| [ARD-0015](ARD-0015-task-session-observability.md) | Local task-session observability; tasks as satisfaction unit | **Proposed** | PRD 10; no phone-home; gated improve; deterministic cursor |
 
 ## Leadership decisions (this wave)
 
@@ -69,6 +70,7 @@ SDK amendments (reducer/projection in `@cline/drive`; host port + conformance ki
 | Approval UI owner detail | [DRV-GATES](../features/DRV-GATES.md) | Feed card over existing approval plumbing. **Taxonomy enums landed** in `sdk/packages/shared/src/drive/gates.ts` (UI / expiry / hub projection still open) |
 | Catch-up orientation copy owner | DRV-LEAVE-END | One factual “since you left” line from stage reducer |
 | One-shot fork vs specialist | Later; not Phase 0 | Out of Phase 0; track under W-33 |
+| Session satisfaction metrics accept | [ARD-0015](ARD-0015-task-session-observability.md), [PRD 10](../prd/prd-task-satisfaction-observability.md) | Local rollups + gated plan improve; leadership dual-proxy defaults in [BRIEF-task-satisfaction](../leadership/BRIEF-task-satisfaction.md) |
 
 ## Explicitly not open anymore (closed by this wave’s defaults)
 
