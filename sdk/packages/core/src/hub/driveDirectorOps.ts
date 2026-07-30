@@ -129,7 +129,9 @@ export function tickShowOnStore(input: {
 		demoCapture: input.demoCapture,
 	});
 	if (!tick.presented) {
-		return { room, presented: null, planned: null };
+		// Persist fail-closed demotions (scoreReasons) even when nothing presented.
+		const next = store.setLive(tick.room);
+		return { room: next, presented: null, planned: null };
 	}
 	const next = store.setLive(tick.room);
 	return { room: next, presented: tick.presented, planned: null };

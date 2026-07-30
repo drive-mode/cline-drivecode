@@ -591,6 +591,113 @@ describe("handleDriveCommand", () => {
 		);
 		expect(tick.ok).toBe(true);
 		expect(tick.payload?.presented).toBeNull();
+		const room = tick.payload?.room as {
+			director: {
+				showBacklog: Array<{
+					id: string;
+					status: string;
+					uri?: string;
+					scoreReasons: string[];
+				}>;
+			};
+		};
+		const shot = room.director.showBacklog.find(
+			(item) => item.id === "show-shot",
+		);
+		expect(shot?.status).toBe("planned");
+		expect(shot?.uri).toBeUndefined();
+		expect(shot?.scoreReasons).toContain("capability:demo_capture_unavailable");
+	});
+
+	it("tick falls back by rank when top show cannot materialize", async () => {
+		const { ctx } = createCtx();
+		// Enqueue mid then low so backlog order is [shot, low, mid] after shot —
+		// insertion order would wrongly pick low; rank order must pick mid.
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r-rank",
+				showItem: {
+					id: "show-mid",
+					ownerParticipantId: "agent-1",
+					title: "Mid",
+					intent: "walk",
+					artifactKind: "walkthrough.code",
+					mediaClass: "document",
+					caption: "mid",
+					produce: {
+						tool: "render_code_walkthrough",
+						templateId: "walk.code",
+						args: { path: "src/a.ts" },
+					},
+					priority: 20,
+					status: "ready",
+					scoreReasons: [],
+				},
+			}),
+		);
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r-rank",
+				showItem: {
+					id: "show-low",
+					ownerParticipantId: "agent-1",
+					title: "Low",
+					intent: "plan",
+					artifactKind: "doc.plan",
+					mediaClass: "document",
+					caption: "low",
+					produce: {
+						tool: "render_plan_card",
+						templateId: "doc.plan",
+						args: {},
+					},
+					priority: 10,
+					status: "ready",
+					scoreReasons: [],
+				},
+			}),
+		);
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r-rank",
+				showItem: {
+					id: "show-shot",
+					ownerParticipantId: "agent-1",
+					title: "Shot",
+					intent: "ui",
+					artifactKind: "capture.screenshot",
+					mediaClass: "still",
+					caption: "shot",
+					produce: {
+						tool: "drive_browser_snapshot",
+						templateId: "capture.shot",
+						args: { url: "http://localhost" },
+					},
+					priority: 90,
+					status: "ready",
+					scoreReasons: [],
+				},
+			}),
+		);
+		const tick = await handleDriveCommand(
+			ctx,
+			envelope("drive.show.tick", { roomId: "r-rank" }),
+		);
+		expect(tick.ok).toBe(true);
+		const room = tick.payload?.room as {
+			director: {
+				activeShowId: string;
+				showBacklog: Array<{ id: string; status: string }>;
+			};
+		};
+		// Highest-rank snapshot fails; next by score is mid (20), not low (10).
+		expect(room.director.activeShowId).toBe("show-mid");
+		expect(
+			room.director.showBacklog.find((item) => item.id === "show-shot")?.status,
+		).toBe("planned");
 	});
 
 	it("show tick prefers addressed owner when priorities tie", async () => {

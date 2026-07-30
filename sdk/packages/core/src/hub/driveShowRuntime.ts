@@ -5,8 +5,8 @@
 
 import {
 	DEFAULT_SHOW_PLANNER_COOLDOWN_MS,
-	pickNextShowToPresent,
 	planShowIntents,
+	rankShowBacklog,
 	resolveAddress,
 	type ShowPlannerMode,
 	workCategoryFromKind,
@@ -277,33 +277,61 @@ export function runShowDirectorTick(input: {
 			snapshot?.addressSet,
 			snapshot?.participants,
 		);
-	const ranked = pickNextShowToPresent({
+	const ranked = rankShowBacklog({
 		items: input.room.director.showBacklog,
 		spotlightParticipantId,
 		addressedParticipantIds,
-		preferShowId: input.preferShowId,
 	});
-	if (!ranked) {
+	if (ranked.length === 0) {
 		return { room: input.room, presented: null };
 	}
 
-	// Prefer ranked winner; if it cannot materialize, try remaining ready/planned.
-	const ordered = [
-		ranked,
-		...input.room.director.showBacklog.filter(
-			(item) =>
-				item.id !== ranked.id &&
-				(item.status === "planned" || item.status === "ready"),
-		),
-	];
+	// Descend rank scores; honor preferShowId by trying it first when ranked.
+	let ordered = ranked.map((entry) => entry.item);
+	if (input.preferShowId) {
+		const preferred = ordered.find((item) => item.id === input.preferShowId);
+		if (preferred) {
+			ordered = [
+				preferred,
+				...ordered.filter((item) => item.id !== preferred.id),
+			];
+		}
+	}
+
+	let showBacklog = input.room.director.showBacklog;
+	let backlogDirty = false;
+
 	for (const candidate of ordered) {
-		const materialized = materializeShowItem(candidate, {
+		const current =
+			showBacklog.find((item) => item.id === candidate.id) ?? candidate;
+		const materialized = materializeShowItem(current, {
 			demoCapture: input.demoCapture,
 		});
 		if (!materialized.uri) {
+			if (
+				materialized.status !== current.status ||
+				materialized.scoreReasons.length !== current.scoreReasons.length ||
+				materialized.scoreReasons.some(
+					(reason, index) => reason !== current.scoreReasons[index],
+				)
+			) {
+				showBacklog = showBacklog.map((item) =>
+					item.id === materialized.id ? materialized : item,
+				);
+				backlogDirty = true;
+			}
 			continue;
 		}
-		const next = applyPresentedShow(input.room, materialized, {
+		const roomForPresent = backlogDirty
+			? {
+					...input.room,
+					director: {
+						...input.room.director,
+						showBacklog,
+					},
+				}
+			: input.room;
+		const next = applyPresentedShow(roomForPresent, materialized, {
 			demoCapture: input.demoCapture,
 		});
 		const presented =
@@ -311,7 +339,20 @@ export function runShowDirectorTick(input: {
 			null;
 		return { room: next, presented };
 	}
-	return { room: input.room, presented: null };
+
+	if (!backlogDirty) {
+		return { room: input.room, presented: null };
+	}
+	return {
+		room: {
+			...input.room,
+			director: {
+				...input.room.director,
+				showBacklog,
+			},
+		},
+		presented: null,
+	};
 }
 
 /**
