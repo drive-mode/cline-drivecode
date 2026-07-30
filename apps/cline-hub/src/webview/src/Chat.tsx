@@ -235,11 +235,14 @@ export default function Chat({
 		) {
 			return;
 		}
+		// Prefer refresh when already on-call so a Drive-tab "join" intent
+		// (e.g. stale available preview) cannot re-post call_join. While
+		// joining, joinDrive returns false and we retry once phase settles —
+		// at "on" that retry is refresh, not another join.
 		const launched =
-			driveLaunchRequest.action === "join" ||
-			connectionPhase !== "on"
-				? joinDrive(driveLaunchRequest.roomId)
-				: refreshDriveRoom(driveLaunchRequest.roomId);
+			connectionPhase === "on"
+				? refreshDriveRoom(driveLaunchRequest.roomId)
+				: joinDrive(driveLaunchRequest.roomId);
 		if (!launched) {
 			return;
 		}
