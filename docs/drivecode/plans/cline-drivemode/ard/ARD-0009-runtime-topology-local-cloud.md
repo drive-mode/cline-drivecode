@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-27
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: D8 in [01-architecture.md](../01-architecture.md), [07-runtime-topology.md](../07-runtime-topology.md), [ARD-0010](ARD-0010-provider-harness-byok.md), DRV-MIC, DRV-TTS, DRV-PRIVACY
+- Related: D8 in [01-architecture.md](../foundation/01-architecture.md), [07-runtime-topology.md](../foundation/07-runtime-topology.md), [ARD-0010](ARD-0010-provider-harness-byok.md), DRV-MIC, DRV-TTS, DRV-PRIVACY
 
 ## Context
 
@@ -47,5 +47,5 @@ Signaling stays on the hub loopback. LLM routing already exists in `@cline/llms`
 
 ## Links
 
-- [07-runtime-topology.md](../07-runtime-topology.md)
-- [08-provider-harness.md](../08-provider-harness.md)
+- [07-runtime-topology.md](../foundation/07-runtime-topology.md)
+- [08-provider-harness.md](../foundation/08-provider-harness.md)

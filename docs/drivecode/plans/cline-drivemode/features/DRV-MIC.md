@@ -1,6 +1,6 @@
 # DRV-MIC · Mic input and mute
 
-Back to [README](../README.md). Phase 3 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 3 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

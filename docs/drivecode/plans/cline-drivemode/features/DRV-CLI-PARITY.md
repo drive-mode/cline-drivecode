@@ -1,6 +1,6 @@
 # DRV-CLI-PARITY · Drive in the TUI
 
-Back to [README](../README.md). Phase 4 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 4 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

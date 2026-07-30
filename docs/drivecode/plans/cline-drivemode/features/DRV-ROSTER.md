@@ -1,6 +1,6 @@
 # DRV-ROSTER · Agent roster as participants
 
-Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 
@@ -21,7 +21,7 @@ On a call, who is here and who is talking matters as much as the transcript. Age
 
 - DRV-ROOM-MVP, DRV-EVENTS, DRV-DRIVE-TAB (list home). DRV-PERSONA-CHIP for presence visuals. [DRV-AGENT-PROFILE](DRV-AGENT-PROFILE.md) for names and inks; [DRV-ROSTER-PACK](DRV-ROSTER-PACK.md) for the add-pack affordance in the roster header.
 
-> **Glossary.** A **RosterPack** is a human-curated seating preset (Drive). A **Team** is Cline's runtime execution group with a lead, teammates, and a mailbox (`sdk/packages/core/src/extensions/tools/team/`). Drive identifiers never contain `Team`. See [06-platform-config.md](../06-platform-config.md#naming-rosterpack-not-teampack-not-team).
+> **Glossary.** A **RosterPack** is a human-curated seating preset (Drive). A **Team** is Cline's runtime execution group with a lead, teammates, and a mailbox (`sdk/packages/core/src/extensions/tools/team/`). Drive identifiers never contain `Team`. See [06-platform-config.md](../foundation/06-platform-config.md#naming-rosterpack-not-teampack-not-team).
 
 ## Surfaces touched
 

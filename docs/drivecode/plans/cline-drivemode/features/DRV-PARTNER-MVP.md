@@ -1,6 +1,6 @@
 # DRV-PARTNER-MVP · One pair partner, end to end
 
-Back to [README](../README.md). Phase 1 gate feature in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 1 gate feature in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

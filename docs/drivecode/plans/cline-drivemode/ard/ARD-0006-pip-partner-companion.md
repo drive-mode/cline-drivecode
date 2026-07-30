@@ -27,7 +27,7 @@ The forcing function is an explicit product requirement to **build PiP**, withou
 3. **Same ops.** Mute, raise hand, leave, and membership projection are shared with the call strip. No second writer.
 4. **Expand** focuses the active Drive room (and stage when present). PiP is not a second stage.
 5. **Host path.** MVP is hub webview only. No Cursor/VS Code editor DOM injection. Later hosts may dock an equivalent companion via real host APIs.
-6. **Supersedes** the “Variant C stays rejected” language in [00-vision.md](../00-vision.md) and the historical wireframe cut label — rejection applied to PiP-*as-primary*, not to PiP-*as-companion*.
+6. **Supersedes** the “Variant C stays rejected” language in [00-vision.md](../foundation/00-vision.md) and the historical wireframe cut label — rejection applied to PiP-*as-primary*, not to PiP-*as-companion*.
 
 ## Consequences
 
@@ -51,5 +51,5 @@ The forcing function is an explicit product requirement to **build PiP**, withou
 
 - [PRD 7](../prd/prd-pip-partner.md)
 - [DRV-PIP](../features/DRV-PIP.md)
-- [DRIVE-TAB.md](../../../design/drive-wireframes/DRIVE-TAB.md)
-- Wireframe variant C in `docs/drivecode/design/drive-wireframes/index.html`
+- [DRIVE-TAB.md](../../../design/wireframes/DRIVE-TAB.md)
+- Wireframe variant C in `docs/drivecode/design/wireframes/index.html`

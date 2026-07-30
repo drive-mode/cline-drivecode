@@ -1,6 +1,6 @@
 # DRV-STEER-QUEUE · Steering while the partner works
 
-Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

@@ -1,6 +1,6 @@
 # DRV-AGENT-PROFILE · Agent display name and two ink channels
 
-Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../TASK-GRAPH.md). Design in [06-platform-config.md](../06-platform-config.md).
+Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Design in [06-platform-config.md](../foundation/06-platform-config.md).
 
 ## Problem / user value
 
@@ -15,7 +15,7 @@ A pair partner you call every day should be yours. Name it what you call it, and
 - `nameInk` styles the byline, roster row, address chip, and call-strip chip. `bodyInk` styles message and narration body text. They are independent; changing one leaves the other alone.
 - Inks persist as `{ kind: "token" }` or `{ kind: "palette", index }`. No hex is written to disk.
 - Contrast is enforced at resolve, not rejected at input. The resolver derives lightness from the active host theme (OKLCH, per `apps/cline-hub/src/webview/src/index.css`) and clamps to meet the ratio against the message well in both light and dark. On failure it falls back to `foreground` for names and `muted` for bodies and the editor explains why.
-- Cline violet is not a default agent ink. A desaturated violet is available as one palette entry; accent stays product chrome per [CLINE-BRAND-TOKENS.md](../../../design/drive-wireframes/CLINE-BRAND-TOKENS.md).
+- Cline violet is not a default agent ink. A desaturated violet is available as one palette entry; accent stays product chrome per [CLINE-BRAND-TOKENS.md](../../../design/brand/CLINE-BRAND-TOKENS.md).
 - Defaults: `nameInk` is a palette index from a stable hash of the profile id, so a fresh roster is legible with no settings visit. `bodyInk` is `{ token: "muted" }`. Reset restores exactly these, per field and per profile.
 - Editing while seated repaints the roster and transcript on the next broadcast. The hub reprojects appearance onto matching participants in the same op it writes the durable value. No reseat, no reconnect, no client-side participant write.
 - `displayName` is a label, never an identity. Addressing, event payloads, `seatSources`, and pack membership all key off `AgentProfileId`. Two profiles may share a display name without anything downstream breaking.
@@ -59,5 +59,5 @@ A pair partner you call every day should be yours. Name it what you call it, and
 ## Risks
 
 - **Colors that fight the product.** Eight free colors on names and bodies can make the transcript look like a stylesheet test. Mitigation. Body default stays `muted`, accent violet is not a default, and the contrast clamp is arithmetic rather than a review note.
-- **Overlay creep.** The next request will be "let me set the model here too". Mitigation. The no-prompt/no-model assertion is a test, and the reason is written down in [06-platform-config.md](../06-platform-config.md): a user who wants a different model authors a different `ConfiguredAgent`.
+- **Overlay creep.** The next request will be "let me set the model here too". Mitigation. The no-prompt/no-model assertion is a test, and the reason is written down in [06-platform-config.md](../foundation/06-platform-config.md): a user who wants a different model authors a different `ConfiguredAgent`.
 - **Repaint distraction.** Live repaint mid-turn could be visually noisy. Mitigation. Named as an open fork with a chosen default; the escape hatch is a per-profile "pin appearance for this call".

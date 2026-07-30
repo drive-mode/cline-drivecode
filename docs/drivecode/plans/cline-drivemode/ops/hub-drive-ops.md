@@ -95,7 +95,7 @@ Clients rebuild projection via `@cline/drive` reducers — they do not merge ad 
 | `orgConfig` | Org-managed facet / policy overlay |
 | `auditExport` | Audit bundle export from the event log |
 
-See [04-future-multi-user.md](../04-future-multi-user.md) Phase 2 and [ARD-0013](../ard/ARD-0013-state-partition.md).
+See [04-future-multi-user.md](../research/04-future-multi-user.md) Phase 2 and [ARD-0013](../ard/ARD-0013-state-partition.md).
 
 ## Out of scope here
 

@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-29
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: [share-and-router/PLAN.md](../share-and-router/PLAN.md), [DRV-TRANSCRIPT](../features/DRV-TRANSCRIPT.md), [DRV-PARALLEL-WAVES](../features/DRV-PARALLEL-WAVES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md), [ARD-0011](ARD-0011-demo-share-track.md), W-33 in [05-workflows.md](../05-workflows.md)
+- Related: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md), [DRV-TRANSCRIPT](../features/DRV-TRANSCRIPT.md), [DRV-PARALLEL-WAVES](../features/DRV-PARALLEL-WAVES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md), [ARD-0011](ARD-0011-demo-share-track.md), W-33 in [05-workflows.md](../foundation/05-workflows.md)
 
 ## Context
 
@@ -55,7 +55,7 @@ Reactive share screen is a dual-backlog planning problem (Do + Show), not WebRTC
 
 ## Links
 
-- [share-and-router/PLAN.md](../share-and-router/PLAN.md) · ChatForkLifecycle section
+- [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md) · ChatForkLifecycle section
 - [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md)
 - [sdk/packages/shared/src/drive/chatFork.ts](../../../../../sdk/packages/shared/src/drive/chatFork.ts)
 - [sdk/packages/drive/src/director/chatForkPolicy.ts](../../../../../sdk/packages/drive/src/director/chatForkPolicy.ts)

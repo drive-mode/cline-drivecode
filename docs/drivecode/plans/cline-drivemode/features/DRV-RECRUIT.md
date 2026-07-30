@@ -1,6 +1,6 @@
 # DRV-RECRUIT · Rank agents (and suggest packs) for a need
 
-Back to [README](../README.md). Phase 2–4 in [TASK-GRAPH](../TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0003](../ard/ARD-0003-recruit-and-roster-pack.md).
+Back to [README](../README.md). Phase 2–4 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0003](../ard/ARD-0003-recruit-and-roster-pack.md).
 
 ## Problem / user value
 

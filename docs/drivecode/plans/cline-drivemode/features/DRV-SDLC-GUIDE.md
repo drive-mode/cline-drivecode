@@ -1,6 +1,6 @@
 # DRV-SDLC-GUIDE · Senior engineering leadership on the call
 
-Back to [README](../README.md). Phase 1 (persona + discovery loop) / Phase 2 (decision + coverage artifacts on stage) in [TASK-GRAPH](../TASK-GRAPH.md).  
+Back to [README](../README.md). Phase 1 (persona + discovery loop) / Phase 2 (decision + coverage artifacts on stage) in [TASK-GRAPH](../delivery/TASK-GRAPH.md).  
 Owns workflows **W-40 through W-45** (Group I · SDLC and requirements leadership).
 
 ## Problem / user value
@@ -34,7 +34,7 @@ Without a named feature, that behavior stays accidental persona prose. With it, 
 - Partner produces staged artifacts in order appropriate to the ask: problem → constraints/non-goals → requirements → options → recommended decision → open questions → next verifiable slice.
 - Requirements are typed as Must / Should / Could / Won’t (or equivalent MoSCoW) with at least one explicit non-goal.
 - Architecture decisions show ≥2 real options, a recommendation, and consequences — never a single hidden choice.
-- Workflow/coverage mapping names concrete workflow IDs or admits UNMAPPED/GAP (same honesty as [05-workflows.md](../05-workflows.md)).
+- Workflow/coverage mapping names concrete workflow IDs or admits UNMAPPED/GAP (same honesty as [05-workflows.md](../foundation/05-workflows.md)).
 - Phase entry / “ready to build” output is a checklist of decisions and invariants, not a calendar.
 - Teaching moments narrate *why* a constraint exists (hub single-writer, privacy, RosterPack≠Team, compile-not-fork) when relevant to the task.
 - Less-experienced user path: partner asks clarifying questions before coding when the problem is underspecified; does not silently invent scope.
@@ -45,7 +45,7 @@ Without a named feature, that behavior stays accidental persona prose. With it, 
 
 - DRV-SKILL-PORT (persona + phrase tables), DRV-NARRATION, DRV-STAGE, DRV-EVENTS, DRV-KERNEL (sub-mode / revise), DRV-PRIVACY.
 - Soft: DRV-DRIVEAGENT-HOME / graph capability `sdlc-guidance` for recruitable tech-lead agents (Phase 2).
-- Related docs: [LEADERSHIP-BRIEF.md](../LEADERSHIP-BRIEF.md), [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md).
+- Related docs: [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md).
 
 ## Surfaces touched
 

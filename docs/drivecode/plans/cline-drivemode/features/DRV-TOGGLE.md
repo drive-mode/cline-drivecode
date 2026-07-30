@@ -1,6 +1,6 @@
 # DRV-TOGGLE · Chat Join call (shortcut into Drive room)
 
-Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

@@ -1,6 +1,6 @@
 # DRV-CHAT-FORK · Invisible auditable worker forks
 
-Back to [README](../README.md). Decision: [ARD-0014](../ard/ARD-0014-chat-fork-lifecycle.md). Architecture: [share-and-router/PLAN.md](../share-and-router/PLAN.md).
+Back to [README](../README.md). Decision: [ARD-0014](../ard/ARD-0014-chat-fork-lifecycle.md). Architecture: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
 
 ## Problem / user value
 
@@ -48,14 +48,14 @@ Chat forks attach to **Do claim** and feed the Show backlog. They do not unblock
 - Full A2A delivery polish
 - Phase 4 [DRV-ISOLATION](DRV-ISOLATION.md) for overlapping edit forks (path-disjoint works now)
 
-Resource admission reuses guardrails from [PR #32](https://github.com/hhalperin/cline-drivecode/pull/32) / [12-performance.md](../12-performance.md). Concurrent forks default to 2 (`DEFAULT_MAX_CONCURRENT_CHAT_FORKS`). Director tick runs via `drive.fork.tick` and best-effort after `call_record_work`.
+Resource admission reuses guardrails from [PR #32](https://github.com/hhalperin/cline-drivecode/pull/32) / [12-performance.md](../research/12-performance.md). Concurrent forks default to 2 (`DEFAULT_MAX_CONCURRENT_CHAT_FORKS`). Director tick runs via `drive.fork.tick` and best-effort after `call_record_work`.
 
 ## Dependencies
 
-- Director dual backlog ([share-and-router/PLAN.md](../share-and-router/PLAN.md))
+- Director dual backlog ([share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md))
 - [DRV-TRANSCRIPT](DRV-TRANSCRIPT.md), [DRV-PARALLEL-WAVES](DRV-PARALLEL-WAVES.md), [DRV-PRIVACY](DRV-PRIVACY.md)
 - Spotlight production Gaps A/B/C remain a parallel track for end-to-end demos
-- Task-bank Do items ([task-bank-drive-loop/overview.md](../task-bank-drive-loop/overview.md)) when Do backlog prefers bank tasks
+- Task-bank Do items ([task-bank-drive-loop/overview.md](../initiatives/task-bank-drive-loop/overview.md)) when Do backlog prefers bank tasks
 
 ## Surfaces touched
 

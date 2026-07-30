@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-27
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: [DRV-ADDRESS](../features/DRV-ADDRESS.md), [DRV-RECRUIT](../features/DRV-RECRUIT.md), [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md), [DRV-AGENT-ROUTER](../features/DRV-AGENT-ROUTER.md), [10-agent-router.md](../10-agent-router.md), [share-and-router/PLAN.md](../share-and-router/PLAN.md)
+- Related: [DRV-ADDRESS](../features/DRV-ADDRESS.md), [DRV-RECRUIT](../features/DRV-RECRUIT.md), [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md), [DRV-AGENT-ROUTER](../features/DRV-AGENT-ROUTER.md), [10-agent-router.md](../initiatives/share-and-router/10-agent-router.md), [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md)
 
 ## Context
 
@@ -44,5 +44,5 @@ Manual address chips (DRV-ADDRESS) do not scale when several agents are seated. 
 
 ## Links
 
-- [10-agent-router.md](../10-agent-router.md)
-- [share-and-router/PLAN.md](../share-and-router/PLAN.md)
+- [10-agent-router.md](../initiatives/share-and-router/10-agent-router.md)
+- [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md)

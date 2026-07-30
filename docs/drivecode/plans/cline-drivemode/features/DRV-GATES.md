@@ -1,6 +1,6 @@
 # DRV-GATES · High-impact approval and policy blocks
 
-Back to [README](../README.md). Phase 1 (taxonomy + events) / Phase 2 (UI) in [TASK-GRAPH](../TASK-GRAPH.md).  
+Back to [README](../README.md). Phase 1 (taxonomy + events) / Phase 2 (UI) in [TASK-GRAPH](../delivery/TASK-GRAPH.md).  
 Owns workflows **W-24** (approve high-impact) and **W-25** (policy block).  
 Closes the top gap previously parked only as platform facet `#26` / `#27`.
 

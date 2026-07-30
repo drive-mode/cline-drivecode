@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/drivecode/assets/logo-dark.png">
-    <img src="docs/drivecode/assets/logo-light.png" width="96" alt="Cline Drive">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/drivecode/assets/logos/logo-dark.png">
+    <img src="docs/drivecode/assets/logos/logo-light.png" width="96" alt="Cline Drive">
   </picture>
 </p>
 
@@ -37,7 +37,7 @@ The same features ship in two clients against one hub:
 Everything Drive adds lives under one **Drive** tab in the hub, so it is never
 scattered across the app. The CLI auto-spawns the same hub daemon.
 
-![The Drive tab](docs/drivecode/assets/drive-tab.png)
+![The Drive tab](docs/drivecode/assets/hub/drive-tab.png)
 
 > Hub screenshots are light theme. The hub ships light and dark and follows your
 > theme choice. TUI screenshots are the dark terminal surface.
@@ -65,7 +65,7 @@ or deafen the partner, or take over the shared surface yourself.
 
 ### Hub UI
 
-![A Drive call, with the Spotlight open](docs/drivecode/assets/drive-call.png)
+![A Drive call, with the Spotlight open](docs/drivecode/assets/hub/drive-call.png)
 
 **Drive Settings** (in the call chrome) pick a runtime profile —
 `local` / `cloud` / `hybrid` — and BYOK speech providers for STT and TTS. The
@@ -79,17 +79,17 @@ The interactive TUI is the same agent core in the terminal: OpenTUI chat,
 plan/act, slash commands, file mentions, live tool approvals, and headless
 one-shots. Drive is a first-class mode on that surface — not a separate app.
 
-![Cline interactive TUI — home](docs/drivecode/assets/tui-chat.png)
+![Cline interactive TUI — home](docs/drivecode/assets/tui/tui-chat.png)
 
-![Provider setup in the TUI](docs/drivecode/assets/tui-auth.png)
+![Provider setup in the TUI](docs/drivecode/assets/tui/tui-auth.png)
 
 `Ctrl+Shift+D` (or click the status-bar Drive line) joins or leaves the call.
 When Drive is on, the bar shows the partner and sub-mode
 (`plan` / `agent` / `ask` / `debug`).
 
-![TUI with Drive off](docs/drivecode/assets/tui-drive-off.png)
+![TUI with Drive off](docs/drivecode/assets/tui/tui-drive-off.png)
 
-![TUI with Drive on — partner Adam in agent sub-mode](docs/drivecode/assets/tui-drive-on.png)
+![TUI with Drive on — partner Adam in agent sub-mode](docs/drivecode/assets/tui/tui-drive-on.png)
 
 ```bash
 bun run cli -i                                    # interactive TUI
@@ -159,11 +159,11 @@ babysit; a client that joins late replays the room snapshot and catches up.
 Simulated share-screen beats (no credentials required) exercise the same
 Spotlight surface:
 
-![Spotlight demo — agent beat](docs/drivecode/assets/share-screen-spotlight-demo-beat-1.png)
+![Spotlight demo — agent beat](docs/drivecode/assets/demos/share-screen-spotlight-demo-beat-1.png)
 
-![Spotlight demo — human pin](docs/drivecode/assets/share-screen-spotlight-demo-human-pin.png)
+![Spotlight demo — human pin](docs/drivecode/assets/demos/share-screen-spotlight-demo-human-pin.png)
 
-![Spotlight demo — test beat](docs/drivecode/assets/share-screen-spotlight-demo-beat-3.png)
+![Spotlight demo — test beat](docs/drivecode/assets/demos/share-screen-spotlight-demo-beat-3.png)
 
 > The hub wire protocol still calls this surface `stage` (`StageState`,
 > `call_set_stage`). Renaming it is a breaking change across every client, so
@@ -201,12 +201,12 @@ contradict the rows beneath them.
 
 **Hub UI**
 
-![Status Hub board](docs/drivecode/assets/status-board.png)
+![Status Hub board](docs/drivecode/assets/hub/status-board.png)
 
 **CLI (TUI)** — `/status` (or **Opt+T** / the command palette). Tab switches
 Board ↔ Dependency map. Live data comes from a `StatusSnapshotSource` (hub ops).
 
-![TUI Status Hub — board](docs/drivecode/assets/tui-status-board.png)
+![TUI Status Hub — board](docs/drivecode/assets/tui/tui-status-board.png)
 
 ### Changelog — "what happened?"
 
@@ -215,7 +215,7 @@ Flat and chronological, including superseded updates, showing transitions
 
 **Hub UI**
 
-![Status Hub changelog](docs/drivecode/assets/status-changelog.png)
+![Status Hub changelog](docs/drivecode/assets/hub/status-changelog.png)
 
 Every row answers what the work is, who did it, how it got there, and when:
 subject, how many updates that subject has, the agent, the publisher it came
@@ -234,19 +234,19 @@ team session with tasks is live.
 The screenshots below use the current Drive plan set
 ([`docs/drivecode/plans/cline-drivemode/`](docs/drivecode/plans/cline-drivemode/)) as the task
 graph — each `DRV-*` feature is a node, edges follow the
-[TASK-GRAPH](docs/drivecode/plans/cline-drivemode/TASK-GRAPH.md) dependency sketch — so
+[TASK-GRAPH](docs/drivecode/plans/cline-drivemode/delivery/TASK-GRAPH.md) dependency sketch — so
 you can see how the map reads with a real plan. In the hub, open
 `/status?demoPlans=1&statusMode=dependency-map` for the same fixture.
 
 **Hub UI**
 
-![Status Hub dependency map — Drive plans](docs/drivecode/assets/status-dependency-map.png)
+![Status Hub dependency map — Drive plans](docs/drivecode/assets/hub/status-dependency-map.png)
 
-![Selected plan task with blockers and dependents](docs/drivecode/assets/status-dependency-map-selected.png)
+![Selected plan task with blockers and dependents](docs/drivecode/assets/hub/status-dependency-map-selected.png)
 
 **CLI (TUI)**
 
-![TUI Status Hub — dependency map (Drive plans)](docs/drivecode/assets/tui-status-dependency-map.png)
+![TUI Status Hub — dependency map (Drive plans)](docs/drivecode/assets/tui/tui-status-dependency-map.png)
 
 Docs demos can compose a separate adapter from `@cline/drivecode-demo` at the CLI
 root when `CLINE_DEMO_STATUS_PLANS=1` (optional lens / auto-open via
@@ -381,9 +381,9 @@ repo publishes — rather than beside it.
 
 - [docs/drivecode/README.md](docs/drivecode/README.md) — status schema, hub op
   list, query options, room model
-- [docs/drivecode/architecture.md](docs/drivecode/architecture.md) — diagram-first
+- [docs/drivecode/reference/architecture.md](docs/drivecode/reference/architecture.md) — diagram-first
   Status Hub / Drive protocol planes
-- [docs/drivecode/skills-inventory.md](docs/drivecode/skills-inventory.md) —
+- [docs/drivecode/reference/skills-inventory.md](docs/drivecode/reference/skills-inventory.md) —
   in-repo skills vs candidates for `cline/skills`
 - [ARD-0005](docs/drivecode/plans/cline-drivemode/ard/ARD-0005-status-hub.md) — Status Hub
   design and the alternatives rejected

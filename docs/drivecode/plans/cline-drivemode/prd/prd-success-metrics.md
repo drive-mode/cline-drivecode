@@ -1,7 +1,7 @@
 # PRD · Drive success metrics
 
 **Status.** Draft for leadership acceptance  
-**Related.** [LEADERSHIP-BRIEF.md](../LEADERSHIP-BRIEF.md), PRD 6, TASK-GRAPH gates  
+**Related.** [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), PRD 6, TASK-GRAPH gates  
 **Rule.** Metrics are verifiable signals, not timelines.
 
 ## Problem

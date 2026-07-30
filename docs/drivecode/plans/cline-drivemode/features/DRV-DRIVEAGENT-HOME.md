@@ -1,6 +1,6 @@
 # DRV-DRIVEAGENT-HOME · `.driveagent/<slug>/` agent home
 
-Back to [README](../README.md). Phase 1+ in [TASK-GRAPH](../TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0001](../ard/ARD-0001-driveagent-home.md).
+Back to [README](../README.md). Phase 1+ in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0001](../ard/ARD-0001-driveagent-home.md).
 
 ## Problem / user value
 

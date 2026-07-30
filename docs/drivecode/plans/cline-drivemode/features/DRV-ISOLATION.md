@@ -1,6 +1,6 @@
 # DRV-ISOLATION · Worktree isolation for multi-agent seats
 
-Back to [README](../README.md). Phase 4 prerequisite of [DRV-TEAM-OPT](DRV-TEAM-OPT.md) in [TASK-GRAPH](../TASK-GRAPH.md).  
+Back to [README](../README.md). Phase 4 prerequisite of [DRV-TEAM-OPT](DRV-TEAM-OPT.md) in [TASK-GRAPH](../delivery/TASK-GRAPH.md).  
 Owns workflow **W-28** (review isolated work). Hard dependency: **`teamOpt` must not enable without this.**
 
 ## Problem / user value

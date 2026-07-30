@@ -1,6 +1,6 @@
 # DRV-KERNEL · The @cline/drive kernel package
 
-Back to [README](../README.md). Phase 0 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 0 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-29
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: D2 / D7 / D10 in [01-architecture.md](../01-architecture.md), [04-future-multi-user.md](../04-future-multi-user.md), [DRV-EVENTS](../features/DRV-EVENTS.md), [ops/hub-drive-ops.md](../ops/hub-drive-ops.md)
+- Related: D2 / D7 / D10 in [01-architecture.md](../foundation/01-architecture.md), [04-future-multi-user.md](../research/04-future-multi-user.md), [DRV-EVENTS](../features/DRV-EVENTS.md), [ops/hub-drive-ops.md](../ops/hub-drive-ops.md)
 
 ## Context
 
@@ -52,6 +52,6 @@ Drive state is partitioned into three lanes:
 
 ## Links
 
-- [01-architecture.md](../01-architecture.md) D10
+- [01-architecture.md](../foundation/01-architecture.md) D10
 - Implementation plan: Drive three-lane state partition
 - Bank markdown projection remains under `.drive/bank/`; bank **history** appends under `.cline/drive/bank/events.jsonl` (envelope `family: "bank"`). Unifying the markdown root is deferred.

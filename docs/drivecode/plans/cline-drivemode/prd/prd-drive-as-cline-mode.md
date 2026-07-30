@@ -82,4 +82,4 @@ See [ARD-0007](../ard/ARD-0007-drive-as-cline-mode.md).
 - [DRV-TOGGLE](../features/DRV-TOGGLE.md)
 - [DRV-DRIVE-TAB](../features/DRV-DRIVE-TAB.md)
 - [DRV-PIP](../features/DRV-PIP.md)
-- [00-vision.md](../00-vision.md)
+- [00-vision.md](../foundation/00-vision.md)

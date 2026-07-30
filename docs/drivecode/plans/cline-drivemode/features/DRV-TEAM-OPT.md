@@ -1,6 +1,6 @@
 # DRV-TEAM-OPT · Optional specialist agents (flagged)
 
-Back to [README](../README.md). Phase 4 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 4 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 
@@ -16,7 +16,7 @@ This feature sits between two neighbours it is regularly confused with. The dist
 | **DRV-TEAM-OPT specialist** (this feature) | One extra seat in a Drive room, requested by the partner, bounded job, cascade-dismissed | The pair partner, at runtime, behind this flag | `seatSources: { kind: "spawn", parentId }` |
 | **`RosterPack`** | A human-curated seating preset with a name, added to a call in one action | A human, ahead of the call | [DRV-ROSTER-PACK](DRV-ROSTER-PACK.md), facet `roster.pack` |
 
-Drive identifiers never contain `Team`; that word belongs to Cline's runtime construct. A pack is not a parent, so pack members are peers with no cascade between them, while a spawned specialist names its parent and cascades. Full rationale in [06-platform-config.md](../06-platform-config.md#naming-rosterpack-not-teampack-not-team).
+Drive identifiers never contain `Team`; that word belongs to Cline's runtime construct. A pack is not a parent, so pack members are peers with no cascade between them, while a spawned specialist names its parent and cascades. Full rationale in [06-platform-config.md](../foundation/06-platform-config.md#naming-rosterpack-not-teampack-not-team).
 
 ## Acceptance criteria
 

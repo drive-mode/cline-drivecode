@@ -23,13 +23,14 @@ This is the **Cline** monorepo. Toolchain is **Bun 1.3.13** (package manager + t
   - Hub: `?demoPlans=1` → `DrivePlansDemoTeamsSource`; `?statusMode=dependency-map`
   - Screenshots: also `CLINE_DISABLE_CLINE_PASS_NOTICE=1`
 - Domain graph logic stays in `@cline/shared` (`buildDependencyMap`). Rebuild with `bun run build:sdk` after shared edits.
-- Product screenshots: `docs/drivecode/assets/` (`tui-drive-*.png`, `tui-status-*.png`, hub `status-*.png`, `drive-*.png`).
+- Product screenshots: `docs/drivecode/assets/{hub,tui,demos,logos}/` (e.g. `tui/tui-drive-*.png`, `hub/status-*.png`, `hub/drive-*.png`).
 - Demo package docs: `apps/drivecode-demo/README.md`.
 
 ### Drive docs (`docs/drivecode/`)
-- **Single nest.** All Drive / drivecode docs live under `docs/drivecode/` (plans, design, assets, reviews, HANDOFF, product reference). Do not recreate `docs/plans/`, `docs/design/`, `docs/reviews/`, or `docs/assets/drivecode/`.
-- **Entry points:** `docs/drivecode/README.md` (product reference), `docs/drivecode/HANDOFF.md` (continuation brief), `docs/drivecode/AGENTS.md` (maintain / add / edit rules).
-- **Adding:** product plans → `docs/drivecode/plans/cline-drivemode/`; harness plan → `docs/drivecode/plans/drivecode-sdk/`; wireframes → `docs/drivecode/design/drive-wireframes/`; screenshots → `docs/drivecode/assets/`; reviews → `docs/drivecode/reviews/`.
+- **Single nest.** All Drive / drivecode docs live under `docs/drivecode/` (plans, design, assets, meta, HANDOFF, product reference). Do not recreate `docs/plans/`, `docs/design/`, `docs/reviews/`, or `docs/assets/drivecode/`.
+- **Entry points:** `docs/drivecode/README.md` (product reference), `docs/drivecode/HANDOFF.md` (continuation brief), `docs/drivecode/AGENTS.md` (maintain / add / edit), `docs/drivecode/STRUCTURE.md` (placement matrix).
+- **Adding:** follow `STRUCTURE.md`. Product role folders under `plans/cline-drivemode/`; harness under `plans/drivecode-sdk/`; wireframes → `design/wireframes/`; screenshots → `assets/{hub,tui,demos,logos}/`; reviews → `meta/reviews/`. Multi-file tracks → `initiatives/<slug>/` (README required).
+- **Enforcement:** `bun run check:drivecode-docs` (CI via docs-link-check). Do not revive `design/drive-wireframes/` or nest-level `reviews/`.
 - **Editing:** prefer relative links inside the nest; use absolute `docs/drivecode/...` in handoffs and external callouts. After moves/renames, grep for the old path and fix links — do not leave stubs at old locations.
 - **Out of scope:** Mintlify user docs stay in `docs/sdk/`, `docs/cli/`, `docs/features/`, etc. Repo-root `assets/drive/` is brand source, not docs.
 
@@ -40,7 +41,7 @@ This is the **Cline** monorepo. Toolchain is **Bun 1.3.13** (package manager + t
 
 ### GUI display
 - A virtual X display is live at **`DISPLAY=:1`** (the same desktop used for screenshots). GUI apps (VS Code, the Tauri desktop window) launched with `DISPLAY=:1` render there and can be screenshotted — no need to start your own `xvfb`. Prefer starting long-running GUI/dev processes in a `tmux` session (see the tmux guidance) so they survive.
-- TUI screenshots: launch `xterm` on `DISPLAY=:1`, run `bun run cli -i --key …` with the demo envs above, then `import -window <id> docs/drivecode/assets/<name>.png`. Prefer demo envs over fragile `xdotool` key chords (Ctrl+D alone exits the TUI).
+- TUI screenshots: launch `xterm` on `DISPLAY=:1`, run `bun run cli -i --key …` with the demo envs above, then `import -window <id> docs/drivecode/assets/tui/<name>.png`. Prefer demo envs over fragile `xdotool` key chords (Ctrl+D alone exits the TUI).
 
 ### VS Code extension (`apps/vscode`, package `claude-dev`)
 Toolchain is pre-installed and persisted in the VM: generated gRPC/proto code, the bundled `ripgrep` binaries (`apps/vscode/bin/`), the built webview (`webview-ui/build`), the esbuild bundle (`dist/extension.js`), VS Code itself (`/usr/bin/code`), and the GUI system libraries its tests need.

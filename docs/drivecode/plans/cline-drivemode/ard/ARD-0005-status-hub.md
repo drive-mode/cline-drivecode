@@ -9,7 +9,7 @@ Accepted — implemented
 - Date: 2026-07-27
 - Deciders: Harrison (product), Drivecode planning
 - Scope: **Cline SDK (`sdk/packages/*`), not Drive-only.** Drive is the first consumer, not the owner.
-- Related: [01-architecture.md](../01-architecture.md) D2 (hub is the single writer), ARD-0002, [AHP review](#why-seq-exists)
+- Related: [01-architecture.md](../foundation/01-architecture.md) D2 (hub is the single writer), ARD-0002, [AHP review](#why-seq-exists)
 
 ## Product framing
 
@@ -46,7 +46,7 @@ status for work that spans sessions.
 The consequence is that every multi-agent consumer invents its own status
 side-channel — a JSON file, a log scrape, a bespoke table. That is the same
 class of duplication that `syncTypes.ts` hand-copying represents in
-[drivecode-sdk 01-problem-and-scope](../../drivecode-sdk/01-problem-and-scope.md).
+[drivecode-sdk 01-problem-and-scope](../../drivecode-sdk/foundation/01-problem-and-scope.md).
 
 ## Decision
 
@@ -186,7 +186,7 @@ That is the "maintain it and use it" loop: an agent publishes through the hub
 (or directly through `StatusService` when it is in-process), every other client
 sees it immediately, and anyone who was not listening queries the DB with a
 `since` cursor. The hub remains the single writer per D2 of
-[01-architecture.md](../01-architecture.md).
+[01-architecture.md](../foundation/01-architecture.md).
 
 The broadcast hangs off a `StatusService` subscription (`attachStatusBroadcast`),
 not off the `status.publish` handler. D9 has agents publishing through a tool
@@ -269,5 +269,5 @@ and the caller decides. A default retention policy is deferred, not assumed.
 - **A task table plus a status table.** Deferred, not rejected. If explicit task
   records land later, `subject = "task/<id>"` is already the join key.
 - **CRDT / distributed status.** Rejected for the same reason
-  [01-architecture.md](../01-architecture.md) rejected it for rooms: one writer,
+  [01-architecture.md](../foundation/01-architecture.md) rejected it for rooms: one writer,
   no offline multi-master.

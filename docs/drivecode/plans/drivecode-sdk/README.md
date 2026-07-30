@@ -12,20 +12,20 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 
 | File | What it holds |
 |---|---|
-| [00-discovery-omnigent.md](00-discovery-omnigent.md) | What Databricks' Omnigent means by "meta harness", with citations. Core abstractions, the runner and server split, the harness capability matrix, policies. Lessons kept and discarded. |
-| [01-problem-and-scope.md](01-problem-and-scope.md) | Why a meta harness at all. The hand-copied `syncTypes.ts` evidence. What is in scope, out of scope permanently, and deferred. Definition of done. |
-| [02-architecture.md](02-architecture.md) | The layer cake, the host port with its capability descriptor, the ownership matrix, the data shapes, and the resolution of `drivecode-sdk` against the planned `@cline/drive` kernel. |
-| [03-phased-plan.md](03-phased-plan.md) | Phases with verifiable acceptance criteria. No time estimates. |
-| [04-relationship-to-cline-drivecode.md](04-relationship-to-cline-drivecode.md) | How the product consumes the SDK and the Cline SDK together. What changes in the existing drivemode plan. |
-| [05-alignment-with-driveagent.md](05-alignment-with-driveagent.md) | How host port + `.driveagent/` compile coexist; reconciles older “no Drive-owned definition” wording. |
-| [06-sdk-leverage.md](06-sdk-leverage.md) | How product code should use `createDriveHarness` vs `@cline/sdk`; gaps and migration order. |
-| [07-agent-handoff.md](07-agent-handoff.md) | Detailed session handoff for the current harness-leverage PR track (#58). |
-| [08-followon-tasks.md](08-followon-tasks.md) | Fleshed follow-ons after Phase-2: durable registry, remove-pack cascade, script/planner DirectorOps. |
+| [00-discovery-omnigent.md](foundation/00-discovery-omnigent.md) | What Databricks' Omnigent means by "meta harness", with citations. Core abstractions, the runner and server split, the harness capability matrix, policies. Lessons kept and discarded. |
+| [01-problem-and-scope.md](foundation/01-problem-and-scope.md) | Why a meta harness at all. The hand-copied `syncTypes.ts` evidence. What is in scope, out of scope permanently, and deferred. Definition of done. |
+| [02-architecture.md](foundation/02-architecture.md) | The layer cake, the host port with its capability descriptor, the ownership matrix, the data shapes, and the resolution of `drivecode-sdk` against the planned `@cline/drive` kernel. |
+| [03-phased-plan.md](foundation/03-phased-plan.md) | Phases with verifiable acceptance criteria. No time estimates. |
+| [04-relationship-to-cline-drivecode.md](foundation/04-relationship-to-cline-drivecode.md) | How the product consumes the SDK and the Cline SDK together. What changes in the existing drivemode plan. |
+| [05-alignment-with-driveagent.md](foundation/05-alignment-with-driveagent.md) | How host port + `.driveagent/` compile coexist; reconciles older “no Drive-owned definition” wording. |
+| [06-sdk-leverage.md](delivery/06-sdk-leverage.md) | How product code should use `createDriveHarness` vs `@cline/sdk`; gaps and migration order. |
+| [07-agent-handoff.md](delivery/07-agent-handoff.md) | Detailed session handoff for the current harness-leverage PR track (#58). |
+| [08-followon-tasks.md](delivery/08-followon-tasks.md) | Fleshed follow-ons after Phase-2: durable registry, remove-pack cascade, script/planner DirectorOps. |
 | [decisions.tsv](decisions.tsv) | The decision trail for this wave. One row per decision, with evidence pointers. |
 
 ## Reading order
 
-Read [01-problem-and-scope.md](01-problem-and-scope.md) first if you want to know whether this layer should exist. Read [02-architecture.md](02-architecture.md) first if you have already accepted that it should and want to argue about the boundaries. Read [00-discovery-omnigent.md](00-discovery-omnigent.md) only if you want the evidence behind the word "meta harness".
+Read [01-problem-and-scope.md](foundation/01-problem-and-scope.md) first if you want to know whether this layer should exist. Read [02-architecture.md](foundation/02-architecture.md) first if you have already accepted that it should and want to argue about the boundaries. Read [00-discovery-omnigent.md](foundation/00-discovery-omnigent.md) only if you want the evidence behind the word "meta harness".
 
 ## The answer, in short
 
@@ -35,7 +35,7 @@ Inside the monorepo the package id stays `@cline/drive`, because `DRV-KERNEL` an
 
 Three verbs summarise the layering. **The harness proposes. The host commits. Apps project.** Every "where does this go?" question resolves by asking which verb applies.
 
-Two things change in the existing drivemode plan, both small and both argued in [02-architecture.md §3.1](02-architecture.md) and [04 §4](04-relationship-to-cline-drivecode.md): the room reducer and stage projection move from `@cline/core` to `@cline/drive` so the webview can import them instead of writing a second copy, and `DRV-KERNEL` gains the port and the conformance kit. D1 through D7 stand.
+Two things change in the existing drivemode plan, both small and both argued in [02-architecture.md §3.1](foundation/02-architecture.md) and [04 §4](foundation/04-relationship-to-cline-drivecode.md): the room reducer and stage projection move from `@cline/core` to `@cline/drive` so the webview can import them instead of writing a second copy, and `DRV-KERNEL` gains the port and the conformance kit. D1 through D7 stand.
 
 ## Constraints inherited from cline-drivemode
 
@@ -56,6 +56,6 @@ Three playbooks were combined because no single one fits. **Investigation** gove
 
 Read-only exploration was delegated to subagents so the main thread kept summaries rather than raw file dumps. The one genuinely contested question, where the SDK boundary falls relative to the already-planned `@cline/drive` kernel, went through a design arena with three independent candidates and a separate cross-judge, because a package boundary is a one-way door. Two candidates said merge, one said sits above; the dissent's central argument — that a host port violates the kernel's purity constraint — does not survive the observation that `DriveHostPort` is an interface with no implementation, and declaring an effect is not performing one.
 
-Two honest caveats. The exploration subagents had not returned by the time these documents were written, so the grounding came from the parent reading the binding plan files directly rather than from delegated summaries. And Phases 1 and 2 of the plan have static verification only — the first runtime evidence for the whole design arrives in Phase 3, which is called out in [03-phased-plan.md](03-phased-plan.md) rather than papered over.
+Two honest caveats. The exploration subagents had not returned by the time these documents were written, so the grounding came from the parent reading the binding plan files directly rather than from delegated summaries. And Phases 1 and 2 of the plan have static verification only — the first runtime evidence for the whole design arrives in Phase 3, which is called out in [03-phased-plan.md](foundation/03-phased-plan.md) rather than papered over.
 
 The full trail with evidence pointers is in [decisions.tsv](decisions.tsv).

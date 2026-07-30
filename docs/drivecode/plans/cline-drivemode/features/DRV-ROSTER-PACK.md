@@ -1,8 +1,8 @@
 # DRV-ROSTER-PACK · Curated roster presets, added to a call in one action
 
-Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../TASK-GRAPH.md). Design in [06-platform-config.md](../06-platform-config.md).
+Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Design in [06-platform-config.md](../foundation/06-platform-config.md).
 
-> **Naming.** This feature was drafted as `DRV-TEAM-PACK`. It is `RosterPack` everywhere now. Cline already ships a runtime `Team` (`sdk/packages/shared/src/team/schema.ts`, tools under `sdk/packages/core/src/extensions/tools/team/`) with a lead, teammates, a mailbox, and outcomes. Any Drive identifier containing `Team` collides with it in grep, autocomplete, imports, and support threads. See [06-platform-config.md](../06-platform-config.md#naming-rosterpack-not-teampack-not-team).
+> **Naming.** This feature was drafted as `DRV-TEAM-PACK`. It is `RosterPack` everywhere now. Cline already ships a runtime `Team` (`sdk/packages/shared/src/team/schema.ts`, tools under `sdk/packages/core/src/extensions/tools/team/`) with a lead, teammates, a mailbox, and outcomes. Any Drive identifier containing `Team` collides with it in grep, autocomplete, imports, and support threads. See [06-platform-config.md](../foundation/06-platform-config.md#naming-rosterpack-not-teampack-not-team).
 
 ## Problem / user value
 
@@ -29,7 +29,7 @@ A pack is configuration, not runtime. It is a list of references and seat order,
 ## Dependencies
 
 - [DRV-PLATFORM-CONFIG](DRV-PLATFORM-CONFIG.md) (`roster.pack` is facet #9), [DRV-AGENT-PROFILE](DRV-AGENT-PROFILE.md) (members are profiles), [DRV-ROSTER](DRV-ROSTER.md) (add affordance and `seatSources` rendering), [DRV-ADDRESS](DRV-ADDRESS.md) (pack address mode), [DRV-ROOM-MVP](DRV-ROOM-MVP.md) (seating ops).
-- Seating more than one agent additionally depends on [DRV-TEAM-OPT](DRV-TEAM-OPT.md)'s flag and, before that flag turns on, the `DRV-ISOLATION` gap named in [05-workflows.md](../05-workflows.md).
+- Seating more than one agent additionally depends on [DRV-TEAM-OPT](DRV-TEAM-OPT.md)'s flag and, before that flag turns on, the `DRV-ISOLATION` gap named in [05-workflows.md](../foundation/05-workflows.md).
 
 ## Surfaces touched
 

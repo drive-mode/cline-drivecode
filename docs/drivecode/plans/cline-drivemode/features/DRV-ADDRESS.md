@@ -1,6 +1,6 @@
 # DRV-ADDRESS · Address set (one / many / everyone)
 
-Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

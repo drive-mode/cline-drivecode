@@ -1,6 +1,6 @@
 # DRV-AGENT-GRAPH · Per-agent portfolio knowledge graph
 
-Back to [README](../README.md). Phase 2+ in [TASK-GRAPH](../TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0002](../ard/ARD-0002-agent-graph-canonical-derived.md).
+Back to [README](../README.md). Phase 2+ in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0002](../ard/ARD-0002-agent-graph-canonical-derived.md).
 
 ## Problem / user value
 

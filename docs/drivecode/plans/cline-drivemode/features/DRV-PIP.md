@@ -1,6 +1,6 @@
 # DRV-PIP · PiP Partner companion widget
 
-Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../TASK-GRAPH.md). Product requirements: [PRD 7](../prd/prd-pip-partner.md). Decision: [ARD-0006](../ard/ARD-0006-pip-partner-companion.md).
+Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product requirements: [PRD 7](../prd/prd-pip-partner.md). Decision: [ARD-0006](../ard/ARD-0006-pip-partner-companion.md).
 
 ## Problem / user value
 
@@ -26,7 +26,7 @@ Users leave the Drive tab for Chat (or other hub pages) while a call is still li
 
 - `apps/cline-hub/src/webview/src/` — PiP shell, drag bounds, show/hide preference
 - Shared room projection / call strip ops (no duplicate protocol)
-- Wireframe reference: `docs/drivecode/design/drive-wireframes/index.html` variant C
+- Wireframe reference: `docs/drivecode/design/wireframes/index.html` variant C
 
 ## Agent tasks
 

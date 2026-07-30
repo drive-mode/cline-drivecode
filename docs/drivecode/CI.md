@@ -86,11 +86,15 @@ In **Settings → Rules → Rulesets** (or classic branch protection) for `main`
 
 ```sh
 bun run build:sdk
+bun run check:drivecode-docs
+bun run test:drivecode-docs
 bun -F @cline/drive typecheck && bun -F @cline/drive test
 bun -F @cline/cline-hub typecheck && bun -F @cline/cline-hub test && bun -F @cline/cline-hub build:webview
 bun -F @cline/drivecode-demo typecheck && bun -F @cline/drivecode-demo test
 bun -F @cline/cli build && bun -F @cline/cli typecheck && bun -F @cline/cli test:unit
 ```
+
+`check:drivecode-docs` / `test:drivecode-docs` enforce the `docs/drivecode/` skeleton ([STRUCTURE.md](STRUCTURE.md)); both also run in the docs-link-check workflow.
 
 ## Release identity (publish / deploy traceability)
 

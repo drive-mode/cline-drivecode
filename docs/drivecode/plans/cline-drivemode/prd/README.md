@@ -6,7 +6,7 @@ Product requirements for Drivecode features that sit on top of the existing driv
 |---|------|--------|
 | PRD 6 | [prd-driveagent-portfolio.md](prd-driveagent-portfolio.md) | `.driveagent/` homes, per-agent knowledge graphs, recruit-into-call |
 
-Related plan docs: [06-platform-config.md](../06-platform-config.md), [05-workflows.md](../05-workflows.md), [../README.md](../README.md).
+Related plan docs: [06-platform-config.md](../foundation/06-platform-config.md), [05-workflows.md](../foundation/05-workflows.md), [../README.md](../README.md).
 
 Example agent home: [../examples/driveagent-pair-partner/](../examples/driveagent-pair-partner/).
 

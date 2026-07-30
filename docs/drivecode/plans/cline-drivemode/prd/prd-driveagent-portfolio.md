@@ -165,7 +165,7 @@ recruit({
 
 | Surface | Behavior |
 |---|---|
-| Drive tab left nav | Channels + Drive calls; nested roster under live call ([DRIVE-TAB.md](../../../design/drive-wireframes/DRIVE-TAB.md)) |
+| Drive tab left nav | Channels + Drive calls; nested roster under live call ([DRIVE-TAB.md](../../../design/wireframes/DRIVE-TAB.md)) |
 | Roster click | Chooser: Transcript \| Profile ([DRV-PARTICIPANT-SHEET](../features/DRV-PARTICIPANT-SHEET.md), W-37) |
 | Transcript choice | Focus agent stream; address-follows-focus |
 | Profile choice | Classifier + sections; no silent broadcast |
@@ -207,6 +207,6 @@ recruit({
 - Personal site pattern: skills catalog + project `skills[].applied` + `ContextGraphLens` (`harrison-site`)
 - BRIEF stack and canonical/derived layout (`briefs` repo)
 - BRIEF lessons: complementary not competing; invest in artifacts; resist scope creep (`docs/blog/02-lessons-learned.md`)
-- Drive platform config: [06-platform-config.md](../06-platform-config.md)
-- Workflows catalog: [05-workflows.md](../05-workflows.md)
+- Drive platform config: [06-platform-config.md](../foundation/06-platform-config.md)
+- Workflows catalog: [05-workflows.md](../foundation/05-workflows.md)
 - Prior art (routing graphs, not portfolios): claude-drive graphify integration (do not fuse stores)

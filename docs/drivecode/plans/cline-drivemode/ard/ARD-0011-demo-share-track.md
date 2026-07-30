@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-27
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: D4, [DRV-SHARE](../features/DRV-SHARE.md), [DRV-STAGE](../features/DRV-STAGE.md), [DRV-DEMO-SHARE](../features/DRV-DEMO-SHARE.md), [09-demo-share.md](../09-demo-share.md), [share-and-router/PLAN.md](../share-and-router/PLAN.md)
+- Related: D4, [DRV-SHARE](../features/DRV-SHARE.md), [DRV-STAGE](../features/DRV-STAGE.md), [DRV-DEMO-SHARE](../features/DRV-DEMO-SHARE.md), [09-demo-share.md](../initiatives/share-and-router/09-demo-share.md), [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md)
 
 ## Context
 
@@ -44,5 +44,5 @@ DRV-SHARE already chose structured human share and deferred WebRTC. Users still 
 
 ## Links
 
-- [09-demo-share.md](../09-demo-share.md)
-- [share-and-router/PLAN.md](../share-and-router/PLAN.md)
+- [09-demo-share.md](../initiatives/share-and-router/09-demo-share.md)
+- [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md)

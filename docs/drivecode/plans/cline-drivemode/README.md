@@ -2,68 +2,68 @@
 
 
 Drive **mode** for Cline (cline-drivecode). The user switches into Drive like Plan/Act; that enables pair-call features inside Cline Hub Chat—room, roster, stage, addressing—without a second product shell. The hub Drive activity remains optional room management. This folder is the complete plan set. Plans only, no implementation here.
-**Drive** is the product; **drive coding** is the practice it names, the way "vibe coding" names one. The user opens the **Drive tab**, joins a call room, and pair-programs with a senior-engineer agent that holds the **Spotlight**. Chat Join call is a shortcut into the active room. This folder is the complete plan set. Plans only, no implementation here. Terminology is fixed in [00-vision.md](00-vision.md#naming).
+**Drive** is the product; **drive coding** is the practice it names, the way "vibe coding" names one. The user opens the **Drive tab**, joins a call room, and pair-programs with a senior-engineer agent that holds the **Spotlight**. Chat Join call is a shortcut into the active room. This folder is the complete plan set. Plans only, no implementation here. Terminology is fixed in [00-vision.md](foundation/00-vision.md#naming).
 
-Mode-first integration. [ARD-0007](ard/ARD-0007-drive-as-cline-mode.md), [PRD 8](prd/prd-drive-as-cline-mode.md). Room IA wireframes. [DRIVE-TAB.md](../../design/drive-wireframes/DRIVE-TAB.md).
+Mode-first integration. [ARD-0007](ard/ARD-0007-drive-as-cline-mode.md), [PRD 8](prd/prd-drive-as-cline-mode.md). Room IA wireframes. [DRIVE-TAB.md](../../design/wireframes/DRIVE-TAB.md).
 
 Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 
-**Session handoff.** [HANDOFF.md](HANDOFF.md) — start here if you are picking this work up cold.
-**PR 24 (U4 AI SDK 7) handoff.** [HANDOFF-pr24-u4.md](HANDOFF-pr24-u4.md) — remaining work to land the AI SDK major.
+**Session handoff.** [HANDOFF.md](delivery/HANDOFF.md) — start here if you are picking this work up cold.
+**PR 24 (U4 AI SDK 7) handoff.** [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) — remaining work to land the AI SDK major.
 
 ## Documents
 
 | File | What it holds |
 |---|---|
 
-| [../../native-vs-drivecode.md](../../native-vs-drivecode.md) | Native Cline vs Drivecode value matrix with maturity labels |
-| [00-vision.md](00-vision.md) | Drive mode inside Cline; Chat default work surface; staged delivery |
-| [01-architecture.md](01-architecture.md) | Kernel `@cline/drive`, hub `:25463` single writer, room-first, **Drive mode** primary activation, Chat default surface, events-first stage, D1–D9 |
-| [02-research-streaming.md](02-research-streaming.md) | Call-architecture research synthesis (Discord, Zoom, Meet, Teams, Webex, Huddles, Twitch) with adopted anti-patterns |
-| [03-research-inventory.md](03-research-inventory.md) | Cline surface inventory, hub and hook gaps, workflows and skills to define |
-| [04-future-multi-user.md](04-future-multi-user.md) | Discord-in-IDE desired state, room/participant/track model, phased media strategy |
-| [05-workflows.md](05-workflows.md) | Canonical workflow catalog. 36 sequences a human performs, cited to cursor-drive and claude-drive prior art, tiered and mapped to DRV features or gaps |
-| [06-platform-config.md](06-platform-config.md) | Platform configuration surface. `AgentProfile` and `RosterPack` domain model, facet inventory with owner/scope/lane/privacy/phase, ownership matrix, phasing, open forks |
-| [07-runtime-topology.md](07-runtime-topology.md) | Local / cloud / hybrid runtime topology, egress matrix, voice planes |
-| [08-provider-harness.md](08-provider-harness.md) | BYOK STT/TTS provider registry, OOTB default packs, Drive Settings IA |
-| [local-stt.md](local-stt.md) | Loopback whisper-compatible STT for MediaRecorder / local-worker |
-| [09-demo-share.md](09-demo-share.md) | Demo artifact share track (Cursor-like proof on stage) |
-| [10-agent-router.md](10-agent-router.md) | Multi-agent utterance router (suggest/auto among seated) |
-| [11-spotlight-a2a.md](11-spotlight-a2a.md) | Spotlight, per-agent bags, mute/deafen, A2A |
-| [12-performance.md](12-performance.md) | Drive compute/memory measurement and optimization architecture |
-| [13-deps-inventory.md](13-deps-inventory.md) | Dependency inventory and compatible upgrade matrix (U0) |
-| [14-primitives-audit.md](14-primitives-audit.md) | Primitives misuse / dead-code audit (P0) |
-| [HANDOFF-pr24-u4.md](HANDOFF-pr24-u4.md) | **Active:** remaining U4 work for PR 24 (AI SDK 7) |
-| [share-and-router/](share-and-router/) | Full reference PLAN for demo share + agent router |
-| [show-backlog-director/](show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
+| [../../native-vs-drivecode.md](../../reference/native-vs-drivecode.md) | Native Cline vs Drivecode value matrix with maturity labels |
+| [00-vision.md](foundation/00-vision.md) | Drive mode inside Cline; Chat default work surface; staged delivery |
+| [01-architecture.md](foundation/01-architecture.md) | Kernel `@cline/drive`, hub `:25463` single writer, room-first, **Drive mode** primary activation, Chat default surface, events-first stage, D1–D9 |
+| [02-research-streaming.md](research/02-research-streaming.md) | Call-architecture research synthesis (Discord, Zoom, Meet, Teams, Webex, Huddles, Twitch) with adopted anti-patterns |
+| [03-research-inventory.md](research/03-research-inventory.md) | Cline surface inventory, hub and hook gaps, workflows and skills to define |
+| [04-future-multi-user.md](research/04-future-multi-user.md) | Discord-in-IDE desired state, room/participant/track model, phased media strategy |
+| [05-workflows.md](foundation/05-workflows.md) | Canonical workflow catalog. 36 sequences a human performs, cited to cursor-drive and claude-drive prior art, tiered and mapped to DRV features or gaps |
+| [06-platform-config.md](foundation/06-platform-config.md) | Platform configuration surface. `AgentProfile` and `RosterPack` domain model, facet inventory with owner/scope/lane/privacy/phase, ownership matrix, phasing, open forks |
+| [07-runtime-topology.md](foundation/07-runtime-topology.md) | Local / cloud / hybrid runtime topology, egress matrix, voice planes |
+| [08-provider-harness.md](foundation/08-provider-harness.md) | BYOK STT/TTS provider registry, OOTB default packs, Drive Settings IA |
+| [local-stt.md](ops/local-stt.md) | Loopback whisper-compatible STT for MediaRecorder / local-worker |
+| [09-demo-share.md](initiatives/share-and-router/09-demo-share.md) | Demo artifact share track (Cursor-like proof on stage) |
+| [10-agent-router.md](initiatives/share-and-router/10-agent-router.md) | Multi-agent utterance router (suggest/auto among seated) |
+| [11-spotlight-a2a.md](initiatives/share-and-router/11-spotlight-a2a.md) | Spotlight, per-agent bags, mute/deafen, A2A |
+| [12-performance.md](research/12-performance.md) | Drive compute/memory measurement and optimization architecture |
+| [13-deps-inventory.md](research/13-deps-inventory.md) | Dependency inventory and compatible upgrade matrix (U0) |
+| [14-primitives-audit.md](research/14-primitives-audit.md) | Primitives misuse / dead-code audit (P0) |
+| [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | **Active:** remaining U4 work for PR 24 (AI SDK 7) |
+| [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
+| [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank loop |
-| [task-bank-drive-loop/](task-bank-drive-loop/) | Multi-phase plan for the task-bank Drive loop |
+| [task-bank-drive-loop/](initiatives/task-bank-drive-loop/) | Multi-phase plan for the task-bank Drive loop |
 | [ard/](ard/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
-| [00-vision.md](00-vision.md) | Drive-tab north star and staged delivery (tab + room, stage/share/address, voice) |
-| [01-architecture.md](01-architecture.md) | Kernel `@cline/drive`, hub `:25463` as single writer, room-first model, Drive tab primary, events-first stage, decisions D1 through D7 |
-| [02-research-streaming.md](02-research-streaming.md) | Call-architecture research synthesis (Discord, Zoom, Meet, Teams, Webex, Huddles, Twitch) with adopted anti-patterns |
-| [03-research-inventory.md](03-research-inventory.md) | Cline surface inventory, hub and hook gaps, workflows and skills to define |
-| [04-future-multi-user.md](04-future-multi-user.md) | Discord-in-IDE desired state, room/participant/track model, phased media strategy |
-| [05-workflows.md](05-workflows.md) | Canonical workflow catalog. 45 sequences a human performs (incl. Group I SDLC leadership), cited to cursor-drive and claude-drive prior art, tiered and mapped to DRV features or gaps |
-| [06-platform-config.md](06-platform-config.md) | Platform configuration surface. `AgentProfile` and `RosterPack` domain model, 34-facet inventory with owner/scope/lane/privacy/phase, ownership matrix, phasing, open forks |
-| [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md) | SE lead / PM brief for the planning wave (defaults, MoSCoW, risks) |
-| [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) | End-to-end systems analysis (context, flows, NFRs, as-is/to-be, recommendations) |
-| [CHECKLIST-phase0-entry.md](CHECKLIST-phase0-entry.md) | Gate before schema freeze |
-| [MATRIX-workflow-coverage.md](MATRIX-workflow-coverage.md) | Workflow ↔ feature coverage matrix |
+| [00-vision.md](foundation/00-vision.md) | Drive-tab north star and staged delivery (tab + room, stage/share/address, voice) |
+| [01-architecture.md](foundation/01-architecture.md) | Kernel `@cline/drive`, hub `:25463` as single writer, room-first model, Drive tab primary, events-first stage, decisions D1 through D7 |
+| [02-research-streaming.md](research/02-research-streaming.md) | Call-architecture research synthesis (Discord, Zoom, Meet, Teams, Webex, Huddles, Twitch) with adopted anti-patterns |
+| [03-research-inventory.md](research/03-research-inventory.md) | Cline surface inventory, hub and hook gaps, workflows and skills to define |
+| [04-future-multi-user.md](research/04-future-multi-user.md) | Discord-in-IDE desired state, room/participant/track model, phased media strategy |
+| [05-workflows.md](foundation/05-workflows.md) | Canonical workflow catalog. 45 sequences a human performs (incl. Group I SDLC leadership), cited to cursor-drive and claude-drive prior art, tiered and mapped to DRV features or gaps |
+| [06-platform-config.md](foundation/06-platform-config.md) | Platform configuration surface. `AgentProfile` and `RosterPack` domain model, 34-facet inventory with owner/scope/lane/privacy/phase, ownership matrix, phasing, open forks |
+| [LEADERSHIP-BRIEF.md](leadership/LEADERSHIP-BRIEF.md) | SE lead / PM brief for the planning wave (defaults, MoSCoW, risks) |
+| [SYSTEMS-ANALYSIS.md](leadership/SYSTEMS-ANALYSIS.md) | End-to-end systems analysis (context, flows, NFRs, as-is/to-be, recommendations) |
+| [CHECKLIST-phase0-entry.md](leadership/CHECKLIST-phase0-entry.md) | Gate before schema freeze |
+| [MATRIX-workflow-coverage.md](leadership/MATRIX-workflow-coverage.md) | Workflow ↔ feature coverage matrix |
 | [decisions/](decisions/) | Leadership DECs (agent SoT, package location, product forks) |
 | [ops/hub-drive-ops.md](ops/hub-drive-ops.md) | Hub op catalog and failure modes |
 | [schemas/README.md](schemas/README.md) | Phase 0 schema index |
 | [prd/](prd/) | Product requirements. PRD 6 Driveagent portfolio / knowledge graph / recruit; success metrics |
 | [ard/](ard/) | Architecture decision records for Driveagent home, graph, recruit, gated learn (+ status board) |
 | [examples/driveagent-pair-partner/](examples/driveagent-pair-partner/) | Example `.driveagent` home + BRIEF + sample graph |
-| [TASK-GRAPH.md](TASK-GRAPH.md) | Phases 0 through 5 with verifiable gates |
-| [AGENT-RUNBOOK.md](AGENT-RUNBOOK.md) | How agents pick tasks, spawn, verify, and report |
+| [TASK-GRAPH.md](delivery/TASK-GRAPH.md) | Phases 0 through 5 with verifiable gates |
+| [AGENT-RUNBOOK.md](delivery/AGENT-RUNBOOK.md) | How agents pick tasks, spawn, verify, and report |
 
 ## SDK layer
 
 The harness layer beneath this plan is designed in [../drivecode-sdk/](../drivecode-sdk/). It resolves `drivecode-sdk` as the same package as the `@cline/drive` kernel specified in [DRV-KERNEL](features/DRV-KERNEL.md) rather than a second one, and adds a host port, a capability descriptor, and a conformance kit to it.
 
-Two things there amend this folder: the pure room reducer and stage projection move from `@cline/core` to `@cline/drive` so the webview can import them instead of growing a second copy ([01-architecture.md](01-architecture.md) package map), and [DRV-KERNEL](features/DRV-KERNEL.md) gains the port and the kit. Decisions D1 through D9 apply; D8/D9 cover topology and the BYOK provider harness.
+Two things there amend this folder: the pure room reducer and stage projection move from `@cline/core` to `@cline/drive` so the webview can import them instead of growing a second copy ([01-architecture.md](foundation/01-architecture.md) package map), and [DRV-KERNEL](features/DRV-KERNEL.md) gains the port and the kit. Decisions D1 through D9 apply; D8/D9 cover topology and the BYOK provider harness.
 
 ## Features
 
@@ -116,11 +116,11 @@ MVP is phases 0 through 3. Future is phases 4 and 5.
 | [DRV-ISOLATION](features/DRV-ISOLATION.md) | Worktree isolation for multi-agent seats | 4 | Future |
 | [DRV-TEAM-OPT](features/DRV-TEAM-OPT.md) | Optional specialist agents (flagged) | 4 | Future |
 
-Multi-user itself (rooms with several humans, remote events, optional WebRTC) is phase 5 design review territory, held in [04-future-multi-user.md](04-future-multi-user.md).
+Multi-user itself (rooms with several humans, remote events, optional WebRTC) is phase 5 design review territory, held in [04-future-multi-user.md](research/04-future-multi-user.md).
 
 ## How agents pick tasks
 
-Short version. Lowest phase with a red gate, then a feature whose dependencies are done, then its checklist top to bottom, verify command per task. Full protocol, environment conventions, and hard constraints are in [AGENT-RUNBOOK.md](AGENT-RUNBOOK.md).
+Short version. Lowest phase with a red gate, then a feature whose dependencies are done, then its checklist top to bottom, verify command per task. Full protocol, environment conventions, and hard constraints are in [AGENT-RUNBOOK.md](delivery/AGENT-RUNBOOK.md).
 
 ## Principles behind the plan's decisions
 
@@ -144,7 +144,7 @@ Each principle below drove a concrete choice you can see in the files.
 - Privacy-strict defaults. No audio or transcript persistence without an explicit, visible debug flag.
 - No timeframes in plans or status docs.
 - Drive is a Cline mode (Plan/Act-class). Chat is the default work surface; Drive hub activity is optional room IA.
-- **`Team` is Cline's word.** It means the runtime execution group in `sdk/packages/core/src/extensions/tools/team/`. Drive's human-curated seating preset is a **`RosterPack`**, and no Drive identifier contains `Team`. UI copy says *pack*. See [06-platform-config.md](06-platform-config.md#naming-rosterpack-not-teampack-not-team).
+- **`Team` is Cline's word.** It means the runtime execution group in `sdk/packages/core/src/extensions/tools/team/`. Drive's human-curated seating preset is a **`RosterPack`**, and no Drive identifier contains `Team`. UI copy says *pack*. See [06-platform-config.md](foundation/06-platform-config.md#naming-rosterpack-not-teampack-not-team).
 - Drive **overlays** appearance on the seated agent. Prompts, tools, skills, provider, and model ids are authored under `.driveagent/<slug>/` (or migration-imported from `.cline/agents/*.yaml`) and **compile** into the host runtime. They are never stored in Drive facets / `AgentProfile`. See [DEC-agent-source-of-truth](decisions/DEC-agent-source-of-truth.md).
 
 ## Implementation guidance (poteto-mode non-negotiables for implementers)

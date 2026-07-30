@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-25
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: PRD 6, [06-platform-config.md](../06-platform-config.md), DRV-AGENT-PROFILE
+- Related: PRD 6, [06-platform-config.md](../foundation/06-platform-config.md), DRV-AGENT-PROFILE
 - Inspired by: BRIEF's dot-agents layout (canonical vs derived)
 
 ## Context
@@ -70,5 +70,5 @@ with optional user-tier homes under `~/.driveagent/<slug>/` using the same two-t
 ## References
 
 - PRD 6: [prd-driveagent-portfolio.md](../prd/prd-driveagent-portfolio.md)
-- Platform overlay rule: [06-platform-config.md](../06-platform-config.md)
+- Platform overlay rule: [06-platform-config.md](../foundation/06-platform-config.md)
 - BRIEF layout: `briefs/docs/standards/brief/dot-agents-layout.md`

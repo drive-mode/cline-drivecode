@@ -1,6 +1,6 @@
 # DRV-PERSONA-CHIP · Partner presence chip
 
-Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

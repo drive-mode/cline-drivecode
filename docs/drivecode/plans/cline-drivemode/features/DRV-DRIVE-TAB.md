@@ -1,12 +1,12 @@
 # DRV-DRIVE-TAB · Drive tab (channels + call rooms)
 
-Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 
 Drive needs a home that feels like Discord voice inside Slack chrome, not only a Join control on Chat. One left-nav Drive activity lists text channels (optional later) and call rooms. Opening a room is the primary join path. Chat Join call remains a shortcut into the active room (DRV-TOGGLE).
 
-Decision record. [DRIVE-TAB.md](../../../design/drive-wireframes/DRIVE-TAB.md).
+Decision record. [DRIVE-TAB.md](../../../design/wireframes/DRIVE-TAB.md).
 
 ## Acceptance criteria
 

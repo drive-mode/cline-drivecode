@@ -1,12 +1,12 @@
 # DRV-PLATFORM-CONFIG · Facet catalog and durable config store
 
-Back to [README](../README.md). Phase 0 in [TASK-GRAPH](../TASK-GRAPH.md). Design in [06-platform-config.md](../06-platform-config.md).
+Back to [README](../README.md). Phase 0 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Design in [06-platform-config.md](../foundation/06-platform-config.md).
 
 ## Problem / user value
 
 Every user-facing knob in Drive needs an owner, a scope, a persistence lane, a privacy class, and a phase. Without one mechanism that declares all five, each facet invents its own store and Drive reproduces `cursor-drive:docs/reference/config-schema.md` — a flat namespace with no answer for what happens when a setting changes during a live call, which surface may write it, or whether it is safe to export.
 
-This feature is the mechanism, not a facet. It ships with exactly two entries (`drive.defaults.subMode`, `agent.appearance`) so it is provable without a settings UI, and it is the registry every later config facet lands in. The full inventory of thirty-four facets, with owners and phases, is the inventory table in [06-platform-config.md](../06-platform-config.md).
+This feature is the mechanism, not a facet. It ships with exactly two entries (`drive.defaults.subMode`, `agent.appearance`) so it is provable without a settings UI, and it is the registry every later config facet lands in. The full inventory of thirty-four facets, with owners and phases, is the inventory table in [06-platform-config.md](../foundation/06-platform-config.md).
 
 ## Acceptance criteria
 
@@ -56,6 +56,6 @@ This feature is the mechanism, not a facet. It ships with exactly two entries (`
 
 ## Risks
 
-- **Registry gravity.** A generic config layer invites putting runtime policy in it. Mitigation. The design names three things that stay outside the schema — preset capping, keybinding collisions, contrast floors — and each has a boundary function in [06-platform-config.md](../06-platform-config.md). Review any new "the catalog should also decide…" against that list.
+- **Registry gravity.** A generic config layer invites putting runtime policy in it. Mitigation. The design names three things that stay outside the schema — preset capping, keybinding collisions, contrast floors — and each has a boundary function in [06-platform-config.md](../foundation/06-platform-config.md). Review any new "the catalog should also decide…" against that list.
 - **Building the mechanism with no consumer.** Mitigation. Exactly two entries ship here, one of which ([DRV-AGENT-PROFILE](DRV-AGENT-PROFILE.md)) is a phase 1 user-visible feature, so the abstraction is proven by use rather than by inspection.
 - **A second writer arriving quietly.** A CLI that writes the file directly when the hub is down would look helpful and break the invariant. Mitigation. Fail fast is an acceptance criterion, and the test asserts it.

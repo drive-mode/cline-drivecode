@@ -1,6 +1,6 @@
 # DRV-SKILL-PORT · Port the Drive persona and mode skills
 
-Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

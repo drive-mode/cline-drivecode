@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-27
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: D9 in [01-architecture.md](../01-architecture.md), [08-provider-harness.md](../08-provider-harness.md), [ARD-0009](ARD-0009-runtime-topology-local-cloud.md), [06-platform-config.md](../06-platform-config.md), DRV-PLATFORM-CONFIG
+- Related: D9 in [01-architecture.md](../foundation/01-architecture.md), [08-provider-harness.md](../foundation/08-provider-harness.md), [ARD-0009](ARD-0009-runtime-topology-local-cloud.md), [06-platform-config.md](../foundation/06-platform-config.md), DRV-PLATFORM-CONFIG
 
 ## Context
 
@@ -51,5 +51,5 @@ Users need Drive to work out of the box for local-only and cloud setups, and to 
 
 ## Links
 
-- [08-provider-harness.md](../08-provider-harness.md)
-- [07-runtime-topology.md](../07-runtime-topology.md)
+- [08-provider-harness.md](../foundation/08-provider-harness.md)
+- [07-runtime-topology.md](../foundation/07-runtime-topology.md)

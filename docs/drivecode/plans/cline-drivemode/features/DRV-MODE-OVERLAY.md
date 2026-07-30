@@ -1,6 +1,6 @@
 # DRV-MODE-OVERLAY · Ask/debug overlays on the mode pill
 
-Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../TASK-GRAPH.md).
+Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
 ## Problem / user value
 

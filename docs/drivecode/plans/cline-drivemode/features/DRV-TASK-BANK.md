@@ -1,6 +1,6 @@
 # DRV-TASK-BANK · Task bank and Drive loop
 
-Back to [README](../README.md). Spans phase 1 (posture) and phase 2 (now/next) in [TASK-GRAPH](../TASK-GRAPH.md). Product: [PRD 9](../prd/prd-task-bank-drive-loop.md). Decision: [ARD-0008](../ard/ARD-0008-task-bank.md).
+Back to [README](../README.md). Spans phase 1 (posture) and phase 2 (now/next) in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 9](../prd/prd-task-bank-drive-loop.md). Decision: [ARD-0008](../ard/ARD-0008-task-bank.md).
 
 ## Problem / user value
 
