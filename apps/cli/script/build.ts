@@ -1,14 +1,18 @@
 #!/usr/bin/env bun
 
 import {
+	chmodSync,
+	copyFileSync,
 	cpSync,
 	existsSync,
 	mkdirSync,
 	readdirSync,
 	readFileSync,
 	realpathSync,
+	rmSync,
 	statSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { $ } from "bun";
 import {
@@ -180,17 +184,18 @@ async function buildCompiledBinary(input: {
 		"/",
 	);
 
-	// Build to /tmp first so Bun's temp-file rename stays on one filesystem
+	// Build to a temp dir first so Bun's temp-file rename stays on one filesystem
 	// layer in containerized environments (virtiofs, overlayfs).
 	const entrypoint = join(cliDir, "src/index.ts");
-	const tmpDir = join("/tmp", `cline-build-${input.dirName}`);
+	const buildTmpRoot = process.platform === "win32" ? tmpdir() : "/tmp";
+	const tmpDir = join(buildTmpRoot, `cline-build-${input.dirName}`);
 	const tmpOutfile = join(
 		tmpDir,
 		input.outfile.endsWith(".exe") ? "cline.exe" : "cline",
 	);
 	mkdirSync(tmpDir, { recursive: true });
 
-	process.chdir("/tmp");
+	process.chdir(buildTmpRoot);
 	const result = await Bun.build({
 		entrypoints: [entrypoint, parserWorker],
 		splitting: true,
@@ -218,8 +223,11 @@ async function buildCompiledBinary(input: {
 		process.exit(1);
 	}
 
-	await $`cp ${tmpOutfile} ${input.outfile} && chmod 755 ${input.outfile}`;
-	await $`rm -rf ${tmpDir}`;
+	copyFileSync(tmpOutfile, input.outfile);
+	if (process.platform !== "win32") {
+		chmodSync(input.outfile, 0o755);
+	}
+	rmSync(tmpDir, { recursive: true, force: true });
 }
 
 for (const item of targets) {
