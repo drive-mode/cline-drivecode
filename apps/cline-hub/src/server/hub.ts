@@ -273,10 +273,13 @@ export async function attachHub(ctx: HubContext): Promise<void> {
 			if (!roomId || !snapshot || typeof snapshot !== "object") {
 				return;
 			}
+			const seq =
+				typeof payload.seq === "number" ? payload.seq : undefined;
 			ctx.broadcast({
 				type: "room_snapshot",
 				roomId,
 				snapshot,
+				...(seq !== undefined ? { seq } : {}),
 			});
 		},
 		onRoomEvent(payload) {
@@ -286,11 +289,14 @@ export async function attachHub(ctx: HubContext): Promise<void> {
 			if (!roomId || !snapshot || typeof snapshot !== "object") {
 				return;
 			}
+			const seq =
+				typeof payload.seq === "number" ? payload.seq : undefined;
 			ctx.broadcast({
 				type: "drive_event",
 				roomId,
 				event,
 				snapshot,
+				...(seq !== undefined ? { seq } : {}),
 			});
 		},
 		onTeamProgress(payload) {

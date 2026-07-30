@@ -128,6 +128,7 @@ export {
 } from "./events";
 export {
 	assertNeverGateActionClass,
+	classifyToolNameForGate,
 	DEFAULT_UNKNOWN_GATE_CLASS,
 	defaultDispositionForGateClass,
 	DRIVE_GATE_TAXONOMY_SCHEMA_VERSION,

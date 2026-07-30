@@ -6,6 +6,7 @@ import {
 	GATE_CLASS_DEFAULT_DISPOSITION,
 	GateActionClassSchema,
 	assertNeverGateActionClass,
+	classifyToolNameForGate,
 	defaultDispositionForGateClass,
 	parseGateActionClass,
 	type GateActionClass,
@@ -73,5 +74,15 @@ describe("DRV-GATES taxonomy", () => {
 			}
 		};
 		expect(classify("policy.hard")).toBe("policy.hard");
+	});
+
+	it("classifyToolNameForGate maps common tools", () => {
+		expect(classifyToolNameForGate("delete_file")).toBe("fs.destructive");
+		expect(classifyToolNameForGate("git_commit")).toBe("git.mutating");
+		expect(classifyToolNameForGate("browser_navigate")).toBe("net.exfil");
+		expect(classifyToolNameForGate("execute_command")).toBe("shell.unchecked");
+		expect(classifyToolNameForGate("read_secret")).toBe("secrets.read");
+		expect(classifyToolNameForGate("policy_check")).toBe("policy.hard");
+		expect(classifyToolNameForGate("read_file")).toBe("shell.unchecked");
 	});
 });

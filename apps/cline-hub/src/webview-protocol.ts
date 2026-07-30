@@ -300,6 +300,8 @@ export type WebviewInboundMessage =
 			agent: { id: string; displayName: string };
 			activateDrive?: boolean;
 			sessionId?: string;
+			/** Attach ARD-0013 durable JSONL log under this workspace. */
+			workspaceRoot?: string;
 	  }
 	| {
 			type: "call_leave";
@@ -356,6 +358,9 @@ export type WebviewInboundMessage =
 			type: "call_get_room";
 			roomId?: string;
 			sessionId?: string;
+			/** Reconnect cursor: hub returns events with seq > afterSeq. */
+			afterSeq?: number;
+			workspaceRoot?: string;
 	  }
 	| {
 			type: "drive_bank_get";
@@ -561,12 +566,14 @@ export type WebviewOutboundMessage =
 			type: "room_snapshot";
 			roomId: string;
 			snapshot: import("@cline/shared").RoomSnapshot;
+			seq?: number;
 	  }
 	| {
 			type: "drive_event";
 			roomId: string;
 			event: import("@cline/shared").DriveEvent;
 			snapshot: import("@cline/shared").RoomSnapshot;
+			seq?: number;
 	  }
 	| { type: "call_error"; text: string; code?: string; command?: string }
 	| {

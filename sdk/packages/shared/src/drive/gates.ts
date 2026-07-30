@@ -63,3 +63,56 @@ export function assertNeverGateActionClass(actionClass: never): never {
 		`Unhandled GateActionClass: ${JSON.stringify(actionClass satisfies never)}`,
 	);
 }
+
+/**
+ * Best-effort tool-name → gate class for feed-card labels (DRV-GATES MVP).
+ * Unknown names fall back to {@link DEFAULT_UNKNOWN_GATE_CLASS}.
+ */
+export function classifyToolNameForGate(toolName: string): GateActionClass {
+	const name = toolName.trim().toLowerCase();
+	if (
+		name.includes("delete") ||
+		name.includes("rm_") ||
+		name.includes("unlink") ||
+		name.includes("force_write")
+	) {
+		return "fs.destructive";
+	}
+	if (
+		name.includes("git") ||
+		name.includes("commit") ||
+		name.includes("push") ||
+		name.includes("reset")
+	) {
+		return "git.mutating";
+	}
+	if (
+		name.includes("fetch") ||
+		name.includes("http") ||
+		name.includes("browser") ||
+		name.includes("request")
+	) {
+		return "net.exfil";
+	}
+	if (
+		name.includes("secret") ||
+		name.includes("credential") ||
+		name === "read_env" ||
+		name.includes("read_secret")
+	) {
+		return "secrets.read";
+	}
+	if (name.includes("policy") || name.includes("permission")) {
+		return "policy.hard";
+	}
+	if (
+		name.includes("shell") ||
+		name.includes("execute") ||
+		name.includes("command") ||
+		name.includes("bash") ||
+		name.includes("terminal")
+	) {
+		return "shell.unchecked";
+	}
+	return DEFAULT_UNKNOWN_GATE_CLASS;
+}
