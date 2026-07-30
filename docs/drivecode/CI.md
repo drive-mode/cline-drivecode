@@ -90,9 +90,41 @@ bun -F @cline/drivecode-demo typecheck && bun -F @cline/drivecode-demo test
 bun -F @cline/cli build && bun -F @cline/cli typecheck && bun -F @cline/cli test:unit
 ```
 
+## Release identity (publish / deploy traceability)
+
+Publish workflows mint a durable identity **before** long pack/publish work so cancelled or retried runs still leave a trail in the Actions job summary.
+
+| Field | Meaning |
+|---|---|
+| `version` | npm / marketplace version. Nightlies use `base-nightly.<run_id>` (VS Code: `major.minor.<run_id>`) instead of unix timestamps |
+| `build_id` | `product@version+<shortsha>.run<run_id>` — greppable across logs, hub discovery (`CLINE_HUB_BUILD_ID`), and summaries |
+| `git_tag` | Canonical tag pushed **after** a successful publish (including nightlies and `@cline/ui`) |
+| `run_url` | Actions run that produced the build |
+
+Shared pieces:
+
+- `.github/scripts/release-identity.sh` — pure bash calculator
+- `.github/actions/release-identity` — writes outputs + job summary
+- `.github/actions/release-tag` — annotated tag push (idempotent if tag already points at the same commit)
+
+Tag schemes:
+
+| Product | Latest / stable | Nightly |
+|---|---|---|
+| SDK | `sdk/<pkg>/vX.Y.Z` (unchanged) | `sdk-nightly/vX.Y.Z-nightly.<run_id>` |
+| CLI | `cli-vX.Y.Z` (pre-pushed) | `cli-nightly/vX.Y.Z-nightly.<run_id>` |
+| UI | `ui/vX.Y.Z` | — |
+| VS Code nightly | — | `vscode-nightly/vX.Y.<run_id>-<shortsha>` |
+| Desktop | `desktop-vX.Y.Z` (pre-pushed) | — |
+
+Publish workflows use `concurrency` with `cancel-in-progress: false` so overlapping dispatches do not race the same channel.
+
+To recover a cancelled mid-publish attempt: open the Actions run → job summary → `build_id` / commit / intended `git_tag`. Successful publishes are always recoverable from the git tag.
+
 ## Follow-ups
 
 - Point branch rulesets at `drive-ci` only for Drive-required merges.
 - Optional later: graph-aware affected via Bun workspace metadata (Nx/Turbo only if the package graph outgrows the manual map).
 - Re-measure Actions minutes after this lands; keep vscode e2e path filters for non-required expensive suites.
 - Optional: split VS Code unit / integration / webview into parallel jobs once artifact reuse beats re-install cost.
+- Optional: embed `CLINE_GIT_SHA` into CLI `version` / doctor output (hub already honors `CLINE_HUB_BUILD_ID`).

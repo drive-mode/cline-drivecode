@@ -31,6 +31,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: cli-publish-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.publish_target || 'nightly' }}
+  cancel-in-progress: false
+
 defaults:
   run:
     working-directory: .
@@ -257,7 +261,7 @@ jobs:
   publish-nightly:
     name: Publish cline nightly
     permissions:
-      contents: read
+      contents: write
       id-token: write
     if: |
       github.repository == 'cline/cline' &&
@@ -347,21 +351,25 @@ jobs:
 
       - name: Generate nightly version
         if: steps.check_commits.outputs.skip != 'true'
-        id: version
+        id: base
         run: |
           BASE_VERSION=$(node -p "require('./apps/cli/package.json').version")
-          TIMESTAMP=$(date +%s)
-          VERSION="${BASE_VERSION}-nightly.${TIMESTAMP}"
-
-          echo "Base version: ${BASE_VERSION}"
-          echo "Generated nightly version: ${VERSION}"
           echo "base_version=${BASE_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Base version: ${BASE_VERSION}"
+
+      - name: Mint release identity
+        if: steps.check_commits.outputs.skip != 'true'
+        id: identity
+        uses: ./.github/actions/release-identity
+        with:
+          product: cli
+          channel: nightly
+          base-version: ${{ steps.base.outputs.base_version }}
 
       - name: Update nightly package version
         if: steps.check_commits.outputs.skip != 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           node -e '
             const fs = require("node:fs");
@@ -377,6 +385,9 @@ jobs:
         run: bun script/build.ts --install-native-variants --skip-sdk-build
         working-directory: apps/cli
         env:
+          CLINE_HUB_BUILD_ID: ${{ steps.identity.outputs.build_id }}
+          CLINE_GIT_SHA: ${{ github.sha }}
+          CLINE_BUILD_ID: ${{ steps.identity.outputs.build_id }}
           TELEMETRY_SERVICE_API_KEY: ${{ secrets.TELEMETRY_SERVICE_API_KEY }}
           ERROR_SERVICE_API_KEY: ${{ secrets.ERROR_SERVICE_API_KEY }}
           OTEL_TELEMETRY_ENABLED: ${{ secrets.OTEL_TELEMETRY_ENABLED }}
@@ -389,7 +400,7 @@ jobs:
       - name: Verify build output
         if: steps.check_commits.outputs.skip != 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           EXPECTED=(
             "@cline/cli-darwin-arm64"
@@ -426,10 +437,32 @@ jobs:
         run: bun script/publish-npm.ts --tag nightly
         working-directory: apps/cli
 
+      - name: Tag nightly publish
+        if: steps.check_commits.outputs.skip != 'true'
+        uses: ./.github/actions/release-tag
+        with:
+          tag: ${{ steps.identity.outputs.git_tag }}
+          message: |
+            CLI nightly ${{ steps.identity.outputs.version }}
+            build_id=${{ steps.identity.outputs.build_id }}
+            run=${{ steps.identity.outputs.run_url }}
+            commit=${{ github.sha }}
+
       - name: Summary
         if: steps.check_commits.outputs.skip != 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
+          BUILD_ID: ${{ steps.identity.outputs.build_id }}
+          GIT_TAG: ${{ steps.identity.outputs.git_tag }}
+          RUN_URL: ${{ steps.identity.outputs.run_url }}
         run: |
-          echo "Published cline@${VERSION} to npm with dist-tag 'nightly'"
-          echo "Install with: npm install -g cline@nightly"
+          {
+            echo "### Published CLI nightly"
+            echo ""
+            echo "- version: \`${VERSION}\`"
+            echo "- build_id: \`${BUILD_ID}\`"
+            echo "- git tag: \`${GIT_TAG}\`"
+            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- run: ${RUN_URL}"
+            echo "- install: \`npm install -g cline@nightly\`"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,61 @@
+# Push an annotated git tag for a successful publish.
+# Tags are the durable pointer from a shipped version → commit after cancellations.
+name: Release tag
+description: Create and push an annotated release/nightly git tag
+
+inputs:
+    tag:
+        description: Fully-qualified tag name (e.g. sdk-nightly/v0.0.66-nightly.123)
+        required: true
+    message:
+        description: Annotated tag message
+        required: true
+    sha:
+        description: Commit to tag (defaults to HEAD)
+        required: false
+        default: ""
+    repository-path:
+        description: Checkout path when the repo is not at GITHUB_WORKSPACE root
+        required: false
+        default: ""
+
+runs:
+    using: composite
+    steps:
+        - name: Create and push tag
+          shell: bash
+          env:
+              TAG: ${{ inputs.tag }}
+              MESSAGE: ${{ inputs.message }}
+              SHA: ${{ inputs.sha }}
+              REPOSITORY_PATH: ${{ inputs.repository-path }}
+              GH_TOKEN: ${{ github.token }}
+          run: |
+              set -euo pipefail
+              ROOT="${GITHUB_WORKSPACE}"
+              if [ -n "${REPOSITORY_PATH}" ]; then
+                ROOT="${GITHUB_WORKSPACE}/${REPOSITORY_PATH}"
+              fi
+              cd "$ROOT"
+
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+              TARGET="${SHA:-HEAD}"
+              TARGET_COMMIT="$(git rev-parse "${TARGET}^{commit}")"
+
+              if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+                EXISTING="$(git rev-parse "refs/tags/${TAG}^{commit}")"
+                if [ "$EXISTING" = "$TARGET_COMMIT" ]; then
+                  echo "Tag already exists at the same commit: ${TAG}"
+                else
+                  echo "Tag ${TAG} already exists at ${EXISTING}, refusing to move (wanted ${TARGET_COMMIT})" >&2
+                  exit 1
+                fi
+              else
+                git tag -a "${TAG}" "${TARGET_COMMIT}" -m "${MESSAGE}"
+                echo "Created tag: ${TAG} → ${TARGET_COMMIT}"
+              fi
+
+              git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}"
+              echo "Pushed tag: ${TAG}"

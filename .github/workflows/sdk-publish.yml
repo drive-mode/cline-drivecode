@@ -24,6 +24,10 @@ on:
     # Run nightly at 2:00 AM UTC
     - cron: "0 2 * * *"
 
+concurrency:
+  group: sdk-publish-${{ github.event_name == 'workflow_dispatch' && inputs.channel || 'nightly' }}
+  cancel-in-progress: false
+
 defaults:
   run:
     working-directory: .
@@ -143,34 +147,37 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build SDK
+      - name: Read base package version
         if: steps.check_commits.outputs.skip != 'true'
-        run: bun run build:sdk
-
-      - name: Generate shared version
-        if: steps.check_commits.outputs.skip != 'true'
-        id: version
-        env:
-          CHANNEL: ${{ steps.channel.outputs.channel }}
+        id: base
         run: |
           BASE_VERSION=$(node -p "require('./sdk/packages/llms/package.json').version")
+          echo "base_version=${BASE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Base version: ${BASE_VERSION}"
 
-          if [ "$CHANNEL" = "nightly" ]; then
-            TIMESTAMP=$(date +%s)
-            VERSION="${BASE_VERSION}-nightly.${TIMESTAMP}"
-          else
-            VERSION="$BASE_VERSION"
-          fi
+      # Mint identity before long publish work so cancelled runs still show
+      # version/build_id/run URL in the job summary.
+      - name: Mint release identity
+        if: steps.check_commits.outputs.skip != 'true'
+        id: identity
+        uses: ./.github/actions/release-identity
+        with:
+          product: sdk
+          channel: ${{ steps.channel.outputs.channel }}
+          base-version: ${{ steps.base.outputs.base_version }}
 
-          echo "Base version: $BASE_VERSION"
-          echo "Channel: $CHANNEL"
-          echo "Publish version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Build SDK
+        if: steps.check_commits.outputs.skip != 'true'
+        env:
+          CLINE_HUB_BUILD_ID: ${{ steps.identity.outputs.build_id }}
+          CLINE_GIT_SHA: ${{ github.sha }}
+          CLINE_BUILD_ID: ${{ steps.identity.outputs.build_id }}
+        run: bun run build:sdk
 
       - name: Update all package versions and lockfile
         if: steps.check_commits.outputs.skip != 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: bun sdk/scripts/version.ts "$VERSION"
 
       - name: Verify publishability
@@ -189,7 +196,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: "true"
           CHANNEL: ${{ steps.channel.outputs.channel }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           echo "Publishing @cline/shared@${VERSION} with tag '${CHANNEL}'..."
           cd sdk/packages/shared
@@ -201,7 +208,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: "true"
           CHANNEL: ${{ steps.channel.outputs.channel }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           echo "Publishing @cline/llms@${VERSION} with tag '${CHANNEL}'..."
           cd sdk/packages/llms
@@ -213,7 +220,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: "true"
           CHANNEL: ${{ steps.channel.outputs.channel }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           echo "Publishing @cline/agents@${VERSION} with tag '${CHANNEL}'..."
           cd sdk/packages/agents
@@ -225,7 +232,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: "true"
           CHANNEL: ${{ steps.channel.outputs.channel }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           echo "Publishing @cline/core@${VERSION} with tag '${CHANNEL}'..."
           cd sdk/packages/core
@@ -237,7 +244,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: "true"
           CHANNEL: ${{ steps.channel.outputs.channel }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           echo "Publishing @cline/sdk@${VERSION} with tag '${CHANNEL}'..."
           cd sdk/packages/sdk
@@ -247,7 +254,7 @@ jobs:
       - name: Create package tags for production publish
         if: steps.check_commits.outputs.skip != 'true' && steps.channel.outputs.channel == 'latest'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -265,11 +272,24 @@ jobs:
             git push origin "refs/tags/${TAG}"
           done
 
+      # Nightlies previously left no git trail — tag after npm success so
+      # version ↔ commit ↔ Actions run_id stays recoverable after cancellations.
+      - name: Tag nightly publish
+        if: steps.check_commits.outputs.skip != 'true' && steps.channel.outputs.channel == 'nightly'
+        uses: ./.github/actions/release-tag
+        with:
+          tag: ${{ steps.identity.outputs.git_tag }}
+          message: |
+            SDK nightly ${{ steps.identity.outputs.version }}
+            build_id=${{ steps.identity.outputs.build_id }}
+            run=${{ steps.identity.outputs.run_url }}
+            commit=${{ github.sha }}
+
       - name: Get Previous SDK Tag
         if: steps.check_commits.outputs.skip != 'true' && steps.channel.outputs.channel == 'latest'
         id: prev_tag
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           # The checkout is shallow and tagless, so fetch the release tags explicitly.
           git fetch origin "+refs/tags/sdk/sdk/v*:refs/tags/sdk/sdk/v*"
@@ -291,35 +311,42 @@ jobs:
         if: steps.check_commits.outputs.skip != 'true' && steps.channel.outputs.channel == 'latest'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: sdk/sdk/v${{ steps.version.outputs.version }}
-          name: "SDK v${{ steps.version.outputs.version }}"
+          tag_name: sdk/sdk/v${{ steps.identity.outputs.version }}
+          name: "SDK v${{ steps.identity.outputs.version }}"
           body: |
             ${{ steps.changelog.outputs.content }}
 
-            ${{ steps.prev_tag.outputs.prev_tag != '' && format('**Full Changelog**: https://github.com/{0}/compare/{1}...sdk/sdk/v{2}', github.repository, steps.prev_tag.outputs.prev_tag, steps.version.outputs.version) || '' }}
+            **Build:** `${{ steps.identity.outputs.build_id }}`
+            **Commit:** `${{ github.sha }}`
+            **Actions run:** ${{ steps.identity.outputs.run_url }}
+
+            ${{ steps.prev_tag.outputs.prev_tag != '' && format('**Full Changelog**: https://github.com/{0}/compare/{1}...sdk/sdk/v{2}', github.repository, steps.prev_tag.outputs.prev_tag, steps.identity.outputs.version) || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         if: steps.check_commits.outputs.skip != 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.identity.outputs.version }}
           CHANNEL: ${{ steps.channel.outputs.channel }}
+          BUILD_ID: ${{ steps.identity.outputs.build_id }}
+          GIT_TAG: ${{ steps.identity.outputs.git_tag }}
+          RUN_URL: ${{ steps.identity.outputs.run_url }}
         run: |
-          echo "Published SDK packages with tag '${CHANNEL}':"
-          echo "  - @cline/shared@${VERSION}"
-          echo "  - @cline/llms@${VERSION}"
-          echo "  - @cline/agents@${VERSION}"
-          echo "  - @cline/core@${VERSION}"
-          echo "  - @cline/sdk@${VERSION}"
-          if [ "$CHANNEL" = "latest" ]; then
-            echo "Created git tags:"
-            echo "  - sdk/shared/v${VERSION}"
-            echo "  - sdk/llms/v${VERSION}"
-            echo "  - sdk/agents/v${VERSION}"
-            echo "  - sdk/core/v${VERSION}"
-            echo "  - sdk/sdk/v${VERSION}"
-          fi
+          {
+            echo "### Published SDK (\`${CHANNEL}\`)"
+            echo ""
+            echo "- version: \`${VERSION}\`"
+            echo "- build_id: \`${BUILD_ID}\`"
+            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- run: ${RUN_URL}"
+            echo "- packages: shared / llms / agents / core / sdk @ ${VERSION}"
+            if [ "$CHANNEL" = "latest" ]; then
+              echo "- git tags: sdk/{shared,llms,agents,core,sdk}/v${VERSION}"
+            else
+              echo "- git tag: \`${GIT_TAG}\`"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Post release to Slack
         if: steps.check_commits.outputs.skip != 'true' && steps.channel.outputs.channel == 'latest'
@@ -329,12 +356,12 @@ jobs:
           token: ${{ secrets.SLACK_RELEASE_BOT_TOKEN }}
           payload: |
             channel: "C0APVKGGZFC"
-            text: "Cline SDK v${{ steps.version.outputs.version }}"
+            text: "Cline SDK v${{ steps.identity.outputs.version }}"
             blocks:
               - type: "section"
                 text:
                   type: "mrkdwn"
-                  text: "Cline SDK v${{ steps.version.outputs.version }}"
+                  text: "Cline SDK v${{ steps.identity.outputs.version }}"
               - type: "section"
                 text:
                   type: "mrkdwn"
@@ -342,4 +369,4 @@ jobs:
               - type: "context"
                 elements:
                   - type: "mrkdwn"
-                    text: "<https://www.npmjs.com/package/@cline/sdk/v/${{ steps.version.outputs.version }}|View on npm>${{ steps.prev_tag.outputs.prev_tag != '' && format(' | Full Changelog: https://github.com/{0}/compare/{1}...sdk/sdk/v{2}', github.repository, steps.prev_tag.outputs.prev_tag, steps.version.outputs.version) || '' }}"
+                    text: "<https://www.npmjs.com/package/@cline/sdk/v/${{ steps.identity.outputs.version }}|View on npm>${{ steps.prev_tag.outputs.prev_tag != '' && format(' | Full Changelog: https://github.com/{0}/compare/{1}...sdk/sdk/v{2}', github.repository, steps.prev_tag.outputs.prev_tag, steps.identity.outputs.version) || '' }}"

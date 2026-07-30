@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-publish-${{ github.event.inputs.git_tag || github.run_id }}
+  cancel-in-progress: false
+
 defaults:
   run:
     working-directory: .
@@ -77,6 +81,15 @@ jobs:
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Mint release identity
+        id: identity
+        uses: ./.github/actions/release-identity
+        with:
+          product: desktop
+          channel: latest
+          version: ${{ steps.version.outputs.version }}
+          base-version: ${{ steps.version.outputs.version }}
 
   build:
     name: Build macOS (${{ matrix.arch }})

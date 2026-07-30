@@ -99,9 +99,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: Publish
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -122,11 +127,29 @@ jobs:
           echo "npm ${npm_version}"
           node -e 'const [major, minor, patch] = process.argv[1].split(".").map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) { console.error("npm 11.5.1 or newer is required for trusted publishing"); process.exit(1); }' "$npm_version"
 
+      - name: Read package version from artifact
+        id: base
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=$(find "$RUNNER_TEMP/ui-npm-pack" -maxdepth 1 -name '*.tgz' -print -quit)
+          version=$(tar -xOf "$archive" package/package.json | node -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(input).version))')
+          echo "base_version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Mint release identity
+        id: identity
+        uses: ./.github/actions/release-identity
+        with:
+          product: ui
+          channel: ${{ inputs.npm_tag }}
+          base-version: ${{ steps.base.outputs.base_version }}
+
       - name: Publish package
         shell: bash
         env:
           NPM_CONFIG_PROVENANCE: "true"
           NPM_TAG: ${{ inputs.npm_tag }}
+          VERSION: ${{ steps.identity.outputs.version }}
         run: |
           set -euo pipefail
           archive=$(find "$RUNNER_TEMP/ui-npm-pack" -maxdepth 1 -name '*.tgz' -print -quit)
@@ -135,11 +158,39 @@ jobs:
             exit 1
           fi
 
-          version=$(tar -xOf "$archive" package/package.json | node -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(input).version))')
-          if npm view "@cline/ui@${version}" version >/dev/null 2>&1; then
-            echo "@cline/ui@${version} already exists; bump sdk/packages/ui/package.json before publishing"
+          if npm view "@cline/ui@${VERSION}" version >/dev/null 2>&1; then
+            echo "@cline/ui@${VERSION} already exists; bump sdk/packages/ui/package.json before publishing"
             exit 1
           fi
 
           npm publish "$archive" --tag "$NPM_TAG" --access public
-          echo "Published @cline/ui@${version} with npm tag '${NPM_TAG}'"
+          echo "Published @cline/ui@${VERSION} with npm tag '${NPM_TAG}'"
+
+      - name: Tag UI publish
+        uses: ./.github/actions/release-tag
+        with:
+          tag: ${{ steps.identity.outputs.git_tag }}
+          message: |
+            @cline/ui@${{ steps.identity.outputs.version }} (${{ inputs.npm_tag }})
+            build_id=${{ steps.identity.outputs.build_id }}
+            run=${{ steps.identity.outputs.run_url }}
+            commit=${{ github.sha }}
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.identity.outputs.version }}
+          BUILD_ID: ${{ steps.identity.outputs.build_id }}
+          GIT_TAG: ${{ steps.identity.outputs.git_tag }}
+          RUN_URL: ${{ steps.identity.outputs.run_url }}
+          NPM_TAG: ${{ inputs.npm_tag }}
+        run: |
+          {
+            echo "### Published @cline/ui"
+            echo ""
+            echo "- version: \`${VERSION}\`"
+            echo "- npm tag: \`${NPM_TAG}\`"
+            echo "- build_id: \`${BUILD_ID}\`"
+            echo "- git tag: \`${GIT_TAG}\`"
+            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- run: ${RUN_URL}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

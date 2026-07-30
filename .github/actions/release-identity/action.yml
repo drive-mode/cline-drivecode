@@ -1,0 +1,121 @@
+# Mint a durable release identity early in a publish job.
+# Writes outputs + job summary so cancelled runs still leave a trail in Actions.
+name: Release identity
+description: Compute version/build_id/git_tag from run_id + commit SHA
+
+inputs:
+    product:
+        description: Product key (sdk|cli|ui|vscode|desktop)
+        required: true
+    channel:
+        description: Release channel (latest|nightly|next|stable)
+        required: true
+    base-version:
+        description: Semver base from package.json (required unless version is set)
+        required: false
+        default: ""
+    version:
+        description: Exact version override (skips nightly stamping)
+        required: false
+        default: ""
+    write-summary:
+        description: Append identity to GITHUB_STEP_SUMMARY
+        required: false
+        default: "true"
+    repository-path:
+        description: Checkout path when the repo is not at GITHUB_WORKSPACE root
+        required: false
+        default: ""
+
+outputs:
+    product:
+        description: Product key
+        value: ${{ steps.id.outputs.product }}
+    channel:
+        description: Channel
+        value: ${{ steps.id.outputs.channel }}
+    base_version:
+        description: Base semver before nightly suffix
+        value: ${{ steps.id.outputs.base_version }}
+    version:
+        description: Publish version
+        value: ${{ steps.id.outputs.version }}
+    sha:
+        description: Full commit SHA
+        value: ${{ steps.id.outputs.sha }}
+    short_sha:
+        description: 12-char commit SHA
+        value: ${{ steps.id.outputs.short_sha }}
+    run_id:
+        description: GitHub Actions run id
+        value: ${{ steps.id.outputs.run_id }}
+    run_url:
+        description: Actions run URL
+        value: ${{ steps.id.outputs.run_url }}
+    build_id:
+        description: Durable build id (product@version+sha.runId)
+        value: ${{ steps.id.outputs.build_id }}
+    git_tag:
+        description: Canonical git tag for a successful publish
+        value: ${{ steps.id.outputs.git_tag }}
+    attempt_tag:
+        description: Per-run attempt tag name (optional bookkeeping)
+        value: ${{ steps.id.outputs.attempt_tag }}
+
+runs:
+    using: composite
+    steps:
+        - name: Compute release identity
+          id: id
+          shell: bash
+          env:
+              PRODUCT: ${{ inputs.product }}
+              CHANNEL: ${{ inputs.channel }}
+              BASE_VERSION: ${{ inputs.base-version }}
+              VERSION_OVERRIDE: ${{ inputs.version }}
+              RUN_ID: ${{ github.run_id }}
+              SHA: ${{ github.sha }}
+              REPO: ${{ github.repository }}
+              SERVER_URL: ${{ github.server_url }}
+              WRITE_SUMMARY: ${{ inputs.write-summary }}
+              REPOSITORY_PATH: ${{ inputs.repository-path }}
+          run: |
+              set -euo pipefail
+              ROOT="${GITHUB_WORKSPACE}"
+              if [ -n "${REPOSITORY_PATH}" ]; then
+                ROOT="${GITHUB_WORKSPACE}/${REPOSITORY_PATH}"
+              fi
+              SCRIPT="${ROOT}/.github/scripts/release-identity.sh"
+              if [ ! -f "$SCRIPT" ] && [ -n "${GITHUB_ACTION_PATH:-}" ]; then
+                SCRIPT="$(cd "${GITHUB_ACTION_PATH}/../.." && pwd)/scripts/release-identity.sh"
+              fi
+              if [ ! -f "$SCRIPT" ]; then
+                echo "Missing release-identity.sh (looked under ${ROOT}/.github/scripts)" >&2
+                exit 1
+              fi
+
+              mapfile -t LINES < <(bash "$SCRIPT")
+              declare -A ID=()
+              for line in "${LINES[@]}"; do
+                key="${line%%=*}"
+                value="${line#*=}"
+                ID["$key"]="$value"
+                echo "${key}=${value}" >> "$GITHUB_OUTPUT"
+                echo "${key}=${value}"
+              done
+
+              if [ "$WRITE_SUMMARY" = "true" ]; then
+                {
+                  echo "## Release identity"
+                  echo ""
+                  echo "| Field | Value |"
+                  echo "| --- | --- |"
+                  echo "| product | \`${ID[product]}\` |"
+                  echo "| channel | \`${ID[channel]}\` |"
+                  echo "| version | \`${ID[version]}\` |"
+                  echo "| build_id | \`${ID[build_id]}\` |"
+                  echo "| commit | \`${ID[sha]}\` |"
+                  echo "| run | [${ID[run_id]}](${ID[run_url]}) |"
+                  echo "| git_tag | \`${ID[git_tag]}\` |"
+                } >> "$GITHUB_STEP_SUMMARY"
+              fi

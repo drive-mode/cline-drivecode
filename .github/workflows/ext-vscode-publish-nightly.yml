@@ -106,15 +106,28 @@ jobs:
 
       # ONE version for the next bundle, the legacy bundle, and the union
       # manifest: gen-manifest hard-fails if the bundle identities diverge.
-      # Same scheme as the standalone nightly: <major>.<minor>.<unix-seconds>
-      # from next's base version, so it keeps outranking earlier nightlies.
-      - name: Compute nightly version
-        id: version
+      # Prefer github.run_id over unix seconds so cancelled/retried runs stay
+      # greppable and do not collide on the same second.
+      - name: Read base package version
+        id: base
         run: |
           BASE=$(node -p "require('./next-src/apps/vscode/package.json').version")
-          VERSION="$(echo "$BASE" | cut -d. -f1,2).$(date +%s)"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Combined nightly version: $VERSION (base $BASE)"
+          echo "base_version=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Mint release identity
+        id: identity
+        uses: ./next-src/.github/actions/release-identity
+        with:
+          product: vscode
+          channel: nightly
+          base-version: ${{ steps.base.outputs.base_version }}
+          repository-path: next-src
+
+      - name: Expose nightly version
+        id: version
+        run: |
+          echo "version=${{ steps.identity.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "Combined nightly version: ${{ steps.identity.outputs.version }} (base ${{ steps.base.outputs.base_version }})"
 
       - name: Install next workspace dependencies
         working-directory: next-src
@@ -282,21 +295,13 @@ jobs:
         # The publish already succeeded by this point — don't mark the run red;
         # push the tag manually with user credentials when it matters.
         continue-on-error: true
-        working-directory: next-src
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          SAFE_REF=$(echo "$GITHUB_REF_NAME" | tr '/[:upper:]' '-[:lower:]' | tr -cd 'a-z0-9._-')
-          SHORT_SHA=$(git rev-parse --short=12 HEAD)
-          TIMESTAMP=$(date -u +"%Y%m%d%H%M%S")
-          TAG="nightly-${SAFE_REF}-${TIMESTAMP}-${SHORT_SHA}"
-          LEGACY_SHA=$(git -C "$GITHUB_WORKSPACE/legacy-src" rev-parse HEAD)
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Cline Nightly (combined A/B) published from ${GITHUB_REF_NAME} at ${GITHUB_SHA} (legacy bundle: ${LEGACY_SHA})"
-          # Use an explicit HTTPS remote with GH_TOKEN because checkout was run with
-          # persist-credentials: false, so actions/checkout did not persist a git credential helper.
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}"
-
-          echo "Tagged published commit: $TAG"
+        uses: ./next-src/.github/actions/release-tag
+        with:
+          tag: ${{ steps.identity.outputs.git_tag }}
+          message: |
+            Cline Nightly (combined A/B) ${{ steps.identity.outputs.version }}
+            build_id=${{ steps.identity.outputs.build_id }}
+            next=${{ github.sha }}
+            run=${{ steps.identity.outputs.run_url }}
+          sha: ${{ github.sha }}
+          repository-path: next-src
