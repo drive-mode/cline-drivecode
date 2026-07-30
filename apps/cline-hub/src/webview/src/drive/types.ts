@@ -12,6 +12,7 @@ import type {
 	StageCard,
 	StagePin,
 } from "@cline/shared";
+import { isDriveHumanId } from "./participantIds";
 
 export type DriveSubMode = "plan" | "agent" | "ask" | "debug";
 
@@ -202,12 +203,13 @@ export function applyRoomSnapshot(
 	snapshot: RoomSnapshot,
 ): DriveUiState {
 	const human = snapshot.participants.find(
-		(participant) => participant.kind === "human",
+		(participant) =>
+			participant.kind === "human" && isDriveHumanId(participant.id),
 	);
 	const agent = snapshot.participants.find(
 		(participant) => participant.kind === "agent",
 	);
-	// Any human seat counts — hub join paths may use legacy ids (`you`, `human`).
+	// Local human seat only — matches Drive preview; guests do not count.
 	const humanSeated = human != null;
 	const sharer = snapshot.stage.sharer;
 	// Hub stage.sharer is authoritative — null clears local "you"/spotlight.

@@ -1,12 +1,10 @@
 /** Normalize spotlight / roster id checks for Drive MVP participants. */
 
-import {
-	DRIVE_PARTICIPANT_HUMAN,
-	DRIVE_PARTICIPANT_PARTNER,
-} from "./types";
+import { DRIVE_PARTICIPANT_HUMAN, DRIVE_PARTICIPANT_PARTNER } from "./types";
 
 export function isDriveHumanId(id: string | null | undefined): boolean {
-	return id === DRIVE_PARTICIPANT_HUMAN || id === "human";
+	// Canonical `drive:human` plus hub join legacy aliases (`human`, `you`).
+	return id === DRIVE_PARTICIPANT_HUMAN || id === "human" || id === "you";
 }
 
 export function isDrivePartnerId(id: string | null | undefined): boolean {

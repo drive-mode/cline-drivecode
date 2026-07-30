@@ -803,9 +803,10 @@ export function useDriveSession(
 								hubSnapshot,
 							})
 						: hubSnapshot;
-				// Any human seat counts — hub join paths may use legacy ids (`you`, `human`).
+				// Local human seat only — matches Drive preview; guests do not count.
 				const humanSeated = snapshot.participants.some(
-					(participant) => participant.kind === "human",
+					(participant) =>
+						participant.kind === "human" && isDriveHumanId(participant.id),
 				);
 				const wasPendingJoin = pendingJoinRef.current;
 				const seatedOnCall = Boolean(snapshot.driveActive && humanSeated);
