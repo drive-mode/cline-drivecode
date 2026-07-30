@@ -18,9 +18,7 @@ import {
 	resetDriveRoomStoreForTests,
 } from "../../collaboration";
 import { getHubDriveHarness } from "../../driveHarnessBinding";
-import {
-	type DriveLiveRoom,
-} from "../../driveShowRuntime";
+import { type DriveLiveRoom } from "../../driveShowRuntime";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 
 export {
@@ -150,7 +148,9 @@ function handleSpotlightSet(
 		);
 	}
 
-	const fromSnapshot = snapshot?.participants.find((p) => p.id === participantId);
+	const fromSnapshot = snapshot?.participants.find(
+		(p) => p.id === participantId,
+	);
 	const kind: StageSharer["kind"] =
 		fromSnapshot?.kind === "human" ||
 		participantId === "drive:human" ||
@@ -309,6 +309,15 @@ async function handleShowEnqueue(
 		presentNow,
 	});
 	const next = asLiveRoom(result.liveRoom);
+	if (presentNow && (result.errorCode || !result.presented?.uri)) {
+		publishRoom(ctx, next);
+		return errorReply(
+			envelope,
+			result.errorCode ?? "show_materialize_failed",
+			result.errorMessage ??
+				"Show item could not be materialized (missing uri)",
+		);
+	}
 	const planned = result.planned ?? parsedShow.data;
 	publishRoom(ctx, next, {
 		event: "drive.show.planned",
@@ -396,7 +405,11 @@ function handlePlannerSet(
 		cooldownRaw >= 0
 			? Math.floor(cooldownRaw)
 			: undefined;
-	if (mode === undefined && tickOnWork === undefined && cooldownMs === undefined) {
+	if (
+		mode === undefined &&
+		tickOnWork === undefined &&
+		cooldownMs === undefined
+	) {
 		return errorReply(
 			envelope,
 			"invalid_payload",

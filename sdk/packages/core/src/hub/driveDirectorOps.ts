@@ -3,15 +3,9 @@
  * Show runtime lives in driveShowRuntime (handlers must not import this file).
  */
 
-import {
-	advanceScriptBeat,
-	normalizeEnqueuedShowStatus,
-} from "@cline/drive";
+import { advanceScriptBeat, normalizeEnqueuedShowStatus } from "@cline/drive";
 import type { DirectorScript, ShowBacklogItem } from "@cline/shared";
-import {
-	getDriveRoomStore,
-	type DriveRoomStore,
-} from "./collaboration";
+import { getDriveRoomStore, type DriveRoomStore } from "./collaboration";
 import {
 	applyPresentedShow,
 	materializeShowItem,
@@ -79,6 +73,24 @@ export function enqueueShowOnStore(input: {
 		});
 		next = store.setLive(tick.room);
 		presented = tick.presented;
+		if (!presented?.uri) {
+			const materialized = materializeShowItem(enqueued, {
+				demoCapture: input.demoCapture,
+			});
+			const parseReason = materialized.scoreReasons.find((reason) =>
+				reason.startsWith("mermaid_parse_failed"),
+			);
+			return {
+				room: next,
+				presented: null,
+				planned: enqueued,
+				errorCode: parseReason
+					? "mermaid_parse_failed"
+					: "show_materialize_failed",
+				errorMessage:
+					parseReason ?? "Show item could not be materialized (missing uri)",
+			};
+		}
 	}
 	return { room: next, presented, planned: enqueued };
 }
@@ -106,16 +118,21 @@ export function presentShowOnStore(input: {
 			room,
 			presented: null,
 			planned: null,
-			errorCode: parseReason ? "mermaid_parse_failed" : "show_materialize_failed",
+			errorCode: parseReason
+				? "mermaid_parse_failed"
+				: "show_materialize_failed",
 			errorMessage:
-				parseReason ??
-				"Show item could not be materialized (missing uri)",
+				parseReason ?? "Show item could not be materialized (missing uri)",
 		};
 	}
 	const next = store.setLive(
-		applyPresentedShow(room, { ...materialized, status: "showing" }, {
-			demoCapture: input.demoCapture,
-		}),
+		applyPresentedShow(
+			room,
+			{ ...materialized, status: "showing" },
+			{
+				demoCapture: input.demoCapture,
+			},
+		),
 	);
 	const presented =
 		next.director.showBacklog.find((item) => item.id === materialized.id) ??
@@ -184,7 +201,9 @@ export function attachScriptOnStore(input: {
 	});
 	const presented = presentDirectorActiveShow(next);
 	next = store.setLive(presented.room);
-	const beat = script.beats.find((entry) => entry.beatId === seeded.activeBeatId);
+	const beat = script.beats.find(
+		(entry) => entry.beatId === seeded.activeBeatId,
+	);
 	return {
 		room: next,
 		presented: presented.presented,

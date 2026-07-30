@@ -312,6 +312,41 @@ describe("handleDriveCommand", () => {
 		).toBe(true);
 	});
 
+	it("fails closed when enqueue presentNow cannot materialize mermaid", async () => {
+		const { ctx, published } = createCtx();
+		const reply = await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r2-bad",
+				presentNow: true,
+				showItem: {
+					id: "show-bad-now",
+					ownerParticipantId: "drive:partner",
+					title: "Bad Now",
+					intent: "Explain",
+					artifactKind: "diagram.architecture",
+					mediaClass: "still",
+					caption: "Invalid",
+					produce: {
+						tool: "render_mermaid",
+						args: { mermaidSource: "not a real diagram" },
+					},
+					priority: 10,
+					status: "planned",
+					scoreReasons: [],
+				},
+			}),
+		);
+		expect(reply.ok).toBe(false);
+		expect(reply.error?.code).toBe("mermaid_parse_failed");
+		expect(
+			published.some((event) => event.event === "drive.show.planned"),
+		).toBe(false);
+		expect(
+			published.some((event) => event.event === "drive.show.presented"),
+		).toBe(false);
+	});
+
 	it("attach sample hold script then advance updates say while keeping show", async () => {
 		const { ctx, published } = createCtx();
 		const showItem = {
@@ -373,7 +408,9 @@ describe("handleDriveCommand", () => {
 		};
 		expect(room.director.activeShowId).toBe("show-hold");
 		expect(room.director.activeBeatId).toBe("b2");
-		const beats = published.filter((event) => event.event === "drive.script.beat");
+		const beats = published.filter(
+			(event) => event.event === "drive.script.beat",
+		);
 		expect(beats.length).toBeGreaterThanOrEqual(2);
 		expect(beats.at(-1)?.payload).toMatchObject({
 			beatId: "b2",
@@ -432,7 +469,9 @@ describe("handleDriveCommand", () => {
 			}),
 		);
 		expect(attach.ok).toBe(true);
-		const beats = published.filter((event) => event.event === "drive.script.beat");
+		const beats = published.filter(
+			(event) => event.event === "drive.script.beat",
+		);
 		expect(beats.at(-1)?.payload).toMatchObject({
 			beatId: "b1",
 			say: "",
@@ -459,7 +498,9 @@ describe("handleDriveCommand", () => {
 		);
 		expect(reply.ok).toBe(true);
 		const room = reply.payload?.room as {
-			director: { doBacklog: Array<{ id: string; status: string; title: string }> };
+			director: {
+				doBacklog: Array<{ id: string; status: string; title: string }>;
+			};
 		};
 		expect(room.director.doBacklog).toEqual([
 			expect.objectContaining({
@@ -489,7 +530,9 @@ describe("handleDriveCommand", () => {
 		);
 		expect(upsert.ok).toBe(true);
 		const next = upsert.payload?.room as {
-			director: { doBacklog: Array<{ id: string; title: string; priority: number }> };
+			director: {
+				doBacklog: Array<{ id: string; title: string; priority: number }>;
+			};
 		};
 		expect(next.director.doBacklog).toHaveLength(1);
 		expect(next.director.doBacklog[0]).toMatchObject({
@@ -537,7 +580,11 @@ describe("handleDriveCommand", () => {
 					artifactKind: "doc.plan",
 					mediaClass: "document",
 					caption: "plan",
-					produce: { tool: "render_plan_card", templateId: "doc.plan", args: {} },
+					produce: {
+						tool: "render_plan_card",
+						templateId: "doc.plan",
+						args: {},
+					},
 					priority: 30,
 					status: "ready",
 					scoreReasons: [],
