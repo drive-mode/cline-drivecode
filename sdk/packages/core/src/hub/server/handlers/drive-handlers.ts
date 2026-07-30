@@ -348,16 +348,23 @@ function handleDoEnqueue(
 			"doItem must be a valid DoBacklogItem",
 		);
 	}
-	const enqueued = {
-		...parsedDo.data,
-		status:
-			parsedDo.data.status === "done" || parsedDo.data.status === "blocked"
-				? parsedDo.data.status
-				: ("queued" as const),
-	};
 	const store = getDriveRoomStore();
 	store.create(roomId);
 	const room = store.getOrCreateLive(roomId);
+	const existing = room.director.doBacklog.find(
+		(item) => item.id === parsedDo.data.id,
+	);
+	// Preserve in-flight claim status on upsert; only done/blocked may demote active.
+	const status =
+		parsedDo.data.status === "done" || parsedDo.data.status === "blocked"
+			? parsedDo.data.status
+			: existing?.status === "active"
+				? ("active" as const)
+				: ("queued" as const);
+	const enqueued = {
+		...parsedDo.data,
+		status,
+	};
 	const doBacklog = [
 		enqueued,
 		...room.director.doBacklog.filter((item) => item.id !== enqueued.id),
