@@ -22,7 +22,9 @@ permissions:
     contents: read
 
 concurrency:
-    group: sdk-test-${{ github.event.pull_request.number || github.ref }}
+    # Match ext-vscode-test: use run_id for non-PR so main pushes and
+    # sdk-publish's reusable call do not cancel each other.
+    group: sdk-test-${{ github.event.pull_request.number || github.run_id }}
     cancel-in-progress: true
 
 defaults:
@@ -139,3 +141,33 @@ jobs:
 
             - name: Verify packages are publishable
               run: bun sdk/scripts/check-publish.ts
+
+    # Stable required-check name. Job-level Windows checks no longer run on PRs
+    # (matrix is Ubuntu-only), and TUI e2e lives in a sibling job — this gate
+    # keeps one always-reported status that fails if either suite failed.
+    test-result:
+        needs: [quality-checks, test, tui-and-publish]
+        if: ${{ !cancelled() }}
+        runs-on: ubuntu-latest
+        name: test
+        steps:
+            - name: Verify sdk-test jobs
+              env:
+                  QUALITY: ${{ needs.quality-checks.result }}
+                  TEST: ${{ needs.test.result }}
+                  TUI: ${{ needs.tui-and-publish.result }}
+              run: |
+                  fail=0
+                  for pair in "quality-checks:$QUALITY" "test:$TEST" "tui-and-publish:$TUI"; do
+                    name="${pair%%:*}"
+                    result="${pair#*:}"
+                    echo "$name=$result"
+                    if [ "$result" != "success" ]; then
+                      fail=1
+                    fi
+                  done
+                  if [ "$fail" -ne 0 ]; then
+                    echo "One or more sdk-test jobs failed or were cancelled"
+                    exit 1
+                  fi
+                  echo "sdk-test gate passed"

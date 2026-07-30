@@ -18,10 +18,12 @@ Enterprise-shaped continuous integration for Drive / drivecode surfaces in this 
 |---|---|
 | Windows cold `bun install` (3–5+ min) | Shared `setup-bun-workspace` caches `~/.bun/install/cache`; PR matrices for sdk-test / ext-vscode-test are **Ubuntu-only** (Windows retained on `push` / `workflow_call` / dispatch) |
 | `ci/sdk` (+docs/vscode) double-billing with path CI | `ci-label-overrides` skips body-driven wakes when dorny says paths already cover the suite; `drive` removed (drive-ci already forces from checkbox/label) |
-| TUI e2e serialized behind SDK unit tests | `tui-and-publish` job runs in parallel with the OS test matrix after quality-checks |
+| TUI e2e serialized behind SDK unit tests | `tui-and-publish` job runs in parallel with the OS test matrix after quality-checks; `test` gate job aggregates both for a stable required check |
 | Bun cache restore (~20s) slower than Linux install | drive-ci jobs set `cache: false` on the composite action |
 
 Shared bootstrap: `.github/actions/setup-bun-workspace`.
+
+**Required checks:** prefer the aggregate job names (`drive-ci`, vscode `test`, sdk-test `test`) — not OS-specific matrix job names. PR matrices omit Windows, so a required `Test (windows-latest, …)` check would stay Pending forever.
 
 ## Workflows
 

@@ -30,7 +30,7 @@ runs:
               bun-version: ${{ inputs.bun-version }}
 
         - name: Cache Bun install cache
-          if: inputs.cache == 'true'
+          if: ${{ inputs.cache == 'true' }}
           uses: actions/cache@v4
           with:
               path: ~/.bun/install/cache
