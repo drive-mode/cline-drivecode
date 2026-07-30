@@ -19,7 +19,7 @@ import { z } from "zod";
 import {
 	clearDrivePauseAfterToolForSessions,
 	getDriveRoomStore,
-	JsonlRoomEventLog,
+	rebindJsonlRoomEventLog,
 	syncDrivePauseAfterToolForRoom,
 	type WorkRecordPayload,
 	workRecordFromToolEvent,
@@ -285,10 +285,10 @@ function ensureEventLog(
 	if (!workspaceRoot) {
 		return;
 	}
-	// Always prefer the explicit workspace root. An earlier harness bind may
-	// have attached a JsonlRoomEventLog under tmpdir() before workspaceRoot
-	// was known; skipping would leave durable events on the wrong parent.
-	store.attachEventLog(new JsonlRoomEventLog(workspaceRoot));
+	// Prefer the explicit workspace root. An earlier harness bind may have
+	// attached under tmpdir() before workspaceRoot was known; rebind migrates
+	// prior durable records so seq stays monotonic.
+	rebindJsonlRoomEventLog(store, workspaceRoot);
 }
 
 export async function handleDriveRoomCommand(

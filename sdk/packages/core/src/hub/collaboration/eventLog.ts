@@ -5,8 +5,10 @@
 
 import {
 	appendFileSync,
+	copyFileSync,
 	existsSync,
 	mkdirSync,
+	readdirSync,
 	readFileSync,
 	renameSync,
 	writeFileSync,
@@ -17,6 +19,7 @@ import {
 	parseDriveEvent,
 	resolveDriveRoomEventsPath,
 	resolveDriveRoomMetaPath,
+	resolveDriveRoomsDir,
 } from "@cline/shared";
 
 export type RoomLogRecord = {
@@ -37,6 +40,14 @@ type MetaFile = {
 	nextSeq: number;
 };
 
+/** Minimal store surface needed to rebind a durable room event log. */
+export type RoomEventLogStore = {
+	getEventLog(): RoomEventLog | undefined;
+	attachEventLog(log: RoomEventLog): void;
+	lastSeq(roomId: string): number;
+	readonly rooms: ReadonlyMap<string, unknown>;
+};
+
 function readMeta(path: string): MetaFile {
 	if (!existsSync(path)) {
 		return { schemaVersion: 1, nextSeq: 1 };
@@ -55,16 +66,74 @@ function writeMetaAtomic(path: string, meta: MetaFile): void {
 	renameSync(tmp, path);
 }
 
+function listJsonlRoomIds(configParent: string): string[] {
+	const roomsDir = resolveDriveRoomsDir(configParent);
+	if (!existsSync(roomsDir)) {
+		return [];
+	}
+	return readdirSync(roomsDir, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name);
+}
+
+function migrateJsonlRoomEventLog(
+	from: JsonlRoomEventLog,
+	to: JsonlRoomEventLog,
+	roomIds: Iterable<string>,
+): void {
+	if (from.configParent === to.configParent) {
+		return;
+	}
+	for (const roomId of roomIds) {
+		const srcEvents = resolveDriveRoomEventsPath(from.configParent, roomId);
+		const srcMeta = resolveDriveRoomMetaPath(from.configParent, roomId);
+		const dstEvents = resolveDriveRoomEventsPath(to.configParent, roomId);
+		const dstMeta = resolveDriveRoomMetaPath(to.configParent, roomId);
+		if (!existsSync(srcEvents) && !existsSync(srcMeta)) {
+			continue;
+		}
+		if (!existsSync(dstEvents) && !existsSync(dstMeta)) {
+			mkdirSync(dirname(dstEvents), { recursive: true });
+			if (existsSync(srcEvents)) {
+				copyFileSync(srcEvents, dstEvents);
+			}
+			if (existsSync(srcMeta)) {
+				copyFileSync(srcMeta, dstMeta);
+			}
+			continue;
+		}
+		// Destination already durable: keep its records, never let nextSeq go backwards.
+		const nextSeq = Math.max(
+			readMeta(srcMeta).nextSeq,
+			readMeta(dstMeta).nextSeq,
+		);
+		writeMetaAtomic(dstMeta, { schemaVersion: 1, nextSeq });
+	}
+}
+
 /**
  * File-backed room event log for a workspace config parent
  * (`<workspace>` or similar — used with resolveDriveConfigDir).
  */
 export class JsonlRoomEventLog implements RoomEventLog {
-	constructor(private readonly configParent: string) {}
+	constructor(readonly configParent: string) {}
 
 	latestSeq(roomId: string): number {
 		const meta = readMeta(resolveDriveRoomMetaPath(this.configParent, roomId));
 		return Math.max(0, meta.nextSeq - 1);
+	}
+
+	/** Ensure subsequent appends allocate seq >= minNextSeq. */
+	ensureNextSeqAtLeast(roomId: string, minNextSeq: number): void {
+		if (minNextSeq <= 1) {
+			return;
+		}
+		const metaPath = resolveDriveRoomMetaPath(this.configParent, roomId);
+		const meta = readMeta(metaPath);
+		if (meta.nextSeq >= minNextSeq) {
+			return;
+		}
+		writeMetaAtomic(metaPath, { schemaVersion: 1, nextSeq: minNextSeq });
 	}
 
 	appendSync(roomId: string, event: DriveEvent): RoomLogRecord {
@@ -106,6 +175,47 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		}
 		return out;
 	}
+}
+
+/**
+ * Attach a JsonlRoomEventLog under `configParent`, migrating any prior durable
+ * records when the parent changes (e.g. tmpdir → workspaceRoot) so seq stays
+ * monotonic and earlier room ops are not orphaned.
+ */
+export function rebindJsonlRoomEventLog(
+	store: RoomEventLogStore,
+	configParent: string,
+): void {
+	const nextParent = configParent.trim();
+	if (!nextParent) {
+		return;
+	}
+	const existing = store.getEventLog();
+	if (
+		existing instanceof JsonlRoomEventLog &&
+		existing.configParent === nextParent
+	) {
+		return;
+	}
+
+	const next = new JsonlRoomEventLog(nextParent);
+	const roomIds = new Set<string>(store.rooms.keys());
+	if (existing instanceof JsonlRoomEventLog) {
+		for (const roomId of listJsonlRoomIds(existing.configParent)) {
+			roomIds.add(roomId);
+		}
+		migrateJsonlRoomEventLog(existing, next, roomIds);
+	}
+
+	// In-memory commits may already have published higher seq than an empty dest.
+	for (const roomId of roomIds) {
+		const seq = store.lastSeq(roomId);
+		if (seq > 0) {
+			next.ensureNextSeqAtLeast(roomId, seq + 1);
+		}
+	}
+
+	store.attachEventLog(next);
 }
 
 /** In-memory log for unit tests (no disk). */

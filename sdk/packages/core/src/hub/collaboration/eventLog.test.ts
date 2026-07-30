@@ -2,7 +2,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DriveRoomStore, JsonlRoomEventLog, MemoryRoomEventLog } from "./index";
+import {
+	DriveRoomStore,
+	JsonlRoomEventLog,
+	MemoryRoomEventLog,
+	rebindJsonlRoomEventLog,
+} from "./index";
 
 describe("RoomEventLog + DriveRoomStore", () => {
 	let store: DriveRoomStore;
@@ -101,5 +106,58 @@ describe("RoomEventLog + DriveRoomStore", () => {
 		const gaps = log.readSinceSync("r1", 1);
 		expect(gaps).toHaveLength(1);
 		expect(gaps[0]?.seq).toBe(2);
+	});
+
+	it("rebindJsonlRoomEventLog migrates events and keeps seq monotonic", () => {
+		const fromDir = mkdtempSync(join(tmpdir(), "drive-room-from-"));
+		const toDir = mkdtempSync(join(tmpdir(), "drive-room-to-"));
+		try {
+			store.attachEventLog(new JsonlRoomEventLog(fromDir));
+			store.create("r1");
+			store.join({
+				roomId: "r1",
+				participant: {
+					id: "h1",
+					kind: "human",
+					displayName: "H",
+					role: "host",
+					status: "idle",
+				},
+			});
+			store.mute({ roomId: "r1", participantId: "h1", muted: true });
+			expect(store.lastSeq("r1")).toBe(2);
+
+			rebindJsonlRoomEventLog(store, toDir);
+
+			const rebound = store.getEventLog();
+			expect(rebound).toBeInstanceOf(JsonlRoomEventLog);
+			expect((rebound as JsonlRoomEventLog).configParent).toBe(toDir);
+			expect(rebound?.readSinceSync("r1", 0)).toHaveLength(2);
+			expect(store.lastSeq("r1")).toBe(2);
+
+			const next = store.mute({
+				roomId: "r1",
+				participantId: "h1",
+				muted: false,
+			});
+			expect(next.seq).toBe(3);
+			expect(store.lastSeq("r1")).toBe(3);
+			expect(rebound?.latestSeq("r1")).toBe(3);
+		} finally {
+			rmSync(fromDir, { recursive: true, force: true });
+			rmSync(toDir, { recursive: true, force: true });
+		}
+	});
+
+	it("rebindJsonlRoomEventLog is a no-op for the same configParent", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-same-"));
+		try {
+			const log = new JsonlRoomEventLog(dir);
+			store.attachEventLog(log);
+			rebindJsonlRoomEventLog(store, dir);
+			expect(store.getEventLog()).toBe(log);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });

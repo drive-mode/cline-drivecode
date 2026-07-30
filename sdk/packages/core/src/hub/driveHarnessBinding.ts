@@ -10,7 +10,7 @@ import { createClineDriveHost } from "./clineDriveHost";
 import {
 	type DriveRoomStore,
 	getDriveRoomStore,
-	JsonlRoomEventLog,
+	rebindJsonlRoomEventLog,
 } from "./collaboration";
 import { resolvePackFromRegistry } from "./drive-config/driveRegistryStore";
 
@@ -50,8 +50,9 @@ export function getHubDriveHarness(input?: {
 		if (nextParent && nextParent !== existing.configParent) {
 			existing.configParent = nextParent;
 			// Keep durable room events aligned with registry resolution parent.
-			// First bind may have attached under tmpdir() before workspaceRoot existed.
-			store.attachEventLog(new JsonlRoomEventLog(nextParent));
+			// First bind may have attached under tmpdir() before workspaceRoot existed;
+			// rebind migrates prior records so seq stays monotonic.
+			rebindJsonlRoomEventLog(store, nextParent);
 		}
 		return existing;
 	}
