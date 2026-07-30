@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Session satisfaction moments · visual plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Schibsted+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand-purple: #9F58FA;
+    --brand-purple-text: #B98AFF;
+    --bg: #0A0A0A;
+    --panel: #101013;
+    --raised: #12131A;
+    --text: #FFFFFF;
+    --text-2: #9CA3AF;
+    --text-3: #6B7280;
+    --line: rgba(255, 255, 255, 0.10);
+    --ok: #34D399;
+    --warn: #FBBF24;
+    --r: 9px;
+    --hair: 0.8px;
+    --ui: "Schibsted Grotesk", system-ui, sans-serif;
+    --display: "DM Sans", system-ui, sans-serif;
+    --grotesk: "Space Grotesk", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1000px 500px at 8% -8%, color-mix(in srgb, var(--brand-purple) 20%, transparent), transparent 60%),
+      radial-gradient(700px 360px at 92% 0%, color-mix(in srgb, #5487C8 14%, transparent), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.55 var(--ui);
+  }
+  .shell { max-width: 1120px; margin: 0 auto; padding: 28px 18px 56px; }
+  .brand { font: 700 28px/1.1 var(--display); letter-spacing: -0.02em; }
+  .brand em { font-style: normal; color: var(--brand-purple-text); }
+  .lede { margin-top: 10px; color: var(--text-2); max-width: 68ch; }
+  .nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 18px; }
+  .nav button {
+    border: var(--hair) solid var(--line);
+    background: var(--raised);
+    color: var(--text-2);
+    border-radius: 7px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font: 500 12px/1 var(--ui);
+  }
+  .nav button.on {
+    color: #fff;
+    border-color: var(--brand-purple);
+    background: color-mix(in srgb, var(--brand-purple) 18%, transparent);
+  }
+  .page { display: none; animation: rise 280ms ease both; }
+  .page.on { display: block; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  h2 { font: 700 20px/1.2 var(--display); margin-bottom: 8px; }
+  .eyebrow {
+    font: 500 10px/1 var(--grotesk);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 6px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .card {
+    background: var(--panel);
+    border: var(--hair) solid var(--line);
+    border-radius: var(--r);
+    padding: 14px;
+  }
+  .card h3 { font: 600 14px/1.3 var(--ui); margin-bottom: 6px; }
+  .card p, .card li { color: var(--text-2); font-size: 13px; }
+  .card ul { padding-left: 16px; }
+  .card li { margin: 3px 0; }
+  .pill {
+    display: inline-block;
+    font: 500 10px/1 var(--grotesk);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    border: var(--hair) solid var(--line);
+    border-radius: 999px;
+    padding: 4px 8px;
+    margin-bottom: 8px;
+  }
+  .pill.w1 { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+  .pill.w2 { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .pill.w3 { color: var(--brand-purple-text); border-color: color-mix(in srgb, var(--brand-purple) 40%, transparent); }
+  .arc {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: 14px;
+  }
+  .arc .step {
+    background: var(--raised);
+    border: var(--hair) solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-width: 96px;
+  }
+  .arc .step strong { display: block; font-size: 12px; margin-bottom: 2px; }
+  .arc .step span { color: var(--text-3); font-size: 11px; }
+  .arc .arrow { color: var(--text-3); font-size: 16px; }
+  code {
+    font: 400 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--raised);
+    border: var(--hair) solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #D1D5DB;
+  }
+  a { color: var(--brand-purple-text); }
+  .foot { margin-top: 22px; color: var(--text-3); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="eyebrow">Visual plan · task-as-unit satisfaction</div>
+  <div class="brand">Session <em>moments</em></div>
+  <p class="lede">
+    Product moments that turn task-centric session metrics into lived satisfaction.
+    Measure in <code>DriveTask</code>s. Act on the call arc. Keep improvement gated and local.
+  </p>
+
+  <div class="nav" id="nav">
+    <button data-page="arc" class="on" type="button">Session arc</button>
+    <button data-page="components" type="button">Components</button>
+    <button data-page="waves" type="button">Delivery waves</button>
+    <button data-page="deps" type="button">Dependencies</button>
+    <button data-page="forks" type="button">Decision forks</button>
+  </div>
+
+  <section class="page on" id="arc">
+    <div class="eyebrow">Page 1</div>
+    <h2>Session arc</h2>
+    <p style="color:var(--text-2);max-width:70ch">Every diamond on the journey is a named requirements doc. Metrics observe; moments intervene.</p>
+    <div class="arc">
+      <div class="step"><strong>Join</strong><span>callSessionId</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Work</strong><span>Now task</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Stuck?</strong><span>recovery fork</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Agency</strong><span>visible control</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Drain</strong><span>S3 → E1 invite</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Leave/End</strong><span>handoff packet</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Return</strong><span>plan re-entry</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><strong>Prove</strong><span>Status / digest</span></div>
+    </div>
+    <div class="grid" style="margin-top:18px">
+      <div class="card">
+        <h3>North star</h3>
+        <p>After a Drive session, did the user get enough completed work — and enough control over the plan — that they would start another?</p>
+      </div>
+      <div class="card">
+        <h3>Unit of measurement</h3>
+        <p><code>DriveTask</code> is to Drive what a token is to an LLM. Plans sequence tasks. Intent ≈ <code>plan.title</code>.</p>
+      </div>
+      <div class="card">
+        <h3>Docs</h3>
+        <p>
+          <a href="../../plans/cline-drivemode/initiatives/session-satisfaction-moments/visual-plan.md">visual-plan.md</a> ·
+          <a href="../../plans/cline-drivemode/initiatives/session-satisfaction-moments/README.md">initiative</a> ·
+          <a href="../../plans/cline-drivemode/prd/prd-task-satisfaction-observability.md">PRD 10</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="components">
+    <div class="eyebrow">Page 2</div>
+    <h2>Components</h2>
+    <div class="grid">
+      <div class="card"><span class="pill w1">Call</span><h3>Stuck recovery</h3><ul><li>lastFailure → Spotlight fork</li><li>narrow / fix-up / recruit / pause</li><li><a href="../../plans/cline-drivemode/features/DRV-STUCK-RECOVERY.md">DRV-STUCK-RECOVERY</a></li></ul></div>
+      <div class="card"><span class="pill w1">Call</span><h3>Felt agency</h3><ul><li>steer / interrupt / plan edit</li><li>NowNext + Spotlight show consequence</li><li><a href="../../plans/cline-drivemode/features/DRV-FELT-AGENCY.md">DRV-FELT-AGENCY</a></li></ul></div>
+      <div class="card"><span class="pill w2">Call</span><h3>Clean-drain ritual</h3><ul><li>S3 true → soft next-goal invite</li><li>invite ≠ E1 until user continues</li><li><a href="../../plans/cline-drivemode/features/DRV-CLEAN-DRAIN.md">DRV-CLEAN-DRAIN</a></li></ul></div>
+      <div class="card"><span class="pill w1">Call</span><h3>Return loop</h3><ul><li>Tier-0 handoff packet</li><li>while-away on rejoin</li><li><a href="../../plans/cline-drivemode/features/DRV-RETURN-LOOP.md">DRV-RETURN-LOOP</a></li></ul></div>
+      <div class="card"><span class="pill w2">Habit</span><h3>Plan re-entry</h3><ul><li>Drive tab: title · open count · last rollup</li><li><a href="../../plans/cline-drivemode/features/DRV-PLAN-REENTRY.md">DRV-PLAN-REENTRY</a></li></ul></div>
+      <div class="card"><span class="pill w2">Call</span><h3>Recruit-on-stall</h3><ul><li>Who should take this?</li><li>seat via hub; cursor stays deterministic</li><li><a href="../../plans/cline-drivemode/features/DRV-RECRUIT-STALL.md">DRV-RECRUIT-STALL</a></li></ul></div>
+      <div class="card"><span class="pill w3">Proof</span><h3>Status sessions</h3><ul><li>S2 / S3 / E1 accomplishment lens</li><li><a href="../../plans/cline-drivemode/features/DRV-STATUS-SESSIONS.md">DRV-STATUS-SESSIONS</a></li></ul></div>
+      <div class="card"><span class="pill w3">Proof</span><h3>Shipped digest</h3><ul><li>opt-in local export</li><li><a href="../../plans/cline-drivemode/features/DRV-SHIPPED-DIGEST.md">DRV-SHIPPED-DIGEST</a></li></ul></div>
+      <div class="card"><span class="pill w3">Habit</span><h3>SDLC → bank</h3><ul><li>guided freeze lands DriveTasks</li><li>amends DRV-SDLC-GUIDE</li></ul></div>
+    </div>
+  </section>
+
+  <section class="page" id="waves">
+    <div class="eyebrow">Page 3</div>
+    <h2>Delivery waves</h2>
+    <div class="grid">
+      <div class="card"><span class="pill">W0</span><h3>Honesty gate</h3><p>Observability slices 1–2: <code>callSessionId</code>, bank emit, <code>SessionRollup</code>.</p></div>
+      <div class="card"><span class="pill w1">W1</span><h3>Keep the call alive</h3><p>Felt agency · Return loop · Stuck recovery (manual <code>lastFailure</code>).</p></div>
+      <div class="card"><span class="pill w2">W2</span><h3>Habit + multi-agent</h3><p>Clean-drain ritual · Plan re-entry · Recruit-on-stall.</p></div>
+      <div class="card"><span class="pill w3">W3</span><h3>Proof + guided</h3><p>Status sessions · Shipped digest · SDLC bankable freeze.</p></div>
+      <div class="card"><h3>W4</h3><p>Auto stall→fork (classifier) · post-session plan-improve (Obs slice 3).</p></div>
+    </div>
+  </section>
+
+  <section class="page" id="deps">
+    <div class="eyebrow">Page 4</div>
+    <h2>Dependencies</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Data plane</h3>
+        <ul>
+          <li>Room + bank events</li>
+          <li><code>BankSnapshot</code> cursor</li>
+          <li><code>SessionRollup</code> counts only</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Must land first</h3>
+        <ul>
+          <li>Hub complete / bind / failure</li>
+          <li>Bank event emit → log</li>
+          <li><code>call_end</code> + handoff assembler</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Privacy</h3>
+        <ul>
+          <li>No phone-home Drive telemetry</li>
+          <li>No utterance evidence</li>
+          <li>Accept gate for durable writes</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="forks">
+    <div class="eyebrow">Page 5</div>
+    <h2>Decision forks</h2>
+    <div class="grid">
+      <div class="card"><h3>Stuck fork</h3><p><strong>Default:</strong> manual on <code>lastFailure</code> first; auto stall after rollups.</p></div>
+      <div class="card"><h3>P1 vs collaboration</h3><p><strong>Default:</strong> UX source labels; rollup still counts additive ids unless leadership changes P1.</p></div>
+      <div class="card"><h3>Status lens</h3><p><strong>Default:</strong> product Status mode once R1 green — not forever debug-only.</p></div>
+      <div class="card"><h3>End CTA</h3><p><strong>Default:</strong> End shows handoff packet; Drive tab owns cross-day resume CTA.</p></div>
+      <div class="card"><h3>Pause plan</h3><p><strong>Default W1:</strong> Ask override + raise-hand; no new plan status yet.</p></div>
+      <div class="card"><h3>Accept queue</h3><p><strong>Default:</strong> reuse gated-learn UI with <code>kind</code> tags (recovery / planning / learn).</p></div>
+    </div>
+  </section>
+
+  <p class="foot">
+    Mermaid source of truth:
+    <a href="../../plans/cline-drivemode/initiatives/session-satisfaction-moments/visual-plan.md">visual-plan.md</a>
+    · parse-validated via <code>bun sdk/scripts/validate-mermaid.ts</code>
+  </p>
+</div>
+<script>
+  const nav = document.getElementById("nav");
+  nav.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-page]");
+    if (!btn) return;
+    nav.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
+    document.querySelectorAll(".page").forEach((p) => p.classList.toggle("on", p.id === btn.dataset.page));
+  });
+</script>
+</body>
+</html>

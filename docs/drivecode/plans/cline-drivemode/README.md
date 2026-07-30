@@ -40,6 +40,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
 | [task-bank-drive-loop/](initiatives/task-bank-drive-loop/) | Multi-phase plan for the task-bank Drive loop |
 | [task-satisfaction-observability/](initiatives/task-satisfaction-observability/) | Task-centric session metrics + gated plan improve |
+| [session-satisfaction-moments/](initiatives/session-satisfaction-moments/) | Product moments + [visual plan](initiatives/session-satisfaction-moments/visual-plan.md) / [canvas](../../design/canvases/session-satisfaction-moments-canvas.html) |
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [ard/](ard/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
@@ -95,6 +96,14 @@ MVP is phases 0 through 3. Future is phases 4 and 5.
 | [DRV-CALL-SESSION](features/DRV-CALL-SESSION.md) | Call session binding for task metrics | 2+ | Planned |
 | [DRV-TASK-METRICS](features/DRV-TASK-METRICS.md) | Local session rollups (tasks / plan quality) | 2+ | Planned |
 | [DRV-PLAN-IMPROVE](features/DRV-PLAN-IMPROVE.md) | Gated planning improve from session diagnosis | 2+ | Planned |
+| [DRV-STUCK-RECOVERY](features/DRV-STUCK-RECOVERY.md) | In-call recovery fork on stuck tasks | 2+ | Planned |
+| [DRV-FELT-AGENCY](features/DRV-FELT-AGENCY.md) | Visible plan control after steer/interrupt/edit | 2+ | Planned |
+| [DRV-CLEAN-DRAIN](features/DRV-CLEAN-DRAIN.md) | Clean-drain ritual → next-goal invite | 2+ | Planned |
+| [DRV-RETURN-LOOP](features/DRV-RETURN-LOOP.md) | Leave/End handoff + while-away return | 2+ | Planned |
+| [DRV-PLAN-REENTRY](features/DRV-PLAN-REENTRY.md) | Drive tab unfinished-plan re-entry | 2+ | Planned |
+| [DRV-STATUS-SESSIONS](features/DRV-STATUS-SESSIONS.md) | Status Hub session accomplishment lens | 2+ | Planned |
+| [DRV-SHIPPED-DIGEST](features/DRV-SHIPPED-DIGEST.md) | Opt-in “what Drive shipped” digest | 2+ | Planned |
+| [DRV-RECRUIT-STALL](features/DRV-RECRUIT-STALL.md) | Recruit on stuck task | 2+ | Planned |
 | [DRV-LEAVE-END](features/DRV-LEAVE-END.md) | Leave the call, end the session | 1 | MVP |
 | [DRV-PARTNER-MVP](features/DRV-PARTNER-MVP.md) | One pair partner, end to end (phase gate) | 1 | MVP |
 | [DRV-GATES](features/DRV-GATES.md) | High-impact approval + policy blocks | 1 | MVP |

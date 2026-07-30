@@ -53,6 +53,7 @@ Branch: `cursor/drive-harness-remaining-1929`. After SDK edits: `bun run build:s
 - `docs/drivecode/plans/cline-drivemode/delivery/AGENT-RUNBOOK.md` explains how the next agent should select, implement, and verify tasks.
 - `docs/drivecode/plans/cline-drivemode/prd/prd-driveagent-portfolio.md` defines Driveagent portfolios, knowledge graphs, and recruit.
 - `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ARD-0015](plans/cline-drivemode/ard/ARD-0015-task-session-observability.md) Proposed).
+- `docs/drivecode/plans/cline-drivemode/initiatives/session-satisfaction-moments/` defines product moments on the call arc ([visual plan](plans/cline-drivemode/initiatives/session-satisfaction-moments/visual-plan.md), [canvas](design/canvases/session-satisfaction-moments-canvas.html)).
 - `docs/drivecode/plans/cline-drivemode/ard/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, and gated learning (see status board).
 - `docs/drivecode/plans/cline-drivemode/examples/driveagent-pair-partner/` is the concrete agent-home and graph fixture.
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.

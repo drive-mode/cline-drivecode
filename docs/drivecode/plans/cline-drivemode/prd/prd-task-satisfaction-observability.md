@@ -95,6 +95,10 @@ Observe → Diagnose → Propose → Gate → Improve. Proposals may be planning
 2. Deterministic plan cursor remains source of truth for Now/Next.
 3. Any next-task scorer is a **proposer** only ([research 16](../research/16-task-as-unit-models.md)).
 
+### R6 · Product moments (call arc)
+
+Lived satisfaction components are specified under [session-satisfaction-moments](../initiatives/session-satisfaction-moments/) (stuck recovery, felt agency, clean-drain, return loop, plan re-entry, Status sessions, shipped digest, recruit-on-stall, SDLC→bank). Visual plan: [visual-plan.md](../initiatives/session-satisfaction-moments/visual-plan.md).
+
 ## Acceptance criteria
 
 - [ ] Documented metric definitions S1–S3, E1–E3, P1–P2, A1–A2 with derivation from existing or newly specified events.

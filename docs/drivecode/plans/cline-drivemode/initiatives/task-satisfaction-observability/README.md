@@ -9,6 +9,8 @@
 
 Local, privacy-safe session satisfaction metrics grounded in **tasks**, plus a gated diagnose→improve loop when sessions stall.
 
+**Product moments (UX on the call arc):** [session-satisfaction-moments](../session-satisfaction-moments/) — stuck recovery, felt agency, clean-drain, return loop, Status/digest, recruit-on-stall, SDLC→bank. Visual plan: [visual-plan.md](../session-satisfaction-moments/visual-plan.md).
+
 | File | What |
 |---|---|
 | [overview.md](overview.md) | Context, architecture diagram, slice list |

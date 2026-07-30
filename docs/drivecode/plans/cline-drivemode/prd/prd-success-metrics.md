@@ -3,6 +3,7 @@
 **Status.** Draft for leadership acceptance  
 **Related.** [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), PRD 6, TASK-GRAPH gates  
 **Companion (session satisfaction).** [PRD 10 · task-satisfaction-observability](prd-task-satisfaction-observability.md) — call/task rollups and closed-loop improve; does **not** replace this document.  
+**Product moments.** [session-satisfaction-moments](../initiatives/session-satisfaction-moments/) — lived UX on the call arc ([visual plan](../initiatives/session-satisfaction-moments/visual-plan.md)).  
 **Rule.** Metrics are verifiable signals, not timelines.
 
 ## Problem
