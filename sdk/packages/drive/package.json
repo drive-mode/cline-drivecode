@@ -1,6 +1,6 @@
 {
 	"name": "@cline/drive",
-	"version": "0.0.65",
+	"version": "0.0.66",
 	"description": "Pure Drive kernel: room fold, modes, task bank, topology, director, waves",
 	"repository": {
 		"type": "git",

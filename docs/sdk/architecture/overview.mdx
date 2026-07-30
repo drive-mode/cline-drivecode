@@ -137,3 +137,7 @@ Dependencies flow downward only. Lower layers stay embeddable without pulling in
 - [Hub & Spoke](/sdk/architecture/hub-spoke) — process topology for hub-backed runtimes
 - [Usage analysis](/sdk/architecture/usage-analysis) — how product hosts in this repo consume the SDK, and underused surfaces
 - [Integration build](/sdk/architecture/integration-build) — phased agent tasks to close leverage gaps
+
+### MCP path note (hosts)
+
+CLI, Hub, and Desktop use Core MCP settings-file tooling. VS Code sets `disableMcpSettingsTools: true` and injects tools through its legacy `McpHub` + `createMcpTools`. Treat that split as intentional until [SDK-7.2](/sdk/architecture/integration-build) completes a migration spike.

@@ -1,12 +1,12 @@
 # ClineCore Runtime
 
-`ClineCore` is the full-featured runtime from `@cline/core`. It wraps the `Agent` loop with session persistence, built-in tools (bash, editor, file reading, search, web fetch), config discovery, plugin loading, and optional hub-backed multi-process support.
+`ClineCore` is the full-featured runtime from `@cline/core`. It wraps the `Agent` loop with session persistence, built-in tools (`run_commands`, `editor`, `read_files`, `search_codebase`, `fetch_web_content`, …), config discovery, plugin loading, and optional hub-backed multi-process support.
 
 ## When to Use ClineCore
 
 | Use ClineCore when... | Use Agent instead when... |
 |---|---|
-| You need built-in tools (bash, editor, etc.) | You only need custom tools |
+| You need built-in tools (`run_commands`, `editor`, etc.) | You only need custom tools |
 | You want session persistence to disk | Stateless is fine |
 | You need config discovery from `.cline/` dirs | You handle config yourself |
 | You want scheduled/automated agents | You don't need scheduling |
@@ -47,12 +47,12 @@ ClineCore provides these tools automatically when `enableTools: true`:
 
 | Tool | Description |
 |------|-------------|
-| `bash` | Execute shell commands |
+| `run_commands` | Execute shell commands |
 | `editor` | Edit files |
 | `read_files` | Read file contents |
 | `apply_patch` | Apply unified diffs |
-| `search` | Search file contents and structure |
-| `fetch_web` | HTTP requests and web content |
+| `search_codebase` | Search file contents and structure |
+| `fetch_web_content` | HTTP requests and web content |
 
 ### Config Discovery
 

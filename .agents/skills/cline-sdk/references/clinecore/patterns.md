@@ -85,9 +85,9 @@ const cline = await ClineCore.create({
   clientName: "my-app",
   toolPolicies: {
     read_files: { autoApprove: true },
-    search: { autoApprove: true },
-    fetch_web: { autoApprove: true },
-    bash: { autoApprove: false },
+    search_codebase: { autoApprove: true },
+    fetch_web_content: { autoApprove: true },
+    run_commands: { autoApprove: false },
     editor: { autoApprove: false },
     apply_patch: { autoApprove: false },
   },

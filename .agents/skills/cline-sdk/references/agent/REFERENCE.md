@@ -6,7 +6,7 @@ The `Agent` class (also exported as `AgentRuntime`) is the lightweight, stateles
 
 | Use Agent when... | Use ClineCore instead when... |
 |---|---|
-| You want a simple agent with custom tools | You need built-in tools (bash, editor, etc.) |
+| You want a simple agent with custom tools | You need built-in tools (`run_commands`, `editor`, etc.) |
 | You want minimal dependencies | You need session persistence |
 | You need browser compatibility | You need config discovery from `.cline/` |
 | You're building a stateless worker | You need multi-process session sharing |

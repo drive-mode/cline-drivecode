@@ -796,6 +796,15 @@ export type {
 } from "./session/session-snapshot";
 export { createCoreSessionSnapshot } from "./session/session-snapshot";
 export type {
+	ProductSessionFeatures,
+	ProductSessionHostKind,
+	ResolveProductSessionFeaturesInput,
+} from "./session/product-session-defaults";
+export {
+	PRODUCT_DEFAULT_MAX_ITERATIONS,
+	resolveProductSessionFeatures,
+} from "./session/product-session-defaults";
+export type {
 	SessionCheckpointRestoreContext,
 	SessionCheckpointRestoreResult,
 	SessionVersioningErrorCode,

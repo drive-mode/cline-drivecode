@@ -27,7 +27,7 @@ Per-session policies take precedence.
 
 ## enableTools Must Be Explicit
 
-Built-in tools (bash, editor, read_files, etc.) are not available unless you set `enableTools: true` in the session config:
+Built-in tools (`run_commands`, `editor`, `read_files`, etc.) are not available unless you set `enableTools: true` in the session config:
 
 ```typescript
 await cline.start({
@@ -44,7 +44,7 @@ Without this, the agent only has access to custom tools you provide via `config.
 
 ## cwd Matters for Built-in Tools
 
-Built-in tools like `bash`, `editor`, and `read_files` operate relative to `config.cwd`. If not set, they use the process working directory. Always set it explicitly for predictable behavior:
+Built-in tools like `run_commands`, `editor`, and `read_files` operate relative to `config.cwd`. If not set, they use the process working directory. Always set it explicitly for predictable behavior:
 
 ```typescript
 config: {

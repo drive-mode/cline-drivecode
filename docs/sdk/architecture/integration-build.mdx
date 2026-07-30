@@ -8,17 +8,19 @@ description: "Visual + actionable plan to close public @cline/sdk leverage gaps 
 
 **Public SDK:** [docs.cline.bot/sdk/overview](https://docs.cline.bot/sdk/overview) — `npm install @cline/sdk` (Node ≥22). Same harness as Cline IDE/CLI: plugins, checkpoints, MCP, cron, subagents, and more.
 
-**Visual plan (primary):** open the Tldraw canvas in this Cursor session (`canvasId: giaumqy8`) — package map, leverage heatmap, decision diamonds D1–D4, phase strip, agent swimlanes, and kickoff order.
+**Visual plan (primary):** Tldraw canvas `giaumqy8` — package map, leverage heatmap, decision diamonds D1–D4, phase strip, agent swimlanes, kickoff order.
 
 **Companion detail:** task acceptance criteria below (and [Usage analysis](/sdk/architecture/usage-analysis)).
 
-Turns usage analysis into a sequenced build against the **advertised public SDK** (`ClineCore` / `Agent`, tools, plugins, multi-agent, scheduled agents, production budgets). Phases are ordered by dependency — **no calendar estimates**. Each **agent task** is one focused PR.
+**Monorepo SDK version policy:** Product hosts and examples resolve `@cline/*` via `workspace:*` (always the packages under `sdk/packages/`). Published npm latest for `@cline/sdk` is currently **0.0.66**, matching workspace `@cline/{sdk,core,agents,llms,shared,drive}`. Do not pin numeric `@cline/*` versions inside this monorepo. Keep package `version` fields in lockstep via `sdk/scripts/version.ts` when cutting releases.
 
-**Source of truth for symbols:** code (`DefaultToolNames`, `TEAM_TOOL_NAMES`, `ClineCore` APIs) + [public docs](https://docs.cline.bot/sdk/overview) — not stale skill text when they drift.
+Turns usage analysis into a sequenced build against the **advertised public SDK**. Phases are ordered by dependency — **no calendar estimates**. Each **agent task** is one focused PR.
+
+**Source of truth for symbols:** code (`DefaultToolNames`, `TEAM_TOOL_NAMES`, `spawn_agent`, `ClineCore` APIs) + [public docs](https://docs.cline.bot/sdk/overview).
 
 ## North star
 
-Product hosts stay on **`ClineCore`** from `@cline/sdk` / `@cline/core`. We do **not** migrate hosts to bare `Agent` unless embedding a lightweight loop. Success means:
+Product hosts stay on **`ClineCore`**. Success means:
 
 1. Hosts share **one defaults story** for multi-agent, plugins-on-session, budgets, and Hub runtime depth.
 2. Public docs surfaces either **match product paths** or docs name the product-canonical alternative (esp. scheduling vs `cline.automation`).
@@ -28,46 +30,52 @@ Product hosts stay on **`ClineCore`** from `@cline/sdk` / `@cline/core`. We do *
 
 - Replacing host adapters (VS Code terminal/diff/`McpHub`, Hub WS protocol) with a thin SDK client.
 - Adopting `backendMode: "remote"` or browser automation without a separate product decision.
-- Moving product hosts onto umbrella-only imports for its own sake (peers `@cline/core` etc. remain fine in-monorepo).
 - Rewriting evals to construct SDK objects (CLI/Harbor behavioral coverage is enough).
 
-## Decision gates (lock before coding)
+## Decision gates — LOCKED
 
-Agents must **stop and surface** these if still open. Defaults below are the proposed lock; change them here (and on the visual plan) before implementing dependent tasks.
+| ID | Decision | **Locked** choice | Unlocks |
+|----|----------|-------------------|---------|
+| **D1** | Multi-agent host defaults | **CLI non-YOLO semantics** as product default: `enableSpawnAgent: true`, `enableAgentTeams: true` unless YOLO/sandbox/ACP special-cases. Hub Chat + Desktop adopt the same defaults. VS Code: expose a setting (default **on** once UI is honest); until then do not leave dead subagent UI. | Phase 2 |
+| **D2** | Scheduling canonical path | **Hub `schedule.*` / CLI / Desktop routines** are product-canonical. Public scheduled-agents docs lead with that path; `cline.automation` is the embedder/SDK-local alternative. | Phase 3 |
+| **D3** | Plugin session injection | Installed/enabled plugins load into `CoreSessionConfig` via `pluginPaths` / `extensions` + `extensionContext.workspace` on session start. | Phase 4 |
+| **D4** | Cost budgets | Shared `maxIterations` defaults (+ optional usage abort helper); hosts may override via settings/UI. | Phase 5 |
 
-| ID | Decision | Proposed lock | Unlocks |
-|----|----------|---------------|---------|
-| **D1** | Multi-agent host defaults | **CLI non-YOLO semantics** as product default: `enableSpawnAgent: true`, `enableAgentTeams: true` unless YOLO/sandbox/ACP special-cases. Hub Chat and Desktop adopt the same defaults. VS Code: enable behind a user/setting flag defaulting **on** once UI is honest; until then do not leave dead subagent UI. | Phase 2 |
-| **D2** | Scheduling canonical path | **Hub schedule services / `schedule.*` commands** are product-canonical. Public [scheduled-agents](https://docs.cline.bot/sdk/guides/scheduled-agents) docs must lead with that path; `cline.automation` documented as the embedder/SDK-local alternative — not as “what Desktop/CLI use.” | Phase 3 |
-| **D3** | Plugin session injection | Installed/enabled plugins load into `CoreSessionConfig` via `pluginPaths` / `extensions` + `extensionContext.workspace` on session start (matches [plugins](https://docs.cline.bot/sdk/plugins) guide). | Phase 4 |
-| **D4** | Cost budgets | Shared defaults for `maxIterations` (+ optional usage abort) per [going-to-production](https://docs.cline.bot/sdk/guides/going-to-production); hosts may override. | Phase 5 |
+Amend only by editing this table (and the visual plan). Agents must not invent alternate policy.
 
-## Visual structure (canvas)
+## Architecture note — MCP split brain (SDK-0.3)
+
+| Host | MCP path |
+|------|----------|
+| CLI / Hub / Desktop | Core MCP settings file + install/OAuth helpers; settings tools available unless disabled |
+| VS Code | `disableMcpSettingsTools: true`; tools injected via legacy `McpHub` + `createMcpTools` |
+
+This is intentional adapter debt, not a one-line flip. Do not enable VS Code settings MCP tools without a migration spike (`SDK-7.2`).
+
+## Visual structure
 
 ```txt
-[@cline/sdk packages]
+[@cline/sdk @ 0.0.66 workspace:*]
         ↓
 [North star | Non-goals]
         ↓
-[Feature leverage heatmap: CLI × VS Code × Hub × Desktop]
+[Feature leverage heatmap]
         ↓
-[D1 D2 D3 D4 decision diamonds]
+[D1–D4 LOCKED]
         ↓
-[P0 → P1 → P2 → P3 → P4 → P5 → P6 → P7]
+[P0 → P1 → … → P7]
         ↓
-[Swimlanes: Foundation | Public SDK feature depth | Host honesty]
-        ↓
-[Kickoff order 1…7 + agent run stub]
+[Swimlanes + kickoff order]
 ```
 
 ## Phase overview
 
 | Phase | Goal | Gate |
 |-------|------|------|
-| **0** | Decisions locked; skill/docs symbol drift fixed | D1–D4 recorded; names match Core exports |
+| **0** | Decisions locked; skill/docs symbol drift fixed; MCP note; version lockstep | D1–D4 locked; wire names match Core |
 | **1** | Shared helpers for session features + plugin load | Unit tests in `@cline/core` |
 | **2** | Multi-agent flags consistent across hosts | Defaults match D1 |
-| **3** | Scheduling docs match product (public SDK guide) | Product path first in docs |
+| **3** | Scheduling docs match product | Product path first in docs |
 | **4** | Plugins participate in agent loop | `pluginPaths`/`extensions` on start |
 | **5** | Iteration budgets + optional usage abort | Defaults applied; abort tested |
 | **6** | Hub `ClineCore.create` telemetry/compaction/hooks | Matches CLI depth |
@@ -82,28 +90,21 @@ Agents must **stop and surface** these if still open. Defaults below are the pro
 
 | | |
 |---|---|
-| **Depends on** | — |
-| **Owner surface** | docs + visual plan |
-| **Goal** | Confirm or amend D1–D4 here and on the Tldraw canvas. |
-| **Done when** | Each decision has a single chosen lock; dependent phases reference it. |
-| **Verify** | Doc/canvas review only. |
+| **Status** | **Done** — table above marked LOCKED |
+| **Done when** | Each decision has a single chosen lock |
 
 ### Agent task `SDK-0.2` — Fix skill/docs symbol drift
 
 | | |
 |---|---|
-| **Depends on** | — |
-| **Goal** | Align skill + in-repo docs with Core exports and [public tools docs](https://docs.cline.bot/sdk/tools). |
-| **Code truth** | `DefaultToolNames`, `TEAM_TOOL_NAMES`, `spawn_agent` |
-| **Done when** | No teaching of obsolete wire names as current API. |
-| **Verify** | Grep obsolete names; spot-check constants. |
+| **Status** | **Done** (this PR) — skills + `docs/sdk/guides/multi-agent-teams.mdx` aligned to `DefaultToolNames` / `spawn_agent` / `TEAM_TOOL_NAMES` |
+| **Note** | `start_subagent` remains documented only as **agents-squad plugin** tools, not Core builtins |
 
-### Agent task `SDK-0.3` — Architecture note: MCP split brain
+### Agent task `SDK-0.3` — MCP split-brain note
 
 | | |
 |---|---|
-| **Goal** | Document CLI/Hub settings-file MCP vs VS Code `disableMcpSettingsTools` + `McpHub`. |
-| **Done when** | Agents know not to “fix” VS Code MCP blindly. |
+| **Status** | **Done** — section above + architecture overview see-also |
 
 ---
 
@@ -113,87 +114,72 @@ Agents must **stop and surface** these if still open. Defaults below are the pro
 
 | | |
 |---|---|
-| **Depends on** | D1, D4 |
+| **Depends on** | D1, D4 (locked) |
 | **Owner surface** | `@cline/core` |
-| **Goal** | Pure helper → `{ enableSpawnAgent, enableAgentTeams, maxIterations?, ... }` from host context. |
+| **Goal** | Pure helper → `{ enableSpawnAgent, enableAgentTeams, maxIterations?, ... }` from host context (`yolo`, `acp`, overrides). |
 | **Verify** | `bun run build:sdk` then focused `bun -F @cline/core test:unit`. |
+| **Status** | **Done** — `resolveProductSessionFeatures` + tests in `@cline/core` (hosts wire in Phase 2/5) |
 
 ### Agent task `SDK-1.2` — Extract `resolveSessionPluginLoad`
 
 | | |
 |---|---|
-| **Depends on** | D3 |
-| **Goal** | `{ pluginPaths, extensions, extensionContext }` for `CoreSessionConfig` (public plugins model). |
+| **Depends on** | D3 (locked) |
+| **Goal** | `{ pluginPaths, extensions, extensionContext }` for `CoreSessionConfig`. |
 | **Verify** | `bun run build:sdk`; fixture plugin unit test. |
+| **Status** | Open |
 
 ---
 
 ## Phase 2 · Multi-agent alignment
 
-Tasks `SDK-2.1` CLI · `SDK-2.2` Hub · `SDK-2.3` Desktop · `SDK-2.4` VS Code — wire helper / D1 defaults; VS Code enable-behind-setting **or** remove dead UI.
-
-**Verify:** host unit tests; VS Code smoke if enabling spawn.
-
----
+`SDK-2.1` CLI · `SDK-2.2` Hub · `SDK-2.3` Desktop · `SDK-2.4` VS Code — wire helper / D1 defaults.
 
 ## Phase 3 · Scheduling story
 
-### Agent task `SDK-3.1` — Align public scheduled-agents guide with product
-
-Lead with Hub `schedule.*` / CLI / Desktop routines; demote `cline.automation` to embedder section ([scheduled-agents](https://docs.cline.bot/sdk/guides/scheduled-agents)).
-
-### Agent task `SDK-3.2` (optional) — Thin automation bridge
-
-Only if D2 chooses wrapper: `cline.automation` → hub schedules when `backendMode` is hub.
-
----
+`SDK-3.1` Align public scheduled-agents guide · `SDK-3.2` optional automation bridge.
 
 ## Phase 4 · Plugins on session
 
-`SDK-4.1` CLI · `SDK-4.2` Hub+Desktop · `SDK-4.3` VS Code — inject resolved plugins on `start` so marketplace install participates in the loop ([plugins](https://docs.cline.bot/sdk/plugins)).
-
----
+`SDK-4.1` CLI · `SDK-4.2` Hub+Desktop · `SDK-4.3` VS Code.
 
 ## Phase 5 · Budgets
 
-`SDK-5.1` Apply shared `maxIterations` · `SDK-5.2` Optional usage abort helper ([going-to-production](https://docs.cline.bot/sdk/guides/going-to-production)).
-
----
+`SDK-5.1` Shared `maxIterations` · `SDK-5.2` Optional usage abort.
 
 ## Phase 6 · Hub ClineCore depth
 
-`SDK-6.1` Telemetry on create · `SDK-6.2` Compaction on start · `SDK-6.3` Runtime hooks — match CLI depth for Hub composition root.
-
----
+`SDK-6.1` Telemetry · `SDK-6.2` Compaction · `SDK-6.3` Hooks.
 
 ## Phase 7–8 · VS Code honesty + optional observability
 
-`SDK-7.1` Deferred hooks · `SDK-7.2` MCP spike · `SDK-8.1` OTEL · `SDK-8.2` Shared event projection.
+`SDK-7.1` Hooks · `SDK-7.2` MCP spike · `SDK-8.1` OTEL · `SDK-8.2` Event projection.
 
 ---
 
 ## Per-task agent checklist
 
 ```text
-You are executing task <SDK-X.Y> from the Cline SDK integration visual plan
-(canvas giaumqy8 + docs/sdk/architecture/integration-build.mdx).
-Public API intent: https://docs.cline.bot/sdk/overview (and linked guides).
-1. Respect Decision gates D1–D4 — do not invent product policy.
-2. Implement only this task. No drive-by refactors.
+You are executing task <SDK-X.Y> from docs/sdk/architecture/integration-build.mdx
+(+ visual plan canvas giaumqy8).
+Public API: https://docs.cline.bot/sdk/overview
+Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
+1. Respect LOCKED D1–D4.
+2. One task only. No drive-by refactors.
 3. After @cline/* edits: bun run build:sdk before host tests.
-4. Run the Verify commands for the task.
-5. One task per PR. Update progress tracker.
+4. Verify per task. One task per PR when possible.
 ```
 
 ## Progress tracker
 
 | Task | Status |
 |------|--------|
-| SDK-0.1 Decisions | Open |
-| SDK-0.2 Skill/docs drift | Open |
-| SDK-0.3 MCP split brain note | Open |
-| SDK-1.1 Product session features helper | Open |
-| SDK-1.2 Session plugin load helper | Open |
+| SDK-0.1 Decisions | **Done** |
+| SDK-0.2 Skill/docs drift | **Done** |
+| SDK-0.3 MCP split brain note | **Done** |
+| SDK version lockstep (`@cline/drive` → 0.0.66) | **Done** |
+| SDK-1.1 Product session features helper | **Done** (helper + tests; hosts not wired yet) |
+| SDK-1.2 Session plugin load helper | Open (next) |
 | SDK-2.1–2.4 Multi-agent hosts | Open |
 | SDK-3.1–3.2 Scheduling | Open |
 | SDK-4.1–4.3 Plugins on session | Open |

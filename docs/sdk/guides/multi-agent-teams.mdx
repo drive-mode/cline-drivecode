@@ -34,14 +34,15 @@ const session = await cline.start({
 
 ## How Teams Work
 
-When teams are enabled, the coordinator agent gets additional tools:
+When teams are enabled, the coordinator agent gets additional tools (see `TEAM_TOOL_NAMES` in `@cline/core`):
 
 | Tool | Description |
 |------|-------------|
-| `team_spawn_teammate` | Create a new agent with a specific role and task |
-| `team_delegate_task` | Assign a task to an existing teammate |
-| `team_check_status` | Check the status of delegated tasks |
-| `team_get_result` | Retrieve the result of a completed task |
+| `team_spawn_teammate` | Create a new agent with a specific role |
+| `team_task` / `team_run_task` | Assign / run a task for a teammate |
+| `team_status` | Check teammate / run status |
+| `team_await_runs` / `team_list_runs` | Wait for or list completed runs |
+| `team_send_message` | Send a message to a teammate |
 
 The coordinator decides how to split work, which agents to create, and how to combine results.
 

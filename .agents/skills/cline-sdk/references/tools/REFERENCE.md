@@ -142,12 +142,14 @@ When using `ClineCore` with `enableTools: true`, these tools are available autom
 
 | Tool | Name | What It Does |
 |------|------|-------------|
-| Shell | `bash` | Execute shell commands in the session workspace |
+| Shell | `run_commands` | Execute shell commands in the session workspace |
 | Editor | `editor` | Create and edit files |
 | Read | `read_files` | Read file contents |
 | Patch | `apply_patch` | Apply unified diffs to files |
-| Search | `search` | Search file contents and directory structure |
-| Web | `fetch_web` | Fetch web content via HTTP |
+| Search | `search_codebase` | Search file contents and directory structure |
+| Web | `fetch_web_content` | Fetch web content via HTTP |
+
+Wire names match `DefaultToolNames` in `@cline/core`. Host adapters may replace executors (e.g. VS Code terminal) but keep these tool names unless they inject custom tools.
 
 Built-in tools respect the `cwd` setting in `CoreSessionConfig`.
 
@@ -171,7 +173,7 @@ await cline.start({
   prompt: "...",
   config: { ... },
   toolPolicies: {
-    bash: { autoApprove: true },
+    run_commands: { autoApprove: true },
     editor: { autoApprove: false },
   },
 })

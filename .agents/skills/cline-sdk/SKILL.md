@@ -89,7 +89,7 @@ Which API?
 ```
 Tools?
 +-- Define a custom tool with schema -> tools/REFERENCE.md
-+-- Use built-in tools (bash, editor, read_files) -> tools/REFERENCE.md (built-in section)
++-- Use built-in tools (run_commands, editor, read_files) -> tools/REFERENCE.md (built-in section)
 +-- Control tool approval/policies -> tools/REFERENCE.md (policies section)
 +-- Tool that ends the agent loop -> tools/REFERENCE.md (completion tools)
 +-- Package tools as a reusable plugin -> plugins/REFERENCE.md

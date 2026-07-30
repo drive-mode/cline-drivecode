@@ -188,11 +188,11 @@ Disable tools you don't need and require approval for dangerous ones:
 ```typescript
 toolPolicies: {
   read_files: { autoApprove: true },
-  search: { autoApprove: true },
-  bash: { autoApprove: false },     // require approval
+  search_codebase: { autoApprove: true },
+  run_commands: { autoApprove: false },     // require approval
   editor: { autoApprove: false },
   apply_patch: { autoApprove: false },
-  fetch_web: { enabled: false },    // disable entirely
+  fetch_web_content: { enabled: false },    // disable entirely
 }
 ```
 

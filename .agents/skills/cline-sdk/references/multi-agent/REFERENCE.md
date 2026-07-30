@@ -32,22 +32,20 @@ await cline.start({
 })
 ```
 
-When `enableSpawnAgent` is true, the agent gets access to sub-agent tools:
+When `enableSpawnAgent` is true, the agent gets the core sub-agent tool:
 
 | Tool | Description |
 |------|-------------|
-| `start_subagent` | Spawn a background agent with a task |
-| `message_subagent` | Send a message to a running sub-agent |
-| `handoff_to_agent` | Delegate the current task entirely |
-| `submit_and_exit` | Signal completion |
+| `spawn_agent` | Run a delegated sub-agent with `systemPrompt` + `task` and return its result |
+
+> Plugin examples (e.g. `sdk/examples/plugins/agents-squad`) may add richer tools like `start_subagent` / `message_subagent`. Those are **plugin** tools, not Core builtins.
 
 ### How Sub-Agents Work
 
 1. The parent agent decides a subtask can be delegated
-2. It calls `start_subagent` with a role, task description, and optionally a preset
-3. The sub-agent runs independently in the background
-4. The parent can check status or send follow-up messages
-5. Sub-agent results are available to the parent when complete
+2. It calls `spawn_agent` with a system prompt and task description
+3. The sub-agent runs to completion (or failure) under the parent's tool call
+4. The parent receives the sub-agent output and continues
 
 ## Teams
 
@@ -69,14 +67,18 @@ await cline.start({
 
 ### Team Tools
 
-When `enableAgentTeams` is true, the coordinator agent gets:
+When `enableAgentTeams` is true, the coordinator agent gets Core team tools (`TEAM_TOOL_NAMES`), including:
 
 | Tool | Description |
 |------|-------------|
-| `team_spawn_teammate` | Create a new agent with a role and task |
-| `team_delegate_task` | Assign a task to an existing teammate |
-| `team_check_status` | Check on a delegated task's progress |
-| `team_get_result` | Get the completed result from a teammate |
+| `team_spawn_teammate` | Create a new agent with a role |
+| `team_task` / `team_run_task` | Assign / run a task for a teammate |
+| `team_status` | Check teammate / run status |
+| `team_send_message` / `team_broadcast` | Inter-agent messaging |
+| `team_await_runs` / `team_list_runs` | Wait for or list run results |
+| `team_mission_log` | Read the coordination log |
+
+See `TEAM_TOOL_NAMES` in `@cline/core` for the full inventory.
 
 ### Team Persistence
 

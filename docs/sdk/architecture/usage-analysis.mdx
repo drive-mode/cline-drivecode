@@ -155,7 +155,7 @@ From SDK docs / skill references vs app code:
 
 ### Docs / skill drift (maintenance)
 
-Skill references and some docs still mention outdated symbols relative to current Core exports (e.g. builtin tool wire names like `bash`/`search` vs `run_commands`/`search_codebase`; multi-agent helpers like `start_subagent` / `team_delegate_task` vs `spawn_agent` / `TEAM_TOOL_NAMES`). Treat code (`DefaultToolNames`, `TEAM_TOOL_NAMES`) as source of truth when planning leverage work.
+Skill references and Mintlify guides must track Core exports (`DefaultToolNames`, `TEAM_TOOL_NAMES`, `spawn_agent`). Plugin-only tools (e.g. agents-squad `start_subagent`) must be labeled as plugins, not Core builtins.
 
 ## Beneficial features to leverage next
 
