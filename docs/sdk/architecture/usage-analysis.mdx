@@ -1,0 +1,205 @@
+---
+title: "SDK usage analysis"
+sidebarTitle: "Usage analysis"
+description: "How product hosts and examples consume the Cline SDK, what is used heavily, and where there is room to leverage more."
+---
+
+# SDK usage analysis
+
+Internal audit of how this monorepo consumes the Cline SDK packages (`@cline/sdk`, `@cline/core`, `@cline/agents`, `@cline/llms`, `@cline/shared`, `@cline/drive`). Goal: map real usage intensity, spot thin or bypassed surfaces, and call out beneficial features that are under-leveraged.
+
+## Verdict
+
+Product hosts already lean hard on **`ClineCore`** — not the lightweight `Agent` API. Session lifecycle, hub wiring, providers, tools/approvals, events, MCP, telemetry, auth, compaction, and modes are first-class across CLI, VS Code, Hub, and Desktop.
+
+The gap is not “are we using the SDK?” — we are. The gap is **uneven depth**: multi-agent teams, programmatic automation (`cline.automation`), plugin injection on session start, OpenTelemetry via the SDK adapter, remote backend mode, and several production cost/policy knobs are either host-gated off, reimplemented via hub commands, or left at defaults.
+
+## Package consumption pattern
+
+| Package | Product hosts | Examples / evals |
+|---------|---------------|------------------|
+| `@cline/core` | Primary import surface (CLI, VS Code, Hub, Desktop, Menubar) | `cline-core-cli-agent`, menubar |
+| `@cline/shared` | Types, `createTool`, prompts, hooks contracts, Drive types | Demo fixtures, examples |
+| `@cline/llms` | Provider settings, catalogs, handlers (esp. VS Code) | Menubar catalog lookup |
+| `@cline/drive` | Hub webview Drive kernel | — |
+| `@cline/sdk` | **No direct product imports** | Quickstart, cli-agent, code-review-bot, multi-agent |
+| `@cline/agents` | **No direct product imports** (runtime lives behind `ClineCore`) | Via `@cline/sdk` in Agent examples |
+| Evals | Shell out to CLI / Harbor — behavioral coverage only | — |
+
+`@cline/sdk` re-exports `@cline/core` (`sdk/packages/sdk/src/index.ts`). Product apps correctly import the package that owns the concern (`@cline/core` / `@cline/llms` / `@cline/shared`) rather than the umbrella. That is fine for in-monorepo hosts; external integrators are steered to `@cline/sdk`.
+
+```txt
+External docs / examples  →  @cline/sdk  →  @cline/core (+ agents/llms/shared)
+Product hosts in-repo     →  @cline/core / @cline/llms / @cline/shared / @cline/drive
+```
+
+## Consumer ranking (SDK API depth)
+
+1. **CLI** (`apps/cli`) — richest config + runtime composition: hub/local routing, spawn/teams (non-YOLO), hooks bridge, plugins as slash commands, schedules, MCP wizards, connectors, telemetry/feature flags, enterprise prepare hook.
+2. **Desktop sidecar** (`apps/examples/desktop-app/sidecar`) — broadest product-like surface on hub backend: chat lifecycle, pending prompts/steer, checkpoints, MCP, marketplace, connectors, schedules, OAuth, session DB, child-agent listing.
+3. **VS Code** (`apps/vscode/src/sdk`) — deep `ClineCore` adapter with host overrides (terminal, diffs, MCP hub, VS Code LM). Multi-agent explicitly disabled; browser automation stubbed; events translated to legacy webview messages.
+4. **Cline Hub** (`apps/cline-hub`) — hub daemon + session/provider/schedule/MCP bridges; richest `@cline/drive` consumer in the webview.
+5. **Menubar** — hub observer/launcher (`HubUIClient` / `HubSessionClient`), not a full runtime host.
+6. **Examples using `Agent`** — teach the lightweight surface; not how product hosts run.
+7. **Evals** — exercise tools/providers indirectly via CLI; zero direct SDK imports.
+
+## Feature intensity matrix
+
+Intensity: **H** high · **M** medium · **L** low · **—** none / disabled
+
+| Feature area | CLI | VS Code | Hub | Desktop | Notes |
+|---|:---:|:---:|:---:|:---:|---|
+| `ClineCore` session lifecycle | H | H | H | H | start/send/abort/stop/restore/dispose |
+| Hub backend / discovery | H | — (local) | H | H | VS Code forces `backendMode: "local"` |
+| Provider / model config | H | H | M–H | H | `ProviderSettingsManager`, catalogs, OAuth |
+| Built-in tools + policies | H | H | M–H | H | VS Code overrides shell/edit/read |
+| Custom `createTool` | H | H | L | — | plan→act `switch_to_act_mode` in CLI/VS Code |
+| Approvals / ask-question | H | H | M | H | Capability callbacks on runtime |
+| Event subscribe / stream | H | H | H | H | Hosts map to TUI / webview / desktop chunks |
+| MCP install / settings / tools | M–H | H | M | H | VS Code: `disableMcpSettingsTools` + `McpHub` |
+| Plugins (install / inventory) | H | M | M | H | CLI also loads plugin slash commands |
+| Plugins (`extensions` / `pluginPaths` on session) | M | L | L | L | Discovery strong; session injection thinner |
+| Hooks (`AgentHooks`) | H | M | L–M | L | VS Code defers several hook kinds |
+| Compaction | M–H | M–H | L | M | Manual + auto paths in CLI/VS Code |
+| Checkpoints / restore | M | M | M | H | Desktop restores messages + workspace |
+| Pending prompts / steer | M | M | M | H | Queue delivery; not cron automation |
+| Scheduling (hub schedule cmds) | M–H | — | M–H | H | Routines via hub services |
+| `cline.automation` API | — | — | — | — | Documented; apps use schedule commands instead |
+| Multi-agent spawn / teams | H* | — | M | M | *CLI enables when not YOLO; VS Code forces false |
+| Telemetry (SDK service) | H | H | L–M | H | |
+| OpenTelemetry adapter | L | M† | — | — | †Mostly remote-config / host OTEL path |
+| Auth / account / OAuth | H | H | M–H | H | |
+| `@cline/drive` | — | — | H | — | Status/Drive UI kernel |
+| Direct `Agent` API | — | — | — | — | Examples only |
+| `DefaultGateway` / `createGateway` | — | — | — | — | Docs advertise; hosts use higher layers |
+| `backendMode: "remote"` | — | — | — | — | Unused in product hosts |
+| Browser automation tools | L | — | — | — | VS Code `TaskProxy` stubs browser session |
+
+## What we use the most (and where)
+
+### 1. Session orchestration via `ClineCore`
+
+Composition roots:
+
+- CLI: `apps/cli/src/session/session.ts` → `ClineCore.create`
+- VS Code: `apps/vscode/src/sdk/vscode-session-host.ts` → local backend
+- Hub: `apps/cline-hub/src/server/hub.ts`
+- Desktop: `apps/examples/desktop-app/sidecar/context.ts` → hub `require-hub`
+
+Common APIs: `start`, `send`, `abort`, `stop`, `dispose`, `restore`, `readMessages`, `subscribe`, `pendingPrompts.*`, compaction state helpers.
+
+### 2. Provider / model / auth stack
+
+Deepest in VS Code (`cline-session-factory.ts`, `provider-migration.ts`, `model-catalog/*`, `vscode-lm/*`) and CLI (`main.ts` + `ProviderSettingsManager`). Desktop and Hub expose catalog/save/OAuth command bridges. This is one of the strongest leverage areas already.
+
+### 3. Tools, policies, approvals
+
+Hosts inject `RuntimeCapabilities.requestToolApproval`, tool policy maps, and (CLI/VS Code) host-specific executors. VS Code is the outlier: it suppresses built-in `run_commands`, wraps editor/apply_patch for diffs, and bridges MCP through legacy `McpHub` rather than SDK MCP settings tools.
+
+### 4. Events → UI translation
+
+Every product UI has an adapter that maps `CoreSessionEvent` / `AgentEvent` into host messages (TUI, gRPC webview, Hub WS protocol, desktop chat chunks). This is necessary but means SDK event types are rarely the public UI contract.
+
+### 5. Hub topology
+
+CLI, Hub, Desktop, and Menubar treat hub discovery / `HubSessionClient` / `HubUIClient` / schedule services as core infrastructure. VS Code deliberately stays local-only for the extension host session.
+
+## Config depth: enough, or room for more?
+
+### Already richly configured
+
+- Provider identity, keys, base URLs, regional/Bedrock/Vertex/SAP/Ollama specifics (especially VS Code)
+- System prompt composition + workspace metadata
+- Tool auto-approve / policy maps
+- Plan/act mode + mode-switch tool
+- Checkpoints enabled
+- Compaction strategy (when auto-condense on)
+- Telemetry + distinct IDs + extension context
+- Hub client identity (`clientType`, `displayName`, cwd/workspace)
+
+### Commonly defaulted or lightly exposed
+
+| Knob | Situation | Opportunity |
+|------|-----------|-------------|
+| `maxIterations` | Often undefined / optional UI fields | Default budgets per host; surface in settings |
+| `maxTokensPerTurn` / temperature / thinking | Set when user/provider supplies them | Cost-control presets by task type |
+| `enableSpawnAgent` / `enableAgentTeams` | CLI on (non-YOLO); VS Code hard-off; Hub/Desktop optional | Align product story; enable in VS Code when UI ready |
+| `pluginPaths` / `extensions` | Install/list strong; session start injection uneven | Pass discovered plugins into session config consistently |
+| `automation: true` / `cline.automation.*` | Unused; schedules go through hub command services | Either adopt API or document hub schedules as the canonical path |
+| `backendMode: "remote"` | Unused | Only if remote runtime productizes |
+| Resource / websocket policies | Hub uses `resolveResourcePolicy` for transport | Broader sandboxes / resource profiles in CLI & Desktop |
+| Mistake limit / loop detection | CLI strong; VS Code wires mistake-limit callback | Share CLI defaults across hosts |
+| OpenTelemetry via `loadOpenTelemetryAdapter` | Partial / host-specific | Unify observability story with production guide |
+
+**Bottom line:** we are past “minimal SDK wrap.” Configuration is deep for providers, tools, and session identity. The remaining room is mostly **policy, multi-agent, automation, plugins-on-session, and production observability/cost controls** — not basic session wiring.
+
+## Features advertised but underused
+
+From SDK docs / skill references vs app code:
+
+1. **`ClineCore.automation`** — docs: `automation: true` then `cline.automation.start()`. Apps implement routines via `HubScheduleService` / desktop schedule commands instead.
+2. **Multi-agent teams as first-class product path** — docs: spawn/delegate/status tools. CLI enables flags; VS Code disables; examples use manual fan-out `Agent` instances rather than Core teams.
+3. **Programmatic plugins on the session** — `extensions`, `pluginPaths`, `extensionContext.workspace`. Marketplace install exists; fewer hosts inject plugins into `CoreSessionConfig` the way docs show.
+4. **Direct `Agent` + `createTool` for embedders** — well covered by examples; intentionally not the product-host path.
+5. **LLM gateway (`DefaultGateway` / `createGateway`)** — documented for direct model access; hosts stay on `ClineCore` / `ProviderSettingsManager`.
+6. **`backendMode: "remote"`** — documented; no product host uses it.
+7. **Production cost abort patterns** — subscribe to usage and abort on budget (production guide); hosts track usage for UI more than hard budget enforcement.
+8. **Full hook coverage** — VS Code defers `TaskResume`, `TaskError`, `SessionShutdown`, `PreCompact`, `Notification`.
+
+## Beneficial features to leverage next
+
+Prioritized by product leverage (not calendar estimates). Ordering reflects dependency risk and user-visible upside.
+
+### High leverage
+
+1. **Turn on multi-agent where the UI already implies it**  
+   VS Code still has subagent-aware UI/event translation but sets `enableSpawnAgent: false` / `enableAgentTeams: false`. Either enable behind a flag with the same CLI semantics, or remove dead UI affordances so the SDK contract matches the product.
+
+2. **Unify scheduling on one SDK story**  
+   Hub schedule commands work, but `cline.automation` is the documented SDK surface. Pick one canonical integration path for Desktop/CLI/Hub so external SDK users and in-repo hosts share the same mental model.
+
+3. **Inject installed plugins into session config**  
+   CLI already resolves plugins for slash commands (`resolveAndLoadAgentPlugins`). Extending that into `extensions` / `pluginPaths` (+ workspace `extensionContext`) on `start` would make marketplace plugins participate in the agent loop the way docs describe.
+
+4. **Expose iteration / token budgets in host settings**  
+   Hub/Desktop already pass optional `maxIterations`. Promoting shared defaults and usage-based abort (production guide pattern) would harden long runs without new tools.
+
+### Medium leverage
+
+5. **Complete VS Code hook coverage** — wire deferred hook kinds so file-based hooks match CLI richness.  
+6. **Align OpenTelemetry with SDK adapter** — prefer `loadOpenTelemetryAdapter` / shared remote-config OTEL normalization over one-off host providers where possible.  
+7. **Resource policy profiles beyond Hub websockets** — sandbox / resource profiles for CLI Desktop long-running agents.  
+8. **Reduce dual-path translation debt** — VS Code’s `message-translator` and Hub’s custom WS event mapping are necessary adapters; longer-term, sharing projection helpers from `@cline/shared` would cut drift.
+
+### Lower / situational
+
+9. **`backendMode: "remote"`** — only if a remote execution product lands.  
+10. **Direct gateway usage** — only for non-agent tooling (evals, model probes); product chat should stay on `ClineCore`.  
+11. **Browser automation** — currently stubbed in VS Code SDK adapter; revisit only if browser tools return to Core builtins.
+
+## Architecture notes (gotchas)
+
+- **Product = `ClineCore`; examples = often `Agent`.** Do not infer product capabilities from `apps/examples/quickstart` or `multi-agent`.
+- **VS Code is an adapter layer**, not a thin SDK client. Host overrides for terminal, diffs, MCP, and LM are intentional; built-in SDK behavior is not always what runs.
+- **Hub event protocols are hand-mapped.** Changing `AgentEvent` shapes requires updating CLI TUI, VS Code translator, Hub `agent-events.ts`, and Desktop `handleAgentEvent`.
+- **Evals do not import the SDK.** Behavioral regressions in Core tools show up via CLI smoke/Harbor, not unit-style SDK construction in `evals/`.
+- **Drive logic lives in `@cline/drive` / `@cline/shared`**, composed at Hub/CLI roots with demo adapters from `@cline/drivecode-demo` — not inside the agent loop packages.
+
+## Key file map
+
+| Area | Paths |
+|------|-------|
+| CLI core create | `apps/cli/src/session/session.ts`, `apps/cli/src/main.ts` |
+| CLI run / interactive | `apps/cli/src/runtime/run-agent.ts`, `.../interactive/session-runtime.ts` |
+| VS Code session host | `apps/vscode/src/sdk/vscode-session-host.ts`, `cline-session-factory.ts`, `SdkController.ts` |
+| VS Code events / tools | `message-translator.ts`, `vscode-runtime-builder.ts`, `hooks-adapter.ts` |
+| Hub | `apps/cline-hub/src/server/hub.ts`, `sessions.ts`, `schedules.ts`, `agent-events.ts` |
+| Desktop | `apps/examples/desktop-app/sidecar/{context,chat-session,commands}.ts` |
+| SDK entry | `sdk/packages/sdk/src/index.ts`, `sdk/packages/core/src/ClineCore.ts` |
+| Docs counterparts | `docs/sdk/guides/{scheduled-agents,multi-agent-teams,going-to-production}.mdx` |
+
+## Summary
+
+We use the SDK **enough for a full product runtime** — especially session, providers, tools, hub, MCP, and telemetry. We do **not** under-use the basic agent loop.
+
+The highest-value unused or uneven surfaces are **multi-agent (esp. VS Code)**, **automation API vs hub schedules**, **plugins actually loaded into sessions**, and **production budgets / OTEL**. Closing those gaps would increase leverage without inventing new host abstractions — they are already in `@cline/core` and the public SDK docs.

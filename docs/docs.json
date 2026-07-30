@@ -220,7 +220,8 @@
 						"group": "Architecture",
 						"pages": [
 							"sdk/architecture/overview",
-							"sdk/architecture/hub-spoke"
+							"sdk/architecture/hub-spoke",
+							"sdk/architecture/usage-analysis"
 						]
 					},
 					{
