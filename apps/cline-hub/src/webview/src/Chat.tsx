@@ -863,7 +863,12 @@ export default function Chat({
 				flushPending(prior);
 			}
 
-			const flush = () => flushPending(pending);
+			const flush = () => {
+				// Clear chip on immediate send so Accept/Skip cannot resend a stale hold.
+				setRouteSuggestion(null);
+				setPendingRouteSend(null);
+				flushPending(pending);
+			};
 
 			if (!drive.active || routerMode === "manual") {
 				flush();
