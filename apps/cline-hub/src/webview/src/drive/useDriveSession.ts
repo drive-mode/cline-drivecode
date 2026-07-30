@@ -908,13 +908,20 @@ export function useDriveSession(
 				(item) => item.id === activeId,
 			);
 			if (active) {
-				setPresentedShow({
+				// Hold advances keep the same show id; backlog `caption` stays the
+				// static show caption while `drive_script_beat` owns live narration.
+				// Preserve the sticky caption so a later room sync (including the
+				// command-reply echo) does not clobber beat `say`.
+				setPresentedShow((current) => ({
 					showItemId: active.id,
 					title: active.title,
-					caption: active.caption,
+					caption:
+						current?.showItemId === active.id
+							? (current.caption ?? active.caption)
+							: active.caption,
 					uri: active.uri,
 					ownerParticipantId: active.ownerParticipantId,
-				});
+				}));
 			}
 		};
 		window.addEventListener("message", onMessage);
