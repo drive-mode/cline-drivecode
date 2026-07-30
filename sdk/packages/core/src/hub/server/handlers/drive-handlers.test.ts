@@ -754,4 +754,61 @@ describe("handleDriveCommand", () => {
 		};
 		expect(room.director.activeShowId).toBe("show-b");
 	});
+
+	it("re-enqueue of active show clears activeShowId and drops showing uri", async () => {
+		const { ctx } = createCtx();
+		const showItem = {
+			id: "show-sample-arch-overview-queued",
+			ownerParticipantId: "drive:partner",
+			title: "Architecture overview",
+			intent: "Explain",
+			artifactKind: "diagram.architecture" as const,
+			mediaClass: "still" as const,
+			caption: "sample",
+			produce: {
+				tool: "render_mermaid" as const,
+				args: { mermaidSource: "graph TD; A-->B;" },
+			},
+			priority: 10,
+			status: "planned" as const,
+			scoreReasons: [] as string[],
+		};
+
+		const presented = await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r3",
+				presentNow: true,
+				showItem,
+			}),
+		);
+		expect(presented.ok).toBe(true);
+		const roomPresented = presented.payload?.room as {
+			director: {
+				activeShowId: string;
+				showBacklog: Array<{ id: string; uri?: string; status: string }>;
+			};
+		};
+		expect(roomPresented.director.activeShowId).toBe(showItem.id);
+		expect(roomPresented.director.showBacklog[0]?.uri).toMatch(
+			/^data:image\/svg\+xml/,
+		);
+		expect(roomPresented.director.showBacklog[0]?.status).toBe("showing");
+
+		const requeued = await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", { roomId: "r3", showItem }),
+		);
+		expect(requeued.ok).toBe(true);
+		const room = requeued.payload?.room as {
+			director: {
+				activeShowId: string | null;
+				showBacklog: Array<{ id: string; uri?: string; status: string }>;
+			};
+		};
+		expect(room.director.activeShowId).toBeNull();
+		expect(room.director.showBacklog[0]?.id).toBe(showItem.id);
+		expect(room.director.showBacklog[0]?.uri).toBeUndefined();
+		expect(room.director.showBacklog[0]?.status).toBe("planned");
+	});
 });

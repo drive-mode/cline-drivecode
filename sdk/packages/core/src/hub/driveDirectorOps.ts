@@ -60,11 +60,14 @@ export function enqueueShowOnStore(input: {
 		enqueued,
 		...room.director.showBacklog.filter((item) => item.id !== enqueued.id),
 	];
+	// Upsert demotes showing → planned/ready without uri; clear active so sticky URI remains.
+	const clearActive = room.director.activeShowId === enqueued.id;
 	let next = store.setLive({
 		...room,
 		director: {
 			...room.director,
 			showBacklog,
+			...(clearActive ? { activeShowId: null } : {}),
 		},
 	});
 	let presented: ShowBacklogItem | null = null;
