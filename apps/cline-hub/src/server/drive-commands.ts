@@ -74,6 +74,7 @@ export async function handleDriveWebviewCommand(
 		frame.command === "drive.fork.list" &&
 		Array.isArray(reply.payload?.chatForks)
 	) {
+		// chatForks-only stub: omit director so clients keep live showBacklog.
 		ctx.send(peer, {
 			type: "drive_room_changed",
 			room: {

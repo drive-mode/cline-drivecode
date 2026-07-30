@@ -509,7 +509,7 @@ export type WebviewOutboundMessage =
 					muted: boolean;
 					deafened: boolean;
 				}>;
-				director: {
+				director?: {
 					activeShowId: string | null;
 					stickyShowIds: string[];
 					spotlightParticipantId: string | null;
