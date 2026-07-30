@@ -255,8 +255,16 @@ export function applyPromotePacket(input: {
 
 	for (const templateId of templateIds) {
 		const already =
-			showBacklog.find((item) => item.produce.templateId === templateId) ??
-			showBacklog.find((item) => item.id === templateId);
+			showBacklog.find(
+				(item) =>
+					item.linkedDoItemId === input.promote.doItemId &&
+					item.produce.templateId === templateId,
+			) ??
+			showBacklog.find(
+				(item) =>
+					item.linkedDoItemId === input.promote.doItemId &&
+					item.id === templateId,
+			);
 		if (already) {
 			showBacklog = showBacklog.map((item) =>
 				item.id === already.id ? markShowReady(item) : item,
