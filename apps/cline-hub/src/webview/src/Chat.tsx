@@ -43,6 +43,7 @@ import {
 	isChatForkSession,
 } from "./drive/ChatForkAuditPanel";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
+import type { DriveLaunchRequest } from "./drive/driveLaunch";
 import {
 	type RouteSuggestion,
 	type RouterUiMode,
@@ -117,12 +118,16 @@ function formatSessionLabel(session: WebviewSessionSummary): string {
 }
 
 type ChatProps = {
+	driveLaunchRequest?: DriveLaunchRequest | null;
 	initialSessionId?: string;
+	onDriveLaunchHandled?: (requestId: number) => void;
 	onSessionSelected?: (sessionId?: string) => void;
 };
 
 export default function Chat({
+	driveLaunchRequest,
 	initialSessionId,
+	onDriveLaunchHandled,
 	onSessionSelected,
 }: ChatProps) {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -180,6 +185,7 @@ export default function Chat({
 	const lastSelectionRef = useRef(lastSelection);
 	const sessionsRef = useRef(sessions);
 	const defaultsRef = useRef(defaults);
+	const handledDriveLaunchRequestIdRef = useRef<number | null>(null);
 
 	const isHydrating = Boolean(hydratingSessionId);
 	const driveSession = useDriveSession({
@@ -204,8 +210,11 @@ export default function Chat({
 		planEditorTasks,
 		setPlanEditorTasks,
 		bankSessionRef,
+		connectionPhase,
 		driveVoiceResolved,
-		toggleDrive,
+		joinDrive,
+		leaveDrive,
+		refreshDriveRoom,
 		toggleStage,
 		presentedShow,
 		chatForks,
@@ -218,6 +227,31 @@ export default function Chat({
 		openForkAudit,
 		setForkRetain,
 	} = driveSession;
+
+	useEffect(() => {
+		if (
+			!driveLaunchRequest ||
+			handledDriveLaunchRequestIdRef.current === driveLaunchRequest.id
+		) {
+			return;
+		}
+		const launched =
+			driveLaunchRequest.action === "join" ||
+			connectionPhase !== "on"
+				? joinDrive(driveLaunchRequest.roomId)
+				: refreshDriveRoom(driveLaunchRequest.roomId);
+		if (!launched) {
+			return;
+		}
+		handledDriveLaunchRequestIdRef.current = driveLaunchRequest.id;
+		onDriveLaunchHandled?.(driveLaunchRequest.id);
+	}, [
+		connectionPhase,
+		driveLaunchRequest,
+		joinDrive,
+		onDriveLaunchHandled,
+		refreshDriveRoom,
+	]);
 
 	const visibleSessions = useMemo(
 		() => sessions.filter((session) => !isChatForkSession(session)),
@@ -1006,10 +1040,12 @@ export default function Chat({
 					</div>
 					<div className="flex items-center gap-2">
 						<DriveHeaderControls
+							connectionPhase={connectionPhase}
 							disabled={isHydrating}
 							drive={drive}
-							onToggleDrive={toggleDrive}
-							onToggleStage={toggleStage}
+							onJoinDrive={joinDrive}
+							onLeaveDrive={leaveDrive}
+							onToggleSpotlight={toggleStage}
 						/>
 						<Button
 							disabled={isHydrating}

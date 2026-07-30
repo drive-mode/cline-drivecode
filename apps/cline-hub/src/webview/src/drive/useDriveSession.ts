@@ -1,4 +1,8 @@
-import type { ChatForkRecord, RoomSnapshot, ShowBacklogItem } from "@cline/shared";
+import type {
+	ChatForkRecord,
+	RoomSnapshot,
+	ShowBacklogItem,
+} from "@cline/shared";
 import {
 	type Dispatch,
 	type SetStateAction,
@@ -15,6 +19,7 @@ import {
 	listPlanTasks,
 	seedBankForJoin,
 } from "./bankSession";
+import { isDriveRoomNotFoundError } from "./driveRoomPreview";
 import { foldIncomingDriveEvent } from "./foldRoomSnapshot";
 import {
 	isDriveHumanId,
@@ -129,9 +134,173 @@ export type UseDriveSessionArgs = {
 	workspaceRoot?: string;
 };
 
+export type DriveConnectionPhase = "off" | "joining" | "on" | "error";
+
+export type DriveCallErrorResolution =
+	| {
+			kind: "reset";
+			note: string;
+			phase: Extract<DriveConnectionPhase, "off" | "error">;
+	  }
+	| {
+			kind: "refresh";
+			note: string;
+	  }
+	| {
+			kind: "notice";
+			note: string;
+	  };
+
+export function resolveDriveCallError({
+	code,
+	command,
+	text,
+	wasJoining,
+}: {
+	code?: string;
+	command?: string;
+	text?: string;
+	wasJoining: boolean;
+}): DriveCallErrorResolution {
+	const detail = text?.trim();
+	if (isDriveRoomNotFoundError({ code, text })) {
+		const joinFailed =
+			wasJoining && (command === undefined || command === "call_join");
+		if (command === "call_join" && !joinFailed) {
+			return {
+				kind: "notice",
+				note: detail
+					? `Could not attach this Chat session to Drive: ${detail}`
+					: "Could not attach this Chat session to Drive.",
+			};
+		}
+		return {
+			kind: "reset",
+			note: joinFailed
+				? detail
+					? `Could not join Drive: ${detail}`
+					: "Could not join Drive."
+				: "The Drive call is no longer available.",
+			phase: joinFailed ? "error" : "off",
+		};
+	}
+	if (wasJoining && (command === undefined || command === "call_join")) {
+		return {
+			kind: "reset",
+			note: detail
+				? `Could not join Drive: ${detail}`
+				: "Could not join Drive.",
+			phase: "error",
+		};
+	}
+	if (command === "call_get_room") {
+		return {
+			kind: "notice",
+			note: detail
+				? `Could not refresh the Drive call: ${detail}`
+				: "Could not refresh the Drive call.",
+		};
+	}
+	if (command === "call_join") {
+		return {
+			kind: "notice",
+			note: detail
+				? `Could not attach this Chat session to Drive: ${detail}`
+				: "Could not attach this Chat session to Drive.",
+		};
+	}
+	return {
+		kind: "refresh",
+		note:
+			command === "call_rename_participant"
+				? detail
+					? `Could not rename participant: ${detail}`
+					: "Could not rename participant."
+				: detail || "Drive call command failed.",
+	};
+}
+
+export function isDriveRoomSnapshotForTarget({
+	expectedRoomId,
+	outerRoomId,
+	snapshotRoomId,
+}: {
+	expectedRoomId: string;
+	outerRoomId?: string;
+	snapshotRoomId: string;
+}): boolean {
+	return (
+		snapshotRoomId === expectedRoomId &&
+		(outerRoomId === undefined || outerRoomId === expectedRoomId)
+	);
+}
+
+export function resolveDriveTargetRoomId({
+	requestedRoomId,
+	currentRoomId,
+	expectedRoomId,
+}: {
+	requestedRoomId?: string | null;
+	currentRoomId?: string | null;
+	expectedRoomId?: string | null;
+}): string {
+	for (const candidate of [
+		requestedRoomId,
+		currentRoomId,
+		expectedRoomId,
+		DRIVE_DEFAULT_ROOM_ID,
+	]) {
+		const normalized = candidate?.trim();
+		if (normalized) {
+			return normalized;
+		}
+	}
+	return DRIVE_DEFAULT_ROOM_ID;
+}
+
+export function hasPendingDriveJoinRequest({
+	pendingRoomJoin,
+	pendingAttachedSessionId,
+}: {
+	pendingRoomJoin: boolean;
+	pendingAttachedSessionId: string | null;
+}): boolean {
+	return pendingRoomJoin || pendingAttachedSessionId !== null;
+}
+
+export function shouldReattachDriveSession({
+	active,
+	confirmedAttachedSessionId,
+	connectionPhase,
+	driveIntended,
+	failedAttachedSessionId,
+	pendingAttachedSessionId,
+	sessionId,
+}: {
+	active: boolean;
+	confirmedAttachedSessionId: string | null;
+	connectionPhase: DriveConnectionPhase;
+	driveIntended: boolean;
+	failedAttachedSessionId: string | null;
+	pendingAttachedSessionId: string | null;
+	sessionId?: string | null;
+}): boolean {
+	const normalizedSessionId = sessionId?.trim();
+	return Boolean(
+		normalizedSessionId &&
+			connectionPhase === "on" &&
+			active &&
+			driveIntended &&
+			confirmedAttachedSessionId !== normalizedSessionId &&
+			pendingAttachedSessionId === null &&
+			failedAttachedSessionId !== normalizedSessionId,
+	);
+}
+
 export type UseDriveSessionResult = {
 	drive: DriveUiState;
 	setDrive: Dispatch<SetStateAction<DriveUiState>>;
+	connectionPhase: DriveConnectionPhase;
 	driveVoice: DriveVoiceUi;
 	setDriveVoice: Dispatch<SetStateAction<DriveVoiceUi>>;
 	driveJoinNote: string | null;
@@ -146,6 +315,9 @@ export type UseDriveSessionResult = {
 	driveVoiceResolved: ReturnType<typeof resolveDriveVoiceTopology>;
 	/** Workspace root for durable bank / agent-home hub ops. */
 	workspaceRoot?: string;
+	joinDrive: (roomId?: string) => boolean;
+	leaveDrive: () => void;
+	refreshDriveRoom: (roomId?: string) => boolean;
 	toggleDrive: () => void;
 	toggleStage: () => void;
 	presentedShow: {
@@ -181,6 +353,9 @@ export function useDriveSession(
 	args: UseDriveSessionArgs,
 ): UseDriveSessionResult {
 	const [drive, setDrive] = useState<DriveUiState>(readPersistedDriveUi);
+	const [connectionPhase, setConnectionPhase] = useState<DriveConnectionPhase>(
+		() => (drive.active ? "on" : "off"),
+	);
 	const [driveJoinNote, setDriveJoinNote] = useState<string | null>(null);
 	const [driveVoice, setDriveVoice] = useState<DriveVoiceUi>(
 		readPersistedDriveVoice,
@@ -211,23 +386,31 @@ export function useDriveSession(
 	const roomSeqRef = useRef(0);
 	/** Local RoomSnapshot for reduceRoom fold (same kernel as hub). */
 	const roomSnapshotRef = useRef<RoomSnapshot | null>(null);
+	/** Room whose snapshots may authoritatively mutate this hook. */
+	const expectedRoomIdRef = useRef(drive.roomId ?? DRIVE_DEFAULT_ROOM_ID);
 	/**
 	 * Local intent to be on the Drive call (joining or seated).
 	 * Cleared synchronously on leave/cancel so late hub snapshots cannot rejoin
 	 * or sync chat mode after the user opted out.
 	 */
 	const driveIntentRef = useRef(drive.active);
-	/** Mirrors drive.active synchronously for leave/snapshot races. */
-	const driveActiveRef = useRef(false);
 	const sessionIdRef = useRef(args.sessionId);
+	/** Chat session attachment confirmed by a matching seated room snapshot. */
+	const confirmedAttachedSessionIdRef = useRef<string | null>(null);
+	/** Chat session sent in call_join but not yet confirmed by a snapshot. */
+	const pendingAttachedSessionIdRef = useRef<string | null>(null);
+	/** Failed attachment suppressed from automatic retry until explicit join. */
+	const failedAttachedSessionIdRef = useRef<string | null>(null);
+	const [attachmentRevision, setAttachmentRevision] = useState(0);
 	const workspaceRootRef = useRef(args.workspaceRoot);
 	const onModeChangeRef = useRef(args.onModeChange);
 	const driveRef = useRef(drive);
+	const connectionPhaseRef = useRef(connectionPhase);
 	sessionIdRef.current = args.sessionId;
 	workspaceRootRef.current = args.workspaceRoot;
 	onModeChangeRef.current = args.onModeChange;
-	driveActiveRef.current = drive.active;
 	driveRef.current = drive;
+	connectionPhaseRef.current = connectionPhase;
 
 	useEffect(() => {
 		try {
@@ -247,6 +430,206 @@ export function useDriveSession(
 			// ignore
 		}
 	}, [drive, driveVoice]);
+
+	const resetDriveConnection = useCallback(
+		({
+			note,
+			phase,
+		}: {
+			note: string | null;
+			phase: Extract<DriveConnectionPhase, "off" | "error">;
+		}) => {
+			const current = driveRef.current;
+			pendingJoinRef.current = false;
+			driveIntentRef.current = false;
+			roomSnapshotRef.current = null;
+			roomSeqRef.current = 0;
+			confirmedAttachedSessionIdRef.current = null;
+			pendingAttachedSessionIdRef.current = null;
+			failedAttachedSessionIdRef.current = null;
+			connectionPhaseRef.current = phase;
+			setConnectionPhase(phase);
+			setDriveJoinNote(note);
+			setPlanEditorTasks([]);
+			setDrive({
+				...DEFAULT_DRIVE_UI,
+				partnerName: current.partnerName,
+				partnerNameInk: current.partnerNameInk,
+			});
+			onModeChangeRef.current("act");
+		},
+		[],
+	);
+
+	const sendDriveJoin = useCallback(
+		(
+			current: DriveUiState,
+			sessionId?: string | null,
+			targetRoomId?: string,
+		) => {
+			const roomId = resolveDriveTargetRoomId({
+				requestedRoomId: targetRoomId,
+				currentRoomId: current.roomId,
+				expectedRoomId: expectedRoomIdRef.current,
+			});
+			if (expectedRoomIdRef.current !== roomId) {
+				expectedRoomIdRef.current = roomId;
+				roomSnapshotRef.current = null;
+				roomSeqRef.current = 0;
+			}
+			const payload: {
+				type: "call_join";
+				roomId: string;
+				human: { id: string; displayName: string };
+				agent: { id: string; displayName: string };
+				activateDrive: boolean;
+				sessionId?: string;
+				workspaceRoot?: string;
+			} = {
+				type: "call_join",
+				roomId,
+				human: {
+					id: DRIVE_PARTICIPANT_HUMAN,
+					displayName: "You",
+				},
+				agent: {
+					id: DRIVE_PARTICIPANT_PARTNER,
+					displayName: current.partnerName,
+				},
+				activateDrive: true,
+			};
+			const normalizedSessionId = sessionId?.trim();
+			if (normalizedSessionId) {
+				payload.sessionId = normalizedSessionId;
+				pendingAttachedSessionIdRef.current = normalizedSessionId;
+			}
+			const workspaceRoot = workspaceRootRef.current?.trim();
+			if (workspaceRoot) {
+				payload.workspaceRoot = workspaceRoot;
+			}
+			postToHost(payload);
+		},
+		[],
+	);
+
+	const joinDrive = useCallback(
+		(targetRoomId?: string) => {
+			if (connectionPhaseRef.current === "joining") {
+				return false;
+			}
+			const current = driveRef.current;
+			const roomId = resolveDriveTargetRoomId({
+				requestedRoomId: targetRoomId,
+				currentRoomId: current.roomId,
+				expectedRoomId: expectedRoomIdRef.current,
+			});
+			if (expectedRoomIdRef.current !== roomId) {
+				expectedRoomIdRef.current = roomId;
+				roomSnapshotRef.current = null;
+				roomSeqRef.current = 0;
+			}
+			driveIntentRef.current = true;
+			const joiningDifferentRoom =
+				current.roomId !== null && current.roomId !== roomId;
+			if (
+				connectionPhaseRef.current !== "on" ||
+				!current.active ||
+				joiningDifferentRoom
+			) {
+				pendingJoinRef.current = true;
+				roomSnapshotRef.current = null;
+				roomSeqRef.current = 0;
+				connectionPhaseRef.current = "joining";
+				setConnectionPhase("joining");
+				setDriveJoinNote("Joining Drive call…");
+			}
+			const sessionId = sessionIdRef.current?.trim();
+			if (sessionId) {
+				// Explicit Start/Rejoin is always allowed to retry a failed attachment.
+				failedAttachedSessionIdRef.current = null;
+			}
+			sendDriveJoin(current, sessionId, roomId);
+			return true;
+		},
+		[sendDriveJoin],
+	);
+
+	const leaveDrive = useCallback(() => {
+		const current = driveRef.current;
+		postToHost({
+			type: "call_leave",
+			roomId: current.roomId ?? DRIVE_DEFAULT_ROOM_ID,
+			participantId: DRIVE_PARTICIPANT_HUMAN,
+		});
+		resetDriveConnection({ note: null, phase: "off" });
+	}, [resetDriveConnection]);
+
+	const refreshDriveRoom = useCallback(
+		(targetRoomId?: string) => {
+			const explicitlyTargeted = Boolean(targetRoomId?.trim());
+			if (connectionPhaseRef.current !== "on" && !explicitlyTargeted) {
+				return false;
+			}
+			const current = driveRef.current;
+			const roomId = resolveDriveTargetRoomId({
+				requestedRoomId: targetRoomId,
+				currentRoomId: current.roomId,
+				expectedRoomId: expectedRoomIdRef.current,
+			});
+			if (!roomId) {
+				resetDriveConnection({
+					note: "The Drive call is no longer available.",
+					phase: "off",
+				});
+				return true;
+			}
+			if (expectedRoomIdRef.current !== roomId) {
+				expectedRoomIdRef.current = roomId;
+				roomSnapshotRef.current = null;
+				roomSeqRef.current = 0;
+			}
+			if (explicitlyTargeted) {
+				// A Drive-home "Return" is an assertion that this room is the local
+				// call target. The snapshot still decides whether the human is seated.
+				driveIntentRef.current = true;
+			}
+			const payload: {
+				type: "call_get_room";
+				roomId: string;
+				sessionId?: string;
+				afterSeq?: number;
+				workspaceRoot?: string;
+			} = {
+				type: "call_get_room",
+				roomId,
+			};
+			const sessionId = sessionIdRef.current?.trim();
+			if (sessionId) {
+				payload.sessionId = sessionId;
+			}
+			if (roomSeqRef.current > 0) {
+				payload.afterSeq = roomSeqRef.current;
+			}
+			const workspaceRoot = workspaceRootRef.current?.trim();
+			if (workspaceRoot) {
+				payload.workspaceRoot = workspaceRoot;
+			}
+			postToHost(payload);
+			return true;
+		},
+		[resetDriveConnection],
+	);
+
+	const toggleDrive = useCallback(() => {
+		if (
+			connectionPhaseRef.current === "on" ||
+			connectionPhaseRef.current === "joining"
+		) {
+			leaveDrive();
+			return;
+		}
+		joinDrive();
+	}, [joinDrive, leaveDrive]);
 
 	const seedBankAfterJoin = useCallback(async (partnerName: string) => {
 		const { snapshot } = await seedBankForJoin(
@@ -290,6 +673,7 @@ export function useDriveSession(
 				uri?: string;
 				say?: string;
 				ownerParticipantId?: string;
+				roomId?: string;
 				snapshot?: RoomSnapshot;
 				event?: unknown;
 				auditHandle?: string;
@@ -326,8 +710,7 @@ export function useDriveSession(
 				return;
 			}
 			if (message.type === "drive_script_beat") {
-				const say =
-					typeof message.say === "string" ? message.say.trim() : "";
+				const say = typeof message.say === "string" ? message.say.trim() : "";
 				if (say) {
 					setPresentedShow((current) =>
 						current
@@ -344,69 +727,46 @@ export function useDriveSession(
 				return;
 			}
 			if (message.type === "call_error") {
-				const wasJoining = pendingJoinRef.current;
-				if (wasJoining) {
-					driveIntentRef.current = false;
+				if (
+					message.command === "call_join" &&
+					!hasPendingDriveJoinRequest({
+						pendingRoomJoin: pendingJoinRef.current,
+						pendingAttachedSessionId: pendingAttachedSessionIdRef.current,
+					})
+				) {
+					// Ignore a failure from a cancelled or already-confirmed join.
+					// In particular, a late call_join error must not tear down an
+					// authoritative on-call room.
+					return;
 				}
-				pendingJoinRef.current = false;
-				const command = message.command;
-				if (wasJoining || command === "call_join") {
-					setDriveJoinNote(
-						message.text?.trim()
-							? `Could not join Drive: ${message.text}`
-							: "Could not join Drive.",
-					);
-					setDrive((current) => {
-						// Ignore late/duplicate join failures after seating.
-						if (current.roomId != null && current.active) {
-							return current;
-						}
-						return {
-							...current,
-							active: false,
-							roomId: null,
-							demo: true,
-						};
+				const failedAttachmentSessionId =
+					message.command === "call_join"
+						? pendingAttachedSessionIdRef.current
+						: null;
+				if (failedAttachmentSessionId) {
+					pendingAttachedSessionIdRef.current = null;
+					failedAttachedSessionIdRef.current = failedAttachmentSessionId;
+					setAttachmentRevision((revision) => revision + 1);
+				}
+				const resolution = resolveDriveCallError({
+					code: message.code,
+					command: message.command,
+					text: message.text,
+					wasJoining: pendingJoinRef.current,
+				});
+				if (resolution.kind === "reset") {
+					resetDriveConnection({
+						note: resolution.note,
+						phase: resolution.phase,
 					});
 					return;
 				}
-				if (command === "call_rename_participant") {
-					setDriveJoinNote(
-						message.text?.trim()
-							? `Could not rename participant: ${message.text}`
-							: "Could not rename participant.",
-					);
-				} else {
-					setDriveJoinNote(
-						message.text?.trim() || "Drive call command failed.",
-					);
+				setDriveJoinNote(resolution.note);
+				if (resolution.kind === "notice") {
+					return;
 				}
 				// Refresh authoritative room state (rolls back optimistic rename, etc.).
-				const roomId = driveRef.current.roomId;
-				if (roomId) {
-					const payload: {
-						type: "call_get_room";
-						roomId: string;
-						sessionId?: string;
-						afterSeq?: number;
-						workspaceRoot?: string;
-					} = {
-						type: "call_get_room",
-						roomId,
-					};
-					const sessionId = sessionIdRef.current;
-					if (sessionId) {
-						payload.sessionId = sessionId;
-					}
-					if (roomSeqRef.current > 0) {
-						payload.afterSeq = roomSeqRef.current;
-					}
-					const workspaceRoot = workspaceRootRef.current?.trim();
-					if (workspaceRoot) {
-						payload.workspaceRoot = workspaceRoot;
-					}
-					postToHost(payload);
-				}
+				refreshDriveRoom();
 				return;
 			}
 			if (message.type === "drive_fork_audit") {
@@ -423,6 +783,15 @@ export function useDriveSession(
 				message.snapshot
 			) {
 				const hubSnapshot = message.snapshot;
+				if (
+					!isDriveRoomSnapshotForTarget({
+						expectedRoomId: expectedRoomIdRef.current,
+						outerRoomId: message.roomId,
+						snapshotRoomId: hubSnapshot.roomId,
+					})
+				) {
+					return;
+				}
 				// Fold drive_event through reduceRoom; room_snapshot replaces.
 				// Compute candidate before intent guards — only commit to the ref
 				// once we know this client should apply the update.
@@ -462,12 +831,28 @@ export function useDriveSession(
 				roomSnapshotRef.current = seatedOnCall ? snapshot : null;
 				if (wasPendingJoin) {
 					pendingJoinRef.current = false;
-					driveActiveRef.current = true;
+				}
+				if (seatedOnCall && pendingAttachedSessionIdRef.current) {
+					const confirmedSessionId = pendingAttachedSessionIdRef.current;
+					confirmedAttachedSessionIdRef.current = confirmedSessionId;
+					pendingAttachedSessionIdRef.current = null;
+					if (failedAttachedSessionIdRef.current === confirmedSessionId) {
+						failedAttachedSessionIdRef.current = null;
+					}
+					setAttachmentRevision((revision) => revision + 1);
 				}
 				if (!seatedOnCall) {
 					driveIntentRef.current = false;
-					driveActiveRef.current = false;
+					confirmedAttachedSessionIdRef.current = null;
+					pendingAttachedSessionIdRef.current = null;
+					failedAttachedSessionIdRef.current = null;
+					connectionPhaseRef.current = "off";
+					setConnectionPhase("off");
 					setDriveJoinNote(null);
+					setPlanEditorTasks([]);
+				} else {
+					connectionPhaseRef.current = "on";
+					setConnectionPhase("on");
 				}
 				setDrive((current) => {
 					const next = applyRoomSnapshot(current, snapshot);
@@ -534,7 +919,34 @@ export function useDriveSession(
 		};
 		window.addEventListener("message", onMessage);
 		return () => window.removeEventListener("message", onMessage);
-	}, [seedBankAfterJoin]);
+	}, [refreshDriveRoom, resetDriveConnection, seedBankAfterJoin]);
+
+	useEffect(() => {
+		// Attachment refs do not render; the revision intentionally re-evaluates
+		// this effect after a pending attachment is confirmed or rejected.
+		void attachmentRevision;
+		const sessionId = args.sessionId?.trim();
+		if (
+			!shouldReattachDriveSession({
+				active: drive.active,
+				confirmedAttachedSessionId: confirmedAttachedSessionIdRef.current,
+				connectionPhase,
+				driveIntended: driveIntentRef.current,
+				failedAttachedSessionId: failedAttachedSessionIdRef.current,
+				pendingAttachedSessionId: pendingAttachedSessionIdRef.current,
+				sessionId,
+			})
+		) {
+			return;
+		}
+		sendDriveJoin(driveRef.current, sessionId, expectedRoomIdRef.current);
+	}, [
+		args.sessionId,
+		attachmentRevision,
+		connectionPhase,
+		drive.active,
+		sendDriveJoin,
+	]);
 
 	const driveVoiceResolved = useMemo(
 		() =>
@@ -605,66 +1017,6 @@ export function useDriveSession(
 			spokenJoinNoteRef.current = null;
 		}
 	}, [drive.active]);
-
-	const toggleDrive = useCallback(() => {
-		const current = drive;
-		// Leave (or cancel an in-flight join) — do not treat pending join as off→on.
-		if (current.active || pendingJoinRef.current) {
-			pendingJoinRef.current = false;
-			driveIntentRef.current = false;
-			driveActiveRef.current = false;
-			roomSeqRef.current = 0;
-			roomSnapshotRef.current = null;
-			const leaveRoomId = current.roomId ?? DRIVE_DEFAULT_ROOM_ID;
-			postToHost({
-				type: "call_leave",
-				roomId: leaveRoomId,
-				participantId: DRIVE_PARTICIPANT_HUMAN,
-			});
-			setDriveJoinNote(null);
-			setPlanEditorTasks([]);
-			setDrive({
-				...DEFAULT_DRIVE_UI,
-				partnerName: current.partnerName,
-				partnerNameInk: current.partnerNameInk,
-			});
-			args.onModeChange("act");
-			return;
-		}
-		pendingJoinRef.current = true;
-		driveIntentRef.current = true;
-		setDriveJoinNote("Joining Drive call…");
-		const joinPayload: {
-			type: "call_join";
-			roomId: string;
-			human: { id: string; displayName: string };
-			agent: { id: string; displayName: string };
-			activateDrive: boolean;
-			sessionId?: string;
-			workspaceRoot?: string;
-		} = {
-			type: "call_join",
-			roomId: current.roomId ?? DRIVE_DEFAULT_ROOM_ID,
-			human: {
-				id: DRIVE_PARTICIPANT_HUMAN,
-				displayName: "You",
-			},
-			agent: {
-				id: DRIVE_PARTICIPANT_PARTNER,
-				displayName: current.partnerName,
-			},
-			activateDrive: true,
-		};
-		const sessionId = sessionIdRef.current;
-		if (sessionId) {
-			joinPayload.sessionId = sessionId;
-		}
-		const workspaceRoot = workspaceRootRef.current?.trim();
-		if (workspaceRoot) {
-			joinPayload.workspaceRoot = workspaceRoot;
-		}
-		postToHost(joinPayload);
-	}, [args, drive]);
 
 	const toggleStage = useCallback(() => {
 		setDrive((current) => {
@@ -875,6 +1227,7 @@ export function useDriveSession(
 	return {
 		drive,
 		setDrive,
+		connectionPhase,
 		driveVoice,
 		setDriveVoice,
 		driveJoinNote,
@@ -886,6 +1239,9 @@ export function useDriveSession(
 		bankSessionRef,
 		driveVoiceResolved,
 		workspaceRoot: args.workspaceRoot,
+		joinDrive,
+		leaveDrive,
+		refreshDriveRoom,
 		toggleDrive,
 		toggleStage,
 		stripHandlers,

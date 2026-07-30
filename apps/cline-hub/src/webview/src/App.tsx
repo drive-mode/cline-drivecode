@@ -34,6 +34,7 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import {
@@ -71,6 +72,10 @@ import { DriveView } from "./components/views/drive-view";
 import { PageFrame, PageHeader } from "./components/views/page-layout";
 import type { CustomizationSection } from "./components/views/settings/extensions-view";
 import type { SettingsSection } from "./components/views/settings/settings-view";
+import type {
+	DriveLaunchRequest,
+	DriveOpenCallRequest,
+} from "./drive/driveLaunch";
 import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
 import { ChatForkDemo } from "./drive/ChatForkDemo";
 import { syncHubTheme } from "./lib/theme";
@@ -1163,12 +1168,16 @@ function App() {
 	const [selectedSessionId, setSelectedSessionId] = useState<
 		string | undefined
 	>(() => readCurrentChatSessionId());
+	const lastChatSessionIdRef = useRef<string | undefined>(selectedSessionId);
 	const [recentSessions, setRecentSessions] = useState<WebviewSessionSummary[]>(
 		[],
 	);
 	const [locationSearch, setLocationSearch] = useState(
 		() => (typeof window !== "undefined" ? window.location.search : ""),
 	);
+	const [driveLaunchRequest, setDriveLaunchRequest] =
+		useState<DriveLaunchRequest | null>(null);
+	const nextDriveLaunchRequestIdRef = useRef(0);
 
 	const demoHub = useMemo(
 		() => readDrivecodeDemoHubBootstrap(locationSearch),
@@ -1190,10 +1199,16 @@ function App() {
 		const handlePopState = () => {
 			replaceLegacyCustomizationRoute();
 			const nextView = readCurrentView();
+			const nextSessionId =
+				nextView === "chat" ? readCurrentChatSessionId() : undefined;
 			setView(nextView);
-			setSelectedSessionId(
-				nextView === "chat" ? readCurrentChatSessionId() : undefined,
-			);
+			if (nextView !== "chat") {
+				setDriveLaunchRequest(null);
+			}
+			if (nextSessionId) {
+				lastChatSessionIdRef.current = nextSessionId;
+			}
+			setSelectedSessionId(nextSessionId);
 			setSettingsSection(readCurrentSettingsSection());
 			setLocationSearch(window.location.search);
 		};
@@ -1237,6 +1252,7 @@ function App() {
 		}
 		if (nextView !== "chat") {
 			setSelectedSessionId(undefined);
+			setDriveLaunchRequest(null);
 		}
 		const nextPath = routePath(VIEW_PATHS[nextView]);
 		if (currentPathWithSearch() !== nextPath) {
@@ -1245,7 +1261,30 @@ function App() {
 		setView(nextView);
 	}, []);
 
+	const openDriveCall = useCallback((request: DriveOpenCallRequest) => {
+			nextDriveLaunchRequestIdRef.current += 1;
+			setDriveLaunchRequest({
+				id: nextDriveLaunchRequestIdRef.current,
+				...request,
+			});
+			const sessionId =
+				request.action === "focus" ? lastChatSessionIdRef.current : undefined;
+			setSelectedSessionId(sessionId);
+			const nextPath = chatPath(sessionId);
+			if (currentPathWithSearch() !== nextPath) {
+				window.history.pushState(null, "", nextPath);
+			}
+			setView("chat");
+		}, []);
+
+	const acknowledgeDriveLaunch = useCallback((requestId: number) => {
+		setDriveLaunchRequest((current) =>
+			current?.id === requestId ? null : current,
+		);
+	}, []);
+
 	const openSession = useCallback((sessionId: string) => {
+		lastChatSessionIdRef.current = sessionId;
 		setSelectedSessionId(sessionId);
 		const nextPath = chatPath(sessionId);
 		if (currentPathWithSearch() !== nextPath) {
@@ -1255,6 +1294,9 @@ function App() {
 	}, []);
 
 	const updateChatSessionRoute = useCallback((sessionId?: string) => {
+		if (sessionId) {
+			lastChatSessionIdRef.current = sessionId;
+		}
 		setSelectedSessionId(sessionId);
 		const nextPath = chatPath(sessionId);
 		if (currentPathWithSearch() !== nextPath) {
@@ -1286,7 +1328,9 @@ function App() {
 		if (view === "chat") {
 			return (
 				<Chat
+					driveLaunchRequest={driveLaunchRequest}
 					initialSessionId={selectedSessionId}
+					onDriveLaunchHandled={acknowledgeDriveLaunch}
 					onSessionSelected={updateChatSessionRoute}
 				/>
 			);
@@ -1300,7 +1344,7 @@ function App() {
 			}
 			return (
 				<DriveView
-					onOpenCall={() => navigate("chat")}
+					onOpenCall={openDriveCall}
 					onOpenStatus={() => navigate("status")}
 				/>
 			);
@@ -1418,11 +1462,14 @@ function App() {
 		demoHub.initialStatusMode,
 		demoHub.useChatForkDemo,
 		demoHub.useShareScreenSpotlightDemo,
+		acknowledgeDriveLaunch,
+		driveLaunchRequest,
 		statusTeamsSource,
 		hubState,
 		deleteSession,
 		navigate,
 		openSession,
+		openDriveCall,
 		recentSessions,
 		renameSession,
 		restartHub,

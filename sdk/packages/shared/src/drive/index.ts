@@ -157,13 +157,13 @@ export type {
 	FacetScope,
 	InkRef,
 	PrivacyClass,
-} from "./facets";
-export * from "./facets";
+} from "./facets/index";
+export * from "./facets/index";
 export {
 	AgentProfileSchema,
 	DRIVE_FACET_SCHEMA_VERSION,
 	parseDriveFacetDiskFile,
-} from "./facets";
+} from "./facets/index";
 export {
 	type DriveFacetId,
 	DriveFacetIdSchema,

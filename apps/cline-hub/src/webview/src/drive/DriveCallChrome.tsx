@@ -1,31 +1,68 @@
-import { ApertureIcon, HandIcon, HeadphonesIcon, MicIcon, MicOffIcon, PhoneIcon, PhoneOffIcon, Settings2Icon, UsersIcon, VolumeXIcon } from "lucide-react";
 import type { StageCard } from "@cline/shared";
+import {
+	ApertureIcon,
+	HandIcon,
+	HeadphonesIcon,
+	Loader2Icon,
+	MicIcon,
+	MicOffIcon,
+	PhoneIcon,
+	PhoneOffIcon,
+	Settings2Icon,
+	UsersIcon,
+	VolumeXIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { DriveSubMode, DriveUiState } from "./types";
 import { isDriveHumanId } from "./participantIds";
+import type { DriveSubMode, DriveUiState } from "./types";
+import type { DriveConnectionPhase } from "./useDriveSession";
 
 const SUB_MODES: DriveSubMode[] = ["plan", "agent", "ask", "debug"];
 
 export function DriveHeaderControls({
+	connectionPhase,
 	drive,
 	disabled,
-	onToggleDrive,
-	onToggleStage,
+	onJoinDrive,
+	onLeaveDrive,
+	onToggleSpotlight,
 }: {
+	connectionPhase: DriveConnectionPhase;
 	drive: DriveUiState;
 	disabled?: boolean;
-	onToggleDrive: () => void;
-	onToggleStage: () => void;
+	onJoinDrive: () => void;
+	onLeaveDrive: () => void;
+	onToggleSpotlight: () => void;
 }) {
+	const joining = connectionPhase === "joining";
+	const onCall = connectionPhase === "on";
+	const statusText =
+		connectionPhase === "joining"
+			? "Joining Drive call."
+			: connectionPhase === "on"
+				? "Drive call connected."
+				: connectionPhase === "error"
+					? "Drive call connection failed."
+					: "Drive call disconnected.";
+
 	return (
-		<div className="flex items-center gap-2">
-			{drive.active ? (
+		<div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+			<span
+				aria-atomic="true"
+				aria-live="polite"
+				className="sr-only"
+				role="status"
+			>
+				{statusText}
+			</span>
+			{onCall && drive.active ? (
 				<>
 					<Badge
-						className="gap-1.5 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+						className="max-w-full gap-1.5 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+						title={`Drive · ${drive.partnerName}`}
 						variant="outline"
 					>
 						<span
@@ -35,30 +72,39 @@ export function DriveHeaderControls({
 								!drive.muted && "animate-pulse",
 							)}
 						/>
-						Drive · {drive.partnerName}
+						<span className="max-w-40 truncate">
+							Drive · {drive.partnerName}
+						</span>
 					</Badge>
 					<Button
+						aria-pressed={drive.stageLayout}
 						disabled={disabled}
-						onClick={onToggleStage}
+						onClick={onToggleSpotlight}
 						size="sm"
 						type="button"
 						variant={drive.stageLayout ? "default" : "outline"}
 					>
-						{drive.stageLayout ? "Stage on" : "Stage off"}
+						{drive.stageLayout ? "Hide Spotlight" : "Show Spotlight"}
 					</Button>
 				</>
 			) : null}
 			<Button
+				aria-label={joining ? "Cancel joining Drive call" : undefined}
 				disabled={disabled}
-				onClick={onToggleDrive}
+				onClick={onCall || joining ? onLeaveDrive : onJoinDrive}
 				size="sm"
 				type="button"
-				variant={drive.active ? "default" : "outline"}
+				variant={onCall ? "default" : "outline"}
 			>
-				{drive.active ? (
+				{onCall ? (
 					<>
 						<PhoneOffIcon className="size-3.5" />
 						Leave call
+					</>
+				) : joining ? (
+					<>
+						<Loader2Icon className="size-3.5 animate-spin" />
+						Joining…
 					</>
 				) : (
 					<>
@@ -107,6 +153,9 @@ export function DriveCallStrip({
 	const spotlightLabel = isDriveHumanId(drive.spotlightParticipantId)
 		? "you"
 		: drive.partnerName;
+	const nextSpotlightLabel = isDriveHumanId(drive.spotlightParticipantId)
+		? drive.partnerName
+		: "you";
 
 	return (
 		<div className="flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/5 px-4 py-2">
@@ -127,19 +176,25 @@ export function DriveCallStrip({
 				{drive.handRaised ? " · hand raised" : ""}
 			</span>
 			<div className="ml-auto flex flex-wrap items-center gap-1">
-				{SUB_MODES.map((mode) => (
-					<Button
-						disabled={disabled}
-						key={mode}
-						onClick={() => onSubModeChange(mode)}
-						size="sm"
-						type="button"
-						variant={drive.subMode === mode ? "default" : "ghost"}
-						className="h-7 px-2 text-xs capitalize"
-					>
-						{mode}
-					</Button>
-				))}
+				<fieldset
+					aria-label="Drive working mode"
+					className="m-0 flex flex-wrap items-center gap-1 border-0 p-0"
+				>
+					{SUB_MODES.map((mode) => (
+						<Button
+							aria-pressed={drive.subMode === mode}
+							className="h-7 px-2 text-xs capitalize"
+							disabled={disabled}
+							key={mode}
+							onClick={() => onSubModeChange(mode)}
+							size="sm"
+							type="button"
+							variant={drive.subMode === mode ? "default" : "ghost"}
+						>
+							{mode}
+						</Button>
+					))}
+				</fieldset>
 				{drive.postureOverride ? (
 					<Button
 						disabled={disabled}
@@ -153,13 +208,13 @@ export function DriveCallStrip({
 					</Button>
 				) : null}
 				<Button
-					aria-label={`Spotlight ${spotlightLabel}`}
+					aria-label={`Move Spotlight to ${nextSpotlightLabel}`}
 					disabled={disabled}
 					onClick={() => onToggleSpotlight?.()}
 					size="icon-sm"
 					type="button"
 					variant="ghost"
-					title="Toggle stage sharer (call_set_stage) between you and partner"
+					title="Move Spotlight between you and your partner"
 				>
 					<ApertureIcon className="size-3.5" />
 				</Button>
@@ -167,6 +222,7 @@ export function DriveCallStrip({
 					aria-label={
 						drive.partnerMuted ? "Unmute partner" : "Mute partner"
 					}
+					aria-pressed={drive.partnerMuted}
 					disabled={disabled}
 					onClick={() => onTogglePartnerMute?.()}
 					size="icon-sm"
@@ -182,6 +238,7 @@ export function DriveCallStrip({
 							? "Undeafen partner"
 							: "Deafen partner"
 					}
+					aria-pressed={drive.partnerDeafened}
 					disabled={disabled}
 					onClick={() => onTogglePartnerDeafen?.()}
 					size="icon-sm"
@@ -204,6 +261,7 @@ export function DriveCallStrip({
 				{onToggleWorkers ? (
 					<Button
 						aria-label="Workers audit"
+						aria-pressed={workersOpen}
 						disabled={disabled}
 						onClick={() => onToggleWorkers()}
 						size="sm"
@@ -221,6 +279,7 @@ export function DriveCallStrip({
 				) : null}
 				<Button
 					aria-label={drive.muted ? "Unmute" : "Mute"}
+					aria-pressed={drive.muted}
 					disabled={disabled}
 					onClick={onMuteToggle}
 					size="icon-sm"
@@ -234,7 +293,8 @@ export function DriveCallStrip({
 					)}
 				</Button>
 				<Button
-					aria-label="Raise hand"
+					aria-label={drive.handRaised ? "Lower hand" : "Raise hand"}
+					aria-pressed={drive.handRaised}
 					disabled={disabled}
 					onClick={onHandToggle}
 					size="icon-sm"
@@ -288,8 +348,7 @@ export function DriveStageCards({ cards }: { cards: readonly StageCard[] }) {
 	return (
 		<div className="space-y-2">
 			<p className="text-xs text-muted-foreground">
-				Last-event-wins stage cards. Prefer <code>Stage.tsx</code> for live
-				ai-elements rendering.
+				Latest Spotlight updates from the shared event stream.
 			</p>
 			{cards.map((card) => (
 				<div
@@ -322,7 +381,12 @@ export function DriveNarrationBanner({
 	text: string;
 }) {
 	return (
-		<div className="mx-4 mb-2 flex gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm italic text-amber-900 dark:text-amber-100">
+		<div
+			aria-atomic="true"
+			aria-live="polite"
+			className="mx-4 mb-2 flex gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm italic text-amber-900 dark:text-amber-100"
+			role="status"
+		>
 			<span
 				aria-hidden
 				className="mt-0.5 inline-block size-5 shrink-0 rounded-full border-2 border-amber-500 bg-amber-400/40"

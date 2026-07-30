@@ -63,6 +63,7 @@ this nest. Brand source files under repo-root `assets/drive/` are not docs.
 - Prefer relative links inside the nest; use absolute `docs/drivecode/...` in handoffs and external callouts.
 - When renaming or moving a file, update absolute `docs/drivecode/...` strings and relative links that cross folder boundaries. Grep for the old path before finishing.
 - Do not leave stubs at old locations (`docs/plans/...`, `design/drive-wireframes/`, flat `reviews/`, etc.).
+- Structural docs (architecture, ARDs, ops topology, director DAGs): load Cline skill **`diagram-first`**; Show stage diagrams use **`diagram-show`**. Honor [`.claude/diagram-conventions.md`](../../.claude/diagram-conventions.md). See [AGENT-RUNBOOK](plans/cline-drivemode/delivery/AGENT-RUNBOOK.md) § Diagram-first.
 
 ## Maintaining
 
