@@ -19,6 +19,7 @@ The map should answer three questions in one composition: **order**, **payload**
 
 - Dependency map remains a Status Hub lens (`board` | `changelog` | `dependency-map`); it does not become a second task store.
 - The primary surface is a **viewport graph**: drag to pan, wheel / pinch / buttons to zoom, native scroll when content overflows the viewport.
+- **First paint and `Fit` always frame every task** inside the viewport (padding). Zoom may leave content off-screen afterward; Fit restores the full-graph frame. Layout follows the fit/density ladder in the initiative UX (viewport-fit gaps → LOD → adaptive LR/TD → plan hulls / stacks as escape).
 - Each task is a **node**; `dependsOn` relationships are **edges**. Edge labels show the artifact / result passed when known; unlabeled edges still draw when only the dependency exists.
 - Clicking (or activating) a node selects it, highlights incident edges, and opens a **task detail** panel (status, description, blockers, dependents, artifacts, plan membership).
 - Plans appear in a fixed **rail on the right** of the graph. Selecting a plan highlights its tasks in that plan’s color and dims non-members. Nodes carry a plan-color accent when they belong to a plan.

@@ -162,6 +162,10 @@
     cursor: pointer;
   }
   .toolbar button:hover { border-color: var(--line-strong); }
+  .toolbar button.active {
+    border-color: color-mix(in srgb, var(--brand-purple) 55%, var(--line));
+    background: color-mix(in srgb, var(--brand-purple) 16%, var(--card));
+  }
   .viewport {
     flex: 1;
     position: relative;
@@ -343,7 +347,8 @@
       <h1>Status Hub · Interactive dependency graph</h1>
     </div>
     <p>
-      Pan the canvas · scroll-wheel zoom · click a task for details · use the Plans rail on the right to color-filter.
+      Pan the canvas · scroll-wheel zoom · click a task for details · Plans rail color-filters.
+      <strong>Fit / first open always frames every task.</strong>
       Spec: <a href="../../plans/cline-drivemode/initiatives/status-dependency-graph/UX.md">UX.md</a>
       · <a href="../../plans/cline-drivemode/features/DRV-DEP-MAP.md">DRV-DEP-MAP</a>
     </p>
@@ -368,6 +373,8 @@
             <strong id="map-heading">Dependency map</strong>
             <span id="summary">8 tasks · sample graph</span>
             <span style="flex:1"></span>
+            <button type="button" id="orient-lr" class="active" title="Left-to-right layers">LR</button>
+            <button type="button" id="orient-td" title="Top-down layers">TD</button>
             <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
             <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
             <button type="button" id="fit">Fit</button>
@@ -416,15 +423,15 @@ const PLANS = {
 };
 
 const NODES = [
-  { id: "room", title: "Room MVP", status: "completed", plan: "partner", layer: 0, y: 40 },
-  { id: "tab", title: "Drive tab", status: "completed", plan: "partner", layer: 1, y: 40 },
-  { id: "roster", title: "Roster", status: "in_progress", plan: "partner", layer: 2, y: 0 },
-  { id: "partner", title: "Partner end-to-end", status: "in_progress", plan: "partner", layer: 3, y: 40 },
-  { id: "stage", title: "Call Stage", status: "completed", plan: "stage", layer: 4, y: 40 },
-  { id: "share", title: "Bidirectional share", status: "completed", plan: "stage", layer: 5, y: 0 },
-  { id: "demo", title: "Demo artifact share", status: "pending", plan: "stage", layer: 6, y: 0 },
-  { id: "mic", title: "Mic + mute", status: "pending", plan: "voice", layer: 6, y: 120 },
-  { id: "tts", title: "Partner voice out", status: "blocked", plan: "voice", layer: 7, y: 120 },
+  { id: "room", title: "Room MVP", status: "completed", plan: "partner", layer: 0 },
+  { id: "tab", title: "Drive tab", status: "completed", plan: "partner", layer: 1 },
+  { id: "roster", title: "Roster", status: "in_progress", plan: "partner", layer: 2 },
+  { id: "partner", title: "Partner end-to-end", status: "in_progress", plan: "partner", layer: 3 },
+  { id: "stage", title: "Call Stage", status: "completed", plan: "stage", layer: 4 },
+  { id: "share", title: "Bidirectional share", status: "completed", plan: "stage", layer: 5 },
+  { id: "demo", title: "Demo artifact share", status: "pending", plan: "stage", layer: 6 },
+  { id: "mic", title: "Mic + mute", status: "pending", plan: "voice", layer: 6 },
+  { id: "tts", title: "Partner voice out", status: "blocked", plan: "voice", layer: 7 },
 ];
 
 const EDGES = [
@@ -439,22 +446,19 @@ const EDGES = [
   { from: "mic", to: "tts", artifact: "Mute bus" },
 ];
 
-const LAYER_X = 40;
-const LAYER_GAP = 210;
 const NODE_W = 168;
 const NODE_H = 52;
+const PAD = 24;
+const LABEL_LOD_SCALE = 0.85;
 
 const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
-NODES.forEach((n) => {
-  n.x = LAYER_X + n.layer * LAYER_GAP;
-  n.y = 60 + n.y;
-});
 
 let selected = null;
 let planFilter = "all";
+let orientation = "lr"; // lr | td
 let scale = 1;
-let tx = 24;
-let ty = 24;
+let tx = 0;
+let ty = 0;
 let dragging = false;
 let lastX = 0;
 let lastY = 0;
@@ -476,9 +480,103 @@ function statusClass(status) {
 
 function applyCamera() {
   camera.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  document.body.dataset.lod = scale < LABEL_LOD_SCALE ? "overview" : "detail";
+}
+
+function contentBounds(ids = null) {
+  const list = ids ? NODES.filter((n) => ids.includes(n.id)) : NODES;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of list) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + NODE_W);
+    maxY = Math.max(maxY, n.y + NODE_H);
+  }
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+}
+
+/** Tier 0 — frame every node (or selection) inside the viewport. */
+function fitCamera(ids = null) {
+  const rect = viewport.getBoundingClientRect();
+  const b = contentBounds(ids);
+  if (!Number.isFinite(b.width) || b.width <= 0) return;
+  const availW = Math.max(120, rect.width - PAD * 2);
+  const availH = Math.max(120, rect.height - PAD * 2);
+  const next = Math.min(1.35, availW / b.width, availH / b.height);
+  scale = Math.max(0.35, next);
+  tx = PAD + (availW - b.width * scale) / 2 - b.minX * scale;
+  ty = PAD + (availH - b.height * scale) / 2 - b.minY * scale;
+  applyCamera();
+  render();
+}
+
+/**
+ * Tier 1 — pack layers into the viewport rectangle before camera fit.
+ * Tier 3 — LR vs TD from the orientation control (product will auto-pick).
+ */
+function layoutGraph() {
+  const rect = viewport.getBoundingClientRect();
+  const maxLayer = Math.max(...NODES.map((n) => n.layer));
+  const byLayer = new Map();
+  for (const n of NODES) {
+    if (!byLayer.has(n.layer)) byLayer.set(n.layer, []);
+    byLayer.get(n.layer).push(n);
+  }
+  for (const list of byLayer.values()) {
+    list.sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+  }
+  const maxInLayer = Math.max(...[...byLayer.values()].map((l) => l.length));
+
+  if (orientation === "lr") {
+    const layerGap = Math.max(
+      NODE_W + 36,
+      Math.min(210, (rect.width - PAD * 2 - NODE_W) / Math.max(1, maxLayer)),
+    );
+    const rowGap = Math.max(
+      NODE_H + 16,
+      Math.min(100, (rect.height - PAD * 2 - NODE_H) / Math.max(1, maxInLayer - 1 || 1)),
+    );
+    for (const [layer, list] of byLayer) {
+      const blockH = (list.length - 1) * rowGap;
+      const startY = Math.max(PAD, (rect.height / Math.max(scale, 0.01) - blockH) / 4);
+      list.forEach((n, i) => {
+        n.x = PAD + layer * layerGap;
+        n.y = startY + i * rowGap;
+      });
+    }
+  } else {
+    const layerGap = Math.max(
+      NODE_H + 28,
+      Math.min(120, (rect.height - PAD * 2 - NODE_H) / Math.max(1, maxLayer)),
+    );
+    const colGap = Math.max(
+      NODE_W + 20,
+      Math.min(200, (rect.width - PAD * 2 - NODE_W) / Math.max(1, maxInLayer - 1 || 1)),
+    );
+    for (const [layer, list] of byLayer) {
+      const blockW = (list.length - 1) * colGap;
+      const startX = Math.max(PAD, (rect.width / Math.max(scale, 0.01) - blockW) / 4);
+      list.forEach((n, i) => {
+        n.x = startX + i * colGap;
+        n.y = PAD + layer * layerGap;
+      });
+    }
+  }
+
+  const b = contentBounds();
+  edgesSvg.setAttribute("width", String(Math.ceil(b.maxX + PAD)));
+  edgesSvg.setAttribute("height", String(Math.ceil(b.maxY + PAD)));
 }
 
 function edgePath(a, b) {
+  if (orientation === "td") {
+    const x1 = a.x + NODE_W / 2;
+    const y1 = a.y + NODE_H;
+    const x2 = b.x + NODE_W / 2;
+    const y2 = b.y;
+    const c = Math.max(28, (y2 - y1) * 0.45);
+    return `M ${x1} ${y1} C ${x1} ${y1 + c}, ${x2} ${y2 - c}, ${x2} ${y2}`;
+  }
   const x1 = a.x + NODE_W;
   const y1 = a.y + NODE_H / 2;
   const x2 = b.x;
@@ -488,11 +586,18 @@ function edgePath(a, b) {
 }
 
 function mid(a, b) {
-  return { x: (a.x + NODE_W + b.x) / 2, y: (a.y + b.y) / 2 + NODE_H / 2 };
+  return {
+    x: (a.x + b.x) / 2 + NODE_W / 2,
+    y: (a.y + b.y) / 2 + NODE_H / 2,
+  };
 }
 
 function inPlan(node) {
   return planFilter === "all" || node.plan === planFilter;
+}
+
+function shortTitle(title) {
+  return title.length > 18 ? title.slice(0, 16) + "…" : title;
 }
 
 function render() {
@@ -501,6 +606,7 @@ function render() {
   const marker = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   marker.innerHTML = `<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.35)"/></marker>`;
   edgesSvg.appendChild(marker);
+  const showLabels = scale >= LABEL_LOD_SCALE;
 
   EDGES.forEach((e) => {
     const a = byId[e.from];
@@ -514,13 +620,15 @@ function render() {
     path.classList.toggle("dim", dim && !hot);
     edgesSvg.appendChild(path);
 
-    const m = mid(a, b);
-    const lab = document.createElement("div");
-    lab.className = "edge-label" + (hot ? " hot" : "") + (dim && !hot ? " dim" : "");
-    lab.textContent = e.artifact;
-    lab.style.left = m.x + "px";
-    lab.style.top = m.y + "px";
-    labelsEl.appendChild(lab);
+    if (showLabels || hot) {
+      const m = mid(a, b);
+      const lab = document.createElement("div");
+      lab.className = "edge-label" + (hot ? " hot" : "") + (dim && !hot ? " dim" : "");
+      lab.textContent = e.artifact;
+      lab.style.left = m.x + "px";
+      lab.style.top = m.y + "px";
+      labelsEl.appendChild(lab);
+    }
   });
 
   nodesEl.innerHTML = "";
@@ -535,13 +643,20 @@ function render() {
     btn.classList.toggle("dim", !inPlan(n));
     btn.setAttribute("aria-pressed", selected === n.id ? "true" : "false");
     btn.dataset.id = n.id;
-    btn.innerHTML = `<span class="title">${n.title}</span><span class="meta"><span class="${statusClass(n.status)}">${n.status.replace("_", " ")}</span> · ${PLANS[n.plan].title}</span>`;
+    const title = showLabels ? n.title : shortTitle(n.title);
+    btn.innerHTML = `<span class="title">${title}</span><span class="meta"><span class="${statusClass(n.status)}">${n.status.replace("_", " ")}</span> · ${PLANS[n.plan].title}</span>`;
+    btn.title = n.title;
     btn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       selectNode(n.id);
     });
     nodesEl.appendChild(btn);
   });
+}
+
+function relayoutAndFit(_preserveSelectionFit = false) {
+  layoutGraph();
+  fitCamera(null);
 }
 
 function selectNode(id) {
@@ -603,22 +718,27 @@ viewport.addEventListener("pointerup", () => {
 viewport.addEventListener("click", (e) => {
   if (e.target === viewport || e.target === camera || e.target === edgesSvg) clearSelection();
 });
-viewport.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  const rect = viewport.getBoundingClientRect();
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-  const prev = scale;
-  const next = Math.min(2.2, Math.max(0.45, scale * (e.deltaY < 0 ? 1.08 : 0.92)));
-  tx = cx - ((cx - tx) / prev) * next;
-  ty = cy - ((cy - ty) / prev) * next;
-  scale = next;
+document.getElementById("zoom-in").onclick = () => {
+  scale = Math.min(2.2, scale * 1.15);
   applyCamera();
-}, { passive: false });
-
-document.getElementById("zoom-in").onclick = () => { scale = Math.min(2.2, scale * 1.15); applyCamera(); };
-document.getElementById("zoom-out").onclick = () => { scale = Math.max(0.45, scale / 1.15); applyCamera(); };
-document.getElementById("fit").onclick = () => { scale = 1; tx = 24; ty = 24; applyCamera(); };
+  render();
+};
+document.getElementById("zoom-out").onclick = () => {
+  scale = Math.max(0.35, scale / 1.15);
+  applyCamera();
+  render();
+};
+document.getElementById("fit").onclick = () => {
+  fitCamera(null);
+};
+function setOrientation(next) {
+  orientation = next;
+  document.getElementById("orient-lr").classList.toggle("active", next === "lr");
+  document.getElementById("orient-td").classList.toggle("active", next === "td");
+  relayoutAndFit(false);
+}
+document.getElementById("orient-lr").onclick = () => setOrientation("lr");
+document.getElementById("orient-td").onclick = () => setOrientation("td");
 
 viewport.addEventListener("keydown", (e) => {
   if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
@@ -637,8 +757,22 @@ viewport.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { e.preventDefault(); clearSelection(); }
 });
 
-render();
-applyCamera();
-</script>
+viewport.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const rect = viewport.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const prev = scale;
+  const next = Math.min(2.2, Math.max(0.35, scale * (e.deltaY < 0 ? 1.08 : 0.92)));
+  tx = cx - ((cx - tx) / prev) * next;
+  ty = cy - ((cy - ty) / prev) * next;
+  scale = next;
+  applyCamera();
+  render();
+}, { passive: false });
+
+window.addEventListener("resize", () => relayoutAndFit(false));
+
+relayoutAndFit(false);</script>
 </body>
 </html>

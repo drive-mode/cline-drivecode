@@ -66,10 +66,38 @@ Hero budget for this lens: graph + plans rail + optional one-line map summary (�
 
 ### Spatial model
 
-- **Layout:** left-to-right layers from `DependencyNode.layer` (prerequisites on the left, dependents on the right). Vertical order within a layer stays deterministic (title, then key) so screenshots and tests stay stable.
+- **Layout:** layered DAG from `DependencyNode.layer`. Default orientation is left-to-right (prerequisites → dependents). Vertical order within a layer stays deterministic (title, then key) so screenshots and tests stay stable.
 - **Nodes:** compact chips (title + status glyph). Not large marketing cards. Status color follows existing Status Hub state language; **plan color** is a separate accent (left edge or ring).
 - **Edges:** bezier or orthogonal polylines from prerequisite → dependent. Arrowheads point toward the dependent (work flows forward).
 - **Integrity:** cyclic / missing-ref nodes keep today’s warning banner; cycle edges use a distinct stroke (dashed destructive) so topology stays honest.
+
+### Fit & density (all tasks on screen at start)
+
+**Hard rule:** first paint and every `Fit` action must frame **every** task node inside the graph viewport (with padding). Users may zoom/pan afterward and leave content off-screen; opening the lens and hitting Fit always restores the full-graph frame.
+
+Camera fit alone is not enough for deep demos (many layers trail right). Apply this ladder until the fitted overview stays readable:
+
+```mermaid
+flowchart TD
+  FitCam[Fit camera to bbox]
+  Gaps[Viewport-fit layer and row gaps]
+  Lod[LOD hide labels and shorten titles]
+  Orient[Flip LR vs TD by aspect]
+  Cluster[Plan hulls or completed stacks]
+  FitCam --> Gaps --> Lod --> Orient --> Cluster
+```
+
+| Tier | Strategy | When |
+|---|---|---|
+| **0 · Required** | Fit camera to content bbox (+ padding) on open, on `Fit`, and after viewport resize | Always |
+| **1 · Required** | Compute layer/row gaps from viewport size so the layout *itself* targets the viewport, then fit | Always for live graphs |
+| **2 · Default** | Level-of-detail: at overview, hide edge artifact labels and truncate titles; reveal on zoom / hover / selection | Fitted scale below a readability threshold |
+| **3 · Adaptive** | Choose LR vs TD from graph aspect (depth vs breadth) vs viewport aspect | When tier 1–2 still forces unreadably small chips |
+| **4 · Escape** | Snake/wrap layer bands, or collapse into plan hulls / completed stacks | Large graphs (e.g. full TASK-GRAPH demo) after adaptive orientation |
+
+**Anti-pattern:** drawing a large fixed-gap LR graph and hoping a tiny `scale` makes it usable. Prefer densifying layout, then scaling.
+
+Wireframe proves tiers 0–2 (+ optional LR/TD toggle). Product implementation follows the same ladder in [slices.md](slices.md).
 
 ### Navigation
 
@@ -79,13 +107,13 @@ Hero budget for this lens: graph + plans rail + optional one-line map summary (�
 | Wheel over viewport | Zoom toward cursor (with ctrl/meta if the host needs unmodified wheel for page scroll) |
 | Pinch | Zoom |
 | `+` / `−` buttons | Discrete zoom |
-| `Fit` | Frame all nodes (or selection if any) |
+| `Fit` | Frame **all** nodes (or the current selection set if non-empty) |
 | Trackpad scroll when zoomed out past fit | Scroll the page / outer container — do not fight the host |
 | Click node | Select + open detail |
 | Click empty canvas | Clear selection (keep plan filter if any) |
 | Click edge | Select edge; detail shows artifact payload when present |
 
-Default zoom should fit the active graph on first open. Persist nothing until we prove users need remembered camera (open question).
+Persist nothing until we prove users need remembered camera (open question).
 
 ### Node visual states
 
