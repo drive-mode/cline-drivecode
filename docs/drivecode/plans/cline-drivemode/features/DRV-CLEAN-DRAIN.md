@@ -26,18 +26,21 @@ E1 (post-success continue) is the preferred engagement proxy but has no product 
 
 ## Agent tasks
 
-- [ ] Gate ritual on verified S3 + ≥1 completion; skip churny/zero-completion archives.
+- [x] Gate ritual on verified S3 + ≥1 completion; skip churny/zero-completion archives.
   - Owner package: `@cline/drive`
   - Verify: rollup fixture matrix (S3 true/false, zero completes)
   - Done when: ritual fires only on clean drain with completions.
-- [ ] Ship one primary acknowledgment + soft E1 invite CTA; dismissible, non-blocking.
+  - Landed (W2.1): `shouldOfferCleanDrain` + session counters; skips mid-plan adds / zero completes / dismissed keys.
+- [x] Ship one primary acknowledgment + soft E1 invite CTA; dismissible, non-blocking.
   - Owner package: `@cline/cline-hub`
   - Verify: hub smoke dismiss + leave during ritual
   - Done when: invite alone does not mark E1; leave/end still work.
-- [ ] Ensure logging uses plan/task ids only — no utterance or egress defaults.
+  - Landed (W2.1): NowNext successor (“Done → what's next?”) + narration; Set next goal → Plan mode only (invite ≠ E1).
+- [x] Ensure logging uses plan/task ids only — no utterance or egress defaults.
   - Owner package: `@cline/shared`
   - Verify: privacy / forbidden-key tests
   - Done when: schema forbids utterance fields.
+  - Landed (W2.1): `cleanDrainInviteIsPrivate` + `CLEAN_DRAIN_FORBIDDEN_KEYS` (invite carries planId/title/counts only).
 
 ## Risks
 

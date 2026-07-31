@@ -39,13 +39,14 @@ flowchart TD
     Felt["Felt agency chrome + steer"]
     Reader["Session rollup reader + debug dump"]
     P2ev["drive_task_failed / P2 stickiness"]
+    CleanDrain["Clean-drain ritual invite"]
   end
   subgraph OpenObs["Open · observability"]
     S3["Stall classify + gated propose"]
   end
   subgraph OpenMoments["Open · product moments"]
     W1["W1.2 return / W1.3 stuck"]
-    W2["W2 drain / reentry / recruit"]
+    W2["W2.2 reentry / W2.3 recruit"]
     W3["W3 Status / digest / SDLC bank"]
     W4["W4 auto stall"]
   end
@@ -55,6 +56,7 @@ flowchart TD
   Reader --> S3
   Felt --> W1
   W1 --> W2
+  CleanDrain --> W2
   W2 --> W3
 ```
 
@@ -64,6 +66,7 @@ Caption:
 - Hub commands + webview protocol expose complete/bind/activate/failure with `roomId` / `callSessionId`.
 - `drive_task_failed` + P2 stickiness in `deriveSessionRollup` landed (REMAINING §2.3 Option A).
 - Felt agency (W1.1) chrome + mid-turn steer path landed; return loop (W1.2) + stuck recovery fork (W1.3 manual) landed.
+- Clean-drain ritual (W2.1) NowNext successor + soft invite landed; invite ≠ auto E1.
 - Status Hub fourth mode (W3.1) still open — consume `SessionRollupSource` / `readSessionRollups`.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
@@ -80,6 +83,7 @@ Caption:
 | Hub webview bridge: protocol frames + `drive-bank` forward + `bankSession` mutators + PlanEditor complete / Agent bind / tool failure | `apps/cline-hub` webview + server |
 | Felt agency (W1.1): interrupt chrome, plan-edit consequence, recovery vs collaborative add, mid-turn steer chip | `agencyChrome.ts`, DriveCallChrome, NowNext, PlanEditor, server send steer, Composer |
 | Stuck recovery (W1.3): Spotlight fork after `nowLastFailure`; gated narrow / fix-up / recruit stub / pause(Ask) | `stuckRecovery.ts`, `StuckRecoveryFork.tsx`, Chat Spotlight |
+| Clean-drain (W2.1): S3 gate + NowNext successor invite (invite ≠ E1) | `@cline/drive` `cleanDrain.ts`; NowNext successor; Chat counters |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1–P2) | `@cline/drive` `sessionRollup.ts` |
 | `drive_task_failed` emit + P2 stickiness | `bankStore.recordTaskFailure` → `deriveSessionRollup.failureStickyCount` |
@@ -181,7 +185,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 
 | ID | Component | Req | Key remaining work |
 |---|---|---|---|
-| W2.1 | [DRV-CLEAN-DRAIN](../features/DRV-CLEAN-DRAIN.md) | [req-clean-drain-ritual](../initiatives/session-satisfaction-moments/req-clean-drain-ritual.md) | Detect S3; single light invite; NowNext successor state so collapse ≠ failure; invite ≠ auto E1 |
+| W2.1 | [DRV-CLEAN-DRAIN](../features/DRV-CLEAN-DRAIN.md) | [req-clean-drain-ritual](../initiatives/session-satisfaction-moments/req-clean-drain-ritual.md) | **Landed:** S3 gate via snapshot transition + session counters; NowNext successor + narration invite; Set next goal → Plan mode (invite ≠ E1); dismissible |
 | W2.2 | [DRV-PLAN-REENTRY](../features/DRV-PLAN-REENTRY.md) | [req-cross-day-return](../initiatives/session-satisfaction-moments/req-cross-day-return.md) | Drive tab row: plan title, open count, last rollup chips; amend wireframe IA |
 | W2.3 | [DRV-RECRUIT-STALL](../features/DRV-RECRUIT-STALL.md) | [req-recruit-on-stall](../initiatives/session-satisfaction-moments/req-recruit-on-stall.md) | Stuck-task “Who should take this?”; structured need only; seat via hub; **agentId on complete/bind** for attribution |
 
@@ -231,7 +235,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 4. ~~W1.3 Stuck recovery (manual)~~ ✅ (auto classifier / full recruit still open — see §3 W1.3)
 5. ~~Slice 2 UI reader (2.2)~~ ✅
 6. ~~Failure event for P2 (2.3)~~ ✅
-7. W2.1 Clean-drain
+7. ~~W2.1 Clean-drain~~ ✅
 8. W2.2 Plan re-entry
 9. W2.3 Recruit-on-stall (+ agentId)
 10. W3 Status + digest + SDLC bankable

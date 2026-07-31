@@ -92,6 +92,7 @@ function readPersistedDriveUi(): DriveUiState {
 					state.driveUi.callSessionId ?? DEFAULT_DRIVE_UI.callSessionId,
 				// One-shot banners should not survive reload.
 				agencyBanner: null,
+				cleanDrainInvite: null,
 			};
 		}
 	} catch {

@@ -31,11 +31,15 @@ export function DriveRoomChrome({
 	disabled,
 	providerId,
 	turnInFlight = false,
+	onCleanDrainContinue,
+	onCleanDrainDismiss,
 }: {
 	session: UseDriveSessionResult;
 	disabled: boolean;
 	providerId: string;
 	turnInFlight?: boolean;
+	onCleanDrainContinue?: () => void;
+	onCleanDrainDismiss?: () => void;
 }) {
 	const {
 		drive,
@@ -145,6 +149,9 @@ export function DriveRoomChrome({
 			{drive.active ? (
 				<NowNext
 					agencyBanner={drive.agencyBanner}
+					cleanDrainInvite={drive.cleanDrainInvite}
+					onCleanDrainContinue={onCleanDrainContinue}
+					onCleanDrainDismiss={onCleanDrainDismiss}
 					onSelectNext={() => {}}
 					onSelectNow={() => {}}
 					snapshot={drive.bankSnapshot}

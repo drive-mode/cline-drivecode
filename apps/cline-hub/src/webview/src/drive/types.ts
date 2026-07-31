@@ -2,6 +2,7 @@
 
 import {
 	allowWorkspaceMutation,
+	type CleanDrainInvite,
 	type DrivePostureOverride,
 	resolveDriveLoop,
 } from "@cline/drive";
@@ -91,6 +92,11 @@ export type DriveUiState = {
 	 * Cleared by the chrome after display or on the next explicit clear.
 	 */
 	agencyBanner: string | null;
+	/**
+	 * Clean-drain ritual invite after S3 plan success (DRV-CLEAN-DRAIN).
+	 * Invite alone does not set E1; dismissible and non-blocking.
+	 */
+	cleanDrainInvite: CleanDrainInvite | null;
 };
 
 /** Stable ids until hub roster provides real participant UUIDs. */
@@ -133,6 +139,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	focusedParticipantId: null,
 	addressFollowsFocusParticipantId: null,
 	agencyBanner: null,
+	cleanDrainInvite: null,
 };
 
 /** Map Drive sub-mode onto native Cline plan|act for send config. */

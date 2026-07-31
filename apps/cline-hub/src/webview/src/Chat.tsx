@@ -1,6 +1,11 @@
 "use client";
 
-import { buildVoiceAckNarration } from "@cline/drive";
+import {
+	buildCleanDrainInvite,
+	buildVoiceAckNarration,
+	formatCleanDrainNarration,
+	shouldOfferCleanDrain,
+} from "@cline/drive";
 import type { AddressSet } from "@cline/shared";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -257,6 +262,21 @@ export default function Chat({
 	const [dismissedRecoveryOfferKey, setDismissedRecoveryOfferKey] = useState<
 		string | null
 	>(null);
+	/** Mute identical clean-drain invites (one soft ask per drain). */
+	const [dismissedCleanDrainInviteKey, setDismissedCleanDrainInviteKey] =
+		useState<string | null>(null);
+	/** Session counters for S3 detection without re-reading bank JSONL mid-call. */
+	const cleanDrainCountersRef = useRef<{
+		activateTaskIds: string[];
+		completedCount: number;
+		midPlanAddCount: number;
+		planTitle: string | null;
+	}>({
+		activateTaskIds: [],
+		completedCount: 0,
+		midPlanAddCount: 0,
+		planTitle: "Current work",
+	});
 
 	const showStuckRecovery = shouldOfferRecoveryFork({
 		driveActive: drive.active && drive.stageLayout,
@@ -264,6 +284,109 @@ export default function Chat({
 		nowLastFailure: drive.bankSnapshot.nowLastFailure,
 		dismissedOfferKey: dismissedRecoveryOfferKey,
 	});
+
+	const maybeOfferCleanDrain = useCallback(
+		(prev: typeof drive.bankSnapshot, next: typeof drive.bankSnapshot) => {
+			const counters = cleanDrainCountersRef.current;
+			if (
+				!shouldOfferCleanDrain({
+					driveActive: driveRef.current.active,
+					prev,
+					next,
+					counters: {
+						activateTaskIds: counters.activateTaskIds,
+						completedCount: counters.completedCount,
+						midPlanAddCount: counters.midPlanAddCount,
+					},
+					dismissedInviteKey: dismissedCleanDrainInviteKey,
+				})
+			) {
+				return;
+			}
+			const planId = prev.activePlanId?.trim();
+			if (!planId) {
+				return;
+			}
+			const invite = buildCleanDrainInvite({
+				planId,
+				planTitle: counters.planTitle,
+				tasksCompleted: counters.completedCount,
+			});
+			setDrive((current) => ({
+				...current,
+				cleanDrainInvite: invite,
+			}));
+			setDriveJoinNote(formatCleanDrainNarration(invite));
+		},
+		[dismissedCleanDrainInviteKey, setDrive, setDriveJoinNote],
+	);
+
+	const dismissCleanDrain = useCallback(() => {
+		const invite = driveRef.current.cleanDrainInvite;
+		if (invite) {
+			setDismissedCleanDrainInviteKey(invite.inviteKey);
+		}
+		setDrive((current) => ({
+			...current,
+			cleanDrainInvite: null,
+		}));
+	}, [setDrive]);
+
+	/** Soft E1 affordance — switches to Plan mode; does not activate a plan. */
+	const continueCleanDrain = useCallback(() => {
+		dismissCleanDrain();
+		setDrive((current) => {
+			const next = applySubModeIntent(current, "plan");
+			setMode(toNativeMode(next.subMode));
+			if (current.roomId) {
+				postToHost({
+					type: "call_set_mode",
+					roomId: current.roomId,
+					subMode: toSharedDriveSubMode(next.subMode),
+					driveActive: true,
+				});
+			}
+			return {
+				...next,
+				agencyBanner: "Ready for the next goal — add tasks when you like",
+			};
+		});
+	}, [dismissCleanDrain, setDrive, setMode]);
+
+	/** Baseline activate task ids when a plan first appears this session. */
+	const lastCleanDrainPlanIdRef = useRef<string | null>(null);
+	useEffect(() => {
+		const planId = drive.bankSnapshot.activePlanId;
+		if (!planId) {
+			return;
+		}
+		if (lastCleanDrainPlanIdRef.current !== planId) {
+			lastCleanDrainPlanIdRef.current = planId;
+			cleanDrainCountersRef.current = {
+				activateTaskIds:
+					planEditorTasks.length > 0
+						? planEditorTasks.map((task) => task.id)
+						: [...drive.bankSnapshot.openTaskIds],
+				completedCount: 0,
+				midPlanAddCount: 0,
+				planTitle: "Current work",
+			};
+			return;
+		}
+		if (
+			cleanDrainCountersRef.current.activateTaskIds.length === 0 &&
+			(planEditorTasks.length > 0 || drive.bankSnapshot.openTaskIds.length > 0)
+		) {
+			cleanDrainCountersRef.current.activateTaskIds =
+				planEditorTasks.length > 0
+					? planEditorTasks.map((task) => task.id)
+					: [...drive.bankSnapshot.openTaskIds];
+		}
+	}, [
+		drive.bankSnapshot.activePlanId,
+		drive.bankSnapshot.openTaskIds,
+		planEditorTasks,
+	]);
 
 	const acceptStuckRecovery = useCallback(
 		(option: RecoveryOptionKind) => {
@@ -1399,6 +1522,8 @@ export default function Chat({
 				</div>
 				<DriveRoomChrome
 					disabled={isHydrating}
+					onCleanDrainContinue={continueCleanDrain}
+					onCleanDrainDismiss={dismissCleanDrain}
 					providerId={provider}
 					session={driveSession}
 					turnInFlight={sending}
@@ -1611,6 +1736,11 @@ export default function Chat({
 												);
 												return;
 											}
+											const baseline =
+												cleanDrainCountersRef.current.activateTaskIds;
+											if (baseline.length > 0 && !baseline.includes(task.id)) {
+												cleanDrainCountersRef.current.midPlanAddCount += 1;
+											}
 											setPlanEditorTasks(
 												await listPlanTasks(bankSessionRef.current, planId),
 											);
@@ -1626,6 +1756,7 @@ export default function Chat({
 									onComplete={(taskId) => {
 										void (async () => {
 											const planId = drive.bankSnapshot.activePlanId;
+											const prevSnapshot = drive.bankSnapshot;
 											const { snapshot, fromHub } =
 												await mutateBankCompleteTask(
 													bankSessionRef.current,
@@ -1642,6 +1773,7 @@ export default function Chat({
 												);
 												return;
 											}
+											cleanDrainCountersRef.current.completedCount += 1;
 											if (planId) {
 												setPlanEditorTasks(
 													await listPlanTasks(
@@ -1649,12 +1781,15 @@ export default function Chat({
 														planId,
 													),
 												);
+											} else {
+												setPlanEditorTasks([]);
 											}
 											setDrive((current) =>
 												applyBankSnapshot(current, snapshot, {
 													mutation: "complete",
 												}),
 											);
+											maybeOfferCleanDrain(prevSnapshot, snapshot);
 										})();
 									}}
 									onReorder={(taskIds) => {

@@ -1,7 +1,9 @@
+import type { CleanDrainInvite } from "@cline/drive";
 import type { BankSnapshot } from "@cline/shared";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { hasNowLastFailure } from "../drive/agencyChrome";
-import { shouldShowNowNext } from "./nowNextLogic";
+import { isCleanDrainSuccessor, shouldShowNowNext } from "./nowNextLogic";
 
 export type NowNextProps = {
 	snapshot: BankSnapshot;
@@ -9,6 +11,11 @@ export type NowNextProps = {
 	onSelectNext?: (taskId: string) => void;
 	/** One-shot felt-agency consequence (DRV-FELT-AGENCY). */
 	agencyBanner?: string | null;
+	/** Clean-drain successor invite (DRV-CLEAN-DRAIN) — invite ≠ auto E1. */
+	cleanDrainInvite?: CleanDrainInvite | null;
+	/** Soft CTA to start setting the next goal (does not mark E1). */
+	onCleanDrainContinue?: () => void;
+	onCleanDrainDismiss?: () => void;
 	className?: string;
 };
 
@@ -19,10 +26,77 @@ export function NowNext({
 	onSelectNow,
 	onSelectNext,
 	agencyBanner,
+	cleanDrainInvite,
+	onCleanDrainContinue,
+	onCleanDrainDismiss,
 	className,
 }: NowNextProps) {
-	if (!shouldShowNowNext(snapshot)) {
+	if (!shouldShowNowNext(snapshot, cleanDrainInvite)) {
 		return null;
+	}
+
+	const successor = isCleanDrainSuccessor(cleanDrainInvite);
+	if (successor && cleanDrainInvite) {
+		const title =
+			cleanDrainInvite.planTitle?.trim() || cleanDrainInvite.planId;
+		return (
+			<div
+				className={cn(
+					"border-b border-emerald-500/25 bg-emerald-500/5",
+					className,
+				)}
+				data-slot="now-next"
+				data-clean-drain="true"
+			>
+				{agencyBanner ? (
+					<div
+						aria-live="polite"
+						className="border-b border-emerald-500/20 px-4 py-1.5 text-xs font-medium text-emerald-900 dark:text-emerald-100"
+						data-slot="agency-consequence"
+						role="status"
+					>
+						{agencyBanner}
+					</div>
+				) : null}
+				<div className="space-y-2 px-4 py-2">
+					<div
+						className="text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300"
+						data-slot="now-next-clean-drain"
+					>
+						Done → what's next?
+					</div>
+					<p className="text-xs text-emerald-900 dark:text-emerald-100">
+						Finished <span className="font-medium">{title}</span>
+						{cleanDrainInvite.tasksCompleted > 0
+							? ` · ${cleanDrainInvite.tasksCompleted} completed`
+							: ""}
+						. Set a next goal when you're ready — leave is fine.
+					</p>
+					<div className="flex flex-wrap gap-1.5">
+						<Button
+							className="h-7 text-xs"
+							data-clean-drain-cta="continue"
+							onClick={() => onCleanDrainContinue?.()}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							Set next goal
+						</Button>
+						<Button
+							className="h-7 text-xs"
+							data-clean-drain-cta="dismiss"
+							onClick={() => onCleanDrainDismiss?.()}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							Dismiss
+						</Button>
+					</div>
+				</div>
+			</div>
+		);
 	}
 
 	const recovery = hasNowLastFailure(snapshot);

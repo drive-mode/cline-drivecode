@@ -165,6 +165,17 @@ export {
 	type SessionRollup,
 } from "./sessionRollup.js";
 export {
+	buildCleanDrainInvite,
+	CLEAN_DRAIN_FORBIDDEN_KEYS,
+	cleanDrainInviteIsPrivate,
+	cleanDrainInviteKey,
+	countMidPlanAdds,
+	formatCleanDrainNarration,
+	shouldOfferCleanDrain,
+	type CleanDrainInvite,
+	type CleanDrainSessionCounters,
+} from "./cleanDrain.js";
+export {
 	assembleHandoffPacket,
 	assertNoForbiddenHandoffKeys,
 	formatHandoffNarration,

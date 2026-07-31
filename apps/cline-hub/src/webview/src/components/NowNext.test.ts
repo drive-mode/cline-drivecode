@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
+import { buildCleanDrainInvite } from "@cline/drive";
 import { hasNowLastFailure } from "../drive/agencyChrome";
-import { shouldShowNowNext } from "./nowNextLogic";
+import { isCleanDrainSuccessor, shouldShowNowNext } from "./nowNextLogic";
 
 const empty: BankSnapshot = {
 	activePlanId: null,
@@ -29,6 +30,16 @@ describe("shouldShowNowNext", () => {
 
 	it("shows when now task exists", () => {
 		expect(shouldShowNowNext(planned)).toBe(true);
+	});
+
+	it("shows successor when clean-drain invite is set", () => {
+		const invite = buildCleanDrainInvite({
+			planId: "p1",
+			planTitle: "Current work",
+			tasksCompleted: 2,
+		});
+		expect(shouldShowNowNext(empty, invite)).toBe(true);
+		expect(isCleanDrainSuccessor(invite)).toBe(true);
 	});
 });
 
