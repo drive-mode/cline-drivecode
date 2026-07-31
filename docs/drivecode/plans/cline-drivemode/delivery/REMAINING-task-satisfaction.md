@@ -62,7 +62,7 @@ Caption:
 
 - Kernel correlation + pure rollup exist; **product path** now emits complete/bind/failure via hub webview bank bridge.
 - Hub commands + webview protocol expose complete/bind/activate/failure with `roomId` / `callSessionId`.
-- Felt agency (W1.1) chrome + mid-turn steer path landed; return loop / stuck fork still open.
+- Felt agency (W1.1) chrome + mid-turn steer path landed; return loop (W1.2) + stuck recovery fork (W1.3 manual) landed.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
 
@@ -77,6 +77,7 @@ Caption:
 | Hub commands: `drive_bank_complete_task`, `bind_now`, `activate_plan`, `record_failure` | `hub.ts` + transport + handlers |
 | Hub webview bridge: protocol frames + `drive-bank` forward + `bankSession` mutators + PlanEditor complete / Agent bind / tool failure | `apps/cline-hub` webview + server |
 | Felt agency (W1.1): interrupt chrome, plan-edit consequence, recovery vs collaborative add, mid-turn steer chip | `agencyChrome.ts`, DriveCallChrome, NowNext, PlanEditor, server send steer, Composer |
+| Stuck recovery (W1.3): Spotlight fork after `nowLastFailure`; gated narrow / fix-up / recruit stub / pause(Ask) | `stuckRecovery.ts`, `StuckRecoveryFork.tsx`, Chat Spotlight |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1; P2 stubbed at 0) | `@cline/drive` `sessionRollup.ts` |
 | Planning docs, DRVs, visual plan, canvas | `docs/drivecode/...` |
@@ -160,7 +161,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 |---|---|---|---|
 | W1.1 | [DRV-FELT-AGENCY](../features/DRV-FELT-AGENCY.md) | [req-felt-agency](../initiatives/session-satisfaction-moments/req-felt-agency.md) | **Landed (partial):** agency interrupt chrome (finishing/paused); PlanEditor → BankSnapshot consequence banner; recovery vs collaborative add (`nowLastFailure`); mid-turn send → steer pending prompts + Composer chip + “Steer applied”. **Still open:** interrupt redirect Now rewrite announce (W-13); optional plan-ref `source` facet; Spotlight delta beyond NowNext/agency banner |
 | W1.2 | [DRV-RETURN-LOOP](../features/DRV-RETURN-LOOP.md) | [req-leave-end-return](../initiatives/session-satisfaction-moments/req-leave-end-return.md) | **Landed (partial):** `call_end` + `control.end`; pure `handoff.ts` Tier-0 packet; End narration; rejoin “since you left” line; Leave≠End chrome. **Still open:** End→next-task resume CTA / Drive tab row (W2.2 PLAN-REENTRY) |
-| W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | Spotlight fork after `recordTaskFailure`; gated narrow / fix-up / recruit / pause(Ask); hub failure path from 2.1 |
+| W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | **Landed (partial):** Spotlight `StuckRecoveryFork` after `nowLastFailure` (manual-only); gated narrow / fix-up / recruit stub / pause(Ask+raise-hand); dismiss mutes identical offerKey. **Still open:** auto stall classifier (W4.1); full recruit seating (W2.3); feed narration of proposal |
 
 **W1 honesty deps:** 2.1 bank bridge; interrupt/steer/now-next already partially shipped.
 
@@ -221,7 +222,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 1. ~~Hub bank bridge (2.1)~~ ✅
 2. ~~W1.1 Felt agency~~ ✅ (chrome + steer path; redirect Now rewrite + plan-ref `source` still open — see §3 W1.1)
 3. ~~W1.2 Return loop (call_end + handoff)~~ ✅ (resume CTA / Plan-reentry Drive tab still open — see §3 W1.2)
-4. W1.3 Stuck recovery (manual)
+4. ~~W1.3 Stuck recovery (manual)~~ ✅ (auto classifier / full recruit still open — see §3 W1.3)
 5. Slice 2 UI reader (2.2)
 6. Failure event for P2 (2.3)
 7. W2.1 Clean-drain

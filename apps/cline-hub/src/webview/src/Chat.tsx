@@ -54,12 +54,21 @@ import {
 	suggestRouteForUtterance,
 } from "./drive/routeSuggest";
 import { Spotlight } from "./drive/Spotlight";
+import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
+import {
+	planRecoveryAccept,
+	shouldOfferRecoveryFork,
+	type RecoveryOptionKind,
+} from "./drive/stuckRecovery";
 import { StickyStagePane } from "./drive/StickyStagePane";
 import {
 	applyBankSnapshot,
+	applySubModeIntent,
 	DRIVE_DEFAULT_ROOM_ID,
+	DRIVE_PARTICIPANT_HUMAN,
 	drivePersonaSystemHint,
 	toNativeMode,
+	toSharedDriveSubMode,
 } from "./drive/types";
 import { useDriveSession } from "./drive/useDriveSession";
 import { createVoiceStack } from "./drive/voice/createVoiceStack";
@@ -244,6 +253,172 @@ export default function Chat({
 	driveRef.current = drive;
 	/** Guard bind_now spam — one bind per now-task while Agent posture. */
 	const lastBoundNowTaskIdRef = useRef<string | null>(null);
+	/** Mute identical stuck-recovery offers until a new failure fingerprint. */
+	const [dismissedRecoveryOfferKey, setDismissedRecoveryOfferKey] = useState<
+		string | null
+	>(null);
+
+	const showStuckRecovery = shouldOfferRecoveryFork({
+		driveActive: drive.active && drive.stageLayout,
+		nowTaskId: drive.bankSnapshot.nowTaskId,
+		nowLastFailure: drive.bankSnapshot.nowLastFailure,
+		dismissedOfferKey: dismissedRecoveryOfferKey,
+	});
+
+	const acceptStuckRecovery = useCallback(
+		(option: RecoveryOptionKind) => {
+			void (async () => {
+				const snapshot = driveRef.current.bankSnapshot;
+				const plan = planRecoveryAccept({
+					option,
+					snapshot,
+					planTaskIds: planEditorTasks.map((task) => task.id),
+				});
+				if (!plan) {
+					return;
+				}
+
+				switch (plan.action) {
+					case "dismiss":
+						setDismissedRecoveryOfferKey(plan.offerKey);
+						return;
+					case "recruit":
+						setDismissedRecoveryOfferKey(plan.offerKey);
+						setDrive((current) => ({
+							...current,
+							agencyBanner: plan.agencyBanner,
+						}));
+						return;
+					case "pause": {
+						setDismissedRecoveryOfferKey(plan.offerKey);
+						if (sending) {
+							postToHost({ type: "abort" });
+							setStatus("Drive recovery: turn stopped");
+						}
+						setDrive((current) => {
+							let next = applySubModeIntent(current, plan.posture);
+							next = {
+								...next,
+								handRaised: true,
+								agencyBanner: plan.agencyBanner,
+							};
+							setMode(toNativeMode(next.subMode));
+							if (current.roomId) {
+								postToHost({
+									type: "call_set_mode",
+									roomId: current.roomId,
+									subMode: toSharedDriveSubMode(next.subMode),
+									driveActive: true,
+								});
+								if (!current.handRaised) {
+									postToHost({
+										type: "call_raise_hand",
+										roomId: current.roomId,
+										participantId: DRIVE_PARTICIPANT_HUMAN,
+										raised: true,
+									});
+								}
+							}
+							return next;
+						});
+						return;
+					}
+					case "narrow":
+					case "fixup": {
+						const correlation = {
+							roomId: driveRef.current.roomId,
+							callSessionId: driveRef.current.callSessionId,
+						};
+						const created = await mutateBankCreateTask(
+							bankSessionRef.current,
+							defaultsRef.current.workspaceRoot,
+							plan.action === "narrow"
+								? {
+										id: plan.createTask.id,
+										title: plan.createTask.title,
+										body: plan.createTask.body,
+										// Reorder in the next step so Now becomes the narrowed task.
+									}
+								: plan.createTask,
+							correlation,
+						);
+						if (
+							defaultsRef.current.workspaceRoot?.trim() &&
+							!created.fromHub
+						) {
+							setStatus(
+								"Recovery not saved — workspace bank was not updated.",
+							);
+							return;
+						}
+						let nextSnapshot = created.snapshot;
+						if (plan.action === "narrow") {
+							const reordered = await mutateBankEditPlanTasks(
+								bankSessionRef.current,
+								defaultsRef.current.workspaceRoot,
+								{
+									planId: plan.createTask.planId,
+									taskIds: plan.reorderTaskIds,
+								},
+								correlation,
+							);
+							if (
+								defaultsRef.current.workspaceRoot?.trim() &&
+								!reordered.fromHub
+							) {
+								setStatus(
+									"Recovery not saved — workspace bank was not updated.",
+								);
+								return;
+							}
+							nextSnapshot = reordered.snapshot;
+						}
+						setDismissedRecoveryOfferKey(plan.offerKey);
+						setPlanEditorTasks(
+							await listPlanTasks(
+								bankSessionRef.current,
+								plan.createTask.planId,
+							),
+						);
+						setDrive((current) =>
+							applyBankSnapshot(current, nextSnapshot, {
+								mutation: "add",
+								addedTitle: plan.createTask.title,
+								recovery: true,
+								agencyBanner: plan.agencyBanner,
+							}),
+						);
+						return;
+					}
+					default: {
+						const _exhaustive: never = plan;
+						return _exhaustive;
+					}
+				}
+			})();
+		},
+		[
+			bankSessionRef,
+			planEditorTasks,
+			sending,
+			setDrive,
+			setMode,
+			setPlanEditorTasks,
+			setStatus,
+		],
+	);
+
+	const dismissStuckRecovery = useCallback(() => {
+		const snapshot = driveRef.current.bankSnapshot;
+		const plan = planRecoveryAccept({
+			option: "dismiss",
+			snapshot,
+			planTaskIds: planEditorTasks.map((task) => task.id),
+		});
+		if (plan?.action === "dismiss") {
+			setDismissedRecoveryOfferKey(plan.offerKey);
+		}
+	}, [planEditorTasks]);
 
 	useEffect(() => {
 		if (
@@ -1365,6 +1540,19 @@ export default function Chat({
 								drive.stageSharer === "you" ? "You" : drive.partnerName
 							}
 						>
+							{showStuckRecovery &&
+							drive.bankSnapshot.nowTaskId &&
+							drive.bankSnapshot.nowLastFailure ? (
+								<StuckRecoveryFork
+									className="mb-3"
+									disabled={isHydrating}
+									failureNote={drive.bankSnapshot.nowLastFailure}
+									nowTitle={drive.bankSnapshot.nowTitle}
+									onAccept={acceptStuckRecovery}
+									onDismiss={dismissStuckRecovery}
+									taskId={drive.bankSnapshot.nowTaskId}
+								/>
+							) : null}
 							<StickyStagePane
 								caption={presentedShow?.caption}
 								drive={drive}

@@ -27,18 +27,21 @@ Mid-call task failure without a recovery path causes abandon. Post-session plan-
 
 ## Agent tasks
 
-- [ ] Wire `lastFailure` on open tasks and surface a gated recovery fork in Spotlight after `recordTaskFailure`.
+- [x] Wire `lastFailure` on open tasks and surface a gated recovery fork in Spotlight after `recordTaskFailure`.
   - Owner package: `@cline/core` + `@cline/cline-hub`
   - Verify: unit + hub fixture for failure → fork options
   - Done when: failure leaves task open; fork appears; reject writes nothing.
-- [ ] Implement accept paths for narrow-task and add-fix-up (bank + NowNext from snapshot).
+  - Landed (W1.3): tool_event failed → `mutateBankRecordFailure` → `BankSnapshot.nowLastFailure`; Spotlight `StuckRecoveryFork` when Drive active; Dismiss mutes identical `offerKey` with no bank write.
+- [x] Implement accept paths for narrow-task and add-fix-up (bank + NowNext from snapshot).
   - Owner package: `@cline/drive` + `@cline/core`
   - Verify: `bun -F @cline/drive test`, hub accept integration
   - Done when: accept mutates bank; NowNext refreshes; mute does not re-offer identically.
-- [ ] Ensure proposals carry only ids (task/plan/skill/event) — no utterance payloads.
+  - Landed (W1.3): pure `planRecoveryAccept` → `mutateBankCreateTask` (+ `mutateBankEditPlanTasks` for narrow); `applyBankSnapshot` refreshes NowNext; pause = Ask override + raise-hand/abort (no new status); recruit CTA = agency banner stub (full seating = W2.3).
+- [x] Ensure proposals carry only ids (task/plan/skill/event) — no utterance payloads.
   - Owner package: `@cline/shared`
   - Verify: privacy / forbidden-key tests
   - Done when: schema rejects utterance fields.
+  - Landed: `RecoveryProposal` + `recoveryProposalIsPrivate` forbid utterance-like keys; fork copy uses task ids + bank `lastFailure` note only.
 
 ## Risks
 

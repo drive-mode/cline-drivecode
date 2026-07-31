@@ -97,7 +97,7 @@ MVP is phases 0 through 3. Future is phases 4 and 5.
 | [DRV-CALL-SESSION](features/DRV-CALL-SESSION.md) | Call session binding for task metrics | 2+ | Planned |
 | [DRV-TASK-METRICS](features/DRV-TASK-METRICS.md) | Local session rollups (tasks / plan quality) | 2+ | Planned |
 | [DRV-PLAN-IMPROVE](features/DRV-PLAN-IMPROVE.md) | Gated planning improve from session diagnosis | 2+ | Planned |
-| [DRV-STUCK-RECOVERY](features/DRV-STUCK-RECOVERY.md) | In-call recovery fork on stuck tasks | 2+ | Planned |
+| [DRV-STUCK-RECOVERY](features/DRV-STUCK-RECOVERY.md) | In-call recovery fork on stuck tasks | 2+ | Partial (W1.3 manual) |
 | [DRV-FELT-AGENCY](features/DRV-FELT-AGENCY.md) | Visible plan control after steer/interrupt/edit | 2+ | Planned |
 | [DRV-CLEAN-DRAIN](features/DRV-CLEAN-DRAIN.md) | Clean-drain ritual → next-goal invite | 2+ | Planned |
 | [DRV-RETURN-LOOP](features/DRV-RETURN-LOOP.md) | Leave/End handoff + while-away return | 2+ | Planned |
