@@ -1,8 +1,21 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildSessionStartInput } from "./sessions";
+
+const mocks = vi.hoisted(() => ({
+	readCompactionModeGlobally: vi.fn(),
+}));
+
+vi.mock("@cline/core", async () => {
+	const actual =
+		await vi.importActual<typeof import("@cline/core")>("@cline/core");
+	return {
+		...actual,
+		readCompactionModeGlobally: mocks.readCompactionModeGlobally,
+	};
+});
 
 function makeFixturePluginRoot(): string {
 	const root = mkdtempSync(join(tmpdir(), "hub-session-plugin-"));
@@ -28,6 +41,11 @@ function makeFixturePluginRoot(): string {
 }
 
 describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
+	beforeEach(() => {
+		mocks.readCompactionModeGlobally.mockReset();
+		mocks.readCompactionModeGlobally.mockReturnValue(undefined);
+	});
+
 	it("sets pluginPaths: [] and workspace when no plugins are installed", () => {
 		const root = mkdtempSync(join(tmpdir(), "hub-session-empty-"));
 		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
@@ -106,11 +124,22 @@ describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
 			modelId: "claude-sonnet-4-5",
 		});
 
-		// Shape details (default / global mode) covered in compaction.test.ts;
-		// here we only prove Hub session start always sets compaction.
-		expect(input.config.compaction).toEqual(
-			expect.objectContaining({ enabled: expect.any(Boolean) }),
-		);
+		// Default when global mode unset: CLI-ish { enabled: true }.
+		expect(input.config.compaction).toEqual({ enabled: true });
+	});
+
+	it("honors global compaction mode on session start (SDK-6.2)", () => {
+		mocks.readCompactionModeGlobally.mockReturnValue("off");
+		const root = mkdtempSync(join(tmpdir(), "hub-session-compaction-off-"));
+
+		const input = buildSessionStartInput({
+			workspaceRoot: root,
+			cwd: root,
+			providerId: "anthropic",
+			modelId: "claude-sonnet-4-5",
+		});
+
+		expect(input.config.compaction).toEqual({ enabled: false });
 	});
 
 	it("omits host AgentHooks — file hooks via Core bootstrap (SDK-6.3)", () => {

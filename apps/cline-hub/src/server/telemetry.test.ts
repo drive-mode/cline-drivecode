@@ -6,6 +6,14 @@ const mocks = vi.hoisted(() => ({
 	createConfiguredTelemetryHandle: vi.fn(),
 	disposeTelemetry: vi.fn(async () => {}),
 	identifyAccount: vi.fn(),
+	getProviderSettings: vi.fn(() => ({
+		auth: {
+			accountId: "account-1",
+			organizationId: "org-1",
+			organizationName: "Org",
+			memberId: "member-1",
+		},
+	})),
 }));
 
 const telemetry = { capture: vi.fn() };
@@ -21,14 +29,7 @@ vi.mock("@cline/core", async () => {
 		identifyAccount: mocks.identifyAccount,
 		ProviderSettingsManager: class {
 			getProviderSettings() {
-				return {
-					auth: {
-						accountId: "account-1",
-						organizationId: "org-1",
-						organizationName: "Org",
-						memberId: "member-1",
-					},
-				};
+				return mocks.getProviderSettings();
 			}
 		},
 	};
@@ -37,6 +38,14 @@ vi.mock("@cline/core", async () => {
 describe("createHubTelemetry (SDK-6.1)", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.getProviderSettings.mockReturnValue({
+			auth: {
+				accountId: "account-1",
+				organizationId: "org-1",
+				organizationName: "Org",
+				memberId: "member-1",
+			},
+		});
 		mocks.createConfiguredTelemetryHandle.mockReturnValue({
 			telemetry,
 			provider: { kind: "otel" },
@@ -81,6 +90,14 @@ describe("createHubTelemetry (SDK-6.1)", () => {
 		const handle = createHubTelemetry();
 		expect(handle.telemetry).toBe(telemetry);
 		expect(handle.provider).toBeUndefined();
+	});
+
+	it("skips identifyAccount when provider auth has no accountId", async () => {
+		mocks.getProviderSettings.mockReturnValue({ auth: {} } as never);
+		const { createHubTelemetry } = await import("./telemetry");
+		createHubTelemetry();
+		expect(mocks.identifyAccount).not.toHaveBeenCalled();
+		expect(mocks.captureExtensionActivated).toHaveBeenCalledWith(telemetry);
 	});
 });
 

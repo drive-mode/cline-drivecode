@@ -47,6 +47,17 @@ describe("resolveHubSessionCompaction (SDK-6.2)", () => {
 		});
 	});
 
+	it("maps global off and agentic through resolve", async () => {
+		const { resolveHubSessionCompaction } = await import("./compaction");
+		mocks.readCompactionModeGlobally.mockReturnValue("off");
+		expect(resolveHubSessionCompaction()).toEqual({ enabled: false });
+		mocks.readCompactionModeGlobally.mockReturnValue("agentic");
+		expect(resolveHubSessionCompaction()).toEqual({
+			enabled: true,
+			strategy: "agentic",
+		});
+	});
+
 	it("falls back to enabled when no global mode is set", async () => {
 		mocks.readCompactionModeGlobally.mockReturnValue(undefined);
 		const { resolveHubSessionCompaction } = await import("./compaction");

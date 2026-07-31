@@ -52,3 +52,5 @@ _Phase 6+ items appended below as agents complete reviews._
 | BL-6.3 | Hub logger + `setSdkLogger` on create | SDK-6.1 | Desktop wires a logger; Hub telemetry path is logger-less today |
 | BL-6.4 | Distinguish Hub Chat vs hub-daemon `cline_type` | review | Both use `cline_type: "hub"`; Chat uses `platform: "Cline Hub"`, daemon `cline-hub-daemon` — consider `hub-chat` if analytics need a hard split |
 | BL-6.5 | Desktop session compaction on start (parity) | SDK-6.2 | Desktop `buildCoreSessionConfig` still omits `compaction`; Hub now sets it |
+| BL-6.6 | `detachHub` disposes Hub Chat telemetry | test | Unit coverage hits `HubTelemetry.dispose` idempotency; no attach/detach wiring assert (would need heavy hub daemon mocks) |
+| BL-6.7 | ProviderSettingsManager throw path in `createHubTelemetry` | test | Identity enrichment is try/catch; missing-account path covered; throw-from-settings manager not asserted |
