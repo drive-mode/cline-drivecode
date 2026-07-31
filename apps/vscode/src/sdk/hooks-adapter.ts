@@ -2,7 +2,8 @@
 //
 // Runtime hooks use typed in-process lifecycle callbacks (AgentRuntimeHooks):
 //   TaskStart        -> beforeRun (new session)
-//   TaskResume       -> beforeRun when isResume / CLINE_HOOK_AGENT_RESUME=1
+//   TaskResume       -> beforeRun when isResume (product path). CLINE_HOOK_AGENT_RESUME=1
+//                      is CLI/test parity only — do not rely on process-wide env in VS Code.
 //   UserPromptSubmit -> beforeRun with the latest submitted user message
 //   PreToolUse       -> beforeTool
 //   PostToolUse      -> afterTool
@@ -38,8 +39,9 @@ export type HookMessageEmitter = (message: ClineMessage) => void
 
 export interface BuildAgentHooksOptions {
 	/**
-	 * When true, beforeRun fires TaskResume instead of TaskStart (CLI parity with
-	 * CLINE_HOOK_AGENT_RESUME=1 for resumed sessions).
+	 * When true, beforeRun fires TaskResume instead of TaskStart.
+	 * Product VS Code path: pass this from resume/history builders — do not set
+	 * process-wide `CLINE_HOOK_AGENT_RESUME` (that env is CLI/test parity only).
 	 */
 	isResume?: boolean
 }
@@ -87,6 +89,8 @@ function latestUserPrompt(ctx: AgentRunLifecycleContext): string {
 }
 
 function shouldRunTaskResume(options?: BuildAgentHooksOptions): boolean {
+	// Prefer explicit isResume. Env fallback matches CLI subprocess hooks and unit
+	// tests only — rebuild coordinators must pass isResume (see BL-7.9 / BL-7.10).
 	return options?.isResume === true || process.env.CLINE_HOOK_AGENT_RESUME === "1"
 }
 

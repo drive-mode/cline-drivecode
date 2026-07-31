@@ -39,9 +39,9 @@ Items filed by post-task review and test-coverage agents. Address after the curr
 | BL-5.11 | Document `CLINE_MAX_SESSION_COST` in CLI README | docs | **Done** — listed under Environment variables (one-shot opt-in USD budget) |
 | BL-5.12 | VS Code Phase 5 tests run via `test:vitest`, not `test:unit` | test | `cline-session-factory.test.ts` imports vitest; `run-bun-unit-tests.ts` only picks `bun:test` files — document in contributor notes or dual-run in CI if missing |
 
-## Open (to be filled by later phases)
+## Open (filled by later phases)
 
-_Phase 6+ items appended below as agents complete reviews._
+_Phase 6–8 items are appended in the sections below._
 
 ## From Phase 6 (Hub ClineCore depth)
 
@@ -71,3 +71,14 @@ _Phase 6+ items appended below as agents complete reviews._
 | BL-7.6 | TaskResume `cancel` → AgentStopControl mapping | test | Adapter maps hook `cancel` via `mapStopControl`; covered for TaskStart path indirectly only — explicit TaskResume cancel assert optional |
 | BL-7.7 | `historyItem` implies `isResume` in session config builder | test | `buildAgentHooks(..., { isResume: true })` when `input.historyItem` set; `isResume: true` flag path covered |
 | BL-7.8 | HookFactory TaskResume bun:test in CI with vitest Phase 7 filter | test | Core `taskresume.test.ts` is bun:test (`test:unit`); Phase 7 verify doc lists vitest filters only — keep both in contributor checklist |
+| BL-7.9 | Preserve `isResume` across mode/provider/MCP rebuilds | review | Mode / provider / MCP / terminal-mode coordinators call `sessionConfigBuilder.build({ cwd, mode })` without `isResume`; a mid-task rebuild can fire TaskStart instead of TaskResume |
+| BL-7.10 | VS Code must not rely on process-wide `CLINE_HOOK_AGENT_RESUME` | review | Product path uses `isResume` option; env fallback is CLI/test parity only — document (hooks-adapter) and avoid setting the env from the extension host |
+
+## From Phase 8 (optional observability)
+
+| ID | Title | Source | Notes |
+|----|-------|--------|-------|
+| BL-8.1 | Optionally align VS Code legacy OTEL stack with shared env helper | SDK-8.1 | Legacy `otel-config.ts` still owns `CLINE_OTEL_*` + remote-config for extension TelemetryService; SDK path already shares `createClineTelemetryServiceConfig`. Unifying stacks is out of Phase 8 scope |
+| BL-8.2 | Shared host event-projection layer | SDK-8.2 | **Deferred** — hub `projectSessionEvent` is WS transport only; extracting a cross-host UI projector needs a product protocol decision |
+| BL-8.3 | Document `OTEL_*` vs `CLINE_OTEL_*` in going-to-production | docs | Shared config now accepts both; public production guide still mentions generic OTEL env only |
+| BL-8.4 | Hub Chat / Desktop opt-in OTEL enabled-by-env smoke | test | Unit coverage is in `@cline/shared` telemetry-config; host activation still defaults `enabled: false` unless env/remote-config sets it |

@@ -50,7 +50,7 @@ Amend only by editing this table (and the visual plan). Agents must not invent a
 | CLI / Hub / Desktop | Core MCP settings file + install/OAuth helpers; settings tools available unless disabled |
 | VS Code | `disableMcpSettingsTools: true`; tools injected via legacy `McpHub` + `createMcpTools` |
 
-This is intentional adapter debt, not a one-line flip. Do not enable VS Code settings MCP tools without a migration spike (`SDK-7.2`).
+This is intentional adapter debt, not a one-line flip. **SDK-7.2 spike: Done — keep adapter** ([vscode-mcp-spike](/sdk/architecture/vscode-mcp-spike)). Do not enable VS Code settings MCP tools without a product migration.
 
 ## Visual structure
 
@@ -104,7 +104,7 @@ This is intentional adapter debt, not a one-line flip. Do not enable VS Code set
 
 | | |
 |---|---|
-| **Status** | **Done** — section above + architecture overview see-also |
+| **Status** | **Done** — section above + architecture overview see-also; SDK-7.2 spike keeps VS Code adapter |
 
 ---
 
@@ -286,7 +286,35 @@ Shared `maxIterations` defaults (+ optional usage abort helper); hosts may overr
 
 ## Phase 8 · Optional observability
 
-`SDK-8.1` OTEL · `SDK-8.2` Event projection.
+Incremental OTEL / event-projection alignment. Do **not** rewrite host telemetry stacks or force a shared UI event contract.
+
+### Agent task `SDK-8.1` — OTEL alignment
+
+| | |
+|---|---|
+| **Depends on** | — |
+| **Owner surface** | Docs + `@cline/shared` env normalization (`createClineTelemetryServiceConfig`) |
+| **Goal** | Document current host OTEL paths; prefer SDK adapter helpers / shared env vars where practical. |
+| **Host paths (current)** | |
+| **CLI** | `apps/cli/src/utils/telemetry.ts` → `createClineTelemetryServiceConfig` + `createConfiguredTelemetryHandle` (SDK OpenTelemetryProvider when `enabled`). Lazy `loadOpenTelemetryAdapter()` remains available for embedders. |
+| **Hub Chat** | `apps/cline-hub/src/server/telemetry.ts` → same SDK handle (SDK-6.1). Hub daemon: `sdk/packages/core/src/hub/daemon/telemetry.ts`. |
+| **Desktop** | `apps/examples/desktop-app/sidecar/observability.ts` → same SDK handle. |
+| **VS Code** | Dual stack: (1) SDK session path `sdk-telemetry.ts` → `createConfiguredTelemetryHandle`; (2) legacy extension `TelemetryService` / `OpenTelemetryClientProvider` via `apps/vscode/src/shared/services/config/otel-config.ts` (`CLINE_OTEL_*` + remote-config). Remote-config OTEL for Core uses `@cline/shared` `resolveOpenTelemetryConfigFromRemoteConfig`. |
+| **Concrete improvement** | `getTelemetryBuildTimeConfig` now honors enterprise `CLINE_OTEL_*` as fallback after standard `OTEL_*` so CLI/Hub/Desktop pick up the same env names as Mintlify / VS Code override docs — without rewriting host stacks. |
+| **Verify** | `bun -F @cline/shared test` filtered to `telemetry-config`; `bun run build:sdk`. |
+| **Status** | **Done** (docs + shared env fallback) |
+
+### Agent task `SDK-8.2` — Event projection spike
+
+| | |
+|---|---|
+| **Depends on** | — |
+| **Owner surface** | Docs / backlog |
+| **Goal** | Decide whether SDK/hub event projection helpers should be adopted by product hosts. |
+| **Finding** | The only shared projector is hub-daemon `projectSessionEvent` (`session-event-projector.ts`) — it maps `CoreSessionEvent` → Hub WS `HubEventEnvelope` (already covered by hub boundary tests). It is **not** a UI projection helper. Product hosts each own protocol adapters by design: CLI TUI, VS Code `message-translator`, Hub Chat `agent-events.ts`, Desktop `handleAgentEvent`. There is no `@cline/shared` host-agnostic projector to adopt without inventing a cross-host UI contract. |
+| **Decision** | **Deferred** — keep host translators; do not extract a shared product projection layer without a product UI-protocol decision. |
+| **Tiny safe usage** | Hub daemon already uses `projectSessionEvent` (+ tests). No additional host wire. |
+| **Status** | **Deferred** (documented; BL-8.2) |
 
 ---
 
@@ -324,7 +352,8 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-6.3 Hub hooks | **Done** (file hooks via Core bootstrap; host AgentHooks omit / Desktop parity) |
 | SDK-7.1 VS Code hooks | **Done** (TaskResume wired; TaskError/SessionShutdown wontfix; PreCompact/Notification backlog) |
 | SDK-7.2 VS Code MCP spike | **Done** (keep adapter; see vscode-mcp-spike) |
-| SDK-8.1–8.2 Observability | Open |
+| SDK-8.1 OTEL alignment | **Done** (docs + `CLINE_OTEL_*` env fallback in shared telemetry-config) |
+| SDK-8.2 Event projection | **Deferred** (hub projector is transport-only; host UI translators stay) |
 
 ## Related
 

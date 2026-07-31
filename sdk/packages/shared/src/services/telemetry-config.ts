@@ -5,28 +5,124 @@ export interface ClineTelemetryServiceConfig extends OpenTelemetryClientConfig {
 	metadata: TelemetryMetadata;
 }
 
-function getTelemetryBuildTimeConfig(): OpenTelemetryClientConfig {
+/**
+ * Reads the first non-empty env value among `keys` (left → right priority).
+ * Used so SDK hosts honor standard `OTEL_*` vars and fall back to enterprise
+ * `CLINE_OTEL_*` aliases documented for VS Code / self-hosted deployments.
+ */
+export function readTelemetryEnv(...keys: string[]): string | undefined {
+	for (const key of keys) {
+		const value = process.env[key];
+		if (value !== undefined && value !== "") {
+			return value;
+		}
+	}
+	return undefined;
+}
+
+function isEnvEnabled(value: string | undefined): boolean {
+	return value === "1" || value === "true";
+}
+
+function parsePositiveInt(value: string | undefined): number | undefined {
+	if (value === undefined) {
+		return undefined;
+	}
+	const parsed = Number.parseInt(value, 10);
+	return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * Build-time OTEL config from process env.
+ *
+ * Priority per field: standard OpenTelemetry / SDK `OTEL_*`, then enterprise
+ * `CLINE_OTEL_*` (same names as VS Code legacy + Mintlify override docs).
+ * Does not rewrite host telemetry stacks — only shared env normalization for
+ * `createClineTelemetryServiceConfig` → `createConfiguredTelemetryHandle`.
+ */
+export function getTelemetryBuildTimeConfig(): OpenTelemetryClientConfig {
 	if (!process.env) {
 		return {
 			enabled: false,
 		};
 	}
 
+	const enabledRaw = readTelemetryEnv(
+		"OTEL_TELEMETRY_ENABLED",
+		"CLINE_OTEL_TELEMETRY_ENABLED",
+	);
+	const headersRaw = readTelemetryEnv(
+		"OTEL_EXPORTER_OTLP_HEADERS",
+		"CLINE_OTEL_EXPORTER_OTLP_HEADERS",
+	);
+	const metricIntervalRaw = readTelemetryEnv(
+		"OTEL_METRIC_EXPORT_INTERVAL",
+		"CLINE_OTEL_METRIC_EXPORT_INTERVAL",
+	);
+	const otlpInsecureRaw = readTelemetryEnv(
+		"OTEL_EXPORTER_OTLP_INSECURE",
+		"CLINE_OTEL_EXPORTER_OTLP_INSECURE",
+	);
+	const logBatchSizeRaw = readTelemetryEnv(
+		"OTEL_LOG_BATCH_SIZE",
+		"CLINE_OTEL_LOG_BATCH_SIZE",
+	);
+	const logBatchTimeoutRaw = readTelemetryEnv(
+		"OTEL_LOG_BATCH_TIMEOUT",
+		"CLINE_OTEL_LOG_BATCH_TIMEOUT",
+	);
+	const logMaxQueueSizeRaw = readTelemetryEnv(
+		"OTEL_LOG_MAX_QUEUE_SIZE",
+		"CLINE_OTEL_LOG_MAX_QUEUE_SIZE",
+	);
+
 	return {
-		enabled:
-			process.env.OTEL_TELEMETRY_ENABLED === "1" ||
-			process.env.OTEL_TELEMETRY_ENABLED === "true",
-		metricsExporter: process.env.OTEL_METRICS_EXPORTER || "otlp",
-		logsExporter: process.env.OTEL_LOGS_EXPORTER || "otlp",
-		tracesExporter: process.env.OTEL_TRACES_EXPORTER,
-		otlpProtocol: process.env.OTEL_EXPORTER_OTLP_PROTOCOL || "http/json",
-		otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
-		metricExportInterval: process.env.OTEL_METRIC_EXPORT_INTERVAL
-			? Number.parseInt(process.env.OTEL_METRIC_EXPORT_INTERVAL, 10)
+		enabled: isEnvEnabled(enabledRaw),
+		metricsExporter:
+			readTelemetryEnv(
+				"OTEL_METRICS_EXPORTER",
+				"CLINE_OTEL_METRICS_EXPORTER",
+			) || "otlp",
+		logsExporter:
+			readTelemetryEnv("OTEL_LOGS_EXPORTER", "CLINE_OTEL_LOGS_EXPORTER") ||
+			"otlp",
+		tracesExporter: readTelemetryEnv(
+			"OTEL_TRACES_EXPORTER",
+			"CLINE_OTEL_TRACES_EXPORTER",
+		),
+		otlpProtocol:
+			readTelemetryEnv(
+				"OTEL_EXPORTER_OTLP_PROTOCOL",
+				"CLINE_OTEL_EXPORTER_OTLP_PROTOCOL",
+			) || "http/json",
+		otlpEndpoint: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_ENDPOINT",
+			"CLINE_OTEL_EXPORTER_OTLP_ENDPOINT",
+		),
+		otlpMetricsProtocol: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_METRICS_PROTOCOL",
+			"CLINE_OTEL_EXPORTER_OTLP_METRICS_PROTOCOL",
+		),
+		otlpMetricsEndpoint: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+			"CLINE_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+		),
+		otlpLogsProtocol: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
+			"CLINE_OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
+		),
+		otlpLogsEndpoint: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+			"CLINE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+		),
+		metricExportInterval: parsePositiveInt(metricIntervalRaw),
+		otlpHeaders: headersRaw
+			? parseKeyPairsIntoRecord(headersRaw)
 			: undefined,
-		otlpHeaders: process.env.OTEL_EXPORTER_OTLP_HEADERS
-			? parseKeyPairsIntoRecord(process.env.OTEL_EXPORTER_OTLP_HEADERS)
-			: undefined,
+		otlpInsecure: otlpInsecureRaw === "true",
+		logBatchSize: parsePositiveInt(logBatchSizeRaw),
+		logBatchTimeout: parsePositiveInt(logBatchTimeoutRaw),
+		logMaxQueueSize: parsePositiveInt(logMaxQueueSizeRaw),
 	};
 }
 
