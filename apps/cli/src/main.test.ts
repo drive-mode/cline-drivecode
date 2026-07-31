@@ -1,4 +1,10 @@
-import { fstatSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	fstatSync,
+	mkdirSync,
+	mkdtempSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -577,9 +583,11 @@ describe("runCli lightweight command dispatch", () => {
 		);
 	});
 
-	it("injects pluginPaths and extensionContext.workspace on session config (SDK-4.1)", async () => {
+	it("injects empty pluginPaths + workspace for --cwd without plugins (SDK-4.1)", async () => {
 		forcePromptModeInput();
-		process.argv = ["bun", "src/index.ts", "hello plugins"];
+		const root = mkdtempSync(join(tmpdir(), "cli-plugin-empty-"));
+		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
+		process.argv = ["bun", "src/index.ts", "--cwd", root, "hello plugins"];
 
 		const { runCli } = await import("./main");
 
@@ -587,11 +595,57 @@ describe("runCli lightweight command dispatch", () => {
 		expect(runtimeMocks.runAgent).toHaveBeenCalledWith(
 			"hello plugins",
 			expect.objectContaining({
-				pluginPaths: expect.any(Array),
+				cwd: root,
+				pluginPaths: [],
 				extensionContext: expect.objectContaining({
 					workspace: expect.objectContaining({
-						cwd: expect.any(String),
-						rootPath: expect.any(String),
+						cwd: root,
+						rootPath: root,
+						ide: "Terminal Shell",
+					}),
+				}),
+			}),
+			expect.anything(),
+		);
+	});
+
+	it("discovers fixture plugins via --cwd into session pluginPaths (SDK-4.1)", async () => {
+		forcePromptModeInput();
+		const root = mkdtempSync(join(tmpdir(), "cli-plugin-fixture-"));
+		const pluginDir = join(root, ".cline", "plugins", "demo");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "index.ts"),
+			`export default { name: "demo", setup() {} }\n`,
+			"utf8",
+		);
+		writeFileSync(
+			join(pluginDir, "package.json"),
+			JSON.stringify({
+				name: "demo-plugin",
+				type: "module",
+				cline: {
+					plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }],
+				},
+			}),
+			"utf8",
+		);
+		process.argv = ["bun", "src/index.ts", "--cwd", root, "hello plugins"];
+
+		const { runCli } = await import("./main");
+
+		await expect(runCli()).resolves.toBeUndefined();
+		expect(runtimeMocks.runAgent).toHaveBeenCalledWith(
+			"hello plugins",
+			expect.objectContaining({
+				cwd: root,
+				pluginPaths: expect.arrayContaining([
+					expect.stringMatching(/index\.ts$/),
+				]),
+				extensionContext: expect.objectContaining({
+					workspace: expect.objectContaining({
+						cwd: root,
+						rootPath: root,
 						ide: "Terminal Shell",
 					}),
 				}),
