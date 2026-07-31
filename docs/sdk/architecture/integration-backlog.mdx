@@ -56,7 +56,7 @@ _Phase 6–8 items are appended in the sections below._
 | BL-6.7 | ProviderSettingsManager throw path in `createHubTelemetry` | test | Identity enrichment is try/catch; missing-account path covered; throw-from-settings manager not asserted |
 | BL-6.8 | Recreate Hub telemetry on opt-out toggle | review | When user toggles telemetry opt-out/in, recreate or rebind Hub Chat telemetry so the live session reflects the new preference |
 | BL-6.9 | Refresh usage-analysis Hub rows | docs | Keep usage-analysis / integration-build Hub depth rows current as SDK-6.* landings drift |
-| BL-6.10 | `attachHub` try/finally telemetry dispose | review | Ensure attach failures still dispose partial Hub telemetry / avoid leaked reporters |
+| BL-6.10 | `attachHub` try/finally + dispose previous telemetry before recreate | review | **Done** — dispose previous handle before recreate; dispose on attach failure |
 | BL-6.11 | Hub↔CLI hooks gap matrix | docs | Explicit matrix of file-hook vs host-`AgentHooks` coverage between Hub daemon and CLI for product honesty |
 
 ## From Phase 7 (VS Code honesty)

@@ -71,8 +71,12 @@ describe("evaluateUsageBudget / shouldAbortForUsageBudget", () => {
 			evaluateUsageBudget(
 				{ totalCost: 5 },
 				{ maxCostUsd: 1, reason: "Budget exceeded" },
-			).reason,
-		).toBe("Budget exceeded");
+			),
+		).toEqual({
+			abort: true,
+			cost: 5,
+			reason: "Budget exceeded",
+		});
 	});
 
 	it("ignores non-positive budgets", () => {

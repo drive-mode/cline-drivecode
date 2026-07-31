@@ -1,6 +1,25 @@
-import type { AgentRunLifecycleContext } from "@cline/shared"
+import type { AgentMessage, AgentRunLifecycleContext, AgentUsage } from "@cline/shared"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { buildAgentHooks } from "./hooks-adapter"
+
+function makeMessage(role: AgentMessage["role"], text: string, id = `msg-${role}-${text.slice(0, 8)}`): AgentMessage {
+	return {
+		id,
+		role,
+		content: [{ type: "text", text }],
+		createdAt: 1,
+	}
+}
+
+function makeUsage(overrides?: Partial<AgentUsage>): AgentUsage {
+	return {
+		inputTokens: 0,
+		outputTokens: 0,
+		cacheReadTokens: 0,
+		cacheWriteTokens: 0,
+		...overrides,
+	}
+}
 
 const mocks = vi.hoisted(() => {
 	const run = vi.fn(async () => ({ cancel: false }))
@@ -44,14 +63,9 @@ function makeLifecycleCtx(overrides?: Partial<AgentRunLifecycleContext["snapshot
 			runId: "run-1",
 			status: "running",
 			iteration: 0,
-			messages: [
-				{
-					role: "user",
-					content: [{ type: "text", text: "continue the work" }],
-				},
-			],
+			messages: [makeMessage("user", "continue the work")],
 			pendingToolCalls: [],
-			usage: { inputTokens: 0, outputTokens: 0 },
+			usage: makeUsage(),
 			...overrides,
 		},
 	}
@@ -94,11 +108,7 @@ describe("buildAgentHooks", () => {
 		const emit = vi.fn()
 		const hooks = buildAgentHooks(makeStateManager(), emit, { isResume: true })
 		const ctx = makeLifecycleCtx({
-			messages: [
-				{ role: "user", content: [{ type: "text", text: "old" }] },
-				{ role: "assistant", content: [{ type: "text", text: "ok" }] },
-				{ role: "user", content: [{ type: "text", text: "resume me" }] },
-			],
+			messages: [makeMessage("user", "old"), makeMessage("assistant", "ok"), makeMessage("user", "resume me")],
 		})
 
 		await hooks.beforeRun?.(ctx)
@@ -144,7 +154,7 @@ describe("buildAgentHooks", () => {
 				iterations: 1,
 				outputText: "done",
 				messages: [],
-				usage: { inputTokens: 0, outputTokens: 0 },
+				usage: makeUsage(),
 			},
 		})
 		expect(mocks.create).toHaveBeenCalledWith("TaskComplete")
@@ -159,7 +169,7 @@ describe("buildAgentHooks", () => {
 				iterations: 1,
 				outputText: "",
 				messages: [],
-				usage: { inputTokens: 0, outputTokens: 0 },
+				usage: makeUsage(),
 			},
 		})
 		expect(mocks.create).toHaveBeenCalledWith("TaskCancel")
@@ -174,7 +184,7 @@ describe("buildAgentHooks", () => {
 				iterations: 1,
 				outputText: "",
 				messages: [],
-				usage: { inputTokens: 0, outputTokens: 0 },
+				usage: makeUsage(),
 				error: new Error("boom"),
 			},
 		})

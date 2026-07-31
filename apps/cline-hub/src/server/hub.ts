@@ -37,9 +37,7 @@ export function buildHubClineCoreCreateOptions(input: {
 	hubAuthToken: string;
 	workspaceRoot: string;
 	telemetry: ClineCoreOptions["telemetry"];
-	requestToolApproval: NonNullable<
-		RuntimeCapabilities["requestToolApproval"]
-	>;
+	requestToolApproval: NonNullable<RuntimeCapabilities["requestToolApproval"]>;
 }): ClineCoreOptions {
 	return {
 		clientName: "cline-hub",
@@ -129,227 +127,256 @@ export async function attachHub(ctx: HubContext): Promise<void> {
 	ctx.hubUrl = hub.url;
 	ctx.hubAuthToken = hub.authToken;
 
+	if (ctx.disposeTelemetry) {
+		try {
+			await ctx.disposeTelemetry();
+		} catch {
+			// ignore previous handle dispose errors
+		}
+		ctx.disposeTelemetry = undefined;
+	}
+
 	const hubTelemetry = createHubTelemetry();
 	ctx.disposeTelemetry = () => hubTelemetry.dispose();
 
-	ctx.cline = await ClineCore.create(
-		buildHubClineCoreCreateOptions({
-			hubUrl: ctx.hubUrl,
-			hubAuthToken: ctx.hubAuthToken,
-			workspaceRoot,
-			telemetry: hubTelemetry.telemetry,
-			requestToolApproval: (request) =>
-				requestToolApprovalFromWebview(ctx, request),
-		}),
-	);
+	try {
+		ctx.cline = await ClineCore.create(
+			buildHubClineCoreCreateOptions({
+				hubUrl: ctx.hubUrl,
+				hubAuthToken: ctx.hubAuthToken,
+				workspaceRoot,
+				telemetry: hubTelemetry.telemetry,
+				requestToolApproval: (request) =>
+					requestToolApprovalFromWebview(ctx, request),
+			}),
+		);
 
-	ctx.uiClient = new HubUIClient({
-		address: ctx.hubUrl,
-		authToken: ctx.hubAuthToken,
-		clientType: "cline-hub-server",
-		displayName: "Cline Hub Server",
-	});
-	await ctx.uiClient.connect();
+		ctx.uiClient = new HubUIClient({
+			address: ctx.hubUrl,
+			authToken: ctx.hubAuthToken,
+			clientType: "cline-hub-server",
+			displayName: "Cline Hub Server",
+		});
+		await ctx.uiClient.connect();
 
-	ctx.uiClient.subscribeUI({
-		onNotify(payload: HubUINotifyPayload) {
-			ctx.pushEvent(
-				payload.title,
-				payload.body,
-				payload.severity === "error"
-					? "error"
-					: payload.severity === "warning"
-						? "warn"
-						: "info",
-			);
-			ctx.broadcast({
-				type: "notification",
-				title: payload.title,
-				body: payload.body,
-				severity: payload.severity ?? "info",
-			});
-		},
-		onClientRegistered(payload) {
-			const clientId = asString(payload.clientId);
-			const clientType = asString(payload.clientType) ?? "unknown";
-			if (!clientId || !isVisibleClient(clientType)) return;
-			ctx.clients.set(clientId, {
-				clientId,
-				displayName: asString(payload.displayName),
-				clientType,
-				connectedAt: Date.now(),
-			});
-			ctx.pushEvent(
-				"Client connected",
-				`${asString(payload.displayName) ?? clientType} joined the hub`,
-				"success",
-			);
-			broadcastHubState(ctx);
-		},
-		onClientDisconnected(payload) {
-			const clientId = asString(payload.clientId);
-			if (!clientId) return;
-			const client = ctx.clients.get(clientId);
-			ctx.clients.delete(clientId);
-			if (client) {
+		ctx.uiClient.subscribeUI({
+			onNotify(payload: HubUINotifyPayload) {
 				ctx.pushEvent(
-					"Client disconnected",
-					`${formatClientName(client)} left the hub`,
-					"info",
+					payload.title,
+					payload.body,
+					payload.severity === "error"
+						? "error"
+						: payload.severity === "warning"
+							? "warn"
+							: "info",
 				);
-			}
-			broadcastHubState(ctx);
-		},
-		onSessionCreated(payload) {
-			const record =
-				payload.session && typeof payload.session === "object"
-					? (payload.session as Record<string, unknown>)
-					: (payload as unknown as Record<string, unknown>);
-			const tracked = trackSession(record);
-			if (tracked) {
-				ctx.sessions.set(tracked.sessionId, tracked);
-				const context = parseSessionContext(record);
-				if (context) ctx.lastSessionContext = context;
+				ctx.broadcast({
+					type: "notification",
+					title: payload.title,
+					body: payload.body,
+					severity: payload.severity ?? "info",
+				});
+			},
+			onClientRegistered(payload) {
+				const clientId = asString(payload.clientId);
+				const clientType = asString(payload.clientType) ?? "unknown";
+				if (!clientId || !isVisibleClient(clientType)) return;
+				ctx.clients.set(clientId, {
+					clientId,
+					displayName: asString(payload.displayName),
+					clientType,
+					connectedAt: Date.now(),
+				});
 				ctx.pushEvent(
-					"Session started",
-					`By ${formatSessionCreator(ctx, tracked)} at ${basename(tracked.workspaceRoot || tracked.cwd)}`,
+					"Client connected",
+					`${asString(payload.displayName) ?? clientType} joined the hub`,
 					"success",
 				);
 				broadcastHubState(ctx);
-			}
-		},
-		onSessionUpdated(payload) {
-			const record =
-				payload.session && typeof payload.session === "object"
-					? (payload.session as Record<string, unknown>)
-					: (payload as unknown as Record<string, unknown>);
-			const tracked = trackSession(record);
-			if (tracked) {
-				ctx.sessions.set(tracked.sessionId, tracked);
-				const context = parseSessionContext(record);
-				if (context) ctx.lastSessionContext = context;
+			},
+			onClientDisconnected(payload) {
+				const clientId = asString(payload.clientId);
+				if (!clientId) return;
+				const client = ctx.clients.get(clientId);
+				ctx.clients.delete(clientId);
+				if (client) {
+					ctx.pushEvent(
+						"Client disconnected",
+						`${formatClientName(client)} left the hub`,
+						"info",
+					);
+				}
 				broadcastHubState(ctx);
-			}
-		},
-		onSessionDetached(payload) {
-			const sessionId =
-				asString((payload as Record<string, unknown>).sessionId) ??
-				asString(
-					(
-						(payload as Record<string, unknown>).session as
-							| Record<string, unknown>
-							| undefined
-					)?.sessionId,
-				);
-			if (sessionId) {
-				ctx.sessions.delete(sessionId);
-				broadcastHubState(ctx);
-			}
-		},
+			},
+			onSessionCreated(payload) {
+				const record =
+					payload.session && typeof payload.session === "object"
+						? (payload.session as Record<string, unknown>)
+						: (payload as unknown as Record<string, unknown>);
+				const tracked = trackSession(record);
+				if (tracked) {
+					ctx.sessions.set(tracked.sessionId, tracked);
+					const context = parseSessionContext(record);
+					if (context) ctx.lastSessionContext = context;
+					ctx.pushEvent(
+						"Session started",
+						`By ${formatSessionCreator(ctx, tracked)} at ${basename(tracked.workspaceRoot || tracked.cwd)}`,
+						"success",
+					);
+					broadcastHubState(ctx);
+				}
+			},
+			onSessionUpdated(payload) {
+				const record =
+					payload.session && typeof payload.session === "object"
+						? (payload.session as Record<string, unknown>)
+						: (payload as unknown as Record<string, unknown>);
+				const tracked = trackSession(record);
+				if (tracked) {
+					ctx.sessions.set(tracked.sessionId, tracked);
+					const context = parseSessionContext(record);
+					if (context) ctx.lastSessionContext = context;
+					broadcastHubState(ctx);
+				}
+			},
+			onSessionDetached(payload) {
+				const sessionId =
+					asString((payload as Record<string, unknown>).sessionId) ??
+					asString(
+						(
+							(payload as Record<string, unknown>).session as
+								| Record<string, unknown>
+								| undefined
+						)?.sessionId,
+					);
+				if (sessionId) {
+					ctx.sessions.delete(sessionId);
+					broadcastHubState(ctx);
+				}
+			},
 
-		onDriveRoomChanged(payload) {
-			const room = (payload as Record<string, unknown>).room;
-			if (!room || typeof room !== "object") return;
-			ctx.broadcast({
-				type: "drive_room_changed",
-				room,
-			});
-		},
-		onDriveShowPresented(payload) {
-			ctx.broadcast({
-				type: "drive_show_presented",
-				showItemId: asString(payload.showItemId) ?? "",
-				ownerParticipantId: asString(payload.ownerParticipantId) ?? "",
-				uri: asString(payload.uri) ?? undefined,
-				caption: asString(payload.caption) ?? undefined,
-				title: asString(payload.title) ?? undefined,
-			});
-		},
-		onDriveShowPlanned(payload) {
-			ctx.broadcast({
-				type: "drive_show_planned",
-				showItemId: asString(payload.showItemId) ?? "",
-				ownerParticipantId: asString(payload.ownerParticipantId) ?? "",
-				title: asString(payload.title) ?? undefined,
-				status: asString(payload.status) ?? undefined,
-				priority:
-					typeof payload.priority === "number" ? payload.priority : undefined,
-			});
-		},
-		onDriveScriptBeat(payload) {
-			ctx.broadcast({
-				type: "drive_script_beat",
-				beatId: asString(payload.beatId) ?? null,
-				say: asString(payload.say) ?? "",
-				showItemId: asString(payload.showItemId) ?? null,
-				stickyShowIds: Array.isArray(payload.stickyShowIds)
-					? payload.stickyShowIds.filter(
-							(id): id is string => typeof id === "string",
-						)
-					: [],
-				activeScriptId: asString(payload.activeScriptId) ?? null,
-			});
-		},
-		onDriveSpotlightChanged(payload) {
-			ctx.broadcast({
-				type: "drive_spotlight_changed",
-				from: asString(payload.from) ?? null,
-				to: asString(payload.to) ?? null,
-				reason: asString(payload.reason) ?? undefined,
-			});
-		},
-		onRoomSnapshot(payload) {
-			const roomId = asString(payload.roomId);
-			const snapshot = payload.snapshot;
-			if (!roomId || !snapshot || typeof snapshot !== "object") {
-				return;
-			}
-			const seq =
-				typeof payload.seq === "number" ? payload.seq : undefined;
-			ctx.broadcast({
-				type: "room_snapshot",
-				roomId,
-				snapshot,
-				...(seq !== undefined ? { seq } : {}),
-			});
-		},
-		onRoomEvent(payload) {
-			const roomId = asString(payload.roomId);
-			const snapshot = payload.snapshot;
-			const event = payload.event;
-			if (!roomId || !snapshot || typeof snapshot !== "object") {
-				return;
-			}
-			const seq =
-				typeof payload.seq === "number" ? payload.seq : undefined;
-			ctx.broadcast({
-				type: "drive_event",
-				roomId,
-				event,
-				snapshot,
-				...(seq !== undefined ? { seq } : {}),
-			});
-		},
-		onTeamProgress(payload) {
-			ctx.broadcast({ type: "team_progress", payload });
-		},
-		onStatusUpdated(payload) {
-			// Only the new row is pushed; open views append it to whatever page
-			// they already hold rather than refetching.
-			if (!asString(payload.updateId)) {
-				return;
-			}
-			ctx.broadcast({
-				type: "status_updated",
-				update: payload as unknown as import("@cline/shared").StatusUpdate,
-			});
-		},
-	});
+			onDriveRoomChanged(payload) {
+				const room = (payload as Record<string, unknown>).room;
+				if (!room || typeof room !== "object") return;
+				ctx.broadcast({
+					type: "drive_room_changed",
+					room,
+				});
+			},
+			onDriveShowPresented(payload) {
+				ctx.broadcast({
+					type: "drive_show_presented",
+					showItemId: asString(payload.showItemId) ?? "",
+					ownerParticipantId: asString(payload.ownerParticipantId) ?? "",
+					uri: asString(payload.uri) ?? undefined,
+					caption: asString(payload.caption) ?? undefined,
+					title: asString(payload.title) ?? undefined,
+				});
+			},
+			onDriveShowPlanned(payload) {
+				ctx.broadcast({
+					type: "drive_show_planned",
+					showItemId: asString(payload.showItemId) ?? "",
+					ownerParticipantId: asString(payload.ownerParticipantId) ?? "",
+					title: asString(payload.title) ?? undefined,
+					status: asString(payload.status) ?? undefined,
+					priority:
+						typeof payload.priority === "number" ? payload.priority : undefined,
+				});
+			},
+			onDriveScriptBeat(payload) {
+				ctx.broadcast({
+					type: "drive_script_beat",
+					beatId: asString(payload.beatId) ?? null,
+					say: asString(payload.say) ?? "",
+					showItemId: asString(payload.showItemId) ?? null,
+					stickyShowIds: Array.isArray(payload.stickyShowIds)
+						? payload.stickyShowIds.filter(
+								(id): id is string => typeof id === "string",
+							)
+						: [],
+					activeScriptId: asString(payload.activeScriptId) ?? null,
+				});
+			},
+			onDriveSpotlightChanged(payload) {
+				ctx.broadcast({
+					type: "drive_spotlight_changed",
+					from: asString(payload.from) ?? null,
+					to: asString(payload.to) ?? null,
+					reason: asString(payload.reason) ?? undefined,
+				});
+			},
+			onRoomSnapshot(payload) {
+				const roomId = asString(payload.roomId);
+				const snapshot = payload.snapshot;
+				if (!roomId || !snapshot || typeof snapshot !== "object") {
+					return;
+				}
+				const seq = typeof payload.seq === "number" ? payload.seq : undefined;
+				ctx.broadcast({
+					type: "room_snapshot",
+					roomId,
+					snapshot,
+					...(seq !== undefined ? { seq } : {}),
+				});
+			},
+			onRoomEvent(payload) {
+				const roomId = asString(payload.roomId);
+				const snapshot = payload.snapshot;
+				const event = payload.event;
+				if (!roomId || !snapshot || typeof snapshot !== "object") {
+					return;
+				}
+				const seq = typeof payload.seq === "number" ? payload.seq : undefined;
+				ctx.broadcast({
+					type: "drive_event",
+					roomId,
+					event,
+					snapshot,
+					...(seq !== undefined ? { seq } : {}),
+				});
+			},
+			onTeamProgress(payload) {
+				ctx.broadcast({ type: "team_progress", payload });
+			},
+			onStatusUpdated(payload) {
+				// Only the new row is pushed; open views append it to whatever page
+				// they already hold rather than refetching.
+				if (!asString(payload.updateId)) {
+					return;
+				}
+				ctx.broadcast({
+					type: "status_updated",
+					update: payload as unknown as import("@cline/shared").StatusUpdate,
+				});
+			},
+		});
 
-	ctx.cline.subscribe((event) => handleSessionEvent(ctx, event));
+		ctx.cline.subscribe((event) => handleSessionEvent(ctx, event));
 
-	await syncHubClientsAndSessions(ctx);
-	await syncHubHealth(ctx);
+		await syncHubClientsAndSessions(ctx);
+		await syncHubHealth(ctx);
+	} catch (error) {
+		try {
+			ctx.uiClient?.close();
+		} catch {
+			// ignore
+		}
+		ctx.uiClient = undefined;
+		try {
+			await ctx.cline?.dispose();
+		} catch {
+			// ignore
+		}
+		ctx.cline = undefined;
+		try {
+			await ctx.disposeTelemetry?.();
+		} catch {
+			// ignore
+		}
+		ctx.disposeTelemetry = undefined;
+		throw error;
+	}
 }
 
 export async function detachHub(ctx: HubContext): Promise<void> {
