@@ -95,4 +95,37 @@ describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
 		).toBe(true);
 		expect(input.config.extensionContext?.workspace?.rootPath).toBe(root);
 	});
+
+	it("includes compaction on session start config (SDK-6.2)", () => {
+		const root = mkdtempSync(join(tmpdir(), "hub-session-compaction-"));
+
+		const input = buildSessionStartInput({
+			workspaceRoot: root,
+			cwd: root,
+			providerId: "anthropic",
+			modelId: "claude-sonnet-4-5",
+		});
+
+		// Shape details (default / global mode) covered in compaction.test.ts;
+		// here we only prove Hub session start always sets compaction.
+		expect(input.config.compaction).toEqual(
+			expect.objectContaining({ enabled: expect.any(Boolean) }),
+		);
+	});
+
+	it("omits host AgentHooks — file hooks via Core bootstrap (SDK-6.3)", () => {
+		const root = mkdtempSync(join(tmpdir(), "hub-session-hooks-"));
+
+		const input = buildSessionStartInput({
+			workspaceRoot: root,
+			cwd: root,
+			providerId: "anthropic",
+			modelId: "claude-sonnet-4-5",
+		});
+
+		// Desktop parity: no host AgentHooks on session config. File-based
+		// hooks under .clinerules/hooks are loaded by Core local-runtime-bootstrap
+		// on the hub daemon for hub-backed sessions.
+		expect(input.config.hooks).toBeUndefined();
+	});
 });

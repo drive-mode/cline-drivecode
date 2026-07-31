@@ -226,6 +226,36 @@ Shared `maxIterations` defaults (+ optional usage abort helper); hosts may overr
 
 `SDK-6.1` Telemetry · `SDK-6.2` Compaction · `SDK-6.3` Hooks.
 
+### Agent task `SDK-6.1` — Hub telemetry on `ClineCore.create`
+
+| | |
+|---|---|
+| **Depends on** | — |
+| **Owner surface** | `apps/cline-hub` (`telemetry.ts`, `hub.ts` `attachHub`) |
+| **Goal** | Pass an SDK telemetry handle into Hub Chat `ClineCore.create`, matching Desktop/CLI. Honor global telemetry opt-out (`setTelemetryOptOutGlobally` / settings UI) via Core's `createConfiguredTelemetryHandle`. |
+| **Verify** | Hub vitest: `telemetry.test.ts` (create + create-options wiring); opt-out yields handle without provider. |
+| **Status** | **Done** — `createHubTelemetry` + `buildHubClineCoreCreateOptions`; disposed on `detachHub` |
+
+### Agent task `SDK-6.2` — Compaction on Hub session start
+
+| | |
+|---|---|
+| **Depends on** | — |
+| **Owner surface** | `apps/cline-hub` `buildSessionStartInput` / `compaction.ts` |
+| **Goal** | Include `compaction` on Hub Chat session start. When unset, CLI-ish `{ enabled: true }`; when global mode is set (`readCompactionModeGlobally`), map off/basic/agentic like CLI. |
+| **Verify** | Hub vitest: `compaction.test.ts` + `sessions.plugin.test.ts` asserts compaction present on start input. |
+| **Status** | **Done** — `resolveHubSessionCompaction` wired into `buildSessionStartInput` |
+
+### Agent task `SDK-6.3` — Hub hooks
+
+| | |
+|---|---|
+| **Depends on** | — |
+| **Owner surface** | Hub session config + Core hub daemon bootstrap |
+| **Goal** | Attach runtime `AgentHooks` only if product hosts require them; otherwise document file-hook path. |
+| **Status** | **Done** (explicit host-`AgentHooks` omit) — Hub-backed sessions already get file-based hooks via Core `prepareLocalRuntimeBootstrap` → `createHookConfigFileExtension` on the hub daemon. Hub Extensions UI lists hooks (`read_session_hooks`). Host `AgentHooks` (CLI `createRuntimeHooks` / VS Code `hooks-adapter`) are intentionally not attached — Desktop parity. No Hub UI for deferred hook kinds; see backlog if product wants a CLI-style host bridge. |
+| **Verify** | `sessions.plugin.test.ts` asserts `config.hooks` is undefined on start input. |
+
 ## Phase 7–8 · VS Code honesty + optional observability
 
 `SDK-7.1` Hooks · `SDK-7.2` MCP spike · `SDK-8.1` OTEL · `SDK-8.2` Event projection.
@@ -261,7 +291,9 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-4.1–4.3 Plugins on session | **Done** |
 | SDK-5.1 Shared `maxIterations` | **Done** |
 | SDK-5.2 Optional usage abort | **Partial** (core + CLI env; see backlog) |
-| SDK-6.1–6.3 Hub depth | Open |
+| SDK-6.1 Hub telemetry on create | **Done** |
+| SDK-6.2 Hub session compaction | **Done** |
+| SDK-6.3 Hub hooks | **Done** (file hooks via Core bootstrap; host AgentHooks omit / Desktop parity) |
 | SDK-7.1–7.2 VS Code hooks/MCP | Open |
 | SDK-8.1–8.2 Observability | Open |
 

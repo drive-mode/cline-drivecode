@@ -42,3 +42,13 @@ Items filed by post-task review and test-coverage agents. Address after the curr
 ## Open (to be filled by later phases)
 
 _Phase 6+ items appended below as agents complete reviews._
+
+## From Phase 6 (Hub ClineCore depth)
+
+| ID | Title | Source | Notes |
+|----|-------|--------|-------|
+| BL-6.1 | Hub Chat compaction UI / per-session override | SDK-6.2 | Session start honors global compaction mode + CLI-ish default; no Hub settings control yet (CLI TUI has one) |
+| BL-6.2 | Optional Hub host `AgentHooks` bridge | SDK-6.3 | File hooks already run on hub daemon via Core bootstrap. Only needed if product wants CLI-style host lifecycle hooks / webview hook status messages |
+| BL-6.3 | Hub logger + `setSdkLogger` on create | SDK-6.1 | Desktop wires a logger; Hub telemetry path is logger-less today |
+| BL-6.4 | Distinguish Hub Chat vs hub-daemon `cline_type` | review | Both use `cline_type: "hub"`; Chat uses `platform: "Cline Hub"`, daemon `cline-hub-daemon` — consider `hub-chat` if analytics need a hard split |
+| BL-6.5 | Desktop session compaction on start (parity) | SDK-6.2 | Desktop `buildCoreSessionConfig` still omits `compaction`; Hub now sets it |

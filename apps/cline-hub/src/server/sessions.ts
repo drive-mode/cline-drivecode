@@ -9,6 +9,7 @@ import {
 import type { Message } from "@cline/llms";
 import type { WebviewConfig, WebviewReasonLevel } from "../webview-protocol";
 import { rejectPendingApprovalsForSession } from "./approvals";
+import { resolveHubSessionCompaction } from "./compaction";
 import { providerSettingsManager, workspaceRoot } from "./deps";
 import {
 	loadProviders,
@@ -137,6 +138,12 @@ export function buildSessionStartInput(
 			missionLogIntervalSteps: 3,
 			missionLogIntervalMs: 120000,
 			checkpoint: { enabled: true },
+			// CLI-ish default when unset; honors global compaction mode when set.
+			compaction: resolveHubSessionCompaction(),
+			// File-based hooks (.clinerules/hooks) are injected by Core's
+			// local-runtime-bootstrap on the hub daemon for hub-backed sessions.
+			// Host AgentHooks (CLI createRuntimeHooks / VS Code hooks-adapter)
+			// are intentionally omitted — Desktop parity. See SDK-6.3.
 			pluginPaths: sessionPlugins.pluginPaths,
 			extensionContext: {
 				workspace: sessionPlugins.workspace,

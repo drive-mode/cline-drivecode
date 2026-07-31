@@ -34,6 +34,8 @@ export class HubContext {
 	hubHealthy = false;
 	cline: ClineCore | undefined;
 	uiClient: HubUIClient | undefined;
+	/** Disposes the Hub Chat telemetry handle created in {@link attachHub}. */
+	disposeTelemetry: (() => Promise<void>) | undefined;
 	hubStartedAt: string | undefined;
 	coreVersion: string | undefined = CORE_BUILD_VERSION;
 	lastSessionContext: SessionContext | undefined;

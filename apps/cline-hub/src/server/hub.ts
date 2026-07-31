@@ -1,8 +1,10 @@
 import {
 	ClineCore,
+	type ClineCoreOptions,
 	ensureDetachedHubServer,
 	type HubServerDiscoveryRecord,
 	HubUIClient,
+	type RuntimeCapabilities,
 	stopLocalHubServerGracefully,
 	toHubHealthUrl,
 } from "@cline/core";
@@ -22,8 +24,39 @@ import {
 } from "./session-mapping";
 import type { HubContext } from "./state";
 import { broadcastHubState } from "./state-payloads";
+import { createHubTelemetry } from "./telemetry";
 import type { SessionContext } from "./types";
 import { asString, basename, isActiveSession, isVisibleClient } from "./utils";
+
+/**
+ * Options passed to `ClineCore.create` for Hub Chat.
+ * Extracted for focused unit tests (telemetry wiring / opt-out).
+ */
+export function buildHubClineCoreCreateOptions(input: {
+	hubUrl: string;
+	hubAuthToken: string;
+	workspaceRoot: string;
+	telemetry: ClineCoreOptions["telemetry"];
+	requestToolApproval: NonNullable<
+		RuntimeCapabilities["requestToolApproval"]
+	>;
+}): ClineCoreOptions {
+	return {
+		clientName: "cline-hub",
+		backendMode: "hub",
+		telemetry: input.telemetry,
+		capabilities: {
+			requestToolApproval: input.requestToolApproval,
+		},
+		hub: {
+			endpoint: input.hubUrl,
+			authToken: input.hubAuthToken,
+			clientType: "cline-hub-chat",
+			displayName: "Cline Hub Chat",
+			workspaceRoot: input.workspaceRoot,
+		},
+	};
+}
 
 export async function syncHubHealth(ctx: HubContext): Promise<void> {
 	if (!ctx.hubUrl) {
@@ -96,21 +129,19 @@ export async function attachHub(ctx: HubContext): Promise<void> {
 	ctx.hubUrl = hub.url;
 	ctx.hubAuthToken = hub.authToken;
 
-	ctx.cline = await ClineCore.create({
-		clientName: "cline-hub",
-		backendMode: "hub",
-		capabilities: {
+	const hubTelemetry = createHubTelemetry();
+	ctx.disposeTelemetry = () => hubTelemetry.dispose();
+
+	ctx.cline = await ClineCore.create(
+		buildHubClineCoreCreateOptions({
+			hubUrl: ctx.hubUrl,
+			hubAuthToken: ctx.hubAuthToken,
+			workspaceRoot,
+			telemetry: hubTelemetry.telemetry,
 			requestToolApproval: (request) =>
 				requestToolApprovalFromWebview(ctx, request),
-		},
-		hub: {
-			endpoint: ctx.hubUrl,
-			authToken: ctx.hubAuthToken,
-			clientType: "cline-hub-chat",
-			displayName: "Cline Hub Chat",
-			workspaceRoot,
-		},
-	});
+		}),
+	);
 
 	ctx.uiClient = new HubUIClient({
 		address: ctx.hubUrl,
@@ -342,6 +373,12 @@ export async function detachHub(ctx: HubContext): Promise<void> {
 		// ignore
 	}
 	ctx.cline = undefined;
+	try {
+		await ctx.disposeTelemetry?.();
+	} catch {
+		// ignore
+	}
+	ctx.disposeTelemetry = undefined;
 	ctx.clients.clear();
 	ctx.sessions.clear();
 	ctx.hubStartedAt = undefined;
