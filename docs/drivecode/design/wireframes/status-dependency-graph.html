@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Status Hub · Dependency graph (throwaway UX)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Schibsted+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* Tokens from CLINE-BRAND-TOKENS.md — hub UI font is Schibsted Grotesk. */
+  :root {
+    --brand-purple: #9F58FA;
+    --brand-purple-text: #B98AFF;
+    --brand-green: #4ADE80;
+    --brand-pink: #F53969;
+    --brand-blue: #5487C8;
+    --bg: #0A0A0A;
+    --well: #08080A;
+    --card: #0D0D10;
+    --panel: #101013;
+    --raised: #12131A;
+    --text: #FFFFFF;
+    --text-2: #9CA3AF;
+    --text-3: #6B7280;
+    --line: rgba(255, 255, 255, 0.10);
+    --line-strong: rgba(255, 255, 255, 0.20);
+    --r: 9px;
+    --hair: 0.8px;
+    --ui: "Schibsted Grotesk", system-ui, sans-serif;
+    --display: "DM Sans", system-ui, sans-serif;
+    --grotesk: "Space Grotesk", system-ui, sans-serif;
+    --plan-a: #2DD4BF;
+    --plan-b: #F59E0B;
+    --plan-c: #38BDF8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 var(--ui);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  .banner {
+    border-bottom: var(--hair) solid var(--line);
+    background: var(--panel);
+    padding: 10px 16px;
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    font-family: var(--grotesk);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-3);
+  }
+  .banner h1 {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .banner p { color: var(--text-2); font-size: 12px; max-width: 62ch; }
+  .banner a { color: var(--brand-purple-text); }
+  .shell {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    min-height: 0;
+  }
+  .rail {
+    border-right: var(--hair) solid var(--line);
+    background: var(--well);
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .rail .dot {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r);
+    border: var(--hair) solid var(--line);
+    background: var(--card);
+  }
+  .rail .dot.active {
+    border-color: var(--brand-purple);
+    box-shadow: inset 2px 0 0 var(--brand-purple);
+    background: color-mix(in srgb, var(--brand-purple) 14%, var(--card));
+  }
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  .page-head {
+    padding: 16px 20px 12px;
+    border-bottom: var(--hair) solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: end;
+  }
+  .page-head h2 {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .lenses {
+    display: inline-flex;
+    border: var(--hair) solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .lenses span {
+    padding: 6px 12px;
+    color: var(--text-3);
+    font-size: 12px;
+  }
+  .lenses span.on {
+    background: color-mix(in srgb, var(--brand-purple) 18%, transparent);
+    color: var(--text);
+  }
+  .map-wrap {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    grid-template-rows: 1fr auto;
+    min-height: 0;
+  }
+  .viewport-chrome {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+    border-right: var(--hair) solid var(--line);
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: var(--hair) solid var(--line);
+    color: var(--text-2);
+    font-size: 12px;
+  }
+  .toolbar button {
+    background: var(--card);
+    border: var(--hair) solid var(--line);
+    color: var(--text);
+    border-radius: var(--r);
+    padding: 4px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+  .toolbar button:hover { border-color: var(--line-strong); }
+  .toolbar button.active {
+    border-color: color-mix(in srgb, var(--brand-purple) 55%, var(--line));
+    background: color-mix(in srgb, var(--brand-purple) 16%, var(--card));
+  }
+  .viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--brand-purple) 8%, transparent), transparent 40%),
+      linear-gradient(180deg, var(--well), var(--bg));
+    cursor: grab;
+    touch-action: none;
+  }
+  .viewport.dragging { cursor: grabbing; }
+  .camera {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  svg.edges {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+  svg.edges path {
+    fill: none;
+    stroke: rgba(255,255,255,0.22);
+    stroke-width: 1.5;
+  }
+  svg.edges path.hot {
+    stroke: var(--brand-purple-text);
+    stroke-width: 2.25;
+  }
+  svg.edges path.dim { opacity: 0.22; }
+  .edge-label {
+    position: absolute;
+    font-size: 10px;
+    font-family: var(--grotesk);
+    color: var(--text-2);
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+    border: var(--hair) solid var(--line);
+    border-radius: 999px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+  .edge-label.dim { opacity: 0.25; }
+  .edge-label.hot {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--brand-purple) 50%, var(--line));
+  }
+  .node {
+    position: absolute;
+    width: 168px;
+    border: var(--hair) solid var(--line);
+    background: var(--card);
+    border-radius: var(--r);
+    padding: 8px 10px 8px 12px;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: inset 3px 0 0 var(--plan, transparent);
+    transition: opacity 150ms ease, border-color 150ms ease, background 150ms ease;
+  }
+  .node:hover { border-color: var(--line-strong); }
+  .node:focus-visible {
+    outline: 2px solid var(--brand-purple);
+    outline-offset: 2px;
+  }
+  .node.selected {
+    border-color: var(--brand-purple);
+    background: color-mix(in srgb, var(--brand-purple) 12%, var(--card));
+  }
+  .node.dim { opacity: 0.35; }
+  .node .id {
+    display: block;
+    font-family: var(--grotesk);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    margin-bottom: 1px;
+  }
+  .node .title {
+    font-weight: 600;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .node .meta {
+    color: var(--text-3);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .node .meta .st-blocked { color: #FBBF24; }
+  .node .meta .st-progress { color: var(--brand-purple-text); }
+  .node .meta .st-done { color: var(--brand-green); }
+  .plans {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    background: var(--panel);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+  }
+  .plans h3 {
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .plans .hint { color: var(--text-3); font-size: 11px; }
+  .plan {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    width: 100%;
+    text-align: left;
+    background: var(--card);
+    border: var(--hair) solid var(--line);
+    border-radius: var(--r);
+    padding: 10px;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .plan:hover { border-color: var(--line-strong); }
+  .plan.active {
+    border-color: color-mix(in srgb, var(--swatch) 55%, var(--line));
+    background: color-mix(in srgb, var(--swatch) 12%, var(--card));
+  }
+  .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-top: 4px;
+    background: var(--swatch);
+    flex: 0 0 auto;
+  }
+  .plan .name { font-weight: 600; font-size: 12px; }
+  .plan .pid {
+    font-family: var(--grotesk);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    margin-right: 6px;
+  }
+  .plan .sub { color: var(--text-3); font-size: 11px; margin-top: 2px; }
+  .detail {
+    grid-column: 1;
+    grid-row: 2;
+    border-top: var(--hair) solid var(--line);
+    background: var(--card);
+    padding: 14px 16px;
+    min-height: 112px;
+  }
+  .detail h3 { font-size: 14px; font-family: var(--display); font-weight: 500; }
+  .detail p { color: var(--text-2); margin-top: 6px; max-width: 80ch; }
+  .detail .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    border: var(--hair) solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .chip.plan-chip { border-color: color-mix(in srgb, var(--swatch) 40%, var(--line)); }
+  .live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  @media (max-width: 900px) {
+    .map-wrap { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    .viewport-chrome { grid-column: 1; grid-row: 2; border-right: 0; }
+    .plans { grid-column: 1; grid-row: 1; flex-direction: row; flex-wrap: wrap; }
+    .detail { grid-column: 1; grid-row: 3; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .node { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="banner">
+    <div>
+      <div class="eyebrow">Throwaway wireframe</div>
+      <h1>Status Hub · Interactive dependency graph</h1>
+    </div>
+    <p>
+      Pan the canvas · scroll-wheel zoom · click a task for details · Plans rail color-filters.
+      <strong>Fit / first open always frames every task.</strong>
+      Spec: <a href="../../plans/cline-drivemode/initiatives/status-dependency-graph/UX.md">UX.md</a>
+      · <a href="../../plans/cline-drivemode/features/DRV-DEP-MAP.md">DRV-DEP-MAP</a>
+    </p>
+  </div>
+  <div class="shell">
+    <aside class="rail" aria-hidden="true">
+      <div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div>
+    </aside>
+    <div class="main">
+      <header class="page-head">
+        <div>
+          <div class="eyebrow">Drive</div>
+          <h2>Status Hub</h2>
+        </div>
+        <div class="lenses" aria-label="Status lenses">
+          <span>Board</span><span>Changelog</span><span class="on">Dependency map</span>
+        </div>
+      </header>
+      <div class="map-wrap">
+        <section class="viewport-chrome" aria-labelledby="map-heading">
+          <div class="toolbar">
+            <strong id="map-heading">Dependency map</strong>
+            <span id="summary">9 tasks · progressive IDs T001–T009</span>
+            <span style="flex:1"></span>
+            <button type="button" id="orient-lr" class="active" title="Left-to-right layers">LR</button>
+            <button type="button" id="orient-td" title="Top-down layers">TD</button>
+            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" id="fit">Fit</button>
+          </div>
+          <div class="viewport" id="viewport" tabindex="0" aria-label="Task dependency graph. Drag to pan, wheel to zoom.">
+            <div class="camera" id="camera">
+              <svg class="edges" id="edges" width="900" height="420"></svg>
+              <div id="labels"></div>
+              <div id="nodes"></div>
+            </div>
+          </div>
+        </section>
+        <aside class="plans" aria-label="Plans">
+          <h3>Plans</h3>
+          <p class="hint">To the right of the graph so membership stays obvious.</p>
+          <button type="button" class="plan active" data-plan="all" style="--swatch: #9CA3AF">
+            <span class="swatch"></span>
+            <span><div class="name">All tasks</div><div class="sub">Clear plan filter</div></span>
+          </button>
+          <button type="button" class="plan" data-plan="partner" style="--swatch: var(--plan-a)">
+            <span class="swatch"></span>
+            <span><div class="name"><span class="pid">P001</span> Partner MVP</div><div class="sub">4 tasks · active</div></span>
+          </button>
+          <button type="button" class="plan" data-plan="stage" style="--swatch: var(--plan-b)">
+            <span class="swatch"></span>
+            <span><div class="name"><span class="pid">P002</span> Stage &amp; share</div><div class="sub">3 tasks · active</div></span>
+          </button>
+          <button type="button" class="plan" data-plan="voice" style="--swatch: var(--plan-c)">
+            <span class="swatch"></span>
+            <span><div class="name"><span class="pid">P003</span> Voice pack</div><div class="sub">2 tasks · draft</div></span>
+          </button>
+        </aside>
+        <aside class="detail" id="detail" aria-live="polite">
+          <h3>Select a task</h3>
+          <p>Click a node to inspect status, plan membership, blockers, and artifacts on incident edges.</p>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <div class="live" id="live" aria-live="polite"></div>
+<script>
+const PLANS = {
+  partner: { id: "P001", title: "Partner MVP", color: "var(--plan-a)" },
+  stage: { id: "P002", title: "Stage & share", color: "var(--plan-b)" },
+  voice: { id: "P003", title: "Voice pack", color: "var(--plan-c)" },
+};
+
+const NODES = [
+  { id: "room", code: "T001", title: "Room MVP", status: "completed", plan: "partner", layer: 0 },
+  { id: "tab", code: "T002", title: "Drive tab", status: "completed", plan: "partner", layer: 1 },
+  { id: "roster", code: "T003", title: "Roster", status: "in_progress", plan: "partner", layer: 2 },
+  { id: "partner", code: "T004", title: "Partner end-to-end", status: "in_progress", plan: "partner", layer: 3 },
+  { id: "stage", code: "T005", title: "Call Stage", status: "completed", plan: "stage", layer: 4 },
+  { id: "share", code: "T006", title: "Bidirectional share", status: "completed", plan: "stage", layer: 5 },
+  { id: "demo", code: "T007", title: "Demo artifact share", status: "pending", plan: "stage", layer: 6 },
+  { id: "mic", code: "T008", title: "Mic + mute", status: "pending", plan: "voice", layer: 6 },
+  { id: "tts", code: "T009", title: "Partner voice out", status: "blocked", plan: "voice", layer: 7 },
+];
+
+const EDGES = [
+  { from: "room", to: "tab", artifact: "RoomSnapshot" },
+  { from: "tab", to: "roster", artifact: "DriveTab attach" },
+  { from: "roster", to: "partner", artifact: "Participant[]" },
+  { from: "tab", to: "partner", artifact: "joinCall() path" },
+  { from: "partner", to: "stage", artifact: "Call chrome ready" },
+  { from: "stage", to: "share", artifact: "StageState" },
+  { from: "share", to: "demo", artifact: "Share pin schema" },
+  { from: "stage", to: "mic", artifact: "Call strip slot" },
+  { from: "mic", to: "tts", artifact: "Mute bus" },
+];
+
+const NODE_W = 168;
+const NODE_H = 62;
+const PAD = 24;
+const LABEL_LOD_SCALE = 0.85;
+
+const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
+
+let selected = null;
+let planFilter = "all";
+let orientation = "lr"; // lr | td
+let scale = 1;
+let tx = 0;
+let ty = 0;
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
+
+const viewport = document.getElementById("viewport");
+const camera = document.getElementById("camera");
+const edgesSvg = document.getElementById("edges");
+const labelsEl = document.getElementById("labels");
+const nodesEl = document.getElementById("nodes");
+const detail = document.getElementById("detail");
+const live = document.getElementById("live");
+
+function statusClass(status) {
+  if (status === "blocked") return "st-blocked";
+  if (status === "in_progress") return "st-progress";
+  if (status === "completed") return "st-done";
+  return "";
+}
+
+function applyCamera() {
+  camera.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  document.body.dataset.lod = scale < LABEL_LOD_SCALE ? "overview" : "detail";
+}
+
+function contentBounds(ids = null) {
+  const list = ids ? NODES.filter((n) => ids.includes(n.id)) : NODES;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of list) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + NODE_W);
+    maxY = Math.max(maxY, n.y + NODE_H);
+  }
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+}
+
+/** Tier 0 — frame every node (or selection) inside the viewport. */
+function fitCamera(ids = null) {
+  const rect = viewport.getBoundingClientRect();
+  const b = contentBounds(ids);
+  if (!Number.isFinite(b.width) || b.width <= 0) return;
+  const availW = Math.max(120, rect.width - PAD * 2);
+  const availH = Math.max(120, rect.height - PAD * 2);
+  const next = Math.min(1.35, availW / b.width, availH / b.height);
+  scale = Math.max(0.35, next);
+  tx = PAD + (availW - b.width * scale) / 2 - b.minX * scale;
+  ty = PAD + (availH - b.height * scale) / 2 - b.minY * scale;
+  applyCamera();
+  render();
+}
+
+/**
+ * Tier 1 — pack layers into the viewport rectangle before camera fit.
+ * Tier 3 — LR vs TD from the orientation control (product will auto-pick).
+ */
+function layoutGraph() {
+  const rect = viewport.getBoundingClientRect();
+  const maxLayer = Math.max(...NODES.map((n) => n.layer));
+  const byLayer = new Map();
+  for (const n of NODES) {
+    if (!byLayer.has(n.layer)) byLayer.set(n.layer, []);
+    byLayer.get(n.layer).push(n);
+  }
+  for (const list of byLayer.values()) {
+    list.sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+  }
+  const maxInLayer = Math.max(...[...byLayer.values()].map((l) => l.length));
+
+  if (orientation === "lr") {
+    const layerGap = Math.max(
+      NODE_W + 36,
+      Math.min(210, (rect.width - PAD * 2 - NODE_W) / Math.max(1, maxLayer)),
+    );
+    const rowGap = Math.max(
+      NODE_H + 16,
+      Math.min(100, (rect.height - PAD * 2 - NODE_H) / Math.max(1, maxInLayer - 1 || 1)),
+    );
+    for (const [layer, list] of byLayer) {
+      const blockH = (list.length - 1) * rowGap;
+      const startY = Math.max(PAD, (rect.height / Math.max(scale, 0.01) - blockH) / 4);
+      list.forEach((n, i) => {
+        n.x = PAD + layer * layerGap;
+        n.y = startY + i * rowGap;
+      });
+    }
+  } else {
+    const layerGap = Math.max(
+      NODE_H + 28,
+      Math.min(120, (rect.height - PAD * 2 - NODE_H) / Math.max(1, maxLayer)),
+    );
+    const colGap = Math.max(
+      NODE_W + 20,
+      Math.min(200, (rect.width - PAD * 2 - NODE_W) / Math.max(1, maxInLayer - 1 || 1)),
+    );
+    for (const [layer, list] of byLayer) {
+      const blockW = (list.length - 1) * colGap;
+      const startX = Math.max(PAD, (rect.width / Math.max(scale, 0.01) - blockW) / 4);
+      list.forEach((n, i) => {
+        n.x = startX + i * colGap;
+        n.y = PAD + layer * layerGap;
+      });
+    }
+  }
+
+  const b = contentBounds();
+  edgesSvg.setAttribute("width", String(Math.ceil(b.maxX + PAD)));
+  edgesSvg.setAttribute("height", String(Math.ceil(b.maxY + PAD)));
+}
+
+function edgePath(a, b) {
+  if (orientation === "td") {
+    const x1 = a.x + NODE_W / 2;
+    const y1 = a.y + NODE_H;
+    const x2 = b.x + NODE_W / 2;
+    const y2 = b.y;
+    const c = Math.max(28, (y2 - y1) * 0.45);
+    return `M ${x1} ${y1} C ${x1} ${y1 + c}, ${x2} ${y2 - c}, ${x2} ${y2}`;
+  }
+  const x1 = a.x + NODE_W;
+  const y1 = a.y + NODE_H / 2;
+  const x2 = b.x;
+  const y2 = b.y + NODE_H / 2;
+  const c = Math.max(40, (x2 - x1) * 0.45);
+  return `M ${x1} ${y1} C ${x1 + c} ${y1}, ${x2 - c} ${y2}, ${x2} ${y2}`;
+}
+
+function mid(a, b) {
+  return {
+    x: (a.x + b.x) / 2 + NODE_W / 2,
+    y: (a.y + b.y) / 2 + NODE_H / 2,
+  };
+}
+
+function inPlan(node) {
+  return planFilter === "all" || node.plan === planFilter;
+}
+
+function shortTitle(title) {
+  return title.length > 18 ? title.slice(0, 16) + "…" : title;
+}
+
+function render() {
+  edgesSvg.innerHTML = "";
+  labelsEl.innerHTML = "";
+  const marker = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  marker.innerHTML = `<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.35)"/></marker>`;
+  edgesSvg.appendChild(marker);
+  const showLabels = scale >= LABEL_LOD_SCALE;
+
+  EDGES.forEach((e) => {
+    const a = byId[e.from];
+    const b = byId[e.to];
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", edgePath(a, b));
+    path.setAttribute("marker-end", "url(#arrow)");
+    const hot = selected && (selected === a.id || selected === b.id);
+    const dim = !(inPlan(a) && inPlan(b));
+    path.classList.toggle("hot", !!hot);
+    path.classList.toggle("dim", dim && !hot);
+    edgesSvg.appendChild(path);
+
+    if (showLabels || hot) {
+      const m = mid(a, b);
+      const lab = document.createElement("div");
+      lab.className = "edge-label" + (hot ? " hot" : "") + (dim && !hot ? " dim" : "");
+      lab.textContent = e.artifact;
+      lab.style.left = m.x + "px";
+      lab.style.top = m.y + "px";
+      labelsEl.appendChild(lab);
+    }
+  });
+
+  nodesEl.innerHTML = "";
+  NODES.forEach((n) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "node";
+    btn.style.left = n.x + "px";
+    btn.style.top = n.y + "px";
+    btn.style.setProperty("--plan", PLANS[n.plan].color);
+    btn.classList.toggle("selected", selected === n.id);
+    btn.classList.toggle("dim", !inPlan(n));
+    btn.setAttribute("aria-pressed", selected === n.id ? "true" : "false");
+    btn.dataset.id = n.id;
+    const title = showLabels ? n.title : shortTitle(n.title);
+    btn.innerHTML = `<span class="id">${n.code}</span><span class="title">${title}</span><span class="meta"><span class="${statusClass(n.status)}">${n.status.replace("_", " ")}</span> · ${PLANS[n.plan].id}</span>`;
+    btn.title = `${n.code} · ${n.title}`;
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      selectNode(n.id);
+    });
+    nodesEl.appendChild(btn);
+  });
+}
+
+function relayoutAndFit(_preserveSelectionFit = false) {
+  layoutGraph();
+  fitCamera(null);
+}
+
+function selectNode(id) {
+  selected = id;
+  const n = byId[id];
+  const incoming = EDGES.filter((e) => e.to === id);
+  const outgoing = EDGES.filter((e) => e.from === id);
+  const blockedBy = incoming.map((e) => {
+    const p = byId[e.from];
+    return `${p.code} ${p.title}`;
+  }).join(", ") || "Nothing";
+  const unblocks = outgoing.map((e) => {
+    const p = byId[e.to];
+    return `${p.code} ${p.title}`;
+  }).join(", ") || "Nothing";
+  const artifacts = [...incoming, ...outgoing]
+    .map((e) => e.artifact)
+    .filter(Boolean);
+  const plan = PLANS[n.plan];
+  detail.innerHTML = `
+    <h3><span style="font-family:var(--grotesk);color:var(--text-3);letter-spacing:0.06em;margin-right:8px">${n.code}</span>${n.title}</h3>
+    <p>${n.status.replace("_", " ")}. Blocked by: ${blockedBy}. Unblocks: ${unblocks}.</p>
+    <div class="chips">
+      <span class="chip plan-chip" style="--swatch:${plan.color}">${plan.id} · ${plan.title}</span>
+      ${artifacts.map((a) => `<span class="chip">Artifact · ${a}</span>`).join("")}
+    </div>`;
+  live.textContent = `Selected ${n.code} ${n.title}. Prerequisites: ${blockedBy}. Dependents: ${unblocks}. Plan: ${plan.id} ${plan.title}.`;
+  render();
+}
+
+function clearSelection() {
+  selected = null;
+  detail.innerHTML = `<h3>Select a task</h3><p>Click a node to inspect status, plan membership, blockers, and artifacts on incident edges.</p>`;
+  live.textContent = "Selection cleared.";
+  render();
+}
+
+document.querySelectorAll(".plan").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    planFilter = btn.dataset.plan;
+    document.querySelectorAll(".plan").forEach((b) => b.classList.toggle("active", b === btn));
+    render();
+  });
+});
+
+viewport.addEventListener("pointerdown", (e) => {
+  if (e.target.closest(".node")) return;
+  dragging = true;
+  viewport.classList.add("dragging");
+  lastX = e.clientX;
+  lastY = e.clientY;
+  viewport.setPointerCapture(e.pointerId);
+});
+viewport.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  tx += e.clientX - lastX;
+  ty += e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  applyCamera();
+});
+viewport.addEventListener("pointerup", () => {
+  dragging = false;
+  viewport.classList.remove("dragging");
+});
+viewport.addEventListener("click", (e) => {
+  if (e.target === viewport || e.target === camera || e.target === edgesSvg) clearSelection();
+});
+document.getElementById("zoom-in").onclick = () => {
+  scale = Math.min(2.2, scale * 1.15);
+  applyCamera();
+  render();
+};
+document.getElementById("zoom-out").onclick = () => {
+  scale = Math.max(0.35, scale / 1.15);
+  applyCamera();
+  render();
+};
+document.getElementById("fit").onclick = () => {
+  fitCamera(null);
+};
+function setOrientation(next) {
+  orientation = next;
+  document.getElementById("orient-lr").classList.toggle("active", next === "lr");
+  document.getElementById("orient-td").classList.toggle("active", next === "td");
+  relayoutAndFit(false);
+}
+document.getElementById("orient-lr").onclick = () => setOrientation("lr");
+document.getElementById("orient-td").onclick = () => setOrientation("td");
+
+viewport.addEventListener("keydown", (e) => {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+  const ids = NODES.map((n) => n.id);
+  const idx = Math.max(0, ids.indexOf(selected));
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    e.preventDefault();
+    selectNode(ids[(idx + 1) % ids.length]);
+  }
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    e.preventDefault();
+    selectNode(ids[(idx - 1 + ids.length) % ids.length]);
+  }
+  if (e.key === "Home") { e.preventDefault(); selectNode(ids[0]); }
+  if (e.key === "End") { e.preventDefault(); selectNode(ids.at(-1)); }
+  if (e.key === "Escape") { e.preventDefault(); clearSelection(); }
+});
+
+viewport.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const rect = viewport.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const prev = scale;
+  const next = Math.min(2.2, Math.max(0.35, scale * (e.deltaY < 0 ? 1.08 : 0.92)));
+  tx = cx - ((cx - tx) / prev) * next;
+  ty = cy - ((cy - ty) / prev) * next;
+  scale = next;
+  applyCamera();
+  render();
+}, { passive: false });
+
+window.addEventListener("resize", () => relayoutAndFit(false));
+
+relayoutAndFit(false);</script>
+</body>
+</html>
