@@ -24,10 +24,20 @@ const MANAGED_KEYS = [
 	"CLINE_OTEL_METRIC_EXPORT_INTERVAL",
 	"OTEL_EXPORTER_OTLP_INSECURE",
 	"CLINE_OTEL_EXPORTER_OTLP_INSECURE",
+	"OTEL_EXPORTER_OTLP_METRICS_PROTOCOL",
+	"CLINE_OTEL_EXPORTER_OTLP_METRICS_PROTOCOL",
 	"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
 	"CLINE_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+	"OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
+	"CLINE_OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
+	"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+	"CLINE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 	"OTEL_LOG_BATCH_SIZE",
 	"CLINE_OTEL_LOG_BATCH_SIZE",
+	"OTEL_LOG_BATCH_TIMEOUT",
+	"CLINE_OTEL_LOG_BATCH_TIMEOUT",
+	"OTEL_LOG_MAX_QUEUE_SIZE",
+	"CLINE_OTEL_LOG_MAX_QUEUE_SIZE",
 ] as const;
 
 const saved: Record<string, string | undefined> = {};
@@ -76,6 +86,18 @@ describe("readTelemetryEnv", () => {
 				"CLINE_OTEL_EXPORTER_OTLP_ENDPOINT",
 			),
 		).toBe("http://collector:4318");
+	});
+
+	it("skips empty preferred values and uses the next key", () => {
+		stashEnv();
+		process.env.OTEL_EXPORTER_OTLP_ENDPOINT = "";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_ENDPOINT = "http://cline-fallback:4318";
+		expect(
+			readTelemetryEnv(
+				"OTEL_EXPORTER_OTLP_ENDPOINT",
+				"CLINE_OTEL_EXPORTER_OTLP_ENDPOINT",
+			),
+		).toBe("http://cline-fallback:4318");
 	});
 });
 
@@ -151,5 +173,26 @@ describe("getTelemetryBuildTimeConfig / createClineTelemetryServiceConfig", () =
 		const config = getTelemetryBuildTimeConfig();
 		expect(config.enabled).toBe(true);
 		expect(config.otlpEndpoint).toBe("https://otel-first");
+	});
+
+	it("falls back to remaining CLINE_OTEL_* secondary fields when OTEL_* unset", () => {
+		stashEnv();
+		process.env.CLINE_OTEL_TRACES_EXPORTER = "otlp";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_METRICS_PROTOCOL = "grpc";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_LOGS_PROTOCOL = "http/protobuf";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT =
+			"https://logs.example:4318";
+		process.env.CLINE_OTEL_METRIC_EXPORT_INTERVAL = "12000";
+		process.env.CLINE_OTEL_LOG_BATCH_TIMEOUT = "3500";
+		process.env.CLINE_OTEL_LOG_MAX_QUEUE_SIZE = "1024";
+
+		const config = getTelemetryBuildTimeConfig();
+		expect(config.tracesExporter).toBe("otlp");
+		expect(config.otlpMetricsProtocol).toBe("grpc");
+		expect(config.otlpLogsProtocol).toBe("http/protobuf");
+		expect(config.otlpLogsEndpoint).toBe("https://logs.example:4318");
+		expect(config.metricExportInterval).toBe(12000);
+		expect(config.logBatchTimeout).toBe(3500);
+		expect(config.logMaxQueueSize).toBe(1024);
 	});
 });
