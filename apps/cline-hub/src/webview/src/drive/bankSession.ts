@@ -18,7 +18,28 @@ export type HubBankOpType =
 	| "drive_bank_get"
 	| "drive_bank_seed"
 	| "drive_bank_create_task"
-	| "drive_bank_edit_plan_tasks";
+	| "drive_bank_edit_plan_tasks"
+	| "drive_bank_complete_task"
+	| "drive_bank_bind_now"
+	| "drive_bank_activate_plan"
+	| "drive_bank_record_failure";
+
+/** Optional room/call session correlation for bank JSONL. */
+export type BankOpSessionContext = {
+	roomId?: string | null;
+	callSessionId?: string | null;
+};
+
+export function bankCorrelationFields(
+	ctx?: BankOpSessionContext,
+): { roomId?: string; callSessionId?: string } {
+	const roomId = ctx?.roomId?.trim();
+	const callSessionId = ctx?.callSessionId?.trim();
+	return {
+		...(roomId ? { roomId } : {}),
+		...(callSessionId ? { callSessionId } : {}),
+	};
+}
 
 /**
  * Browser projection of the task bank.
@@ -119,24 +140,31 @@ export function planTasksFromSnapshot(
 	});
 }
 
+export type HubBankOpPayload = {
+	workspaceRoot: string;
+	id?: string;
+	title?: string;
+	body?: string;
+	planId?: string;
+	taskIds?: string[];
+	taskId?: string;
+	note?: string;
+	roomId?: string;
+	callSessionId?: string;
+};
+
 /**
  * Request a hub `drive_bank_*` op and resolve with the snapshot reply.
  * Rejects on error reply or timeout (~3s).
  */
 export function requestHubBankOp(
 	type: HubBankOpType,
-	payload: {
-		workspaceRoot: string;
-		id?: string;
-		title?: string;
-		body?: string;
-		planId?: string;
-		taskIds?: string[];
-	},
+	payload: HubBankOpPayload,
 	options?: { timeoutMs?: number },
 ): Promise<BankSnapshot> {
 	const timeoutMs = options?.timeoutMs ?? HUB_BANK_TIMEOUT_MS;
 	const requestId = `drive-bank-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	const correlation = bankCorrelationFields(payload);
 
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => {
@@ -180,6 +208,7 @@ export function requestHubBankOp(
 					type: "drive_bank_get",
 					requestId,
 					workspaceRoot: payload.workspaceRoot,
+					...correlation,
 				});
 				break;
 			case "drive_bank_seed":
@@ -187,6 +216,7 @@ export function requestHubBankOp(
 					type: "drive_bank_seed",
 					requestId,
 					workspaceRoot: payload.workspaceRoot,
+					...correlation,
 				});
 				break;
 			case "drive_bank_create_task":
@@ -198,6 +228,7 @@ export function requestHubBankOp(
 					title: payload.title ?? "",
 					body: payload.body,
 					planId: payload.planId,
+					...correlation,
 				});
 				break;
 			case "drive_bank_edit_plan_tasks":
@@ -207,6 +238,43 @@ export function requestHubBankOp(
 					workspaceRoot: payload.workspaceRoot,
 					planId: payload.planId ?? "",
 					taskIds: payload.taskIds ?? [],
+					...correlation,
+				});
+				break;
+			case "drive_bank_complete_task":
+				postToHost({
+					type: "drive_bank_complete_task",
+					requestId,
+					workspaceRoot: payload.workspaceRoot,
+					taskId: payload.taskId ?? "",
+					...correlation,
+				});
+				break;
+			case "drive_bank_bind_now":
+				postToHost({
+					type: "drive_bank_bind_now",
+					requestId,
+					workspaceRoot: payload.workspaceRoot,
+					...correlation,
+				});
+				break;
+			case "drive_bank_activate_plan":
+				postToHost({
+					type: "drive_bank_activate_plan",
+					requestId,
+					workspaceRoot: payload.workspaceRoot,
+					planId: payload.planId ?? "",
+					...correlation,
+				});
+				break;
+			case "drive_bank_record_failure":
+				postToHost({
+					type: "drive_bank_record_failure",
+					requestId,
+					workspaceRoot: payload.workspaceRoot,
+					taskId: payload.taskId ?? "",
+					note: payload.note ?? "",
+					...correlation,
 				});
 				break;
 			default: {
@@ -221,9 +289,14 @@ export function requestHubBankOp(
 /** Convenience wrapper around requestHubBankOp("drive_bank_seed", …). */
 export function requestHubBankSeed(
 	workspaceRoot: string,
-	options?: { timeoutMs?: number },
+	options?: { timeoutMs?: number } & BankOpSessionContext,
 ): Promise<BankSnapshot> {
-	return requestHubBankOp("drive_bank_seed", { workspaceRoot }, options);
+	const { timeoutMs, ...correlation } = options ?? {};
+	return requestHubBankOp(
+		"drive_bank_seed",
+		{ workspaceRoot, ...bankCorrelationFields(correlation) },
+		{ timeoutMs },
+	);
 }
 
 /**
@@ -233,12 +306,14 @@ export function requestHubBankSeed(
 export async function seedBankForJoin(
 	session: DriveBankSession,
 	workspaceRoot: string | undefined,
+	correlation?: BankOpSessionContext,
 ): Promise<{ snapshot: BankSnapshot; fromHub: boolean }> {
 	const root = workspaceRoot?.trim();
 	if (root) {
 		try {
 			const snapshot = await requestHubBankOp("drive_bank_seed", {
 				workspaceRoot: root,
+				...bankCorrelationFields(correlation),
 			});
 			await hydrateLocalBankFromHubSnapshot(session, snapshot);
 			return { snapshot, fromHub: true };
@@ -256,6 +331,28 @@ export type BankMutationResult = {
 	fromHub: boolean;
 };
 
+async function hubMutationOrLocal(
+	session: DriveBankSession,
+	workspaceRoot: string | undefined,
+	hubOp: () => Promise<BankSnapshot>,
+	localOp: () => Promise<void>,
+): Promise<BankMutationResult> {
+	const root = workspaceRoot?.trim();
+	if (root) {
+		try {
+			const snapshot = await hubOp();
+			await hydrateLocalBankFromHubSnapshot(session, snapshot);
+			return { snapshot, fromHub: true };
+		} catch {
+			const snapshot = await session.refresh();
+			return { snapshot, fromHub: false };
+		}
+	}
+	await localOp();
+	const snapshot = await session.refresh();
+	return { snapshot, fromHub: false };
+}
+
 /**
  * Create a task (optionally appending to a plan). Writes through hub when
  * workspaceRoot is set. On hub error returns `{ fromHub: false }` without
@@ -272,42 +369,38 @@ export async function mutateBankCreateTask(
 		body?: string;
 		planId?: string;
 	},
+	correlation?: BankOpSessionContext,
 ): Promise<BankMutationResult> {
-	const root = workspaceRoot?.trim();
 	const body = input.body ?? "";
-	if (root) {
-		try {
-			const snapshot = await requestHubBankOp("drive_bank_create_task", {
-				workspaceRoot: root,
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_create_task", {
+				workspaceRoot: workspaceRoot!.trim(),
 				id: input.id,
 				title: input.title,
 				body,
 				planId: input.planId,
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await session.store.createTask({
+				id: input.id,
+				title: input.title,
+				body,
 			});
-			await hydrateLocalBankFromHubSnapshot(session, snapshot);
-			return { snapshot, fromHub: true };
-		} catch {
-			// Hub failed — leave local store unchanged; callers check fromHub.
-			const snapshot = await session.refresh();
-			return { snapshot, fromHub: false };
-		}
-	}
-	await session.store.createTask({
-		id: input.id,
-		title: input.title,
-		body,
-	});
-	if (input.planId) {
-		const plan = await session.store.getPlan(input.planId);
-		if (plan) {
-			await session.store.editPlanTaskIds(input.planId, [
-				...plan.taskIds,
-				input.id,
-			]);
-		}
-	}
-	const snapshot = await session.refresh();
-	return { snapshot, fromHub: false };
+			if (input.planId) {
+				const plan = await session.store.getPlan(input.planId);
+				if (plan) {
+					await session.store.editPlanTaskIds(input.planId, [
+						...plan.taskIds,
+						input.id,
+					]);
+				}
+			}
+		},
+	);
 }
 
 /**
@@ -319,26 +412,109 @@ export async function mutateBankEditPlanTasks(
 	session: DriveBankSession,
 	workspaceRoot: string | undefined,
 	input: { planId: string; taskIds: string[] },
+	correlation?: BankOpSessionContext,
 ): Promise<BankMutationResult> {
-	const root = workspaceRoot?.trim();
-	if (root) {
-		try {
-			const snapshot = await requestHubBankOp("drive_bank_edit_plan_tasks", {
-				workspaceRoot: root,
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_edit_plan_tasks", {
+				workspaceRoot: workspaceRoot!.trim(),
 				planId: input.planId,
 				taskIds: input.taskIds,
-			});
-			await hydrateLocalBankFromHubSnapshot(session, snapshot);
-			return { snapshot, fromHub: true };
-		} catch {
-			// Hub failed — leave local store unchanged; callers check fromHub.
-			const snapshot = await session.refresh();
-			return { snapshot, fromHub: false };
-		}
-	}
-	await session.store.editPlanTaskIds(input.planId, input.taskIds);
-	const snapshot = await session.refresh();
-	return { snapshot, fromHub: false };
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await session.store.editPlanTaskIds(input.planId, input.taskIds);
+		},
+	);
+}
+
+/** Mark a task done (archive). Prefer over remove-from-plan for product complete. */
+export async function mutateBankCompleteTask(
+	session: DriveBankSession,
+	workspaceRoot: string | undefined,
+	input: { taskId: string },
+	correlation?: BankOpSessionContext,
+): Promise<BankMutationResult> {
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_complete_task", {
+				workspaceRoot: workspaceRoot!.trim(),
+				taskId: input.taskId,
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await session.store.completeTask(input.taskId);
+		},
+	);
+}
+
+/** Bind Agent posture to the bank now-task (emit drive_task_bound). */
+export async function mutateBankBindNow(
+	session: DriveBankSession,
+	workspaceRoot: string | undefined,
+	correlation?: BankOpSessionContext,
+): Promise<BankMutationResult> {
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_bind_now", {
+				workspaceRoot: workspaceRoot!.trim(),
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await session.store.bindNowTask();
+		},
+	);
+}
+
+/** Activate a plan as the bank cursor. */
+export async function mutateBankActivatePlan(
+	session: DriveBankSession,
+	workspaceRoot: string | undefined,
+	input: { planId: string },
+	correlation?: BankOpSessionContext,
+): Promise<BankMutationResult> {
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_activate_plan", {
+				workspaceRoot: workspaceRoot!.trim(),
+				planId: input.planId,
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await session.store.activatePlan(input.planId);
+		},
+	);
+}
+
+/** Record a sticky failure note on the now task. */
+export async function mutateBankRecordFailure(
+	session: DriveBankSession,
+	workspaceRoot: string | undefined,
+	input: { taskId: string; note: string },
+	correlation?: BankOpSessionContext,
+): Promise<BankMutationResult> {
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_record_failure", {
+				workspaceRoot: workspaceRoot!.trim(),
+				taskId: input.taskId,
+				note: input.note,
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await session.store.recordTaskFailure(input.taskId, input.note);
+		},
+	);
 }
 
 export async function listPlanTasks(

@@ -1,5 +1,6 @@
 import type {
 	ChatForkRecord,
+	DriveEvent,
 	RoomSnapshot,
 	ShowBacklogItem,
 } from "@cline/shared";
@@ -87,6 +88,8 @@ function readPersistedDriveUi(): DriveUiState {
 					DEFAULT_DRIVE_UI.addressFollowsFocusParticipantId,
 				partnerNameInk:
 					state.driveUi.partnerNameInk ?? DEFAULT_DRIVE_UI.partnerNameInk,
+				callSessionId:
+					state.driveUi.callSessionId ?? DEFAULT_DRIVE_UI.callSessionId,
 			};
 		}
 	} catch {
@@ -631,33 +634,45 @@ export function useDriveSession(
 		joinDrive();
 	}, [joinDrive, leaveDrive]);
 
-	const seedBankAfterJoin = useCallback(async (partnerName: string) => {
-		const { snapshot } = await seedBankForJoin(
-			bankSessionRef.current,
-			workspaceRootRef.current,
-		);
-		const tasks = snapshot.activePlanId
-			? await listPlanTasks(bankSessionRef.current, snapshot.activePlanId)
-			: [];
-		// Leave/cancel clears intent synchronously; skip chrome if join is stale.
-		if (!driveIntentRef.current) {
-			return;
-		}
-		setPlanEditorTasks(tasks);
-		setDrive((current) => {
-			// Only seed bank chrome after a real hub join (demo must stay false).
-			if (!current.active || current.roomId == null) {
-				return current;
+	const seedBankAfterJoin = useCallback(
+		async (
+			partnerName: string,
+			correlation?: { roomId?: string | null; callSessionId?: string | null },
+		) => {
+			const current = driveRef.current;
+			const { snapshot } = await seedBankForJoin(
+				bankSessionRef.current,
+				workspaceRootRef.current,
+				{
+					roomId: correlation?.roomId ?? current.roomId,
+					callSessionId:
+						correlation?.callSessionId ?? current.callSessionId,
+				},
+			);
+			const tasks = snapshot.activePlanId
+				? await listPlanTasks(bankSessionRef.current, snapshot.activePlanId)
+				: [];
+			// Leave/cancel clears intent synchronously; skip chrome if join is stale.
+			if (!driveIntentRef.current) {
+				return;
 			}
-			return applyBankSnapshot(current, snapshot);
-		});
-		if (!driveIntentRef.current) {
-			return;
-		}
-		setDriveJoinNote(
-			`On the call. I am ${partnerName}. Share what you want to work on and I will drive.`,
-		);
-	}, []);
+			setPlanEditorTasks(tasks);
+			setDrive((prev) => {
+				// Only seed bank chrome after a real hub join (demo must stay false).
+				if (!prev.active || prev.roomId == null) {
+					return prev;
+				}
+				return applyBankSnapshot(prev, snapshot);
+			});
+			if (!driveIntentRef.current) {
+				return;
+			}
+			setDriveJoinNote(
+				`On the call. I am ${partnerName}. Share what you want to work on and I will drive.`,
+			);
+		},
+		[],
+	);
 
 	useEffect(() => {
 		const onMessage = (event: MessageEvent) => {
@@ -674,8 +689,9 @@ export function useDriveSession(
 				say?: string;
 				ownerParticipantId?: string;
 				roomId?: string;
+				callSessionId?: string;
 				snapshot?: RoomSnapshot;
-				event?: unknown;
+				event?: DriveEvent;
 				auditHandle?: string;
 				messages?: unknown[];
 				summaryOnly?: boolean;
@@ -855,8 +871,24 @@ export function useDriveSession(
 					connectionPhaseRef.current = "on";
 					setConnectionPhase("on");
 				}
+				const fromMessage =
+					typeof message.callSessionId === "string" &&
+					message.callSessionId.trim()
+						? message.callSessionId.trim()
+						: undefined;
+				const fromEvent =
+					message.type === "drive_event" &&
+					message.event &&
+					typeof message.event.callSessionId === "string" &&
+					message.event.callSessionId.trim()
+						? message.event.callSessionId.trim()
+						: undefined;
+				const nextCallSessionId = fromMessage ?? fromEvent;
 				setDrive((current) => {
-					const next = applyRoomSnapshot(current, snapshot);
+					let next = applyRoomSnapshot(current, snapshot);
+					if (seatedOnCall && nextCallSessionId) {
+						next = { ...next, callSessionId: nextCallSessionId };
+					}
 					// Slice S2 — Join auto-opens Stage so Spotlight mounts without a second click.
 					if (wasPendingJoin && seatedOnCall) {
 						return { ...next, stageLayout: true };
@@ -873,7 +905,10 @@ export function useDriveSession(
 					const partner =
 						snapshot.participants.find((p) => p.kind === "agent")
 							?.displayName ?? "partner";
-					void seedBankAfterJoin(partner);
+					void seedBankAfterJoin(partner, {
+						roomId: snapshot.roomId,
+						callSessionId: nextCallSessionId,
+					});
 				}
 				return;
 			}

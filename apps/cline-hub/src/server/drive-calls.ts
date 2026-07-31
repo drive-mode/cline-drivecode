@@ -63,12 +63,17 @@ export async function handleCallCommand(
 				: undefined) ?? snapshot?.roomId;
 		const seq =
 			typeof reply.payload?.seq === "number" ? reply.payload.seq : undefined;
+		const callSessionId =
+			typeof reply.payload?.callSessionId === "string"
+				? reply.payload.callSessionId
+				: undefined;
 		if (snapshot && roomId) {
 			ctx.send(peer, {
 				type: "room_snapshot",
 				roomId,
 				snapshot,
 				...(seq !== undefined ? { seq } : {}),
+				...(callSessionId ? { callSessionId } : {}),
 			});
 		}
 	} catch (error) {

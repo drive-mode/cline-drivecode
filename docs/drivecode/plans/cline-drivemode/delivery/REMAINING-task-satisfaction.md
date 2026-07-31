@@ -35,9 +35,9 @@ flowchart TD
     HubOps["hub complete/bind/activate/failure"]
     Log["bank JSONL onBankEvent"]
     Rollup["deriveSessionRollup pure"]
+    Bridge["Hub webview/CLI bank bridge"]
   end
   subgraph OpenObs["Open · observability"]
-    Bridge["Hub webview/CLI bank bridge"]
     UI2["Local rollup debug / Status lens"]
     S3["Stall classify + gated propose"]
     P2ev["Failure event / P2 stickiness"]
@@ -58,10 +58,9 @@ flowchart TD
 
 Caption:
 
-- Kernel correlation + pure rollup exist; **no product UI** consumes them yet.
-- Hub commands exist in transport; **webview protocol does not** expose complete/bind/failure.
+- Kernel correlation + pure rollup exist; **product path** now emits complete/bind/failure via hub webview bank bridge.
+- Hub commands + webview protocol expose complete/bind/activate/failure with `roomId` / `callSessionId`.
 - ARD-0015 remains **Proposed** (leadership accept still open).
-
 ---
 
 ## 1. Shipped (do not re-implement)
@@ -73,6 +72,7 @@ Caption:
 | Bank emits: opened, activated (incl. create+activate), bound, completed, archived, plan_step (adds), plan_archived | `bankStore.ts` |
 | Hub bank log wire | `drive-bank-handlers` → `appendBankLogEvent` |
 | Hub commands: `drive_bank_complete_task`, `bind_now`, `activate_plan`, `record_failure` | `hub.ts` + transport + handlers |
+| Hub webview bridge: protocol frames + `drive-bank` forward + `bankSession` mutators + PlanEditor complete / Agent bind / tool failure | `apps/cline-hub` webview + server |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1; P2 stubbed at 0) | `@cline/drive` `sessionRollup.ts` |
 | Planning docs, DRVs, visual plan, canvas | `docs/drivecode/...` |
@@ -83,21 +83,22 @@ Caption:
 
 ## 2. Observability remaining (foundation)
 
-### 2.1 Hub webview + server bridge (blocks live product path)
+### ~~2.1 Hub webview + server bridge (blocks live product path)~~ ✅ done
 
 **Why.** Kernel commands exist; Chat/Drive UI still only speaks `get|seed|create_task|edit_plan_tasks`. Completions in product sessions will not hit the bank log until this lands.
 
 | Work | Owner | AC |
 |---|---|---|
-| Extend `webview-protocol.ts` host↔webview frames for complete/bind/activate/record_failure | `@cline/cline-hub` | Types compile; frames round-trip |
-| Forward in `server/drive-bank.ts` + allowlist in `server.ts` | `@cline/cline-hub` | Hub invokes new `drive_bank_*` commands |
-| Extend `bankSession.ts` request helpers + callers (complete on task done, bind on Agent posture, failure on tool fail) | hub webview | Live smoke: complete one task → bank JSONL has `drive_task_completed` with matching `callSessionId` |
-| Pass `roomId` + `callSessionId` from session into every bank op | hub webview | Log correlation test / manual smoke |
-| Tests in `bankSession.test.ts` | hub | Snapshot + error paths |
+| ~~Extend `webview-protocol.ts` host↔webview frames for complete/bind/activate/record_failure~~ | `@cline/cline-hub` | Types compile; frames round-trip |
+| ~~Forward in `server/drive-bank.ts` + allowlist in `server.ts`~~ | `@cline/cline-hub` | Hub invokes new `drive_bank_*` commands |
+| ~~Extend `bankSession.ts` request helpers + callers (complete on task done, bind on Agent posture, failure on tool fail)~~ | hub webview | Live smoke: complete one task → bank JSONL has `drive_task_completed` with matching `callSessionId` |
+| ~~Pass `roomId` + `callSessionId` from session into every bank op~~ | hub webview | Log correlation test / manual smoke |
+| ~~Tests in `bankSession.test.ts`~~ | hub | Snapshot + error paths |
 
 **Deps:** W0 (done).  
 **Docs:** amend [DRV-TASK-BANK](../features/DRV-TASK-BANK.md), [slice-1](../initiatives/task-satisfaction-observability/slice-1-instrumentation.md).
 
+**Shipped:** webview frames + server bridge; `DriveUiState.callSessionId` from join/leave `room_snapshot`; PlanEditor ✓ → `mutateBankCompleteTask`; Agent posture bind-once; failed `tool_event` → `mutateBankRecordFailure`; activate helper exported.
 ### 2.2 Slice 2 UI — local rollup surface
 
 **Why.** `deriveSessionRollup` is pure-only; nothing reads room+bank logs into a product or debug view.
@@ -213,7 +214,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 ## 5. Recommended implementation sequence
 
 ```text
-1. Hub bank bridge (2.1)           ← unblocks live honesty
+1. ~~Hub bank bridge (2.1)~~ ✅
 2. W1.1 Felt agency                ← UX without new schemas
 3. W1.2 Return loop (call_end + handoff)
 4. W1.3 Stuck recovery (manual)
@@ -259,7 +260,7 @@ From research / briefs / reqs — still unresolved:
 
 1. Dual proxy: S3+E1 vs elevate duration?  
 2. Accept-gate owner / unified queue?  
-3. Hub task completion as hard gate for any satisfaction *claims*? (**Yes** — until 2.1.)  
+3. Hub task completion as hard gate for any satisfaction *claims*? (**Satisfied by 2.1 bridge.**)  
 4. Healthy mid-plan add churn threshold?  
 5. Backfill local history vs clock at instrumentation-complete?  
 6. Stuck auto vs manual?  

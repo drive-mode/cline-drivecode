@@ -3,8 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	createDriveBankSession,
 	hydrateLocalBankFromHubSnapshot,
+	mutateBankActivatePlan,
+	mutateBankBindNow,
+	mutateBankCompleteTask,
 	mutateBankCreateTask,
 	mutateBankEditPlanTasks,
+	mutateBankRecordFailure,
 	planTasksFromSnapshot,
 	seedBankForJoin,
 	seedDemoBank,
@@ -45,6 +49,30 @@ function stubWindowMessageBus() {
 			}
 		},
 	};
+}
+
+async function spyPostToHostSnapshot(
+	bus: ReturnType<typeof stubWindowMessageBus>,
+	snapshot: BankSnapshot,
+) {
+	return vi
+		.spyOn(await import("../vscode"), "postToHost")
+		.mockImplementation((message) => {
+			const requestId =
+				typeof message === "object" &&
+				message &&
+				"requestId" in message &&
+				typeof message.requestId === "string"
+					? message.requestId
+					: undefined;
+			queueMicrotask(() => {
+				bus.dispatch({
+					type: "drive_bank_snapshot",
+					requestId,
+					snapshot,
+				});
+			});
+		});
 }
 
 describe("bankSession hub seed helpers", () => {
@@ -122,13 +150,18 @@ describe("bankSession hub seed helpers", () => {
 			});
 
 		const session = createDriveBankSession();
-		const result = await seedBankForJoin(session, "/tmp/workspace");
+		const result = await seedBankForJoin(session, "/tmp/workspace", {
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
 		expect(result.fromHub).toBe(true);
 		expect(result.snapshot).toEqual(sampleSnapshot);
 		expect(postSpy).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: "drive_bank_seed",
 				workspaceRoot: "/tmp/workspace",
+				roomId: "default",
+				callSessionId: "cs-1",
 			}),
 		);
 		const plan = await session.store.getPlan("p-active");
@@ -198,33 +231,21 @@ describe("bankSession hub mutation helpers", () => {
 			openTaskIds: ["t-parse", "t-tests", "t-hub"],
 		};
 
-		const postSpy = vi
-			.spyOn(await import("../vscode"), "postToHost")
-			.mockImplementation((message) => {
-				const requestId =
-					typeof message === "object" &&
-					message &&
-					"requestId" in message &&
-					typeof message.requestId === "string"
-						? message.requestId
-						: undefined;
-				queueMicrotask(() => {
-					bus.dispatch({
-						type: "drive_bank_snapshot",
-						requestId,
-						snapshot: hubSnapshot,
-					});
-				});
-			});
+		const postSpy = await spyPostToHostSnapshot(bus, hubSnapshot);
 
 		const session = createDriveBankSession();
 		await hydrateLocalBankFromHubSnapshot(session, sampleSnapshot);
-		const result = await mutateBankCreateTask(session, "/tmp/workspace", {
-			id: "t-hub",
-			title: "Hub task",
-			body: "",
-			planId: "p-active",
-		});
+		const result = await mutateBankCreateTask(
+			session,
+			"/tmp/workspace",
+			{
+				id: "t-hub",
+				title: "Hub task",
+				body: "",
+				planId: "p-active",
+			},
+			{ roomId: "default", callSessionId: "cs-1" },
+		);
 		expect(result.fromHub).toBe(true);
 		expect(result.snapshot).toEqual(hubSnapshot);
 		expect(postSpy).toHaveBeenCalledWith(
@@ -234,6 +255,8 @@ describe("bankSession hub mutation helpers", () => {
 				id: "t-hub",
 				title: "Hub task",
 				planId: "p-active",
+				roomId: "default",
+				callSessionId: "cs-1",
 			}),
 		);
 		const plan = await session.store.getPlan("p-active");
@@ -251,24 +274,7 @@ describe("bankSession hub mutation helpers", () => {
 			nextTitle: "Fix parser",
 		};
 
-		const postSpy = vi
-			.spyOn(await import("../vscode"), "postToHost")
-			.mockImplementation((message) => {
-				const requestId =
-					typeof message === "object" &&
-					message &&
-					"requestId" in message &&
-					typeof message.requestId === "string"
-						? message.requestId
-						: undefined;
-				queueMicrotask(() => {
-					bus.dispatch({
-						type: "drive_bank_snapshot",
-						requestId,
-						snapshot: hubSnapshot,
-					});
-				});
-			});
+		const postSpy = await spyPostToHostSnapshot(bus, hubSnapshot);
 
 		const session = createDriveBankSession();
 		await hydrateLocalBankFromHubSnapshot(session, sampleSnapshot);
@@ -320,5 +326,109 @@ describe("bankSession hub mutation helpers", () => {
 		expect(result.snapshot.openTaskIds).toEqual(["t-parse", "t-tests"]);
 		const plan = await session.store.getPlan("p-active");
 		expect(plan?.taskIds).toEqual(["t-parse", "t-tests"]);
+	});
+
+	it("mutateBankCompleteTask posts hub complete with correlation", async () => {
+		const bus = stubWindowMessageBus();
+		const hubSnapshot: BankSnapshot = {
+			...sampleSnapshot,
+			openTaskIds: ["t-tests"],
+			nowTaskId: "t-tests",
+			nextTaskId: null,
+			nowTitle: "Rerun tests",
+			nextTitle: null,
+		};
+		const postSpy = await spyPostToHostSnapshot(bus, hubSnapshot);
+
+		const session = createDriveBankSession();
+		await hydrateLocalBankFromHubSnapshot(session, sampleSnapshot);
+		const result = await mutateBankCompleteTask(
+			session,
+			"/tmp/workspace",
+			{ taskId: "t-parse" },
+			{ roomId: "default", callSessionId: "cs-1" },
+		);
+		expect(result.fromHub).toBe(true);
+		expect(postSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "drive_bank_complete_task",
+				taskId: "t-parse",
+				roomId: "default",
+				callSessionId: "cs-1",
+			}),
+		);
+	});
+
+	it("mutateBankCompleteTask uses local store without workspaceRoot", async () => {
+		const session = createDriveBankSession();
+		await seedDemoBank(session);
+		const result = await mutateBankCompleteTask(session, undefined, {
+			taskId: "t-parse",
+		});
+		expect(result.fromHub).toBe(false);
+		expect(result.snapshot.openTaskIds).not.toContain("t-parse");
+	});
+
+	it("mutateBankBindNow posts hub bind_now", async () => {
+		const bus = stubWindowMessageBus();
+		const postSpy = await spyPostToHostSnapshot(bus, sampleSnapshot);
+		const session = createDriveBankSession();
+		await hydrateLocalBankFromHubSnapshot(session, sampleSnapshot);
+		const result = await mutateBankBindNow(session, "/tmp/workspace", {
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+		expect(result.fromHub).toBe(true);
+		expect(postSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "drive_bank_bind_now",
+				roomId: "default",
+				callSessionId: "cs-1",
+			}),
+		);
+	});
+
+	it("mutateBankActivatePlan posts hub activate_plan", async () => {
+		const bus = stubWindowMessageBus();
+		const postSpy = await spyPostToHostSnapshot(bus, sampleSnapshot);
+		const session = createDriveBankSession();
+		await hydrateLocalBankFromHubSnapshot(session, sampleSnapshot);
+		const result = await mutateBankActivatePlan(
+			session,
+			"/tmp/workspace",
+			{ planId: "p-active" },
+			{ callSessionId: "cs-1" },
+		);
+		expect(result.fromHub).toBe(true);
+		expect(postSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "drive_bank_activate_plan",
+				planId: "p-active",
+				callSessionId: "cs-1",
+			}),
+		);
+	});
+
+	it("mutateBankRecordFailure posts hub record_failure", async () => {
+		const bus = stubWindowMessageBus();
+		const postSpy = await spyPostToHostSnapshot(bus, sampleSnapshot);
+		const session = createDriveBankSession();
+		await hydrateLocalBankFromHubSnapshot(session, sampleSnapshot);
+		const result = await mutateBankRecordFailure(
+			session,
+			"/tmp/workspace",
+			{ taskId: "t-parse", note: "tests red" },
+			{ roomId: "default", callSessionId: "cs-1" },
+		);
+		expect(result.fromHub).toBe(true);
+		expect(postSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "drive_bank_record_failure",
+				taskId: "t-parse",
+				note: "tests red",
+				roomId: "default",
+				callSessionId: "cs-1",
+			}),
+		);
 	});
 });

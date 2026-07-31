@@ -332,7 +332,11 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						frame.type === "drive_bank_get" ||
 						frame.type === "drive_bank_seed" ||
 						frame.type === "drive_bank_create_task" ||
-						frame.type === "drive_bank_edit_plan_tasks"
+						frame.type === "drive_bank_edit_plan_tasks" ||
+						frame.type === "drive_bank_complete_task" ||
+						frame.type === "drive_bank_bind_now" ||
+						frame.type === "drive_bank_activate_plan" ||
+						frame.type === "drive_bank_record_failure"
 					) {
 						await handleDriveBankWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_agent_home_get") {

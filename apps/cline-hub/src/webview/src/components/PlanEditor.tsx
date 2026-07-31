@@ -13,7 +13,8 @@ export type PlanEditorProps = {
 	tasks: PlanEditorTask[];
 	disabled?: boolean;
 	onReorder: (taskIds: string[]) => void;
-	onRemove: (taskId: string) => void;
+	/** Complete (archive) a task — not remove-from-plan. */
+	onComplete: (taskId: string) => void;
 	onAdd: (task: PlanEditorTask) => void;
 	className?: string;
 };
@@ -26,7 +27,7 @@ export function PlanEditor({
 	tasks,
 	disabled,
 	onReorder,
-	onRemove,
+	onComplete,
 	onAdd,
 	className,
 }: PlanEditorProps) {
@@ -73,13 +74,14 @@ export function PlanEditor({
 						</Button>
 						<Button
 							disabled={disabled}
-							onClick={() => onRemove(task.id)}
+							onClick={() => onComplete(task.id)}
 							size="sm"
 							type="button"
 							variant="ghost"
 							className="h-6 px-1"
+							title="Mark done"
 						>
-							✕
+							✓
 						</Button>
 					</li>
 				))}

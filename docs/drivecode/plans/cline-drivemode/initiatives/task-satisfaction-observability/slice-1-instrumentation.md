@@ -27,7 +27,7 @@ A synthetic Drive session can be reconstructed from logs: join → activate plan
 
 Slice 2 can compute S2/S3/P1 without FS archaeology.
 
-## Implementation status (2026-07-30)
+## Implementation status (2026-07-31)
 
 Landed on branch:
 
@@ -35,3 +35,6 @@ Landed on branch:
 - Bank store emits bound / archived / plan_step / plan_archived; activate on `createPlan({activate:true})`
 - Hub `onBankEvent` → bank JSONL; commands `drive_bank_complete_task|bind_now|activate_plan|record_failure`
 - `deriveSessionRollup` (slice 2 pure helper) + tests
+- **Product path wired:** hub webview protocol + `server/drive-bank` allowlist expose complete/bind/activate/failure; `bankSession` mutators thread `roomId` + `callSessionId`; PlanEditor ✓ complete, Agent posture bind-once, tool_event failure → bank log
+
+See [REMAINING §2.1](../../delivery/REMAINING-task-satisfaction.md#21-hub-webview--server-bridge-blocks-live-product-path) (done).

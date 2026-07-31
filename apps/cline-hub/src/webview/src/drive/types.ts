@@ -63,6 +63,11 @@ export type DriveUiState = {
 	/** Hub room id when Join has attached a call. */
 	roomId: string | null;
 	/**
+	 * Active call session id for bank/room log correlation (DRV-CALL-SESSION).
+	 * Set from join/leave extras or drive_event; cleared on leave/unseat.
+	 */
+	callSessionId: string | null;
+	/**
 	 * Hub roster projection (DRV-ROSTER). Read-only copy from room_snapshot.
 	 * Empty until a snapshot arrives — UI may synthesize human+partner.
 	 */
@@ -113,6 +118,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	stageCards: [],
 	stagePin: null,
 	roomId: null,
+	callSessionId: null,
 	participants: [],
 	focusedParticipantId: null,
 	addressFollowsFocusParticipantId: null,
@@ -236,6 +242,7 @@ export function applyRoomSnapshot(
 		...drive,
 		active: Boolean(snapshot.driveActive && humanSeated),
 		roomId: humanSeated ? snapshot.roomId : null,
+		callSessionId: humanSeated ? drive.callSessionId : null,
 		partnerName: agent?.displayName ?? drive.partnerName,
 		stageSharer,
 		spotlightParticipantId: sharer?.participantId ?? agentId,

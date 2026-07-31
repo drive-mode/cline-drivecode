@@ -174,4 +174,99 @@ describe("handleDriveBankWebviewCommand", () => {
 			requestId: "req-6",
 		});
 	});
+
+	it("forwards drive_bank_complete_task with correlation ids", async () => {
+		const command = vi.fn().mockResolvedValue({
+			ok: true,
+			payload: { snapshot: sampleSnapshot },
+		});
+		const { context, sent } = ctx({
+			uiClient: { command } as unknown as HubContext["uiClient"],
+		});
+		await handleDriveBankWebviewCommand(context, peer(), {
+			type: "drive_bank_complete_task",
+			workspaceRoot: "/tmp/ws",
+			requestId: "req-7",
+			taskId: "t-parse",
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+		expect(command).toHaveBeenCalledWith("drive_bank_complete_task", {
+			workspaceRoot: "/tmp/ws",
+			taskId: "t-parse",
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+		expect(sent[0]).toMatchObject({
+			type: "drive_bank_snapshot",
+			requestId: "req-7",
+		});
+	});
+
+	it("forwards drive_bank_bind_now", async () => {
+		const command = vi.fn().mockResolvedValue({
+			ok: true,
+			payload: { snapshot: sampleSnapshot },
+		});
+		const { context } = ctx({
+			uiClient: { command } as unknown as HubContext["uiClient"],
+		});
+		await handleDriveBankWebviewCommand(context, peer(), {
+			type: "drive_bank_bind_now",
+			workspaceRoot: "/tmp/ws",
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+		expect(command).toHaveBeenCalledWith("drive_bank_bind_now", {
+			workspaceRoot: "/tmp/ws",
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+	});
+
+	it("forwards drive_bank_activate_plan", async () => {
+		const command = vi.fn().mockResolvedValue({
+			ok: true,
+			payload: { snapshot: sampleSnapshot },
+		});
+		const { context } = ctx({
+			uiClient: { command } as unknown as HubContext["uiClient"],
+		});
+		await handleDriveBankWebviewCommand(context, peer(), {
+			type: "drive_bank_activate_plan",
+			workspaceRoot: "/tmp/ws",
+			planId: "p-active",
+			callSessionId: "cs-1",
+		});
+		expect(command).toHaveBeenCalledWith("drive_bank_activate_plan", {
+			workspaceRoot: "/tmp/ws",
+			planId: "p-active",
+			callSessionId: "cs-1",
+		});
+	});
+
+	it("forwards drive_bank_record_failure with note", async () => {
+		const command = vi.fn().mockResolvedValue({
+			ok: true,
+			payload: { snapshot: sampleSnapshot },
+		});
+		const { context } = ctx({
+			uiClient: { command } as unknown as HubContext["uiClient"],
+		});
+		await handleDriveBankWebviewCommand(context, peer(), {
+			type: "drive_bank_record_failure",
+			workspaceRoot: "/tmp/ws",
+			taskId: "t-parse",
+			note: "tests red",
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+		expect(command).toHaveBeenCalledWith("drive_bank_record_failure", {
+			workspaceRoot: "/tmp/ws",
+			taskId: "t-parse",
+			note: "tests red",
+			roomId: "default",
+			callSessionId: "cs-1",
+		});
+	});
 });

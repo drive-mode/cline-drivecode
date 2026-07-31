@@ -16,7 +16,11 @@ export type DriveBankWebviewFrame = {
 		| "drive_bank_get"
 		| "drive_bank_seed"
 		| "drive_bank_create_task"
-		| "drive_bank_edit_plan_tasks";
+		| "drive_bank_edit_plan_tasks"
+		| "drive_bank_complete_task"
+		| "drive_bank_bind_now"
+		| "drive_bank_activate_plan"
+		| "drive_bank_record_failure";
 	workspaceRoot: string;
 	requestId?: string;
 	id?: string;
@@ -24,6 +28,10 @@ export type DriveBankWebviewFrame = {
 	body?: string;
 	planId?: string;
 	taskIds?: string[];
+	taskId?: string;
+	note?: string;
+	roomId?: string;
+	callSessionId?: string;
 	[key: string]: unknown;
 };
 
@@ -76,6 +84,18 @@ export async function handleDriveBankWebviewCommand(
 	}
 	if (Array.isArray(frame.taskIds)) {
 		payload.taskIds = frame.taskIds;
+	}
+	if (typeof frame.taskId === "string") {
+		payload.taskId = frame.taskId;
+	}
+	if (typeof frame.note === "string") {
+		payload.note = frame.note;
+	}
+	if (typeof frame.roomId === "string" && frame.roomId.trim()) {
+		payload.roomId = frame.roomId.trim();
+	}
+	if (typeof frame.callSessionId === "string" && frame.callSessionId.trim()) {
+		payload.callSessionId = frame.callSessionId.trim();
 	}
 
 	try {

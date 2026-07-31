@@ -30,11 +30,14 @@ import {
 	type PendingApproval,
 	PendingApprovalsPanel,
 } from "./components/PendingApprovalsPanel";
-import { PlanEditor, removeTask } from "./components/PlanEditor";
+import { PlanEditor } from "./components/PlanEditor";
 import {
 	listPlanTasks,
+	mutateBankBindNow,
+	mutateBankCompleteTask,
 	mutateBankCreateTask,
 	mutateBankEditPlanTasks,
+	mutateBankRecordFailure,
 } from "./drive/bankSession";
 import { DriveHeaderControls } from "./drive/DriveCallChrome";
 import { DriveRoomChrome, DriveVoiceBar } from "./drive/DriveRoomChrome";
@@ -228,6 +231,11 @@ export default function Chat({
 		setForkRetain,
 	} = driveSession;
 
+	const driveRef = useRef(drive);
+	driveRef.current = drive;
+	/** Guard bind_now spam — one bind per now-task while Agent posture. */
+	const lastBoundNowTaskIdRef = useRef<string | null>(null);
+
 	useEffect(() => {
 		if (
 			!driveLaunchRequest ||
@@ -307,6 +315,42 @@ export default function Chat({
 	useEffect(() => {
 		defaultsRef.current = defaults;
 	}, [defaults]);
+
+	useEffect(() => {
+		if (!drive.active || drive.subMode !== "agent") {
+			if (!drive.active) {
+				lastBoundNowTaskIdRef.current = null;
+			}
+			return;
+		}
+		const nowTaskId = drive.bankSnapshot.nowTaskId;
+		if (!nowTaskId || lastBoundNowTaskIdRef.current === nowTaskId) {
+			return;
+		}
+		lastBoundNowTaskIdRef.current = nowTaskId;
+		void (async () => {
+			const { snapshot, fromHub } = await mutateBankBindNow(
+				bankSessionRef.current,
+				defaultsRef.current.workspaceRoot,
+				{
+					roomId: drive.roomId,
+					callSessionId: drive.callSessionId,
+				},
+			);
+			if (defaultsRef.current.workspaceRoot?.trim() && !fromHub) {
+				return;
+			}
+			setDrive((current) => applyBankSnapshot(current, snapshot));
+		})();
+	}, [
+		bankSessionRef,
+		drive.active,
+		drive.bankSnapshot.nowTaskId,
+		drive.callSessionId,
+		drive.roomId,
+		drive.subMode,
+		setDrive,
+	]);
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent<WebviewOutboundMessage>) => {
@@ -507,6 +551,37 @@ export default function Chat({
 							activeAssistantIdRef,
 						),
 					);
+					if (
+						driveRef.current.active &&
+						message.event?.status === "failed" &&
+						driveRef.current.bankSnapshot.nowTaskId
+					) {
+						const nowTaskId = driveRef.current.bankSnapshot.nowTaskId;
+						const note =
+							(typeof message.event.error === "string" &&
+							message.event.error.trim()
+								? message.event.error.trim()
+								: undefined) ??
+							(message.text?.trim() || "tool failed");
+						void (async () => {
+							const { snapshot, fromHub } = await mutateBankRecordFailure(
+								bankSessionRef.current,
+								defaultsRef.current.workspaceRoot,
+								{ taskId: nowTaskId, note },
+								{
+									roomId: driveRef.current.roomId,
+									callSessionId: driveRef.current.callSessionId,
+								},
+							);
+							if (
+								defaultsRef.current.workspaceRoot?.trim() &&
+								!fromHub
+							) {
+								return;
+							}
+							setDrive((current) => applyBankSnapshot(current, snapshot));
+						})();
+					}
 					return;
 				case "approval_request":
 					setPendingApprovals((current) => {
@@ -1255,6 +1330,10 @@ export default function Chat({
 														body: "",
 														planId,
 													},
+													{
+														roomId: drive.roomId,
+														callSessionId: drive.callSessionId,
+													},
 												);
 											if (defaults.workspaceRoot?.trim() && !fromHub) {
 												setStatus(
@@ -1270,21 +1349,18 @@ export default function Chat({
 											);
 										})();
 									}}
-									onRemove={(taskId) => {
+									onComplete={(taskId) => {
 										void (async () => {
 											const planId = drive.bankSnapshot.activePlanId;
-											if (!planId) {
-												return;
-											}
-											const ids = removeTask(
-												planEditorTasks.map((item) => item.id),
-												taskId,
-											);
 											const { snapshot, fromHub } =
-												await mutateBankEditPlanTasks(
+												await mutateBankCompleteTask(
 													bankSessionRef.current,
 													defaults.workspaceRoot,
-													{ planId, taskIds: ids },
+													{ taskId },
+													{
+														roomId: drive.roomId,
+														callSessionId: drive.callSessionId,
+													},
 												);
 											if (defaults.workspaceRoot?.trim() && !fromHub) {
 												setStatus(
@@ -1292,9 +1368,14 @@ export default function Chat({
 												);
 												return;
 											}
-											setPlanEditorTasks(
-												await listPlanTasks(bankSessionRef.current, planId),
-											);
+											if (planId) {
+												setPlanEditorTasks(
+													await listPlanTasks(
+														bankSessionRef.current,
+														planId,
+													),
+												);
+											}
 											setDrive((current) =>
 												applyBankSnapshot(current, snapshot),
 											);
@@ -1311,6 +1392,10 @@ export default function Chat({
 													bankSessionRef.current,
 													defaults.workspaceRoot,
 													{ planId, taskIds },
+													{
+														roomId: drive.roomId,
+														callSessionId: drive.callSessionId,
+													},
 												);
 											if (defaults.workspaceRoot?.trim() && !fromHub) {
 												setStatus(

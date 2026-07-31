@@ -227,7 +227,12 @@ describe("applyRoomSnapshot", () => {
 
 	it("clears active when local human has left even if driveActive persists", () => {
 		const next = applyRoomSnapshot(
-			{ ...DEFAULT_DRIVE_UI, active: true, roomId: "default" },
+			{
+				...DEFAULT_DRIVE_UI,
+				active: true,
+				roomId: "default",
+				callSessionId: "cs-1",
+			},
 			sampleRoomSnapshot({
 				driveActive: true,
 				participants: [
@@ -244,6 +249,7 @@ describe("applyRoomSnapshot", () => {
 		);
 		expect(next.active).toBe(false);
 		expect(next.roomId).toBeNull();
+		expect(next.callSessionId).toBeNull();
 		expect(next.partnerName).toBe("Ada");
 		expect(next.demo).toBe(false);
 	});

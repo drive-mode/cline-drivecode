@@ -366,11 +366,15 @@ export type WebviewInboundMessage =
 			type: "drive_bank_get";
 			workspaceRoot: string;
 			requestId?: string;
+			roomId?: string;
+			callSessionId?: string;
 	  }
 	| {
 			type: "drive_bank_seed";
 			workspaceRoot: string;
 			requestId?: string;
+			roomId?: string;
+			callSessionId?: string;
 	  }
 	| {
 			type: "drive_bank_create_task";
@@ -380,6 +384,8 @@ export type WebviewInboundMessage =
 			title: string;
 			body?: string;
 			planId?: string;
+			roomId?: string;
+			callSessionId?: string;
 	  }
 	| {
 			type: "drive_bank_edit_plan_tasks";
@@ -387,6 +393,40 @@ export type WebviewInboundMessage =
 			requestId?: string;
 			planId: string;
 			taskIds: string[];
+			roomId?: string;
+			callSessionId?: string;
+	  }
+	| {
+			type: "drive_bank_complete_task";
+			workspaceRoot: string;
+			taskId: string;
+			requestId?: string;
+			roomId?: string;
+			callSessionId?: string;
+	  }
+	| {
+			type: "drive_bank_bind_now";
+			workspaceRoot: string;
+			requestId?: string;
+			roomId?: string;
+			callSessionId?: string;
+	  }
+	| {
+			type: "drive_bank_activate_plan";
+			workspaceRoot: string;
+			planId: string;
+			requestId?: string;
+			roomId?: string;
+			callSessionId?: string;
+	  }
+	| {
+			type: "drive_bank_record_failure";
+			workspaceRoot: string;
+			taskId: string;
+			note: string;
+			requestId?: string;
+			roomId?: string;
+			callSessionId?: string;
 	  }
 	| {
 			type: "drive_agent_home_get";
@@ -567,6 +607,8 @@ export type WebviewOutboundMessage =
 			roomId: string;
 			snapshot: import("@cline/shared").RoomSnapshot;
 			seq?: number;
+			/** Active call session when known (join / leave extras). */
+			callSessionId?: string;
 	  }
 	| {
 			type: "drive_event";
@@ -574,6 +616,7 @@ export type WebviewOutboundMessage =
 			event: import("@cline/shared").DriveEvent;
 			snapshot: import("@cline/shared").RoomSnapshot;
 			seq?: number;
+			callSessionId?: string;
 	  }
 	| { type: "call_error"; text: string; code?: string; command?: string }
 	| {

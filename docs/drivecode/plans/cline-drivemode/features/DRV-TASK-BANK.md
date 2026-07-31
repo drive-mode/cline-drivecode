@@ -52,7 +52,10 @@ Drive needs a steady bank of work. Tasks are durable and implementable. Plans ar
   - Owner package: `@cline/cline-hub`
   - Verify: `bun -F @cline/cline-hub test`
   - Done when: fixtures render now/next and derived posture; Ask override blocks edit intent in UI state.
-
+- [x] Bridge hub webview complete/bind/activate/failure with `roomId` + `callSessionId` correlation (task-satisfaction §2.1).
+  - Owner package: `@cline/cline-hub`
+  - Verify: `bun test apps/cline-hub/src/webview/src/drive/bankSession.test.ts` + `drive-bank.test.ts`
+  - Done when: PlanEditor complete and Agent bind/failure paths post durable bank ops.
 ## Risks
 
 - Kernel vs persistence boundary. Mitigation. Injected `BankFs`; no `node:fs` import inside `@cline/drive`.
