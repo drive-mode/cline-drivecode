@@ -805,6 +805,16 @@ export {
 	resolveProductSessionFeatures,
 } from "./session/product-session-defaults";
 export type {
+	ResolveSessionPluginLoadInput,
+	ResolveSessionPluginPathsInput,
+	SessionExtensionWorkspaceInput,
+} from "./session/session-plugin-load";
+export {
+	buildSessionExtensionWorkspace,
+	resolveSessionPluginLoad,
+	resolveSessionPluginPaths,
+} from "./session/session-plugin-load";
+export type {
 	SessionCheckpointRestoreContext,
 	SessionCheckpointRestoreResult,
 	SessionVersioningErrorCode,

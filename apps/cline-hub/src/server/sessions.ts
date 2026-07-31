@@ -2,6 +2,7 @@ import process from "node:process";
 import {
 	type ClineCoreStartInput,
 	type SessionRecord,
+	resolveProductSessionFeatures,
 	SessionSource,
 } from "@cline/core";
 import type { Message } from "@cline/llms";
@@ -94,6 +95,15 @@ function buildSessionStartInput(
 ): ClineCoreStartInput {
 	const mode = options?.mode === "plan" ? "plan" : "act";
 	const reasoningOptions = toRuntimeReasoningOptions(options?.reasonLevel);
+	const sessionFeatures = resolveProductSessionFeatures({
+		host: "hub",
+		...(typeof options?.enableSpawn === "boolean"
+			? { enableSpawnAgent: options.enableSpawn }
+			: {}),
+		...(typeof options?.enableTeams === "boolean"
+			? { enableAgentTeams: options.enableTeams }
+			: {}),
+	});
 	return {
 		source: options?.source ?? SessionSource.WEB,
 		interactive: true,
@@ -107,9 +117,11 @@ function buildSessionStartInput(
 			...reasoningOptions,
 			maxIterations: options?.maxIterations,
 			enableTools: options?.enableTools !== false,
-			enableSpawnAgent: options?.enableSpawn !== false,
-			enableAgentTeams: options?.enableTeams === true,
-			teamName: options?.teamName ?? "cline-hub",
+			enableSpawnAgent: sessionFeatures.enableSpawnAgent,
+			enableAgentTeams: sessionFeatures.enableAgentTeams,
+			teamName: sessionFeatures.enableAgentTeams
+				? (options?.teamName ?? "cline-hub")
+				: undefined,
 			missionLogIntervalSteps: 3,
 			missionLogIntervalMs: 120000,
 			checkpoint: { enabled: true },

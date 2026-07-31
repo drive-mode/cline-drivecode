@@ -14,6 +14,7 @@ import {
 	getProviderAuthHandler,
 	type ProviderSettings,
 	readCompactionStrategyGlobally,
+	resolveProductSessionFeatures,
 	resolveProviderApiKeyFromSettings,
 	type StartSessionResult,
 } from "@cline/core"
@@ -943,6 +944,8 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		fetch,
 	}
 
+	const sessionFeatures = resolveProductSessionFeatures({ host: "vscode" })
+
 	const config: CoreSessionConfig = {
 		providerId: sdkProviderId,
 		modelId,
@@ -960,8 +963,8 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		checkpoint: {
 			enabled: enableCheckpoints,
 		},
-		enableSpawnAgent: false,
-		enableAgentTeams: false,
+		enableSpawnAgent: sessionFeatures.enableSpawnAgent,
+		enableAgentTeams: sessionFeatures.enableAgentTeams,
 		...(useAutoCondense
 			? {
 					compaction: {

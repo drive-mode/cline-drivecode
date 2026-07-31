@@ -26,6 +26,7 @@ import {
 	type ClineCore,
 	Llms,
 	ProviderSettingsManager,
+	resolveProductSessionFeatures,
 	SessionSource,
 } from "@cline/core";
 import type { Message } from "@cline/shared";
@@ -521,6 +522,7 @@ export class AcpAgent implements Agent {
 			mode: session.currentMode,
 		});
 		const cliBuildInfo = getCliBuildInfo();
+		const sessionFeatures = resolveProductSessionFeatures({ host: "acp" });
 
 		return {
 			providerId,
@@ -535,8 +537,8 @@ export class AcpAgent implements Agent {
 			mode: session.currentMode,
 			defaultToolAutoApprove: false,
 			toolPolicies: { "*": { autoApprove: false } },
-			enableSpawnAgent: true,
-			enableAgentTeams: false,
+			enableSpawnAgent: sessionFeatures.enableSpawnAgent,
+			enableAgentTeams: sessionFeatures.enableAgentTeams,
 			enableTools: true,
 			cwd,
 			workspaceRoot,

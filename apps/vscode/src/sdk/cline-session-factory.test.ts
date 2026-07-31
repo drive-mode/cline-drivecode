@@ -126,8 +126,8 @@ function makeBaseConfig(overrides: Partial<CoreSessionConfig> = {}): CoreSession
 		systemPrompt: "",
 		mode: "act",
 		enableTools: true,
-		enableSpawnAgent: false,
-		enableAgentTeams: false,
+		enableSpawnAgent: true,
+		enableAgentTeams: true,
 		...overrides,
 	}
 }
@@ -315,6 +315,15 @@ describe("buildSessionConfig", () => {
 
 		expect(config.providerId).toBe("cline")
 		expect(config.apiKey).toBe("workos:test-access-token")
+	})
+
+	it("enables spawn agent and agent teams by default (D1)", async () => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
+
+		const config = await buildSessionConfig({ cwd: "/tmp/workspace" })
+
+		expect(config.enableSpawnAgent).toBe(true)
+		expect(config.enableAgentTeams).toBe(true)
 	})
 
 	it("resolves ClinePass from the shared Cline OAuth credentials", async () => {

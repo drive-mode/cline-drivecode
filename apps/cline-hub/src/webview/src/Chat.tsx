@@ -156,7 +156,7 @@ export default function Chat({
 	const [mode, setMode] = useState<"act" | "plan">("act");
 	const [reasonLevel, setReasonLevel] = useState<WebviewReasonLevel>("none");
 	const [enableTools, setEnableTools] = useState(true);
-	const [enableSpawn, setEnableSpawn] = useState(false);
+	const [enableSpawn, setEnableSpawn] = useState(true);
 	const [enableTeams, setEnableTeams] = useState(true);
 	const [autoApproveTools, setAutoApproveTools] = useState(true);
 	const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(

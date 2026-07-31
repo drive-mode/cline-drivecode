@@ -8,6 +8,7 @@ import {
 	type ClineCoreStartConfig,
 	createSessionCompactionState,
 	projectSessionCompactionState,
+	resolveProductSessionFeatures,
 	type SessionCompactionState,
 	type SessionPendingPrompt,
 	SessionSource,
@@ -222,6 +223,7 @@ function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 			: readPositiveInteger(
 					config.thinkingBudgetTokens ?? config.thinking_budget_tokens,
 				);
+	const sessionFeatures = resolveProductSessionFeatures({ host: "desktop" });
 	return {
 		sessionId: config.sessionId ?? config.session_id,
 		providerId: config.provider ?? config.providerId ?? "",
@@ -240,12 +242,12 @@ function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 			config.enableSpawn ??
 			config.enableSpawnAgent ??
 			config.enable_spawn ??
-			false,
+			sessionFeatures.enableSpawnAgent,
 		enableAgentTeams:
 			config.enableTeams ??
 			config.enableAgentTeams ??
 			config.enable_teams ??
-			false,
+			sessionFeatures.enableAgentTeams,
 		...(thinking !== undefined ? { thinking } : {}),
 		...(reasoningEffort ? { reasoningEffort } : {}),
 		...(thinkingBudgetTokens !== undefined ? { thinkingBudgetTokens } : {}),

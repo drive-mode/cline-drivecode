@@ -127,13 +127,17 @@ This is intentional adapter debt, not a one-line flip. Do not enable VS Code set
 | **Depends on** | D3 (locked) |
 | **Goal** | `{ pluginPaths, extensions, extensionContext }` for `CoreSessionConfig`. |
 | **Verify** | `bun run build:sdk`; fixture plugin unit test. |
-| **Status** | Open |
+| **Status** | **Done** — `resolveSessionPluginPaths` / `buildSessionExtensionWorkspace` / `resolveSessionPluginLoad` + tests in `@cline/core` (hosts inject in Phase 4) |
 
 ---
 
 ## Phase 2 · Multi-agent alignment
 
 `SDK-2.1` CLI · `SDK-2.2` Hub · `SDK-2.3` Desktop · `SDK-2.4` VS Code — wire helper / D1 defaults.
+
+| | |
+|---|---|
+| **Status** | **Done** — hosts call `resolveProductSessionFeatures` (CLI + ACP, Hub server + Chat defaults, Desktop sidecar, VS Code session factory) |
 
 ## Phase 3 · Scheduling story
 
@@ -178,10 +182,10 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-0.2 Skill/docs drift | **Done** |
 | SDK-0.3 MCP split brain note | **Done** |
 | SDK version lockstep (`@cline/drive` → 0.0.66) | **Done** |
-| SDK-1.1 Product session features helper | **Done** (helper + tests; hosts not wired yet) |
-| SDK-1.2 Session plugin load helper | Open (next) |
-| SDK-2.1–2.4 Multi-agent hosts | Open |
-| SDK-3.1–3.2 Scheduling | Open |
+| SDK-1.1 Product session features helper | **Done** |
+| SDK-1.2 Session plugin load helper | **Done** |
+| SDK-2.1–2.4 Multi-agent hosts | **Done** |
+| SDK-3.1–3.2 Scheduling | Open (next) |
 | SDK-4.1–4.3 Plugins on session | Open |
 | SDK-5.1–5.2 Budgets | Open |
 | SDK-6.1–6.3 Hub depth | Open |

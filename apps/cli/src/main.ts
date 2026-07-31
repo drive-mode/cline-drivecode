@@ -2,6 +2,7 @@ import { fstatSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename } from "node:path";
 import type { ToolPolicy } from "@cline/core";
+import { resolveProductSessionFeatures } from "@cline/core";
 
 import { registerDisposable } from "@cline/shared";
 import type { Command } from "commander";
@@ -1112,6 +1113,10 @@ export async function runCli(): Promise<void> {
 			cwd,
 		});
 
+		const sessionFeatures = resolveProductSessionFeatures({
+			yolo: isYoloMode,
+			host: "cli",
+		});
 		const config: Config = {
 			providerId: provider,
 			modelId:
@@ -1145,8 +1150,8 @@ export async function runCli(): Promise<void> {
 			telemetry: getCliTelemetryService(loggerAdapter.core),
 			defaultToolAutoApprove,
 			toolPolicies,
-			enableSpawnAgent: !isYoloMode,
-			enableAgentTeams: !isYoloMode,
+			enableSpawnAgent: sessionFeatures.enableSpawnAgent,
+			enableAgentTeams: sessionFeatures.enableAgentTeams,
 			enableTools: true,
 			cwd,
 			workspaceRoot,
@@ -1167,7 +1172,9 @@ export async function runCli(): Promise<void> {
 				},
 				logger: loggerAdapter.core,
 			},
-			teamName: !isYoloMode ? args.teamName?.trim() || undefined : undefined,
+			teamName: sessionFeatures.enableAgentTeams
+				? args.teamName?.trim() || undefined
+				: undefined,
 		};
 		try {
 			// For OAuth providers, don't write the resolved key into apiKey;
