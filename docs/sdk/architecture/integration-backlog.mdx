@@ -83,3 +83,6 @@ _Phase 6–8 items are appended in the sections below._
 | BL-8.3 | Document `OTEL_*` vs `CLINE_OTEL_*` in going-to-production | docs | Shared config now accepts both; public production guide still mentions generic OTEL env only |
 | BL-8.4 | Hub Chat / Desktop opt-in OTEL enabled-by-env smoke | test | Unit coverage is in `@cline/shared` telemetry-config (incl. secondary `CLINE_OTEL_*` fields); host activation still defaults `enabled: false` unless env/remote-config sets it — no unmocked host process-env smoke |
 | BL-8.5 | Non-finite `CLINE_OTEL_*` / `OTEL_*` numeric parsing | test | `parsePositiveInt` returns `undefined` for non-finite strings; no dedicated assert yet (defaults apply). Low priority |
+| BL-8.6 | Clamp OTEL batch/interval ints like VS Code legacy (`Math.max(1, …)`) | review | Shared accepts `0` / negatives via `Number.isFinite` only |
+| BL-8.7 | Note `CLINE_OTEL_TELEMETRY_ENABLED=1` enables SDK path, not VS Code legacy | docs | Fold into BL-8.1 / BL-8.3 |
+| BL-8.8 | Optional traces-specific OTLP env keys (`OTEL_EXPORTER_OTLP_TRACES_*`) | review | Config type has `otlpTraces*`; shared reader may not map all traces keys yet |
