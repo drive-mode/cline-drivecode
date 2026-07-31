@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-recruit-on-stall](../initiatives/session-satisfaction-moments/req-recruit-on-stall.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Recruit is unused at the highest-intent moment: a stuck task. Multi-agent value for satisfaction needs “who should take this?” plus later attribution. From a stuck task, find and seat the right agent/pack without rewriting the plan cursor.

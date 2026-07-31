@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ **Landed (W3.1)**. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-status-accomplishment](../initiatives/session-satisfaction-moments/req-status-accomplishment.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Rollups are framed as eng/debug. Users and leads need a product lens: did sessions get work done? Open Status and see recent Drive sessions as accomplishment (tasks completed, clean-drain, continue), then drill into bank/plan/room.

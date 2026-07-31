@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Research: [15](../research/15-task-satisfaction-observability.md). Decision: [ARD-0015](../ard/ARD-0015-task-session-observability.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Drive needs local, privacy-safe rollups: tasks completed per session, plan clean-drain, mid-plan churn, post-success engagement, failure stickiness. Without them, retention risk is invisible.

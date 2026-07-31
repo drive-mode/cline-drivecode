@@ -1,7 +1,7 @@
 # Session satisfaction moments · Overview
 
-**Status:** active (requirements / planning; build order in [REMAINING](../../delivery/REMAINING-task-satisfaction.md))  
-**Depends on:** [task-satisfaction-observability](../task-satisfaction-observability/) slices 1–2 for honest signals; slice 3 for post-session improve (orthogonal to in-call recovery).
+**Status:** active — **core moments landed on main (#80)**; residuals in [REMAINING](../../delivery/REMAINING-task-satisfaction.md)  
+**Depends on:** [task-satisfaction-observability](../task-satisfaction-observability/) (slices 1–3 landed; host skill compile residual).
 
 ## Purpose
 
@@ -11,9 +11,9 @@ Observability answers *what happened*. These components answer *what the user ex
 
 | Wave | Status |
 |---|---|
-| W0 honesty (obs slice 1–2 kernel) | **Partial** — emit + rollup helper landed; hub webview bridge + UI open |
-| W1–W4 product moments | **Not started** — reqs + DRVs written |
-| Slice 3 / auto stall | **Not started** |
+| W0 honesty (obs slice 1–2 kernel) | **Landed** — emit + rollup + hub/CLI bridge |
+| W1–W4 product moments | **Landed** — see REMAINING for W1.1 narration and privacy UI residuals |
+| Slice 3 / auto stall | **Landed** — `classifyStall` + auto recovery fork + `PlanImproveGate` |
 
 Track detail: [REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md).
 

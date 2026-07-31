@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 1+ in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0001](../ard/ARD-0001-driveagent-home.md).
 
+## Implementation status
+
+Schemas + `compileDriveagentHome` fixture landed. Full editor still open.
+
 ## Problem / user value
 
 An agent on a Drive call needs more than a tinted name. Users need a durable **home** for capabilities, permissions, env, and knowledge files they can inspect from the profile sheet. Cline’s flat `.cline/agents/*.yaml` is not enough for multi-file portfolios. Naming the home `.claude/` would lie about the host. `.driveagent/<slug>/` is the product-owned home.

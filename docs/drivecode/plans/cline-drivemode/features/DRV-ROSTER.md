@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
+## Implementation status
+
+Hub Roster projection shipped.
+
 ## Problem / user value
 
 On a call, who is here and who is talking matters as much as the transcript. Agents are room participants, nested under the live call row the way Discord nests connected users under a voice channel. Speaking rings and mute badges map to agent TTS / tool narration activity and mute flags. The MVP still seats one human + one `pair_partner`, but the UI shows the roster shape so later seats do not rewrite chrome.

@@ -4,6 +4,10 @@ Back to [README](../README.md). Phase 1 (taxonomy + events) / Phase 2 (UI) in [T
 Owns workflows **W-24** (approve high-impact) and **W-25** (policy block).  
 Closes the top gap previously parked only as platform facet `#26` / `#27`.
 
+## Implementation status
+
+`gates.ts` taxonomy landed. Feed UI + expiry still open.
+
 ## Problem / user value
 
 Pair-call agents will eventually touch destructive or sensitive actions. Users need a clear, non-modal-hostile way to approve, deny, or allow-for-session — without inventing a second approval plane beside Cline’s existing `approval.requested` plumbing. Policy blocks must produce a visible reason and a replan path, not a silent stall.

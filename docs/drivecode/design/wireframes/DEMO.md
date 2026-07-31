@@ -1,6 +1,6 @@
 # Drive UX demo runbook
 
-Click-through surfaces for the Drive / Drivecode stack. Hub owns room state via `call_*` ops on the Cline hub writer. WebRTC, recruit ranking, and RosterPack runtime are not implemented.
+Click-through surfaces for the Drive / Drivecode stack. Hub owns room state via `call_*` ops on the Cline hub writer. WebRTC is not implemented. Recruit scoring (`scoreNeed`) and RosterPack hub seat path exist; pack library UI and general Add→Recruit are still open.
 
 ## Surfaces
 

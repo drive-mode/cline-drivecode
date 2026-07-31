@@ -23,12 +23,12 @@ Canonical architecture plan for **demo share** and **multi-agent router**.
 
 ## Implementation status
 
-Reconciled against `main` via [PR #39](https://github.com/hhalperin/cline-drivecode/pull/39) (`docs/reconcile-drive-plans`): phases 1–8 and 10 in [PLAN.md](PLAN.md#phases-revised) are partial; phase 9 is not started; no phase is yet evidenced complete.
+Reconciled against `main` via [PR #39](https://github.com/hhalperin/cline-drivecode/pull/39) (`docs/reconcile-drive-plans`): phases 1–8 and 10 in [PLAN.md](PLAN.md#phases-revised) are partial; phase 9 is not started. Post-#58/#80, show-backlog director (phase cluster via #55) and several share/room slices are evidenced landed — see feature `Implementation status` banners and [REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md).
 
 **Landed (partial).** Schemas, pure ranking/routing policy, manual Hub Spotlight and audio-flag ops, Mermaid producer, sticky stage, fraction-routing API scaffolding. ChatForkLifecycle schemas + pure policy + hub `drive.fork.*` (claim/promote/cancel/audit/tick) + Workers audit UI + `?demoChatFork=1` demo ([ARD-0014](../../ard/ARD-0014-chat-fork-lifecycle.md)).
 
 **Show backlog director.** Slices 1–7 + S **Done on main** (merged #55). Treat [show-backlog-director/](../show-backlog-director/) as reference, not a greenfield backlog. Cline skills: `diagram-first` (nest), `diagram-show` (stage). See [overview.md](../show-backlog-director/overview.md).
 
-**Remaining (share/router).** Typed and operational A2A delivery polish, continuous seated director agents (deferred until heuristic planner exits), composer router preview/confirmation, voice-slot roster UI, optional seats and fraction routing, upstream license pass, production Spotlight Gaps A/B/C smokes. The simulated share-screen and ChatFork demos demonstrate interaction but do not satisfy the full production pipeline gate.
+**Remaining (share/router).** Typed and operational A2A delivery polish, continuous seated director agents (deferred until heuristic planner exits), composer router preview/confirmation, voice-slot roster UI, optional seats and fraction routing, upstream license pass, production Spotlight Gaps B/C smokes (Gap A / `call_join` closed). The simulated share-screen and ChatFork demos demonstrate interaction but do not satisfy the full production pipeline gate.
 
 **Remaining (chat forks).** Real worktree isolation for overlapping edits ([DRV-ISOLATION](../../features/DRV-ISOLATION.md)); wave `runTask` binding; richer agent-stream TranscriptFocus (fork audit pane ships now).

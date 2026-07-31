@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
+## Implementation status
+
+Drive home tab shipped. Discord channels IA still wireframe.
+
 ## Problem / user value
 
 Drive needs a home that feels like Discord voice inside Slack chrome, not only a Join control on Chat. One left-nav Drive activity lists text channels (optional later) and call rooms. Opening a room is the primary join path. Chat Join call remains a shortcut into the active room (DRV-TOGGLE).

@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ **Landed (W3.2)**. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-value-proof-digest](../initiatives/session-satisfaction-moments/req-value-proof-digest.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Task-as-unit is the honest alternative to token narratives, but users cannot export “what Drive shipped.” Explicitly export a local digest of sessions → tasks completed → plans drained for personal or lead review.

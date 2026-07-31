@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Privacy: [ARD-0004](../ard/ARD-0004-gated-learn-privacy.md). Companion research: [16](../research/16-task-as-unit-models.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 When users cannot complete tasks in Drive, the system should help **next** sessions plan better — without silently rewriting memory or plans from transcripts. Structured session diagnosis → planning-skill / plan proposals → human accept.

@@ -1,19 +1,21 @@
 # Leadership brief · Drivecode planning wave
 
+> **Status note (2026-07-30).** ARD-0000…0014 + DEC bundle are **Accepted** (2026-07-29 `accept all`; ARD-0014 on main). The three “load-bearing forks” below are **closed**. Treat this brief as the planning-wave record; current as-is is [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) §13.0 and nest [HANDOFF.md](../../../HANDOFF.md).
+
 **Role lens.** Software engineering lead + product manager.
 **Purpose.** Close contradictions, force decisions, freeze Phase 0 entry, and leave implementers a single source of truth.
-**Date.** 2026-07-25.
+**Date.** 2026-07-25 (wave); status note 2026-07-30.
 **Builds on.** Draft PRs [#1](https://github.com/hhalperin/cline-drivecode/pull/1) / [#2](https://github.com/hhalperin/cline-drivecode/pull/2) and review [#3](https://github.com/hhalperin/cline-drivecode/pull/3).
 
 ## Executive summary
 
-Drivecode’s planning set is strong on **call IA, privacy posture, RosterPack naming, and facet/lane mechanics**. It is not yet ready for schema freeze because three load-bearing forks still disagree across docs:
+Drivecode’s planning set is strong on **call IA, privacy posture, RosterPack naming, and facet/lane mechanics**. At wave time it was not ready for schema freeze because three load-bearing forks disagreed across docs (**since closed** — see status note):
 
-1. **Agent source of truth** — vision says appearance-only over `.cline/agents`; PRD 6 / ARD-0001 introduce `.driveagent/` homes that compile into the runtime.
-2. **Package location** — SDK plan locks `@cline/drive` in-monorepo; repo handoff still treats location as open.
-3. **TASK-GRAPH lag** — participant sheet / Driveagent home / graph / recruit appear in the feature table but not in phase gates, so runbook agents will skip them.
+1. **Agent source of truth** — ~~vision vs PRD~~ → **Accepted** [DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md): author in `.driveagent/`; compile into host.
+2. **Package location** — ~~handoff open~~ → **Accepted** [DEC-package-location](../decisions/DEC-package-location.md): `@cline/drive` in-monorepo.
+3. **TASK-GRAPH lag** — sheet / home / graph / recruit placement still has one unchecked box on [CHECKLIST-phase0-entry](CHECKLIST-phase0-entry.md); features exist in the table.
 
-This wave recommends **defaults**, records them as decisions, patches the contradictory docs, and adds the missing product/architecture artifacts (`DRV-GATES`, `DRV-ISOLATION`, success metrics, hub ops catalog, phase-0 entry checklist).
+This wave recommended **defaults**, recorded them as decisions, patched contradictory docs, and added missing artifacts (`DRV-GATES`, `DRV-ISOLATION`, success metrics, hub ops catalog, phase-0 entry checklist).
 
 ## Product north star (unchanged)
 

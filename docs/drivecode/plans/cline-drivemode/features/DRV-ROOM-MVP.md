@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
+## Implementation status
+
+Hub rooms + `call_*` via harness shipped. Reconnect / degraded UX still open.
+
 ## Problem / user value
 
 "Join a call" needs a thing to join. The room is the domain primitive that makes the MVP honest about its future. One human plus one `pair_partner` agent today, more participants later, same object. The hub owns it as the single writer.

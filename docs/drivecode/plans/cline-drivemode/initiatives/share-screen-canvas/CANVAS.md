@@ -1,4 +1,4 @@
-﻿# Share-screen canvas — companion
+# Share-screen canvas — companion
 
 Explains the interactive canvas at
 [`docs/drivecode/design/canvases/share-screen-canvas.html`](../../../../design/canvases/share-screen-canvas.html).
@@ -13,8 +13,8 @@ A three-layer map of the **share-screen** slice of cline-drivemode (Drive / Driv
 **Spotlight** — the hub wire protocol still calls it `stage`. The hub daemon is the
 single writer of room state; clients mutate through `call_*` ops and receive
 `room.snapshot` broadcasts. The canvas lays out nodes grouped by three layers, draws
-**plan → code** and **doc → code** edges, and marks the three gaps that keep the live
-loop from running.
+**plan → code** and **doc → code** edges, and marks the remaining gaps that keep the live
+loop from running (Gap A / `call_join` is closed).
 
 Interactions: click any node to trace its edges and neighbors; click a legend chip to
 filter by maturity; click a gap card (or an index row) to jump to and focus a node.
@@ -25,7 +25,7 @@ filter by maturity; click a gap card (or an index row) to jump to and focus a no
 |---|---|---|
 | **1 · Plans & vision** | What share-screen *should* be — vision, MVP slices, the share-and-router master plan, Spotlight/A2A, demo-share, feature specs | The plan is ahead of the code |
 | **2 · Product documentation** | What is shipped and how to run it, cited to code — the drivecode reference, the demo runbook, architecture, the overview canvas + brand tokens, demo flags | Shippable / accurate today |
-| **3 · Code & current status** | Schemas → pure policies → hub handlers → webview, color-coded by maturity | Foundation solid; the webview wire is the gap |
+| **3 · Code & current status** | Schemas → pure policies → hub handlers → webview, color-coded by maturity | Foundation solid; Gaps B/C remain (Spotlight mount + human pin) |
 
 ## Maturity legend
 
@@ -37,18 +37,17 @@ Every node is color-coded by one of five levels:
 - **planned** — specified in a plan, with little or no code yet.
 - **gap** — the specific missing wire that breaks the live share-screen loop.
 
-## The three highlighted gaps
+## The highlighted gaps
 
-The highest-leverage share-screen work. All three live in the hub webview; the hub
-*receive* side (`drive-room-handlers.ts`) and the wire frames
-(`webview-protocol.ts`) already exist — the webview simply never calls them.
+Highest-leverage share-screen work in the hub webview. Hub *receive* side
+(`drive-room-handlers.ts`) and wire frames (`webview-protocol.ts`) already exist.
 
-- **Gap A — Chat "Join call" does not post `call_join`.** `Chat.tsx` drives local Drive
-  UI state (via `useDriveSession`) on Join; it never sends the `call_join` frame, so no
-  hub room is created and no `room.snapshot` is shared.
+- **Gap A — Chat "Join call" / `call_join` — closed.** Hub Join posts `call_join` and
+  attaches to hub room state (see [DRV-TOGGLE](../../features/DRV-TOGGLE.md)).
 - **Gap B — the canonical `Spotlight.tsx` is built + tested but NOT mounted.** Chat
-  renders `StickyStagePane` (the local Drive layer). `Spotlight.tsx` has a passing
-  branch test (`Spotlight.branch.test.ts`) but zero importers.
+  may still render `StickyStagePane` (the local Drive layer) in some paths.
+  `Spotlight.tsx` has a passing branch test (`Spotlight.branch.test.ts`); confirm
+  Chat importers before treating mount as done.
 - **Gap C — human pin → `call_set_stage` is unwired.** `pinDefaults.ts`
   (`buildHumanPinDefaults`) builds selection / file / terminal pins, but "Spotlight me"
   never emits `call_set_stage`, so the hub never owns the human sharer pointer.
@@ -111,9 +110,9 @@ The highest-leverage share-screen work. All three live in the hub webview; the h
 - [`apps/cline-hub/src/webview/src/drive/Spotlight.branch.test.ts`](../../../../../../apps/cline-hub/src/webview/src/drive/Spotlight.branch.test.ts) — passing branch test for the canonical Spotlight.
 - [`apps/cline-hub/src/webview/src/drive/StickyStagePane.tsx`](../../../../../../apps/cline-hub/src/webview/src/drive/StickyStagePane.tsx) — the local Drive layer Chat renders today.
 - [`apps/cline-hub/src/webview/src/drive/DriveCallChrome.tsx`](../../../../../../apps/cline-hub/src/webview/src/drive/DriveCallChrome.tsx) — Chat Join / stage-on-off / call strip chrome.
-- [`apps/cline-hub/src/webview/src/drive/useDriveSession.ts`](../../../../../../apps/cline-hub/src/webview/src/drive/useDriveSession.ts) — local session state (bank + fixture + persisted UI); never posts `call_join`.
+- [`apps/cline-hub/src/webview/src/drive/useDriveSession.ts`](../../../../../../apps/cline-hub/src/webview/src/drive/useDriveSession.ts) — local session state (bank + fixture + persisted UI); Join path also posts hub `call_join` (Gap A closed).
 - [`apps/cline-hub/src/webview/src/drive/demoFixture.ts`](../../../../../../apps/cline-hub/src/webview/src/drive/demoFixture.ts) — `DRIVE_DEMO_FIXTURE` offline demo cards.
-- [`apps/cline-hub/src/webview/src/Chat.tsx`](../../../../../../apps/cline-hub/src/webview/src/Chat.tsx) — **Gap A**: main in-call surface; Join does not post `call_join`; imports `StickyStagePane`, not `Spotlight`.
+- [`apps/cline-hub/src/webview/src/Chat.tsx`](../../../../../../apps/cline-hub/src/webview/src/Chat.tsx) — main in-call surface; Hub Join wired (`call_join`); Spotlight mount vs `StickyStagePane` remains Gap B.
 - [`apps/cline-hub/src/webview/src/drive/pinDefaults.ts`](../../../../../../apps/cline-hub/src/webview/src/drive/pinDefaults.ts) — **Gap C**: `buildHumanPinDefaults`; pin never wired to `call_set_stage`.
 - [`apps/cline-hub/src/webview/src/components/views/drive-view.tsx`](../../../../../../apps/cline-hub/src/webview/src/components/views/drive-view.tsx) — shipped Drive sidebar tab home.
 

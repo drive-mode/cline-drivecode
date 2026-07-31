@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Spans phase 1 (posture) and phase 2 (now/next) in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 9](../prd/prd-task-bank-drive-loop.md). Decision: [ARD-0008](../ard/ARD-0008-task-bank.md).
 
+## Implementation status
+
+Bank store + hub bank handlers + satisfaction spine shipped. Editor residuals still open.
+
 ## Problem / user value
 
 Drive needs a steady bank of work. Tasks are durable and implementable. Plans are editable indexes of task refs. Posture becomes Plan or Agent from bank state so the user stops switching modes for routine multi-step work.

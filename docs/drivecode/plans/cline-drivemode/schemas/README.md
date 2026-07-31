@@ -34,7 +34,7 @@
 | From | To | Rule |
 |---|---|---|
 | `.cline/agents/*.yaml` | `.driveagent/<slug>/` | Import once; `configured` AgentRef migration-only (`id`, not legacy `name`) |
-| Chat-local Drive React state | Hub room snapshot | Phase 1 replaces scaffold as authority |
+| Chat-local Drive React state | Hub room snapshot | **Done** — hub `RoomSnapshot` + `reduceRoom` is authority |
 | Wireframe A Chat-header-only | Drive tab route | Tab is primary |
 
 ## Compile contract (homes)

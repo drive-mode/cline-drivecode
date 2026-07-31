@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-leave-end-return](../initiatives/session-satisfaction-moments/req-leave-end-return.md). Amends: [DRV-LEAVE-END](DRV-LEAVE-END.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Leave/End today are ops. Satisfaction needs a return loop: structured handoff, while-away continuity, and a resume CTA. Leave safely knowing work continues; End with a factual packet; rejoin and continue the plan in one action.

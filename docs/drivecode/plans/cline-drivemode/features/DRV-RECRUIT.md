@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2–4 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0003](../ard/ARD-0003-recruit-and-roster-pack.md).
 
+## Implementation status
+
+`scoreNeed` + stall `RecruitStallPicker` partial. General Add / Recruit UI still open.
+
 ## Problem / user value
 
 RosterPacks seat known crews. They do not answer “who should review this auth change?” Recruit queries portfolio graphs and returns ranked agents with reasons, optionally suggesting packs whose members cluster on the need. Spoken “add the cybersecurity team” still resolves to a pack display name when the user means a preset; recruit is the open-ended path.

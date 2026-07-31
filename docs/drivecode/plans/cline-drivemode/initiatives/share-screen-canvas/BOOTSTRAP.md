@@ -24,15 +24,17 @@ A future "simulated-live" track renders Cursor-style screenshot/clip artifacts d
 | Pure policies (`@cline/drive`: `reduceRoom`, `projectStage`, `rankShowBacklog`, narration) | Implemented / partial |
 | Hub handlers (`@cline/core`: `call_join`, `call_set_stage`, `call_record_work`, `drive.*`) | Implemented / partial |
 | Canonical `Spotlight.tsx` webview component | Built + tested but **NOT mounted in Chat** |
-| Hub Chat "Join call" wiring (`call_join` / `call_set_stage` from webview) | **Gap** — Chat behaves as local Drive layer (fixture + task bank + `StickyStagePane`) |
+| Hub Chat "Join call" wiring (`call_join` from webview) | **Closed** — Hub Join posts `call_join` (Gap A); `call_set_stage` / pin still Gap C |
+| Hub Chat stage mount (`Spotlight` vs `StickyStagePane`) | **Gap B** — canonical `Spotlight.tsx` built + tested; mount confirmation still open |
 | Status Hub (`/status`, board / changelog / dependency-map) | Implemented (shippable) |
 | Demo adapters (`@cline/drivecode-demo`) | Status/teams fixtures only — no share-screen fixture yet |
 | CLI TUI Drive | Stub (status-bar "Drive on" toggle only; no Spotlight column) |
 | Demo share (`drive_demo_frame`), narration-in-feed, captions, PiP | Schemas/partial or planned |
 
-The highest-leverage share-screen gap: **Chat Join does not post `call_join`, `Spotlight.tsx` is not
-mounted, and human pin → `call_set_stage` is not wired.** A "live demo" should make the Spotlight
-share-screen loop *visible and runnable* without requiring an LLM credential.
+Gap A (`call_join` from Chat Join) is **closed**. Remaining highest-leverage gaps:
+**`Spotlight.tsx` mount (Gap B)** and **human pin → `call_set_stage` (Gap C).** A "live demo"
+should make the Spotlight share-screen loop *visible and runnable* without requiring an LLM
+credential.
 
 ## Plans & vision docs (read for the canvas)
 

@@ -4,6 +4,10 @@ Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.m
 
 > **Naming.** This feature was drafted as `DRV-TEAM-PACK`. It is `RosterPack` everywhere now. Cline already ships a runtime `Team` (`sdk/packages/shared/src/team/schema.ts`, tools under `sdk/packages/core/src/extensions/tools/team/`) with a lead, teammates, a mailbox, and outcomes. Any Drive identifier containing `Team` collides with it in grep, autocomplete, imports, and support threads. See [06-platform-config.md](../foundation/06-platform-config.md#naming-rosterpack-not-teampack-not-team).
 
+## Implementation status
+
+`expandRosterPack` + hub `call_add` / `call_remove_roster_pack` shipped. Pack library UI still open.
+
 ## Problem / user value
 
 Some work has a shape you reach for repeatedly. A security review wants the same three agents every time. Assembling them one at a time before every call is the friction that makes people not bother. A **RosterPack** is a human-curated list of agent profiles with a name — "Cybersecurity", "Review", "Pair" — that drops into a call in one action.

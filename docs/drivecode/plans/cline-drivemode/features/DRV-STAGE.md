@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
+## Implementation status
+
+`reduceRoom` / Spotlight shipped.
+
 ## Problem / user value
 
 This is the agent screen share made literal. Inside a Drive room (primary on the Drive tab; also reachable via Chat Join), the view splits. Conversation on the left, stage on the right. When the agent holds the stage, it always shows what the partner is doing right now. Current edit as a diff card, running command as a terminal card, test run as a results card. The user stops scrolling the feed to find the work. Bidirectional human share is DRV-SHARE on top of this reducer and pointer.

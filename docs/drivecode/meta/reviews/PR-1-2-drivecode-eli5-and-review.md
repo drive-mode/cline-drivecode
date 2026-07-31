@@ -1,5 +1,7 @@
 # PR #1 & #2 review — Drivecode plans, wireframes, and early UI
 
+> **Historical review (2026-07).** Describes early chrome at PR time. Current as-is: nest [HANDOFF.md](../../HANDOFF.md) and [SYSTEMS-ANALYSIS.md](../plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md) §13.0 — hub rooms / harness / Show / satisfaction are on `main`.
+
 **Audience.** Humans or agents opening these drafts cold.  
 **Sources.** [#1](https://github.com/hhalperin/cline-drivecode/pull/1) · [#2](https://github.com/hhalperin/cline-drivecode/pull/2)  
 **Verdict.** Prefer merging **PR #2**. It is a strict superset of PR #1.

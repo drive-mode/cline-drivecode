@@ -32,7 +32,7 @@ The implementation slices are:
 3. `@cline/drive` package scaffold + policies  
 4. Home/graph schema stubs + compile fixture from `examples/driveagent-pair-partner/`
 
-**Current on branch `cursor/drive-mvp-blockers-d61f`.** Slices (1)–(4) landed: locked `AgentRef`, home/graph schemas + `compileDriveagentHome` fixture, schemas README index, facet no-prompt targets, gates taxonomy enums, Chat `call_join` → hub snapshot + Spotlight mount, and `CLINE_HOST_CAPABILITIES.promptRewrite: false` by default. Formal accept of ARD-0000…0013 + DEC bundle recorded 2026-07-29. Still open for freeze: TASK-GRAPH phase placement sign-off, and hub home ops beyond the ops sketch. Do **not** deepen Chat-local Join-call React state as authority — hub snapshots remain the Phase 1 contract.
+**Current on `main` (post-#58 / #80).** Slices (1)–(4) landed: locked `AgentRef`, home/graph schemas + `compileDriveagentHome` fixture, schemas README index, facet no-prompt targets, gates taxonomy enums, hub `call_join` → snapshot + Spotlight, harness leverage, Show director, and task-satisfaction spine. Formal accept of ARD-0000…0013 + DEC bundle recorded 2026-07-29. Still open for freeze checklist: TASK-GRAPH phase placement sign-off (box above). Hub snapshots remain the room authority — do not treat Chat-local Drive React state as truth.
 
 ## Anti-patterns
 

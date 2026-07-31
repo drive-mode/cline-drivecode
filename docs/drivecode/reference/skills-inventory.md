@@ -23,10 +23,12 @@ slash); rules in `.clinerules` / `AGENTS.md` are always-on.
 | **diagram-show** | `.agents/skills/diagram-show/` (+ `.cline/skills/diagram-show/`) | Drive Show `diagram.*` via `SHOW_TEMPLATE_KIT` + `drive.show.*`. Fail-closed parse gate. |
 | **publish-cli / publish-desktop / publish-ui** | `.cline/skills/` | Release-only for this monorepo. **Do not** publish to the community catalog. |
 
-## Drive product skills (planned, not shipped)
+## Drive product skills (port pending)
 
-Ported from cursor-drive under [DRV-SKILL-PORT](../plans/cline-drivemode/features/DRV-SKILL-PORT.md)
-and [DRV-SDLC-GUIDE](../plans/cline-drivemode/features/DRV-SDLC-GUIDE.md):
+Cursor-drive ports tracked under [DRV-SKILL-PORT](../plans/cline-drivemode/features/DRV-SKILL-PORT.md)
+and [DRV-SDLC-GUIDE](../plans/cline-drivemode/features/DRV-SDLC-GUIDE.md) — not yet
+shipped as Drive-gated `.agents` / `.cline` skills (diagram skills above already
+ship in-repo):
 
 - `drive-persona`
 - `drive-modes`

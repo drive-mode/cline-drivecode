@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-clean-drain-ritual](../initiatives/session-satisfaction-moments/req-clean-drain-ritual.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 E1 (post-success continue) is the preferred engagement proxy but has no product moment. NowNext collapsing on archive can feel like failure. When a plan finishes cleanly, the user is acknowledged and gently invited to set the next goal — without pressure.

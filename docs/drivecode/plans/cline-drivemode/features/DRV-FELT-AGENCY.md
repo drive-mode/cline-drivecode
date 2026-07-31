@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-felt-agency](../initiatives/session-satisfaction-moments/req-felt-agency.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 North star includes “control over the plan,” but steer, interrupt, and plan edit often leave NowNext/Spotlight visually unchanged. After the user steers, interrupts, or edits, they must see the consequence on the cursor and stage.

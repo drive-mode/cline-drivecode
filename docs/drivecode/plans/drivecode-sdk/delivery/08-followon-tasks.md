@@ -1,9 +1,11 @@
 # Follow-on task plan — after Phase-2 helpers (PR #58)
 
+> **Historical / Done.** F1–F3 landed on merged [#58](https://github.com/hhalperin/cline-drivecode/pull/58). Pack library UI remains out of scope. Prefer nest [HANDOFF.md](../../../HANDOFF.md) and [06-sdk-leverage.md](06-sdk-leverage.md).
+
 Back to [06-sdk-leverage.md](06-sdk-leverage.md). Handoff: [07-agent-handoff.md](07-agent-handoff.md).
 
 **Date:** 2026-07-30  
-**Branch:** `cursor/drive-harness-remaining-1929`  
+**Branch:** `cursor/drive-harness-remaining-1929` (merged)  
 **Scope:** harness + hub product path only. No webview pack library UI, no `/pack` slash, no Team CI guard.
 
 ---
@@ -31,9 +33,9 @@ Back to [06-sdk-leverage.md](06-sdk-leverage.md). Handoff: [07-agent-handoff.md]
 
 ## Slice F1 — Durable registry IO + hub add-pack wire
 
-### Problem
+### Problem (was)
 
-`resolveRosterPack` is required by harness `addRosterPack`, but `getHubDriveHarness` does not inject it. There is no `registry.v1.json` reader. Product cannot seat packs through the hub.
+`resolveRosterPack` was required by harness `addRosterPack`, but `getHubDriveHarness` did not inject it. **Resolved on main** — hub can seat packs; library UI still open.
 
 ### Tasks
 

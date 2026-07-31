@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Decision: [ARD-0015](../ard/ARD-0015-task-session-observability.md). Depends on [DRV-LEAVE-END](DRV-LEAVE-END.md), [DRV-EVENTS](DRV-EVENTS.md), [DRV-PRIVACY](DRV-PRIVACY.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Without a stable call-session identity, join/leave timestamps and bank task completions cannot be correlated. Duration and “tasks per call” stay guesswork.

@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Mid-call task failure without a recovery path causes abandon. Post-session plan-improve is too late for this session’s retention. When Now sticks, the user chooses a clear recovery path without leaving Drive.

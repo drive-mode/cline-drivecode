@@ -17,7 +17,7 @@ Finish **product leverage of `@cline/drive`** so hub/webview/CLI stop reimplemen
 
 Do **not** reopen Show backlog product design (slices 1–7 + S are done on main). Do **not** dump `@cline/drive` into `@cline/sdk` root.
 
-**Next ordered slices on PR #58:**
+**Landed ordered slices on merged PR #58:**
 
 1. ~~Hub `call_join` / raise-hand via harness~~ — **done**
 2. ~~Thin `drive.show.*`~~ — **done**

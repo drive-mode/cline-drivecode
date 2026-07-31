@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 1 in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
 
+## Implementation status
+
+Hub Join wired. CLI still local `driveActive` only.
+
 ## Problem / user value
 
 Users already live in Chat. A Join call control there should drop them into the active Drive room without hunting the left nav. The **Drive tab** is the primary home for rooms (DRV-DRIVE-TAB). This feature is the shortcut façade made visible on Chat, not a second call product.

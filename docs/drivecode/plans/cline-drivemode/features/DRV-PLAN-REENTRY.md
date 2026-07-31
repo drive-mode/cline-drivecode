@@ -2,6 +2,10 @@
 
 Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-cross-day-return](../initiatives/session-satisfaction-moments/req-cross-day-return.md).
 
+## Implementation status
+
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+
 ## Problem / user value
 
 Rooms persist, but Drive tab does not surface unfinished plans. Users who leave mid-plan are unlikely to return if re-entry is “empty call” only. Open Drive tab and pick up an unfinished plan with one glance and one click.

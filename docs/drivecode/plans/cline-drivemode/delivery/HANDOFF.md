@@ -53,15 +53,16 @@ Out of scope for the next “continue implementation” slice unless Harrison sa
 | [`CLINE-BRAND-TOKENS.md`](../../../design/brand/CLINE-BRAND-TOKENS.md) | Measured from cline.bot |
 | [`index.html`](../../../design/wireframes/index.html) | Historical A/B/C variants (superseded banner) |
 
-### Partial implementation (early chrome only)
+### Implementation note (historical snapshot)
 
-| Path | What |
+At handoff time (2026-07-25) only early chrome existed. **On current `main` that gap is closed** — hub rooms, harness, Show director, Status Hub, and satisfaction spine are shipped (see nest HANDOFF §13.0). The table below is archive inventory only:
+
+| Path | What (then) |
 |---|---|
-| `apps/cline-hub/src/webview/src/drive/` | `types.ts`, `DriveCallChrome.tsx`, tests |
-| `apps/cline-hub/src/webview/src/Chat.tsx` | Wires Drive UI state / persona hint / stage snippet |
-| `apps/cli/src/tui/...` | Status bar Drive fields, Ctrl+Shift+D toggle, help entry |
+| `apps/cline-hub/src/webview/src/drive/` | Early `DriveCallChrome` / types |
+| `apps/cli/src/tui/...` | Status bar Drive toggle |
 
-**Not done.** Full hub room single-writer for Drive rooms, `.driveagent/` loader, recruit, participant sheet, RosterPack seating. Topology + BYOK provider harness are specified in [07-runtime-topology.md](../foundation/07-runtime-topology.md), [08-provider-harness.md](../foundation/08-provider-harness.md), [ARD-0009](../ard/ARD-0009-runtime-topology-local-cloud.md), [ARD-0010](../ard/ARD-0010-provider-harness-byok.md); kernel files under `sdk/packages/drive` already include mode/loop/events/bank slices.
+**Still open today (not “not done” for rooms):** pack library UI, recruit Add path, DRV-GATES feed UI, CLI `call_join` parity, Discord channels IA.
 
 ### Outside this repo (do not expect in the PR tree)
 
@@ -91,17 +92,19 @@ Agent SoT and package location are **Accepted** (compile-from-`.driveagent/`; `@
 
 ## Suggested next slices
 
-1. Clear remaining [CHECKLIST-phase0-entry.md](../leadership/CHECKLIST-phase0-entry.md) items (TASK-GRAPH phase placement).
-2. Phase 0: `@cline/shared` Drive event + home/graph schemas; no-prompt assertion tests; `@cline/drive` scaffold + host port stub.
-3. Phase 1: hub ops stub + Drive tab shell (replace webview-local-only state) + participant sheet chooser + gates feed-card MVP.
-4. Wire example `examples/driveagent-pair-partner/` into a fixture test for compile.
-5. Keep drivecode-sdk plan as the meta-harness track; see [../drivecode-sdk/05-alignment-with-driveagent.md](../../drivecode-sdk/foundation/05-alignment-with-driveagent.md).
+> **Superseded.** Prefer nest [HANDOFF.md](../../../HANDOFF.md) top gaps and [REMAINING-task-satisfaction.md](REMAINING-task-satisfaction.md). Phase 0 schemas / hub rooms / harness are already on `main`.
+
+Historical planning list (do not execute as greenfield):
+
+1. Clear remaining [CHECKLIST-phase0-entry.md](../leadership/CHECKLIST-phase0-entry.md) TASK-GRAPH placement checkbox.
+2. ~~Phase 0 schemas + `@cline/drive`~~ — Done
+3. Product gaps: GATES feed UI, recruit Add, pack library, reconnect UX
+4. Satisfaction residuals in REMAINING
 
 ## How to resume
 
 ```text
-Read: docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md
-Then:  SYSTEMS-ANALYSIS.md → HANDOFF.md → ard/ARD-0000-status-board.md → CHECKLIST-phase0-entry.md
-Then:  prd/prd-driveagent-portfolio.md → features/DRV-DRIVEAGENT-HOME.md
-Smoke: open docs/drivecode/design/wireframes/drive-tab-discord-slack.html in a browser
+Read: docs/drivecode/HANDOFF.md
+Then:  leadership/SYSTEMS-ANALYSIS.md §13.0 → delivery/REMAINING-task-satisfaction.md
+Then:  ard/ARD-0000-status-board.md
 ```
