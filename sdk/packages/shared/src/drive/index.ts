@@ -107,6 +107,7 @@ export {
 export {
 	assertNeverDriveEvent,
 	ControlAddressEventSchema,
+	ControlEndEventSchema,
 	ControlJoinEventSchema,
 	ControlLeaveEventSchema,
 	ControlModeEventSchema,

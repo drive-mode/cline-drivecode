@@ -53,8 +53,18 @@ export class DriveRoomStore {
 
 	private eventLog: RoomEventLog | undefined;
 	private readonly seqByRoom = new Map<string, number>();
-	/** Active call session per room (DRV-CALL-SESSION). */
+	/**
+	 * Active call session per room (DRV-CALL-SESSION).
+	 *
+	 * Lifecycle: join mints a callSessionId when none is open; leave that
+	 * removes the last human closes the session (writes durationMs on
+	 * control.leave) and deletes the map entry; rejoin after leave mints a
+	 * **new** id so leave→rejoin does not inflate duration. End likewise
+	 * closes with durationMs on control.end.
+	 */
 	private readonly callSessions = new Map<string, CallSessionState>();
+	/** Rooms closed via end() — second end is a no-op (DRV-LEAVE-END). */
+	private readonly endedByRoom = new Map<string, RoomCommitResult>();
 	private readonly appliedEventIds = new Set<string>();
 
 	attachEventLog(log: RoomEventLog): void {
@@ -205,6 +215,7 @@ export class DriveRoomStore {
 		}
 		this.create(roomId, first.event.at);
 		let snapshot = this.getOrThrow(roomId);
+		let lastEnd: RoomCommitResult | undefined;
 		for (const record of records) {
 			if (this.appliedEventIds.has(record.event.id)) {
 				continue;
@@ -213,6 +224,17 @@ export class DriveRoomStore {
 			this.rooms.set(roomId, snapshot);
 			this.appliedEventIds.add(record.event.id);
 			this.seqByRoom.set(roomId, record.seq);
+			if (record.event.type === "control.end") {
+				lastEnd = {
+					snapshot,
+					event: record.event,
+					seq: record.seq,
+				};
+			}
+		}
+		if (lastEnd) {
+			this.endedByRoom.set(roomId, lastEnd);
+			this.callSessions.delete(roomId);
 		}
 		this.syncLiveFromSnapshot(snapshot);
 		return snapshot;
@@ -234,6 +256,7 @@ export class DriveRoomStore {
 		}
 		this.create(roomId, first.event.at);
 		let snapshot = this.getOrThrow(roomId);
+		let lastEnd: RoomCommitResult | undefined;
 		for (const record of records) {
 			if (this.appliedEventIds.has(record.event.id)) {
 				continue;
@@ -242,6 +265,17 @@ export class DriveRoomStore {
 			this.rooms.set(roomId, snapshot);
 			this.appliedEventIds.add(record.event.id);
 			this.seqByRoom.set(roomId, record.seq);
+			if (record.event.type === "control.end") {
+				lastEnd = {
+					snapshot,
+					event: record.event,
+					seq: record.seq,
+				};
+			}
+		}
+		if (lastEnd) {
+			this.endedByRoom.set(roomId, lastEnd);
+			this.callSessions.delete(roomId);
 		}
 		this.syncLiveFromSnapshot(snapshot);
 		return snapshot;
@@ -299,6 +333,8 @@ export class DriveRoomStore {
 		sessionId?: string;
 	}): RoomCommitResult {
 		this.create(input.roomId, input.at);
+		// Re-opening a previously ended room allows a fresh end later.
+		this.endedByRoom.delete(input.roomId);
 		if (input.sessionId) {
 			this.linkSession(input.sessionId, input.roomId);
 		}
@@ -365,6 +401,55 @@ export class DriveRoomStore {
 			this.callSessions.delete(input.roomId);
 		}
 		return result;
+	}
+
+	/**
+	 * End the Drive session: close roster + driveActive after callers publish
+	 * Tier-0 handoff narration. Idempotent — double-end returns the prior
+	 * control.end commit without appending again (DRV-LEAVE-END).
+	 *
+	 * Unlike leave, end clears all participants and sets driveActive false.
+	 * Call-session duration closes here (same leave→rejoin mint rules).
+	 */
+	end(input: {
+		roomId: string;
+		actorId?: string;
+		reason?: string;
+		at?: string;
+	}): RoomCommitResult {
+		const prior = this.endedByRoom.get(input.roomId);
+		if (prior) {
+			return prior;
+		}
+		const at = input.at ?? nowIso();
+		this.create(input.roomId, at);
+		const session = this.callSessions.get(input.roomId);
+		const result = this.commit({
+			schemaVersion: 1,
+			id: newEventId("end"),
+			roomId: input.roomId,
+			at,
+			actorId: input.actorId,
+			callSessionId: session?.callSessionId,
+			type: "control.end",
+			track: "control",
+			reason: input.reason,
+			...(session
+				? {
+						durationMs: durationMsBetween(session.startedAt, at),
+					}
+				: {}),
+		});
+		if (session) {
+			this.callSessions.delete(input.roomId);
+		}
+		this.endedByRoom.set(input.roomId, result);
+		return result;
+	}
+
+	/** True after a successful end() until the next join reopens the room. */
+	isEnded(roomId: string): boolean {
+		return this.endedByRoom.has(roomId);
 	}
 
 	mute(input: {

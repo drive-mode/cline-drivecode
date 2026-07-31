@@ -116,10 +116,12 @@ describe("DriveEvent schemas", () => {
 			switch (e.type) {
 				case "control.join":
 				case "control.leave":
+				case "control.end":
 				case "control.mute":
 				case "control.stage":
 				case "control.mode":
 				case "control.raise_hand":
+				case "control.rename":
 				case "control.address":
 					return "control";
 				case "conversation.message":

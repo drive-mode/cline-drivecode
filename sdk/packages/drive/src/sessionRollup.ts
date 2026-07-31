@@ -57,22 +57,26 @@ export function deriveSessionRollup(
 	);
 
 	const join = roomEvents.find((event) => event.type === "control.join");
-	const leave = [...roomEvents]
+	const close = [...roomEvents]
 		.reverse()
 		.find(
 			(event) =>
-				event.type === "control.leave" &&
+				(event.type === "control.leave" || event.type === "control.end") &&
 				typeof event.durationMs === "number",
 		);
 	const roomId =
-		join?.roomId ?? leave?.roomId ?? bankEvents[0]?.roomId ?? null;
+		join?.roomId ?? close?.roomId ?? bankEvents[0]?.roomId ?? null;
 
 	let durationMs: number | null = null;
-	if (leave && leave.type === "control.leave" && leave.durationMs != null) {
-		durationMs = leave.durationMs;
-	} else if (join && leave) {
+	if (
+		close &&
+		(close.type === "control.leave" || close.type === "control.end") &&
+		close.durationMs != null
+	) {
+		durationMs = close.durationMs;
+	} else if (join && close) {
 		const start = Date.parse(join.at);
-		const end = Date.parse(leave.at);
+		const end = Date.parse(close.at);
 		if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
 			durationMs = end - start;
 		}

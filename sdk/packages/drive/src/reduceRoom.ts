@@ -130,6 +130,18 @@ export function reduceRoom(
 					(p) => p.id !== event.participantId,
 				),
 			};
+		case "control.end":
+			return {
+				...base,
+				participants: [],
+				driveActive: false,
+				stage: {
+					...base.stage,
+					sharer: null,
+					pin: null,
+				},
+				raisedHandByParticipantId: {},
+			};
 		case "control.mute":
 			return {
 				...base,

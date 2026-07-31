@@ -225,6 +225,7 @@ export default function Chat({
 		driveVoiceResolved,
 		joinDrive,
 		leaveDrive,
+		endDrive,
 		refreshDriveRoom,
 		toggleStage,
 		presentedShow,
@@ -1200,6 +1201,7 @@ export default function Chat({
 							connectionPhase={connectionPhase}
 							disabled={isHydrating}
 							drive={drive}
+							onEndDrive={endDrive}
 							onJoinDrive={joinDrive}
 							onLeaveDrive={leaveDrive}
 							onToggleSpotlight={toggleStage}

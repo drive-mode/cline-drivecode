@@ -471,6 +471,7 @@ export class HubServerTransport implements NativeHubTransport {
 				return await handleDriveHomeCommand(this.ctx, envelope);
 			case "call_join":
 			case "call_leave":
+			case "call_end":
 			case "call_mute":
 			case "call_raise_hand":
 			case "call_rename_participant":

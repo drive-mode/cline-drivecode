@@ -56,6 +56,18 @@ export const ControlLeaveEventSchema = DriveEventBaseSchema.extend({
 	durationMs: z.number().int().nonnegative().optional(),
 }).strict();
 
+/**
+ * Session end (DRV-LEAVE-END / DRV-RETURN-LOOP). Distinct from leave:
+ * leave persists the room; end closes after Tier-0 handoff narration.
+ */
+export const ControlEndEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.end"),
+	track: z.literal("control"),
+	reason: z.string().optional(),
+	/** Present when this end closes the measurable call session. */
+	durationMs: z.number().int().nonnegative().optional(),
+}).strict();
+
 export const ControlMuteEventSchema = DriveEventBaseSchema.extend({
 	type: z.literal("control.mute"),
 	track: z.literal("control"),
@@ -185,6 +197,7 @@ export const PresenceStatusEventSchema = DriveEventBaseSchema.extend({
 export const DriveEventSchema = z.discriminatedUnion("type", [
 	ControlJoinEventSchema,
 	ControlLeaveEventSchema,
+	ControlEndEventSchema,
 	ControlMuteEventSchema,
 	ControlStageEventSchema,
 	ControlModeEventSchema,

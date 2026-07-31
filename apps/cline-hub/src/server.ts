@@ -347,6 +347,7 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 					} else if (
 						frame.type === "call_join" ||
 						frame.type === "call_leave" ||
+						frame.type === "call_end" ||
 						frame.type === "call_mute" ||
 						frame.type === "call_raise_hand" ||
 						frame.type === "call_rename_participant" ||

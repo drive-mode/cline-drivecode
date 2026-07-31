@@ -16,7 +16,7 @@ Leave/End today are ops. Satisfaction needs a return loop: structured handoff, w
 
 ## Dependencies
 
-- [DRV-LEAVE-END](DRV-LEAVE-END.md) ops (`call_end` still missing in hub), DRV-TASK-BANK snapshot, [DRV-EVENTS](DRV-EVENTS.md), [DRV-PRIVACY](DRV-PRIVACY.md). Soft: Obs slice 1 session binding.
+- [DRV-LEAVE-END](DRV-LEAVE-END.md) ops (`call_end` landed in hub), DRV-TASK-BANK snapshot, [DRV-EVENTS](DRV-EVENTS.md), [DRV-PRIVACY](DRV-PRIVACY.md). Soft: Obs slice 1 session binding.
 
 ## Surfaces touched
 
@@ -26,18 +26,19 @@ Leave/End today are ops. Satisfaction needs a return loop: structured handoff, w
 
 ## Agent tasks
 
-- [ ] Implement Tier-0 handoff assembly (done / open / resume-next / evidence) from synthetic event history.
+- [x] Implement Tier-0 handoff assembly (done / open / resume-next / evidence) from synthetic event history.
   - Owner package: `@cline/drive`
   - Verify: `bun -F @cline/drive test`
   - Done when: summary names files, outcomes, open items without invention; forbids utterance keys.
-- [ ] Wire End: pause-after-tool → handoff render → close; Leave remains persist-only.
+- [x] Wire End: pause-after-tool → handoff render → close; Leave remains persist-only.
   - Owner package: `@cline/core` + hub
   - Verify: idempotency tests + live smoke leave/rejoin/end
   - Done when: double-end/leave are no-ops; End closes roster, Leave does not.
-- [ ] Rejoin while-away orientation + NowNext cursor; catch-up reuses handoff assembly (not End document).
+- [x] Rejoin while-away orientation + NowNext cursor; catch-up reuses handoff assembly (not End document).
   - Owner package: `@cline/cline-hub`
   - Verify: leave → work → rejoin fixture
   - Done when: one factual since-left line + NowNext oriented.
+- [ ] Resume CTA on End packet → next open task (cross-day Drive tab row owned by [DRV-PLAN-REENTRY](DRV-PLAN-REENTRY.md) / W2.2 — not this slice).
 
 ## Risks
 

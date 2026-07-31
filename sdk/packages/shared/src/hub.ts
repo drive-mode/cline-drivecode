@@ -486,6 +486,7 @@ export type HubCommandName =
 	| "drive_agent_home_get"
 	| "call_join"
 	| "call_leave"
+	| "call_end"
 	| "call_mute"
 	| "call_raise_hand"
 	| "call_rename_participant"

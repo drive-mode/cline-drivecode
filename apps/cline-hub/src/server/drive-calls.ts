@@ -20,6 +20,7 @@ export async function handleCallCommand(
 		type:
 			| "call_join"
 			| "call_leave"
+			| "call_end"
 			| "call_mute"
 			| "call_raise_hand"
 			| "call_rename_participant"
@@ -67,6 +68,14 @@ export async function handleCallCommand(
 			typeof reply.payload?.callSessionId === "string"
 				? reply.payload.callSessionId
 				: undefined;
+		const whileAwayNote =
+			typeof reply.payload?.whileAwayNote === "string"
+				? reply.payload.whileAwayNote
+				: undefined;
+		const handoffNarration =
+			typeof reply.payload?.handoffNarration === "string"
+				? reply.payload.handoffNarration
+				: undefined;
 		if (snapshot && roomId) {
 			ctx.send(peer, {
 				type: "room_snapshot",
@@ -74,6 +83,8 @@ export async function handleCallCommand(
 				snapshot,
 				...(seq !== undefined ? { seq } : {}),
 				...(callSessionId ? { callSessionId } : {}),
+				...(whileAwayNote ? { whileAwayNote } : {}),
+				...(handoffNarration ? { handoffNarration } : {}),
 			});
 		}
 	} catch (error) {

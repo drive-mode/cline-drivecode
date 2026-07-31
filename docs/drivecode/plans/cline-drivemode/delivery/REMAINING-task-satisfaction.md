@@ -159,7 +159,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 | ID | Component | Req | Key remaining work |
 |---|---|---|---|
 | W1.1 | [DRV-FELT-AGENCY](../features/DRV-FELT-AGENCY.md) | [req-felt-agency](../initiatives/session-satisfaction-moments/req-felt-agency.md) | **Landed (partial):** agency interrupt chrome (finishing/paused); PlanEditor → BankSnapshot consequence banner; recovery vs collaborative add (`nowLastFailure`); mid-turn send → steer pending prompts + Composer chip + “Steer applied”. **Still open:** interrupt redirect Now rewrite announce (W-13); optional plan-ref `source` facet; Spotlight delta beyond NowNext/agency banner |
-| W1.2 | [DRV-RETURN-LOOP](../features/DRV-RETURN-LOOP.md) | [req-leave-end-return](../initiatives/session-satisfaction-moments/req-leave-end-return.md) | Implement `call_end`; pure `handoff.ts` Tier-0 packet; End narration; rejoin “since you left” line; resume CTA contract with Plan-reentry |
+| W1.2 | [DRV-RETURN-LOOP](../features/DRV-RETURN-LOOP.md) | [req-leave-end-return](../initiatives/session-satisfaction-moments/req-leave-end-return.md) | **Landed (partial):** `call_end` + `control.end`; pure `handoff.ts` Tier-0 packet; End narration; rejoin “since you left” line; Leave≠End chrome. **Still open:** End→next-task resume CTA / Drive tab row (W2.2 PLAN-REENTRY) |
 | W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | Spotlight fork after `recordTaskFailure`; gated narrow / fix-up / recruit / pause(Ask); hub failure path from 2.1 |
 
 **W1 honesty deps:** 2.1 bank bridge; interrupt/steer/now-next already partially shipped.
@@ -210,7 +210,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 | Accept-queue unification (`kind`: learn / planning / recovery) | Default: reuse | Spec schema once for all three |
 | TASK-GRAPH indexing | Satisfaction DRVs not in phase gates yet | Add Phase 2+ optional gate note when W1 starts |
 | CLI Drive join/leave parity | CLI chrome often local-only | Required if CLI counts toward metrics ([DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md)) |
-| `call_end` still missing from hub command union | Open | Owned by W1.2 / DRV-LEAVE-END |
+| `call_end` still missing from hub command union | Done (W1.2) | `HubCommandName` + transport + webview + End chrome |
 | History retention caps | Open | Before Status/digest rely on logs |
 
 ---
@@ -220,7 +220,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 ```text
 1. ~~Hub bank bridge (2.1)~~ ✅
 2. ~~W1.1 Felt agency~~ ✅ (chrome + steer path; redirect Now rewrite + plan-ref `source` still open — see §3 W1.1)
-3. W1.2 Return loop (call_end + handoff)
+3. ~~W1.2 Return loop (call_end + handoff)~~ ✅ (resume CTA / Plan-reentry Drive tab still open — see §3 W1.2)
 4. W1.3 Stuck recovery (manual)
 5. Slice 2 UI reader (2.2)
 6. Failure event for P2 (2.3)

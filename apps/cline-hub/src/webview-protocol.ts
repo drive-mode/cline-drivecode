@@ -315,6 +315,13 @@ export type WebviewInboundMessage =
 			reason?: string;
 	  }
 	| {
+			type: "call_end";
+			roomId: string;
+			actorId?: string;
+			reason?: string;
+			workspaceRoot?: string;
+	  }
+	| {
 			type: "call_mute";
 			roomId: string;
 			participantId: string;
@@ -634,6 +641,10 @@ export type WebviewOutboundMessage =
 			seq?: number;
 			/** Active call session when known (join / leave extras). */
 			callSessionId?: string;
+			/** Rejoin catch-up line (DRV-RETURN-LOOP); absent on first join. */
+			whileAwayNote?: string;
+			/** End Tier-0 handoff narration text (DRV-LEAVE-END). */
+			handoffNarration?: string;
 	  }
 	| {
 			type: "drive_event";

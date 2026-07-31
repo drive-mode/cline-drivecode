@@ -32,7 +32,7 @@ Leave/End today are ops. Satisfaction needs a **return loop**: structured handof
 | Evidence | edit paths, command outcomes, decisions |
 | Counts-only summary | durationMs, completes, plan edits (DRV-CALL-SESSION) |
 
-Assembler: planned `sdk/packages/drive/src/handoff.ts` (pure). Carrier: `conversation.narration` and/or structured handoff event.
+Assembler: `sdk/packages/drive/src/handoff.ts` (pure). Carrier: `conversation.narration` and/or structured handoff event.
 
 ## Rejoin UX
 
@@ -54,7 +54,7 @@ Assembler: planned `sdk/packages/drive/src/handoff.ts` (pure). Carrier: `convers
 
 ## Dependencies
 
-- DRV-LEAVE-END ops (`call_end` still missing in hub)
+- DRV-LEAVE-END ops (`call_end` in hub)
 - DRV-TASK-BANK snapshot, DRV-EVENTS, DRV-PRIVACY caps
 - Soft: Obs slice 1 for session binding
 

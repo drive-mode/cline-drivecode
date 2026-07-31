@@ -32,6 +32,7 @@ export function DriveHeaderControls({
 	disabled,
 	onJoinDrive,
 	onLeaveDrive,
+	onEndDrive,
 	onToggleSpotlight,
 }: {
 	connectionPhase: DriveConnectionPhase;
@@ -39,6 +40,8 @@ export function DriveHeaderControls({
 	disabled?: boolean;
 	onJoinDrive: () => void;
 	onLeaveDrive: () => void;
+	/** End closes the session with Tier-0 handoff (distinct from Leave). */
+	onEndDrive?: () => void;
 	onToggleSpotlight: () => void;
 }) {
 	const joining = connectionPhase === "joining";
@@ -92,11 +95,29 @@ export function DriveHeaderControls({
 					</Button>
 				</>
 			) : null}
+			{onCall && onEndDrive ? (
+				<Button
+					aria-label="End Drive call"
+					disabled={disabled}
+					onClick={onEndDrive}
+					size="sm"
+					title="End call with handoff summary (closes the room)"
+					type="button"
+					variant="outline"
+				>
+					End call
+				</Button>
+			) : null}
 			<Button
 				aria-label={joining ? "Cancel joining Drive call" : undefined}
 				disabled={disabled}
 				onClick={onCall || joining ? onLeaveDrive : onJoinDrive}
 				size="sm"
+				title={
+					onCall
+						? "Leave call (work continues; rejoin to catch up)"
+						: undefined
+				}
 				type="button"
 				variant={onCall ? "default" : "outline"}
 			>

@@ -25,17 +25,17 @@ Leaving must feel safe. The user steps away, the room and work persist, and comi
 
 ## Agent tasks
 
-- [ ] Implement `call_end` as an op distinct from `call_leave`, with idempotency tests for both.
+- [x] Implement `call_end` as an op distinct from `call_leave`, with idempotency tests for both.
   - Owner package: `@cline/core`
   - Files likely: `sdk/packages/core/src/hub/collaboration/ops.ts`, `room.test.ts`
   - Verify: `bun -F @cline/core test:unit`
   - Done when: double-invocation tests pass and end tears down the roster while leave does not.
-- [ ] Implement handoff explanation assembly in the kernel. Structured summary from the room's work events (files touched, commands run, plan state, open items).
+- [x] Implement handoff explanation assembly in the kernel. Structured summary from the room's work events (files touched, commands run, plan state, open items).
   - Owner package: `@cline/drive`
   - Files likely: `sdk/packages/drive/src/handoff.ts`, tests
   - Verify: `bun -F @cline/drive test`
   - Done when: given a synthetic event history, the summary names files, outcomes, and open items.
-- [ ] Add leave and end controls to the hub UI and smoke the full loop. Join, do work, leave, re-join, end.
+- [x] Add leave and end controls to the hub UI and smoke the full loop. Join, do work, leave, re-join, end.
   - Owner package: `@cline/cline-hub`
   - Files likely: `apps/cline-hub/src/webview/src/Chat.tsx`
   - Verify: `bun -F @cline/cline-hub test`, then live smoke with `bun -F @cline/cline-hub dev`

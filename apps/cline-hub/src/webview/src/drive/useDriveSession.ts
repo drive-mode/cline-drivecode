@@ -322,6 +322,8 @@ export type UseDriveSessionResult = {
 	workspaceRoot?: string;
 	joinDrive: (roomId?: string) => boolean;
 	leaveDrive: () => void;
+	/** End closes the room after Tier-0 handoff (distinct from leave). */
+	endDrive: () => void;
 	refreshDriveRoom: (roomId?: string) => boolean;
 	toggleDrive: () => void;
 	toggleStage: () => void;
@@ -569,6 +571,31 @@ export function useDriveSession(
 		resetDriveConnection({ note: null, phase: "off" });
 	}, [resetDriveConnection]);
 
+	/**
+	 * End the Drive session (DRV-LEAVE-END / DRV-RETURN-LOOP).
+	 * Distinct from leave: hub assembles Tier-0 handoff, publishes narration,
+	 * then closes the room. Leave only removes the human and persists work.
+	 * Do not clear chrome here — wait for room_snapshot so handoffNarration paints.
+	 */
+	const endDrive = useCallback(() => {
+		const current = driveRef.current;
+		const payload: {
+			type: "call_end";
+			roomId: string;
+			actorId: string;
+			workspaceRoot?: string;
+		} = {
+			type: "call_end",
+			roomId: current.roomId ?? DRIVE_DEFAULT_ROOM_ID,
+			actorId: DRIVE_PARTICIPANT_HUMAN,
+		};
+		const workspaceRoot = workspaceRootRef.current?.trim();
+		if (workspaceRoot) {
+			payload.workspaceRoot = workspaceRoot;
+		}
+		postToHost(payload);
+	}, []);
+
 	const refreshDriveRoom = useCallback(
 		(targetRoomId?: string) => {
 			const explicitlyTargeted = Boolean(targetRoomId?.trim());
@@ -639,7 +666,11 @@ export function useDriveSession(
 	const seedBankAfterJoin = useCallback(
 		async (
 			partnerName: string,
-			correlation?: { roomId?: string | null; callSessionId?: string | null },
+			correlation?: {
+				roomId?: string | null;
+				callSessionId?: string | null;
+				whileAwayNote?: string | null;
+			},
 		) => {
 			const current = driveRef.current;
 			const { snapshot } = await seedBankForJoin(
@@ -669,8 +700,11 @@ export function useDriveSession(
 			if (!driveIntentRef.current) {
 				return;
 			}
+			const whileAway = correlation?.whileAwayNote?.trim();
 			setDriveJoinNote(
-				`On the call. I am ${partnerName}. Share what you want to work on and I will drive.`,
+				whileAway
+					? whileAway
+					: `On the call. I am ${partnerName}. Share what you want to work on and I will drive.`,
 			);
 		},
 		[],
@@ -692,6 +726,8 @@ export function useDriveSession(
 				ownerParticipantId?: string;
 				roomId?: string;
 				callSessionId?: string;
+				whileAwayNote?: string;
+				handoffNarration?: string;
 				snapshot?: RoomSnapshot;
 				event?: DriveEvent;
 				auditHandle?: string;
@@ -867,7 +903,12 @@ export function useDriveSession(
 					failedAttachedSessionIdRef.current = null;
 					connectionPhaseRef.current = "off";
 					setConnectionPhase("off");
-					setDriveJoinNote(null);
+					const handoff =
+						typeof message.handoffNarration === "string" &&
+						message.handoffNarration.trim()
+							? message.handoffNarration.trim()
+							: null;
+					setDriveJoinNote(handoff);
 					setPlanEditorTasks([]);
 				} else {
 					connectionPhaseRef.current = "on";
@@ -907,10 +948,29 @@ export function useDriveSession(
 					const partner =
 						snapshot.participants.find((p) => p.kind === "agent")
 							?.displayName ?? "partner";
+					const whileAwayNote =
+						typeof message.whileAwayNote === "string" &&
+						message.whileAwayNote.trim()
+							? message.whileAwayNote.trim()
+							: null;
 					void seedBankAfterJoin(partner, {
 						roomId: snapshot.roomId,
 						callSessionId: nextCallSessionId,
+						whileAwayNote,
 					});
+				}
+				if (
+					typeof message.handoffNarration === "string" &&
+					message.handoffNarration.trim()
+				) {
+					setDriveJoinNote(message.handoffNarration.trim());
+				}
+				if (
+					message.type === "drive_event" &&
+					message.event?.type === "conversation.narration" &&
+					message.event.text.trim()
+				) {
+					setDriveJoinNote(message.event.text.trim());
 				}
 				return;
 			}
@@ -1019,8 +1079,11 @@ export function useDriveSession(
 		if (!driveJoinNote || !drive.active) {
 			return;
 		}
-		// Only the post-join greeting — ack / error banners stay display-only here.
-		if (!driveJoinNote.startsWith("On the call.")) {
+		// Speak post-join greeting and while-away catch-up; ack / error stay display-only.
+		if (
+			!driveJoinNote.startsWith("On the call.") &&
+			!driveJoinNote.startsWith("Since you left:")
+		) {
 			return;
 		}
 		if (spokenJoinNoteRef.current === driveJoinNote) {
@@ -1286,6 +1349,7 @@ export function useDriveSession(
 		workspaceRoot: args.workspaceRoot,
 		joinDrive,
 		leaveDrive,
+		endDrive,
 		refreshDriveRoom,
 		toggleDrive,
 		toggleStage,

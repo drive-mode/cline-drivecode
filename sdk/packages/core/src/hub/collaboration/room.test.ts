@@ -146,6 +146,63 @@ describe("DriveRoomStore", () => {
 		expect(rejoined.event.callSessionId).not.toBe(sessionId);
 	});
 
+	it("end closes roster and is idempotent; leave persists participants elsewhere", () => {
+		const store = new DriveRoomStore();
+		store.create("room_end", "2026-07-30T12:00:00.000Z");
+		store.join({
+			roomId: "room_end",
+			participant: {
+				id: "you",
+				kind: "human",
+				displayName: "You",
+				role: "host",
+				status: "idle",
+			},
+			at: "2026-07-30T12:00:01.000Z",
+		});
+		store.join({
+			roomId: "room_end",
+			participant: {
+				id: "partner",
+				kind: "agent",
+				displayName: "Partner",
+				role: "partner",
+				status: "idle",
+				seatSources: [],
+			},
+			at: "2026-07-30T12:00:02.000Z",
+		});
+		store.setMode({
+			roomId: "room_end",
+			subMode: "act",
+			driveActive: true,
+			at: "2026-07-30T12:00:03.000Z",
+		});
+
+		const first = store.end({
+			roomId: "room_end",
+			actorId: "you",
+			at: "2026-07-30T12:10:01.000Z",
+		});
+		expect(first.event.type).toBe("control.end");
+		if (first.event.type === "control.end") {
+			expect(first.event.durationMs).toBe(600_000);
+		}
+		const afterEnd = store.getOrThrow("room_end");
+		expect(afterEnd.participants).toHaveLength(0);
+		expect(afterEnd.driveActive).toBe(false);
+		expect(store.getActiveCallSessionId("room_end")).toBeUndefined();
+		expect(store.isEnded("room_end")).toBe(true);
+
+		const second = store.end({
+			roomId: "room_end",
+			actorId: "you",
+			at: "2026-07-30T12:11:00.000Z",
+		});
+		expect(second.event.id).toBe(first.event.id);
+		expect(second.seq).toBe(first.seq);
+	});
+
 	it("syncLiveFromSnapshot always overwrites live spotlight from stage sharer", () => {
 		const store = new DriveRoomStore();
 		store.create("room_sync");

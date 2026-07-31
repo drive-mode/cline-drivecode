@@ -165,6 +165,21 @@ export {
 	type SessionRollup,
 } from "./sessionRollup.js";
 export {
+	assembleHandoffPacket,
+	assertNoForbiddenHandoffKeys,
+	formatHandoffNarration,
+	formatWhileAwayLine,
+	HANDOFF_FORBIDDEN_KEYS,
+	type AssembleHandoffInput,
+	type HandoffCommandEvidence,
+	type HandoffCounts,
+	type HandoffDecisionEvidence,
+	type HandoffDoneItem,
+	type HandoffEvidence,
+	type HandoffOpenItem,
+	type HandoffPacket,
+} from "./handoff.js";
+export {
 	createDrivePlanActivatedEvent,
 	createDrivePlanArchivedEvent,
 	createDrivePlanStepEvent,

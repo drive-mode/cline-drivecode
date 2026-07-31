@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	getDriveRoomStore,
+	MemoryRoomEventLog,
 	resetDriveRoomStoreForTests,
 	shouldDrivePauseAfterTool,
 } from "../../collaboration";
@@ -820,5 +821,123 @@ describe("handleDriveRoomCommand", () => {
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
+	});
+
+	it("call_end publishes Tier-0 handoff narration then closes; double-end is idempotent", async () => {
+		resetDriveRoomStoreForTests();
+		const ctx = makeCtx();
+		const store = getDriveRoomStore();
+		store.attachEventLog(new MemoryRoomEventLog());
+
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "j_end",
+			payload: {
+				roomId: "room_end",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Adam" },
+			},
+		});
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_record_work",
+			requestId: "w_end",
+			payload: {
+				roomId: "room_end",
+				work: { kind: "edit", path: "src/handoff.ts" },
+			},
+		});
+
+		ctx.published.length = 0;
+		const ended = await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_end",
+			requestId: "e1",
+			payload: { roomId: "room_end", actorId: "you" },
+		});
+		expect(ended.ok).toBe(true);
+		expect(ended.payload?.ended).toBe(true);
+		expect(typeof ended.payload?.handoffNarration).toBe("string");
+		expect(String(ended.payload?.handoffNarration)).toContain("Session handoff:");
+		expect(String(ended.payload?.handoffNarration)).toContain("src/handoff.ts");
+		const snap = ended.payload?.snapshot as {
+			participants: unknown[];
+			driveActive: boolean;
+		};
+		expect(snap.participants).toHaveLength(0);
+		expect(snap.driveActive).toBe(false);
+		expect(store.isEnded("room_end")).toBe(true);
+		expect(
+			ctx.published.some((e) => {
+				const payload = (e as { payload?: { event?: { type?: string } } })
+					.payload;
+				return payload?.event?.type === "conversation.narration";
+			}),
+		).toBe(true);
+		expect(
+			ctx.published.some((e) => {
+				const payload = (e as { payload?: { event?: { type?: string } } })
+					.payload;
+				return payload?.event?.type === "control.end";
+			}),
+		).toBe(true);
+
+		const again = await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_end",
+			requestId: "e2",
+			payload: { roomId: "room_end", actorId: "you" },
+		});
+		expect(again.ok).toBe(true);
+		expect(again.payload?.idempotent).toBe(true);
+	});
+
+	it("call_join after leave returns whileAwayNote from catch-up handoff", async () => {
+		resetDriveRoomStoreForTests();
+		const ctx = makeCtx();
+		const store = getDriveRoomStore();
+		store.attachEventLog(new MemoryRoomEventLog());
+
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "j1",
+			payload: {
+				roomId: "room_away",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Adam" },
+			},
+		});
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_leave",
+			requestId: "l1",
+			payload: { roomId: "room_away", participantId: "you" },
+		});
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_record_work",
+			requestId: "w1",
+			payload: {
+				roomId: "room_away",
+				work: { kind: "command", command: "bun test", exitCode: 0 },
+			},
+		});
+
+		const rejoined = await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "j2",
+			payload: {
+				roomId: "room_away",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Adam" },
+			},
+		});
+		expect(rejoined.ok).toBe(true);
+		expect(typeof rejoined.payload?.whileAwayNote).toBe("string");
+		expect(String(rejoined.payload?.whileAwayNote)).toMatch(/^Since you left:/);
+		expect(String(rejoined.payload?.whileAwayNote)).toContain("bun test");
 	});
 });

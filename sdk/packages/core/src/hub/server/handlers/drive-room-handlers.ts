@@ -2,7 +2,15 @@
  * Hub call_* command handlers (DRV-ROOM-MVP + share-screen work bridge).
  */
 
+import {
+	assembleHandoffPacket,
+	formatHandoffNarration,
+	formatWhileAwayLine,
+	type HandoffPacket,
+} from "@cline/drive";
 import type {
+	BankSnapshot,
+	DriveEvent,
 	HubCommandEnvelope,
 	HubReplyEnvelope,
 	Participant,
@@ -20,10 +28,12 @@ import {
 	clearDrivePauseAfterToolForSessions,
 	getDriveRoomStore,
 	rebindJsonlRoomEventLog,
+	setDrivePauseAfterTool,
 	syncDrivePauseAfterToolForRoom,
 	type WorkRecordPayload,
 	workRecordFromToolEvent,
 } from "../../collaboration";
+import { openWorkspaceBankStore } from "../../collaboration/workspaceBankStore";
 import {
 	captureHubRoomCommit,
 	getHubDriveHarness,
@@ -72,6 +82,12 @@ const CallJoinPayloadSchema = z
 const CallLeavePayloadSchema = RoomIdSchema.extend({
 	participantId: z.string().min(1),
 	reason: z.string().optional(),
+}).strict();
+
+const CallEndPayloadSchema = RoomIdSchema.extend({
+	actorId: z.string().min(1).optional(),
+	reason: z.string().optional(),
+	workspaceRoot: z.string().min(1).optional(),
 }).strict();
 
 const CallMutePayloadSchema = RoomIdSchema.extend({
@@ -293,6 +309,101 @@ function ensureEventLog(
 	rebindJsonlRoomEventLog(store, workspaceRoot);
 }
 
+function emptyBankSnapshot(): BankSnapshot {
+	return {
+		activePlanId: null,
+		openTaskIds: [],
+		nowTaskId: null,
+		nextTaskId: null,
+		nowTitle: null,
+		nextTitle: null,
+		nowLastFailure: null,
+	};
+}
+
+function readRoomEvents(
+	store: ReturnType<typeof getDriveRoomStore>,
+	roomId: string,
+): DriveEvent[] {
+	const log = store.getEventLog();
+	if (!log) {
+		return [];
+	}
+	return log.readSinceSync(roomId, 0).map((record) => record.event);
+}
+
+async function loadBankSnapshot(
+	workspaceRoot: string | undefined,
+	roomId: string,
+): Promise<BankSnapshot> {
+	if (!workspaceRoot) {
+		return emptyBankSnapshot();
+	}
+	const callSessionId = getDriveRoomStore().getActiveCallSessionId(roomId);
+	const bank = openWorkspaceBankStore(workspaceRoot, {
+		roomId,
+		callSessionId,
+	});
+	return bank.getSnapshot();
+}
+
+function lastHumanLeaveAt(
+	events: readonly DriveEvent[],
+	participantId?: string,
+): string | null {
+	for (let i = events.length - 1; i >= 0; i--) {
+		const event = events[i];
+		if (event?.type !== "control.leave") {
+			continue;
+		}
+		if (participantId && event.participantId !== participantId) {
+			continue;
+		}
+		return event.at;
+	}
+	return null;
+}
+
+function buildWhileAwayNote(input: {
+	roomEvents: readonly DriveEvent[];
+	bankSnapshot: BankSnapshot;
+	sinceAt: string;
+}): string {
+	const packet = assembleHandoffPacket({
+		roomEvents: input.roomEvents,
+		bankSnapshot: input.bankSnapshot,
+		sinceAt: input.sinceAt,
+	});
+	return formatWhileAwayLine(packet);
+}
+
+function mintHandoffNarration(input: {
+	store: ReturnType<typeof getDriveRoomStore>;
+	roomId: string;
+	actorId?: string;
+	packet: HandoffPacket;
+}): {
+	snapshot: RoomSnapshot;
+	event: DriveEvent;
+	seq: number;
+	text: string;
+} {
+	const text = formatHandoffNarration(input.packet);
+	const session = input.store.getActiveCallSession(input.roomId);
+	const committed = input.store.commit({
+		schemaVersion: 1,
+		id: `narration_${crypto.randomUUID()}`,
+		roomId: input.roomId,
+		at: new Date().toISOString(),
+		actorId: input.actorId,
+		callSessionId: session?.callSessionId,
+		type: "conversation.narration",
+		track: "conversation",
+		text,
+	});
+	return { ...committed, text };
+}
+
 export async function handleDriveRoomCommand(
 	ctx: HubTransportContext,
 	envelope: HubCommandEnvelope,
@@ -306,6 +417,17 @@ export async function handleDriveRoomCommand(
 				if (!store.get(payload.roomId) && store.getEventLog()) {
 					store.hydrateFromLogSync(payload.roomId);
 				}
+				const priorEvents = readRoomEvents(store, payload.roomId);
+				const priorSnapshot = store.get(payload.roomId);
+				const humanId = payload.participant?.id ?? payload.human.id;
+				const humanWasSeated =
+					priorSnapshot?.participants.some(
+						(participant) =>
+							participant.kind === "human" && participant.id === humanId,
+					) ?? false;
+				const leaveAt = lastHumanLeaveAt(priorEvents, humanId);
+				const isRejoin = Boolean(leaveAt) && !humanWasSeated;
+
 				let result: { snapshot: RoomSnapshot; seq: number };
 				if (payload.participant) {
 					store.create(payload.roomId);
@@ -346,10 +468,28 @@ export async function handleDriveRoomCommand(
 				if (payload.sessionId) {
 					store.linkSession(payload.sessionId, payload.roomId);
 				}
+
+				let whileAwayNote: string | undefined;
+				if (isRejoin && leaveAt) {
+					const bankSnapshot = await loadBankSnapshot(
+						payload.workspaceRoot,
+						payload.roomId,
+					);
+					const note = buildWhileAwayNote({
+						roomEvents: priorEvents,
+						bankSnapshot,
+						sinceAt: leaveAt,
+					});
+					if (note) {
+						whileAwayNote = note;
+					}
+				}
+
 				return okReply(
 					envelope,
 					snapshotPayload(result.snapshot, result.seq, [], {
 						callSessionId: store.getActiveCallSessionId(payload.roomId),
+						...(whileAwayNote ? { whileAwayNote } : {}),
 					}),
 				);
 			}
@@ -380,6 +520,92 @@ export async function handleDriveRoomCommand(
 						durationMs:
 							committed.event.type === "control.leave"
 								? committed.event.durationMs
+								: undefined,
+					}),
+				);
+			}
+			case "call_end": {
+				const payload = CallEndPayloadSchema.parse(envelope.payload ?? {});
+				ensureEventLog(store, payload.workspaceRoot);
+				if (!store.get(payload.roomId) && store.getEventLog()) {
+					store.hydrateFromLogSync(payload.roomId);
+				}
+				if (!store.get(payload.roomId) && !store.isEnded(payload.roomId)) {
+					return errorReply(
+						envelope,
+						"room_not_found",
+						`room_not_found:${payload.roomId}`,
+					);
+				}
+
+				// Idempotent: second end returns prior close without re-narrating.
+				if (store.isEnded(payload.roomId)) {
+					const snapshot = store.getOrThrow(payload.roomId);
+					return okReply(
+						envelope,
+						snapshotPayload(snapshot, store.lastSeq(payload.roomId), [], {
+							ended: true,
+							idempotent: true,
+						}),
+					);
+				}
+
+				const sessionIds = linkedSessionIds(store, payload.roomId);
+				// Pause-after-tool while we assemble handoff (DRV-LEAVE-END).
+				for (const sessionId of sessionIds) {
+					setDrivePauseAfterTool(sessionId, true);
+				}
+
+				const roomEvents = readRoomEvents(store, payload.roomId);
+				const bankSnapshot = await loadBankSnapshot(
+					payload.workspaceRoot,
+					payload.roomId,
+				);
+				const packet = assembleHandoffPacket({
+					roomEvents,
+					bankSnapshot,
+				});
+				const narration = mintHandoffNarration({
+					store,
+					roomId: payload.roomId,
+					actorId: payload.actorId,
+					packet,
+				});
+				publishRoomEvent(
+					ctx,
+					payload.roomId,
+					narration.snapshot,
+					narration.event,
+					narration.seq,
+				);
+
+				const ended = store.end({
+					roomId: payload.roomId,
+					actorId: payload.actorId,
+					reason: payload.reason,
+				});
+				clearDrivePauseAfterToolForSessions(sessionIds);
+				publishRoomEvent(
+					ctx,
+					payload.roomId,
+					ended.snapshot,
+					ended.event,
+					ended.seq,
+				);
+
+				return okReply(
+					envelope,
+					snapshotPayload(ended.snapshot, ended.seq, [], {
+						ended: true,
+						handoff: packet,
+						handoffNarration: narration.text,
+						callSessionId:
+							ended.event.type === "control.end"
+								? ended.event.callSessionId
+								: undefined,
+						durationMs:
+							ended.event.type === "control.end"
+								? ended.event.durationMs
 								: undefined,
 					}),
 				);
