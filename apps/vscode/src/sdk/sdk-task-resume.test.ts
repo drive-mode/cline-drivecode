@@ -35,6 +35,11 @@ describe("prepareTaskResumeStartInput", () => {
 
 		const result = await prepareTaskResumeStartInput(deps, "task-1")
 
+		expect(deps.sessionConfigBuilder.build).toHaveBeenCalledWith({
+			cwd: "/workspace",
+			mode: "act",
+			isResume: true,
+		})
 		expect(result.config.sessionId).toBe("task-1")
 		expect(result.initialMessages).toEqual([{ role: "user", content: "sdk" }])
 		expect(deps.taskHistory.getLegacyResumeInitialMessages).not.toHaveBeenCalled()

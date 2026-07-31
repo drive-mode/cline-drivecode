@@ -140,4 +140,4 @@ Dependencies flow downward only. Lower layers stay embeddable without pulling in
 
 ### MCP path note (hosts)
 
-CLI, Hub, and Desktop use Core MCP settings-file tooling. VS Code sets `disableMcpSettingsTools: true` and injects tools through its legacy `McpHub` + `createMcpTools`. Treat that split as intentional until [SDK-7.2](/sdk/architecture/integration-build) completes a migration spike.
+CLI, Hub, and Desktop use Core MCP settings-file tooling. VS Code sets `disableMcpSettingsTools: true` and injects tools through its legacy `McpHub` + `createMcpTools`. Treat that split as intentional — [SDK-7.2](/sdk/architecture/vscode-mcp-spike) recommends keeping the adapter.

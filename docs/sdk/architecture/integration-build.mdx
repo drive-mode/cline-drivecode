@@ -256,9 +256,37 @@ Shared `maxIterations` defaults (+ optional usage abort helper); hosts may overr
 | **Status** | **Done** (explicit host-`AgentHooks` omit) — Hub-backed sessions already get file-based hooks via Core `prepareLocalRuntimeBootstrap` → `createHookConfigFileExtension` on the hub daemon. Hub Extensions UI lists hooks (`read_session_hooks`). Host `AgentHooks` (CLI `createRuntimeHooks` / VS Code `hooks-adapter`) are intentionally not attached — Desktop parity. No Hub UI for deferred hook kinds; see backlog if product wants a CLI-style host bridge. |
 | **Verify** | `sessions.plugin.test.ts` asserts `config.hooks` is undefined on start input. |
 
-## Phase 7–8 · VS Code honesty + optional observability
+## Phase 7 · VS Code honesty
 
-`SDK-7.1` Hooks · `SDK-7.2` MCP spike · `SDK-8.1` OTEL · `SDK-8.2` Event projection.
+`SDK-7.1` Hooks · `SDK-7.2` MCP spike.
+
+### Agent task `SDK-7.1` — Complete VS Code hook coverage
+
+| | |
+|---|---|
+| **Depends on** | — |
+| **Owner surface** | `apps/vscode/src/sdk/hooks-adapter.ts` (+ resume session config) |
+| **Goal** | Wire deferred file-hook kinds onto `AgentHooks` where Core/`AgentRuntimeHooks` can express them; explicit wontfix/backlog otherwise. |
+| **Wired** | `TaskResume` via `beforeRun` when `isResume` / `CLINE_HOOK_AGENT_RESUME=1` (resume sessions set `isResume` from `prepareTaskResumeStartInput`). Existing: TaskStart, UserPromptSubmit, PreToolUse, PostToolUse, TaskComplete, TaskCancel. |
+| **Wontfix** | **TaskError** — `afterRun(status=failed)` is expressible on AgentHooks, but VS Code HookFactory/proto have no TaskError kind (Core-only file name). **SessionShutdown** — not on `AgentRuntimeHooks` (Core uses separate `shutdown()` / `session_shutdown`); HookFactory lacks it. |
+| **Backlog** | **PreCompact** / **Notification** — HookFactory has kinds; Core does not map them onto AgentHooks (`PreCompact` → `undefined` in Core file map; Notification absent). Need host-side calls (compaction coordinator / notification emitters). |
+| **Verify** | `bun run --cwd apps/vscode test:vitest` filtered to `hooks-adapter` / `sdk-task-resume` / session suites. |
+| **Status** | **Done** — TaskResume wired; matrix documented; BL-7.* for remaining |
+
+### Agent task `SDK-7.2` — MCP settings-tools migration spike
+
+| | |
+|---|---|
+| **Depends on** | SDK-0.3 (split-brain note) |
+| **Owner surface** | Docs + optional honesty comments (no large MCP rewrite) |
+| **Goal** | Document migration risks and a recommended decision; do **not** blindly set `disableMcpSettingsTools: false`. |
+| **Decision** | **Keep adapter** — see [VS Code MCP spike](/sdk/architecture/vscode-mcp-spike). |
+| **Honesty** | Comment at `disableMcpSettingsTools: true` in `cline-session-factory.ts`. |
+| **Status** | **Done** |
+
+## Phase 8 · Optional observability
+
+`SDK-8.1` OTEL · `SDK-8.2` Event projection.
 
 ---
 
@@ -294,13 +322,15 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-6.1 Hub telemetry on create | **Done** |
 | SDK-6.2 Hub session compaction | **Done** |
 | SDK-6.3 Hub hooks | **Done** (file hooks via Core bootstrap; host AgentHooks omit / Desktop parity) |
-| SDK-7.1–7.2 VS Code hooks/MCP | Open |
+| SDK-7.1 VS Code hooks | **Done** (TaskResume wired; TaskError/SessionShutdown wontfix; PreCompact/Notification backlog) |
+| SDK-7.2 VS Code MCP spike | **Done** (keep adapter; see vscode-mcp-spike) |
 | SDK-8.1–8.2 Observability | Open |
 
 ## Related
 
 - [Usage analysis](/sdk/architecture/usage-analysis)
 - [Integration backlog](/sdk/architecture/integration-backlog)
+- [VS Code MCP spike](/sdk/architecture/vscode-mcp-spike)
 - [Public SDK overview](https://docs.cline.bot/sdk/overview)
 - [ClineCore](https://docs.cline.bot/sdk/clinecore)
 - [Multi-agent teams](https://docs.cline.bot/sdk/guides/multi-agent-teams)

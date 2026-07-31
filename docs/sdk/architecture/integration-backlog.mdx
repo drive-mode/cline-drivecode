@@ -54,3 +54,13 @@ _Phase 6+ items appended below as agents complete reviews._
 | BL-6.5 | Desktop session compaction on start (parity) | SDK-6.2 | Desktop `buildCoreSessionConfig` still omits `compaction`; Hub now sets it |
 | BL-6.6 | `detachHub` disposes Hub Chat telemetry | test | Unit coverage hits `HubTelemetry.dispose` idempotency; no attach/detach wiring assert (would need heavy hub daemon mocks) |
 | BL-6.7 | ProviderSettingsManager throw path in `createHubTelemetry` | test | Identity enrichment is try/catch; missing-account path covered; throw-from-settings manager not asserted |
+
+## From Phase 7 (VS Code honesty)
+
+| ID | Title | Source | Notes |
+|----|-------|--------|-------|
+| BL-7.1 | Host-side PreCompact before VS Code compaction | SDK-7.1 | HookFactory has PreCompact; AgentHooks cannot express it (Core file map → undefined). Call HookFactory from `sdk-compaction-coordinator` / auto-condense path |
+| BL-7.2 | Host-side Notification hook emissions | SDK-7.1 | HookFactory has Notification; not on AgentRuntimeHooks. Wire from approval / long-running command / OS notification sites |
+| BL-7.3 | Optional TaskError kind on VS Code HookFactory | SDK-7.1 | Core maps `afterRun(failed)` → TaskError files; VS Code proto/VALID_HOOK_TYPES lack TaskError. Add kind + adapter branch if product wants parity |
+| BL-7.4 | SessionShutdown on VS Code session dispose | SDK-7.1 | Not on AgentHooks; would need host dispose bridge + HookFactory kind (Core has SessionShutdown files; VS Code does not) |
+| BL-7.5 | Unify VS Code MCP onto Core settings tools | SDK-7.2 | **Deferred** — spike recommends keep `McpHub` adapter; see [vscode-mcp-spike](/sdk/architecture/vscode-mcp-spike) |

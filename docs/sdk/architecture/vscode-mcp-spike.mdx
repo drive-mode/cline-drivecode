@@ -1,0 +1,50 @@
+---
+title: "VS Code MCP spike (SDK-7.2)"
+sidebarTitle: "VS Code MCP spike"
+description: "Migration risks and decision for unifying VS Code MCP with Core settings tools."
+---
+
+# VS Code MCP spike (SDK-7.2)
+
+## Current split (intentional)
+
+| Host | Path |
+|------|------|
+| CLI / Hub / Desktop | Core MCP settings file + install/OAuth helpers; settings tools available unless disabled |
+| VS Code | `disableMcpSettingsTools: true` on `CoreSessionConfig`; tools injected via legacy `McpHub` + `createMcpTools` (`vscode-runtime-builder.ts`) |
+
+VS Code also owns MCP UI/settings, OAuth, remote-config sync, and tool-list change callbacks through `McpHub`. Flipping `disableMcpSettingsTools` to `false` alone would **duplicate** MCP tool surfaces (Core settings tools + McpHub tools) and confuse approvals/policies.
+
+## Migration risks
+
+1. **Dual tool registration** — enabling Core MCP settings tools without removing `createVscodeExtraTools` / `McpHubToolProvider` yields duplicate `server__tool` names or conflicting executors.
+2. **Settings file ownership** — VS Code writes/reads MCP settings through `McpHub` watchers and fingerprinting; Core settings tools assume Core's settings path/lifecycle.
+3. **OAuth / remote MCP** — VS Code `McpOAuthManager` + authenticate RPCs are host-specific; Core helpers may not cover the same transports without a bridge.
+4. **Auto-approve / policies** — `sdk-tool-policies` and MCP server toggles key off `McpHub` server state, not Core MCP inventory.
+5. **Webview UX** — MCP management UI talks to gRPC controllers that call `McpHub`; a Core-only path would need UI rewiring or a facade.
+
+## What would need to change to unify
+
+To make VS Code use Core MCP settings tools like CLI/Hub:
+
+1. Keep a single settings store (or adapt Core to VS Code's path) and one watcher.
+2. Replace `createVscodeExtraTools(mcpHub)` with Core's MCP tool injection (or a thin adapter that implements Core's provider interface from `McpHub` **without** also enabling settings tools).
+3. Route install / toggle / OAuth / delete RPCs through Core helpers **or** keep host RPCs but stop registering a second tool set.
+4. Retarget auto-approve and tool-list-change to the unified inventory.
+5. Integration tests for: no duplicate tools, OAuth round-trip, remote-config sync, approval prompts.
+
+## Recommended decision
+
+**Keep the adapter** (`disableMcpSettingsTools: true` + `McpHub` + `createMcpTools`).
+
+- Product MCP UX in VS Code is deeply coupled to `McpHub`.
+- Unification is a multi-PR migration, not a one-line flag flip.
+- Hybrid (Core settings tools for install, McpHub for execution) still risks split-brain unless carefully facaded — defer until product prioritizes one store.
+
+Safe honesty landed with SDK-7.2: document the split here and in [integration build](/sdk/architecture/integration-build) Phase 7; comment at the `disableMcpSettingsTools: true` call site explaining why it must stay on.
+
+## Related
+
+- [SDK integration build](/sdk/architecture/integration-build) Phase 7
+- [Integration backlog](/sdk/architecture/integration-backlog) BL-7.*
+- [Usage analysis](/sdk/architecture/usage-analysis)

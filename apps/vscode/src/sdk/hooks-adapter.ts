@@ -1,15 +1,25 @@
 // Bridges Cline's file-based hook scripts into the SDK's runtime hooks.
 //
-// Runtime hooks use typed in-process lifecycle callbacks:
-//   TaskStart        -> beforeRun
+// Runtime hooks use typed in-process lifecycle callbacks (AgentRuntimeHooks):
+//   TaskStart        -> beforeRun (new session)
+//   TaskResume       -> beforeRun when isResume / CLINE_HOOK_AGENT_RESUME=1
 //   UserPromptSubmit -> beforeRun with the latest submitted user message
 //   PreToolUse       -> beforeTool
 //   PostToolUse      -> afterTool
 //   TaskComplete     -> afterRun when completed
 //   TaskCancel       -> afterRun when aborted
 //
-// Deferred hooks (NOT wired here): TaskResume, TaskError, SessionShutdown,
-// PreCompact, Notification.
+// Coverage matrix (SDK-7.1):
+//   Wired:     TaskStart, TaskResume, UserPromptSubmit, PreToolUse, PostToolUse,
+//              TaskComplete, TaskCancel
+//   Wontfix:   TaskError — AgentHooks can express via afterRun(status=failed), but
+//              VS Code HookFactory/proto have no TaskError kind (Core-only file name)
+//   Wontfix:   SessionShutdown — not on AgentRuntimeHooks (Core uses a separate
+//              subprocess shutdown() / session_shutdown path; HookFactory lacks it)
+//   Backlog:   PreCompact — Core HOOK_CONFIG_FILE_EVENT_MAP maps it to undefined;
+//              HookFactory has the kind; needs a host-side call before compaction
+//   Backlog:   Notification — not on AgentRuntimeHooks; HookFactory has the kind;
+//              needs host-side calls on notification events
 
 import type {
 	AgentAfterToolContext,
@@ -25,6 +35,14 @@ import { getHooksEnabledSafe } from "@/core/hooks/hooks-utils"
 import type { StateManager } from "@/core/storage/StateManager"
 
 export type HookMessageEmitter = (message: ClineMessage) => void
+
+export interface BuildAgentHooksOptions {
+	/**
+	 * When true, beforeRun fires TaskResume instead of TaskStart (CLI parity with
+	 * CLINE_HOOK_AGENT_RESUME=1 for resumed sessions).
+	 */
+	isResume?: boolean
+}
 
 function toStringRecord(input: unknown): Record<string, string> {
 	if (input == null || typeof input !== "object" || Array.isArray(input)) {
@@ -68,6 +86,10 @@ function latestUserPrompt(ctx: AgentRunLifecycleContext): string {
 	return ""
 }
 
+function shouldRunTaskResume(options?: BuildAgentHooksOptions): boolean {
+	return options?.isResume === true || process.env.CLINE_HOOK_AGENT_RESUME === "1"
+}
+
 function buildHookStatusMessage(opts: {
 	hookName: string
 	status: "running" | "completed" | "failed" | "cancelled"
@@ -87,14 +109,20 @@ function buildHookStatusMessage(opts: {
 	}
 }
 
-export function buildAgentHooks(stateManager: StateManager, emitHookMessage?: HookMessageEmitter): AgentHooks {
+export function buildAgentHooks(
+	stateManager: StateManager,
+	emitHookMessage?: HookMessageEmitter,
+	options?: BuildAgentHooksOptions,
+): AgentHooks {
 	const hooksEnabled = () => getHooksEnabledSafe(stateManager.getGlobalSettingsKey("hooksEnabled"))
 
 	return {
 		async beforeRun(ctx: AgentRunLifecycleContext): Promise<AgentStopControl | undefined> {
-			const taskStartControl = await runTaskStart(ctx, hooksEnabled, emitHookMessage)
-			if (taskStartControl) {
-				return taskStartControl
+			const startOrResumeControl = shouldRunTaskResume(options)
+				? await runTaskResume(ctx, hooksEnabled, emitHookMessage)
+				: await runTaskStart(ctx, hooksEnabled, emitHookMessage)
+			if (startOrResumeControl) {
+				return startOrResumeControl
 			}
 			return runUserPromptSubmit(ctx, hooksEnabled, emitHookMessage)
 		},
@@ -208,6 +236,8 @@ export function buildAgentHooks(stateManager: StateManager, emitHookMessage?: Ho
 					return
 				}
 
+				// TaskError (Core agent_error / afterRun failed) is intentionally
+				// not mapped: VS Code HookFactory has no TaskError kind.
 				hookName =
 					ctx.result.status === "completed"
 						? "TaskComplete"
@@ -311,6 +341,58 @@ async function runTaskStart(
 	} catch (error) {
 		emitHookMessage?.(buildHookStatusMessage({ hookName: "TaskStart", status: "failed", ts: runningTs }))
 		Logger.error("[HooksAdapter] beforeRun (TaskStart) hook failed:", error)
+		return undefined
+	}
+}
+
+async function runTaskResume(
+	ctx: AgentRunLifecycleContext,
+	hooksEnabled: () => boolean,
+	emitHookMessage?: HookMessageEmitter,
+): Promise<AgentStopControl | undefined> {
+	let runningTs: number | undefined
+	try {
+		if (!hooksEnabled()) {
+			return undefined
+		}
+
+		const factory = new HookFactory()
+		if (!(await factory.hasHook("TaskResume"))) {
+			return undefined
+		}
+
+		const runningMsg = buildHookStatusMessage({ hookName: "TaskResume", status: "running" })
+		runningTs = runningMsg.ts
+		emitHookMessage?.(runningMsg)
+
+		const taskId = taskIdFromSnapshot(ctx.snapshot)
+		const messageCount = String(ctx.snapshot.messages.length)
+		const runner = await factory.create("TaskResume")
+		const result = await runner.run({
+			taskId,
+			taskResume: {
+				taskMetadata: {
+					taskId,
+					ulid: "",
+					initialTask: latestUserPrompt(ctx),
+				},
+				previousState: {
+					messageCount,
+				},
+			},
+		})
+
+		emitHookMessage?.(
+			buildHookStatusMessage({
+				hookName: "TaskResume",
+				status: result.cancel ? "cancelled" : "completed",
+				ts: runningTs,
+			}),
+		)
+		return mapStopControl(result)
+	} catch (error) {
+		emitHookMessage?.(buildHookStatusMessage({ hookName: "TaskResume", status: "failed", ts: runningTs }))
+		Logger.error("[HooksAdapter] beforeRun (TaskResume) hook failed:", error)
 		return undefined
 	}
 }

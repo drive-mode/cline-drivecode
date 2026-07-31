@@ -48,7 +48,8 @@ export async function prepareTaskResumeStartInput(
 
 	const modeValue = deps.stateManager.getGlobalSettingsKey("mode")
 	const mode: Mode = modeValue === "plan" || modeValue === "act" ? modeValue : "act"
-	const config = await deps.sessionConfigBuilder.build({ cwd, mode })
+	// Mark resume so AgentHooks fire TaskResume (SDK-7.1) instead of TaskStart.
+	const config = await deps.sessionConfigBuilder.build({ cwd, mode, isResume: true })
 	config.sessionId = taskId
 
 	const isLegacyTask = await deps.taskHistory.isLegacyTask(taskId)

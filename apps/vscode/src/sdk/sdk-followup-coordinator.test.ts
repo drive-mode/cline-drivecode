@@ -273,7 +273,7 @@ describe("SdkFollowupCoordinator", () => {
 
 		await coordinator.askResponse("continue")
 
-		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({ cwd: "/task-cwd", mode: "act" })
+		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({ cwd: "/task-cwd", mode: "act", isResume: true })
 		expect(options.createTempSessionHost).toHaveBeenCalledOnce()
 		expect(options.loadInitialMessages).toHaveBeenCalledWith(
 			expect.objectContaining({ readMessages: expect.any(Function) }),

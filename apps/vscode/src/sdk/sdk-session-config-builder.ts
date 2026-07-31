@@ -21,7 +21,9 @@ export class SdkSessionConfigBuilder {
 			config.onConsecutiveMistakeLimitReached = this.options.onConsecutiveMistakeLimitReached
 		}
 
-		const baseHooks = buildAgentHooks(this.options.stateManager, this.options.emitHookMessage)
+		const baseHooks = buildAgentHooks(this.options.stateManager, this.options.emitHookMessage, {
+			isResume: input.isResume === true || input.historyItem !== undefined,
+		})
 		config.hooks = {
 			...baseHooks,
 			beforeModel: async (ctx) => {

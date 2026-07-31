@@ -70,6 +70,11 @@ export interface SessionConfigInput {
 	files?: string[]
 	/** History item to resume (for task resumption) */
 	historyItem?: HistoryItem
+	/**
+	 * When true, session AgentHooks fire TaskResume instead of TaskStart
+	 * (SDK-7.1 / CLI CLINE_HOOK_AGENT_RESUME parity). Also implied by historyItem.
+	 */
+	isResume?: boolean
 	/** Task-specific settings overrides */
 	taskSettings?: Partial<Settings>
 	/** Working directory */
@@ -980,6 +985,9 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 					},
 				}
 			: {}),
+		// Intentional MCP split-brain (SDK-7.2): keep Core MCP settings tools off.
+		// VS Code injects MCP tools via McpHub + createMcpTools instead. Do not flip
+		// this without the migration plan in docs/sdk/architecture/vscode-mcp-spike.mdx.
 		disableMcpSettingsTools: true,
 		mode: mode === "plan" ? "plan" : "act",
 		...reasoningConfig,
@@ -1006,7 +1014,9 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 			},
 			logger: sdkLogger,
 		},
-		hooks: buildAgentHooks(StateManager.get()),
+		hooks: buildAgentHooks(StateManager.get(), undefined, {
+			isResume: input.isResume === true || input.historyItem !== undefined,
+		}),
 	}
 
 	return config
