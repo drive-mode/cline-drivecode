@@ -212,6 +212,12 @@ task database and not a scheduling engine. It projects the canonical
 That keeps task ownership and writes in the team runtime, while the Hub is only
 responsible for transport and presentation.
 
+The hub UI today renders that projection as a layered **card grid** with a text
+detail aside. The planned interactive graph (pan / zoom, labeled artifact edges,
+Plans rail) is specified in [DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md)
+and [status-dependency-graph/UX.md](plans/cline-drivemode/initiatives/status-dependency-graph/UX.md);
+throwaway wireframe: [status-dependency-graph.html](design/wireframes/status-dependency-graph.html).
+
 Each node has a stable view identity of `teamId:taskId`. The team prefix avoids
 colliding task IDs when several active teams use common names such as `build` or
 `test`. A dependency normally resolves within the same team. A fully-qualified

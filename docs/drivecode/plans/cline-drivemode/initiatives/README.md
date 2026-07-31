@@ -6,6 +6,7 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 
 | Slug | Status | Primary DRV |
 |---|---|---|
+| [status-dependency-graph](status-dependency-graph/) | active (UX locked) | [DRV-DEP-MAP](../features/DRV-DEP-MAP.md) |
 | [show-backlog-director](show-backlog-director/) | reference (slices on main) | [DRV-SHOW-BACKLOG](../features/DRV-SHOW-BACKLOG.md) |
 | [share-and-router](share-and-router/) | reference | [DRV-DEMO-SHARE](../features/DRV-DEMO-SHARE.md), [DRV-AGENT-ROUTER](../features/DRV-AGENT-ROUTER.md) |
 | [task-bank-drive-loop](task-bank-drive-loop/) | reference (partial) | [DRV-TASK-BANK](../features/DRV-TASK-BANK.md) |

@@ -7,6 +7,7 @@ Click-through surfaces for the Drive / Drivecode stack. Hub owns room state via 
 | Surface | Kind | How to open |
 |---|---|---|
 | Drive tab HTML | Throwaway prototype (locked IA) | Open [`drive-tab-discord-slack.html`](drive-tab-discord-slack.html) in a browser |
+| Dependency graph HTML | Throwaway Status Hub map UX ([DRV-DEP-MAP](../../plans/cline-drivemode/features/DRV-DEP-MAP.md)) | Open [`status-dependency-graph.html`](status-dependency-graph.html) in a browser |
 | Overview canvas | Cursor `.canvas.tsx` + HTML twin | Open `drivecode-overview.canvas.tsx` from your Cursor canvases beside chat, or [`overview-canvas.html`](../canvases/overview-canvas.html) |
 | Hub Chat Drive Spotlight | Shared Spotlight from hub room | `bun -F @cline/cline-hub dev` → open the printed dashboard URL → Connect → Chat → **Join call** |
 | Status Hub Dependency map | Live team tasks, or Drive plan fixture | printed dashboard URL + `/status?demoPlans=1&statusMode=dependency-map` |
