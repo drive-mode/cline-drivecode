@@ -219,8 +219,8 @@ Shared `maxIterations` defaults (+ optional usage abort helper); hosts may overr
 | **Owner surface** | `@cline/core` (+ one host wire) |
 | **Goal** | Pure helper encoding the [going-to-production](/sdk/guides/going-to-production) cost-control pattern: estimate cost, evaluate budget, abort once over limit. |
 | **API** | `estimateUsageCost`, `evaluateUsageBudget` / `shouldAbortForUsageBudget`, `usageFromSessionEvent`, `createUsageBudgetAbortHandler` |
-| **Verify** | Focused `@cline/core` unit tests; CLI opt-in via `CLINE_MAX_SESSION_COST`. |
-| **Status** | **Partial** — core helper + tests + CLI one-shot (`run-agent.ts` / `CLINE_MAX_SESSION_COST`) done. Remaining host wires (Hub, Desktop, VS Code, CLI interactive) tracked in [integration backlog](/sdk/architecture/integration-backlog). |
+| **Verify** | Focused `@cline/core` unit tests; CLI opt-in via `CLINE_MAX_SESSION_COST` (one-shot path). |
+| **Status** | **Partial** — core helper + tests + CLI one-shot env hook (`run-agent.ts` / `CLINE_MAX_SESSION_COST`, including abort during `start()`). Not a product-wide budget: Hub, Desktop, VS Code, and CLI interactive still open — see [integration backlog](/sdk/architecture/integration-backlog). |
 
 ## Phase 6 · Hub ClineCore depth
 

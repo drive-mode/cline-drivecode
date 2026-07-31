@@ -466,6 +466,93 @@ describe("runAgent", () => {
 		expect(process.exitCode).toBe(0);
 	});
 
+	it("aborts with plannedSessionId when usage budget trips during start()", async () => {
+		const previousBudget = process.env.CLINE_MAX_SESSION_COST;
+		process.env.CLINE_MAX_SESSION_COST = "1";
+
+		const startedAt = new Date("2026-03-22T00:00:00.000Z");
+		const endedAt = new Date("2026-03-22T00:00:01.000Z");
+		sessionManagerMocks.start.mockImplementation(async (input: {
+			config?: { sessionId?: string };
+		}) => {
+			const plannedSessionId = input.config?.sessionId;
+			expect(plannedSessionId).toEqual(expect.any(String));
+			sessionEventsMocks.listener?.({
+				type: "usage",
+				totalCost: 2,
+			});
+			expect(sessionManagerMocks.abort).toHaveBeenCalledWith(
+				plannedSessionId,
+				expect.any(Error),
+			);
+			return {
+				sessionId: plannedSessionId,
+				manifestPath: "/tmp/manifest.json",
+				messagesPath: "/tmp/messages.json",
+				manifest: {
+					session_id: plannedSessionId,
+				},
+				result: {
+					text: "aborted",
+					usage: {
+						inputTokens: 0,
+						outputTokens: 0,
+						cacheReadTokens: 0,
+						cacheWriteTokens: 0,
+						totalCost: 2,
+					},
+					messages: [],
+					toolCalls: [],
+					iterations: 1,
+					finishReason: "aborted",
+					model: {
+						id: "gemini",
+						provider: "openrouter",
+						info: {},
+					},
+					startedAt,
+					endedAt,
+					durationMs: 1000,
+				},
+			};
+		});
+
+		try {
+			const { runAgent } = await import("./run-agent");
+
+			await expect(
+				runAgent("test prompt", {
+					cwd: process.cwd(),
+					enableAgentTeams: false,
+					enableSpawnAgent: false,
+					enableTools: [],
+					execution: {
+						maxConsecutiveMistakes: 3,
+					},
+					logger: undefined,
+					mode: "act",
+					modelId: "google/gemini-3-flash-preview",
+					outputMode: "text",
+					providerId: "openrouter",
+					systemPrompt: "system",
+					thinking: false,
+					toolPolicies: { "*": { autoApprove: true } },
+					verbose: false,
+					workspaceRoot: process.cwd(),
+				} as never),
+			).resolves.toBeUndefined();
+		} finally {
+			if (previousBudget === undefined) {
+				delete process.env.CLINE_MAX_SESSION_COST;
+			} else {
+				process.env.CLINE_MAX_SESSION_COST = previousBudget;
+			}
+		}
+
+		expect(sessionManagerMocks.abort).toHaveBeenCalled();
+		expect(sessionManagerMocks.send).not.toHaveBeenCalled();
+	});
+
 	it("does not fail an aborted run when teardown hooks throw", async () => {
 		const startedAt = new Date("2026-03-22T00:00:00.000Z");
 		const endedAt = new Date("2026-03-22T00:00:01.000Z");

@@ -41,8 +41,8 @@ export type UsageBudgetAbortDecision =
 	| { abort: false; cost?: number }
 	| { abort: true; cost: number; reason: string };
 
-export const DEFAULT_USAGE_BUDGET_ABORT_REASON =
-	"Cost limit exceeded (session usage budget)";
+/** Prefix for the evaluateUsageBudget default abort reason (before the USD amount). */
+export const DEFAULT_USAGE_BUDGET_ABORT_REASON = "Cost limit exceeded";
 
 function asNonNegativeNumber(value: unknown): number | undefined {
 	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
@@ -115,7 +115,7 @@ export function evaluateUsageBudget(
 			cost,
 			reason:
 				options.reason?.trim() ||
-				`Cost limit exceeded ($${options.maxCostUsd.toFixed(2)})`,
+				`${DEFAULT_USAGE_BUDGET_ABORT_REASON} ($${options.maxCostUsd.toFixed(2)})`,
 		};
 	}
 	return { abort: false, cost };
