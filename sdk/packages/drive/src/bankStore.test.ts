@@ -129,6 +129,28 @@ describe("bankStore", () => {
 		expect(await fs.exists(archivedTaskPath(ROOT, "t1"))).toBe(false);
 	});
 
+	it("emits drive_task_failed on recordTaskFailure", async () => {
+		const fs = createMemoryBankFs();
+		const events: Array<{ type: string; taskId?: string }> = [];
+		const store = createBankStore(fs, ROOT, {
+			roomId: "room-fail",
+			callSessionId: "cs-fail",
+			onBankEvent: (event) => {
+				events.push(event);
+				expect(event.roomId).toBe("room-fail");
+				expect(event.callSessionId).toBe("cs-fail");
+			},
+		});
+		await store.createTask({ id: "t1", title: "One", body: "a" });
+		await store.recordTaskFailure("t1", "tests red");
+		const failed = events.find((e) => e.type === "drive_task_failed");
+		expect(failed).toBeDefined();
+		expect(failed && "taskId" in failed ? failed.taskId : undefined).toBe(
+			"t1",
+		);
+		expect(failed && "note" in failed).toBe(false);
+	});
+
 	it("emits bound/completed/archived/plan_step/plan_archived events", async () => {
 		const fs = createMemoryBankFs();
 		const events: string[] = [];

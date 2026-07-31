@@ -11,6 +11,7 @@ Drive needs local, privacy-safe rollups: tasks completed per session, plan clean
 - Pure rollup function(s) in `@cline/drive` (or shared) compute S1–S3, E1–E3, P1–P2 from room + bank event sequences for one `callSessionId`.
 - Mid-plan **adds** after plan activate count as churn (P1); plan edits after ≥1 completion in-session count as engagement (E1).
 - Clean-drain (S3): plan archives with zero additive mid-plan task ids relative to activation snapshot.
+- P2 failure stickiness: distinct taskIds with ≥1 `drive_task_failed` and no later `drive_task_completed` in-session (`recordTaskFailure` emits the event; note stays on disk).
 - No utterance text required or accepted as rollup input.
 - Local dashboard or debug panel can render recent rollups; default is localhost-only.
 - Unit tests cover synthetic sessions: clean drain, churny plan, post-success continue, failure stickiness.
@@ -34,9 +35,13 @@ Drive needs local, privacy-safe rollups: tasks completed per session, plan clean
   - Owner package: `@cline/drive` + `@cline/core`
   - Verify: `bun -F @cline/drive test`, `bun -F @cline/core test:unit`
   - Done when: completeTask / editPlanTaskIds / closeAndArchivePlan emit expected events in tests.
+- [x] Emit `drive_task_failed` from `recordTaskFailure` for P2 stickiness (REMAINING §2.3 Option A).
+  - Owner package: `@cline/shared` + `@cline/drive`
+  - Verify: `bun -F @cline/shared test -- bankEvents`, `bun -F @cline/drive test -- sessionRollup bankStore`
+  - Done when: `failureStickyCount` derives from failed-without-later-complete taskIds.
 - [x] Implement `deriveSessionRollup(events) → SessionRollup` with metric ids from PRD 10.
   - Owner package: `@cline/drive`
-  - Verify: fixture tests for S3 / E1 / P1 cases
+  - Verify: fixture tests for S3 / E1 / P1 / P2 cases
   - Done when: fixtures pass; no forbidden keys in types.
 - [x] Minimal local UI or CLI doctor-style dump of last N rollups (debug-gated).
   - Owner package: `@cline/core` + `@cline/cline-hub` + `@cline/cli`

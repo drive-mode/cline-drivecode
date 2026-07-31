@@ -25,6 +25,7 @@ import {
 	createDriveTaskArchivedEvent,
 	createDriveTaskBoundEvent,
 	createDriveTaskCompletedEvent,
+	createDriveTaskFailedEvent,
 	createDriveTaskOpenedEvent,
 } from "./driveEvents.js";
 
@@ -301,6 +302,12 @@ export function createBankStore(
 				lastFailure: note,
 			};
 			await writeTask(next);
+			emit?.(
+				createDriveTaskFailedEvent({
+					...session,
+					taskId,
+				}),
+			);
 			return next;
 		},
 

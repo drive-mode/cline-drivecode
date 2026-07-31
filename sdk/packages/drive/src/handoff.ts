@@ -109,6 +109,7 @@ function titleByTaskId(
 				break;
 			case "drive_task_bound":
 			case "drive_task_completed":
+			case "drive_task_failed":
 			case "drive_task_archived":
 			case "drive_plan_activated":
 			case "drive_plan_archived":

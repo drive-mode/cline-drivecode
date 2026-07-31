@@ -27,11 +27,11 @@ Leadership can read a rollup from a smoke path without reading raw JSONL by hand
 
 ## Implementation status (2026-07-31)
 
-- Pure `deriveSessionRollup` landed in `@cline/drive` with unit fixtures (clean drain / mid-plan continue).
+- Pure `deriveSessionRollup` landed in `@cline/drive` with unit fixtures (clean drain / mid-plan continue / P2 stickiness).
 - Local reader + debug surfaces landed:
   - `@cline/core` `readSessionRollups` / `createFsSessionRollupSource` (Status W3 port)
   - Hub command `drive_session_rollups`
   - Drive Settings → “Dump last rollups”
   - CLI: `cline doctor session-rollups [--cwd] [--limit] [--json]`
 - Status Hub fourth mode (DRV-STATUS-SESSIONS / W3.1) still open — reuse the same source; do not duplicate stores.
-- P2 failure stickiness still stubbed at 0 (see REMAINING §2.3).
+- P2 failure stickiness: `drive_task_failed` from `recordTaskFailure`; count = distinct taskIds with failure and no later complete (REMAINING §2.3 Option A ✅).

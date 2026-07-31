@@ -68,6 +68,7 @@ export {
 	DriveTaskArchivedEventSchema,
 	DriveTaskBoundEventSchema,
 	DriveTaskCompletedEventSchema,
+	DriveTaskFailedEventSchema,
 	DriveTaskOpenedEventSchema,
 	parseBankDriveEvent,
 } from "./bankEvents";

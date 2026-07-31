@@ -76,7 +76,7 @@ Caption:
 | ID | Metric | Derive from | Reading |
 |---|---|---|---|
 | P1 | Mid-plan add churn | Plan-ref adds after activate / plan lifetime | High = under-planned or thrashing |
-| P2 | Failure stickiness | Tasks with `lastFailure` before complete | Recovery pressure |
+| P2 | Failure stickiness | Distinct taskIds with ≥1 `drive_task_failed` and no later `drive_task_completed` in-session (disk `lastFailure` is the note; event is taskId-only) | Recovery pressure |
 | P3 | Fix-up sibling rate | New tasks appended while open task has `lastFailure` | Healthy recovery vs plan collapse |
 
 ### D. Closed-loop actionability

@@ -35,6 +35,12 @@ export const DriveTaskCompletedEventSchema = DriveEventBaseSchema.extend({
 	taskId: z.string().min(1),
 }).strict();
 
+/** Failure stickiness (P2) — taskId only; note stays on disk lastFailure. */
+export const DriveTaskFailedEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("drive_task_failed"),
+	taskId: z.string().min(1),
+}).strict();
+
 export const DriveTaskArchivedEventSchema = DriveEventBaseSchema.extend({
 	type: z.literal("drive_task_archived"),
 	taskId: z.string().min(1),
@@ -63,6 +69,7 @@ export const BankDriveEventSchema = z.discriminatedUnion("type", [
 	DriveTaskOpenedEventSchema,
 	DriveTaskBoundEventSchema,
 	DriveTaskCompletedEventSchema,
+	DriveTaskFailedEventSchema,
 	DriveTaskArchivedEventSchema,
 	DrivePlanActivatedEventSchema,
 	DrivePlanArchivedEventSchema,

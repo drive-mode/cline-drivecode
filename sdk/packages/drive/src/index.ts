@@ -186,6 +186,7 @@ export {
 	createDriveTaskArchivedEvent,
 	createDriveTaskBoundEvent,
 	createDriveTaskCompletedEvent,
+	createDriveTaskFailedEvent,
 	createDriveTaskOpenedEvent,
 	resetDriveEventSeqForTests,
 } from "./driveEvents.js";

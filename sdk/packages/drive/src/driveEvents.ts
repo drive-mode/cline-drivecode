@@ -86,6 +86,21 @@ export function createDriveTaskCompletedEvent(input: {
 	});
 }
 
+export function createDriveTaskFailedEvent(input: {
+	roomId: string;
+	taskId: string;
+	callSessionId?: string;
+}): BankDriveEvent {
+	return asBankEvent({
+		schemaVersion: DRIVE_BANK_EVENT_SCHEMA_VERSION,
+		id: nextId(),
+		at: nowIso(),
+		...withSession(input),
+		type: "drive_task_failed",
+		taskId: input.taskId,
+	});
+}
+
 export function createDriveTaskArchivedEvent(input: {
 	roomId: string;
 	taskId: string;

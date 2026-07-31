@@ -132,5 +132,82 @@ describe("deriveSessionRollup", () => {
 		expect(rollup.midPlanAddCount).toBe(1);
 		expect(rollup.planCleanDrain).toBe(false);
 		expect(rollup.postSuccessPlanContinue).toBe(true);
+		expect(rollup.failureStickyCount).toBe(0);
+	});
+
+	it("counts P2 failure stickiness for uncleared failures", () => {
+		const callSessionId = "cs-sticky";
+		const roomId = "room-3";
+		const bankEvents: BankDriveEvent[] = [
+			bank({
+				id: "f1",
+				at: "2026-07-30T10:02:00.000Z",
+				roomId,
+				callSessionId,
+				type: "drive_task_failed",
+				taskId: "t1",
+			}),
+			bank({
+				id: "f2",
+				at: "2026-07-30T10:03:00.000Z",
+				roomId,
+				callSessionId,
+				type: "drive_task_failed",
+				taskId: "t1",
+			}),
+			bank({
+				id: "f3",
+				at: "2026-07-30T10:04:00.000Z",
+				roomId,
+				callSessionId,
+				type: "drive_task_failed",
+				taskId: "t2",
+			}),
+			bank({
+				id: "c1",
+				at: "2026-07-30T10:05:00.000Z",
+				roomId,
+				callSessionId,
+				type: "drive_task_completed",
+				taskId: "t2",
+			}),
+		];
+		const rollup = deriveSessionRollup({
+			callSessionId,
+			roomEvents: [],
+			bankEvents,
+		});
+		// t1 failed twice and never completed → sticky; t2 failed then completed → cleared
+		expect(rollup.failureStickyCount).toBe(1);
+	});
+
+	it("clears P2 when a failed task later completes", () => {
+		const callSessionId = "cs-recover";
+		const roomId = "room-4";
+		const bankEvents: BankDriveEvent[] = [
+			bank({
+				id: "f1",
+				at: "2026-07-30T10:02:00.000Z",
+				roomId,
+				callSessionId,
+				type: "drive_task_failed",
+				taskId: "t1",
+			}),
+			bank({
+				id: "c1",
+				at: "2026-07-30T10:05:00.000Z",
+				roomId,
+				callSessionId,
+				type: "drive_task_completed",
+				taskId: "t1",
+			}),
+		];
+		const rollup = deriveSessionRollup({
+			callSessionId,
+			roomEvents: [],
+			bankEvents,
+		});
+		expect(rollup.failureStickyCount).toBe(0);
+		expect(rollup.tasksCompleted).toBe(1);
 	});
 });

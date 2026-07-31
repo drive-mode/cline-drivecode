@@ -38,10 +38,10 @@ flowchart TD
     Bridge["Hub webview/CLI bank bridge"]
     Felt["Felt agency chrome + steer"]
     Reader["Session rollup reader + debug dump"]
+    P2ev["drive_task_failed / P2 stickiness"]
   end
   subgraph OpenObs["Open · observability"]
     S3["Stall classify + gated propose"]
-    P2ev["Failure event / P2 stickiness"]
   end
   subgraph OpenMoments["Open · product moments"]
     W1["W1.2 return / W1.3 stuck"]
@@ -62,6 +62,7 @@ Caption:
 
 - Kernel correlation + pure rollup + local reader/debug dump exist; **product path** emits complete/bind/failure via hub webview bank bridge.
 - Hub commands + webview protocol expose complete/bind/activate/failure with `roomId` / `callSessionId`.
+- `drive_task_failed` + P2 stickiness in `deriveSessionRollup` landed (REMAINING §2.3 Option A).
 - Felt agency (W1.1) chrome + mid-turn steer path landed; return loop (W1.2) + stuck recovery fork (W1.3 manual) landed.
 - Status Hub fourth mode (W3.1) still open — consume `SessionRollupSource` / `readSessionRollups`.
 - ARD-0015 remains **Proposed** (leadership accept still open).
@@ -73,14 +74,15 @@ Caption:
 |---|---|
 | `callSessionId` on room + bank event bases | `@cline/shared` `events.ts`, `bankEvents.ts`, `callSession.ts` |
 | Leave `durationMs` when last human leaves; re-join mints new id | `DriveRoomStore.join/leave` |
-| Bank emits: opened, activated (incl. create+activate), bound, completed, archived, plan_step (adds), plan_archived | `bankStore.ts` |
+| Bank emits: opened, activated (incl. create+activate), bound, completed, failed, archived, plan_step (adds), plan_archived | `bankStore.ts` |
 | Hub bank log wire | `drive-bank-handlers` → `appendBankLogEvent` |
 | Hub commands: `drive_bank_complete_task`, `bind_now`, `activate_plan`, `record_failure` | `hub.ts` + transport + handlers |
 | Hub webview bridge: protocol frames + `drive-bank` forward + `bankSession` mutators + PlanEditor complete / Agent bind / tool failure | `apps/cline-hub` webview + server |
 | Felt agency (W1.1): interrupt chrome, plan-edit consequence, recovery vs collaborative add, mid-turn steer chip | `agencyChrome.ts`, DriveCallChrome, NowNext, PlanEditor, server send steer, Composer |
 | Stuck recovery (W1.3): Spotlight fork after `nowLastFailure`; gated narrow / fix-up / recruit stub / pause(Ask) | `stuckRecovery.ts`, `StuckRecoveryFork.tsx`, Chat Spotlight |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
-| Pure `deriveSessionRollup` (S1–S3, E1–E3, P1; P2 stubbed at 0) | `@cline/drive` `sessionRollup.ts` |
+| Pure `deriveSessionRollup` (S1–S3, E1–E3, P1–P2) | `@cline/drive` `sessionRollup.ts` |
+| `drive_task_failed` emit + P2 stickiness | `bankStore.recordTaskFailure` → `deriveSessionRollup.failureStickyCount` |
 | Session rollup reader + local debug dump | `@cline/core` `sessionRollupReader.ts`; hub `drive_session_rollups`; Drive Settings dump; `cline doctor session-rollups` |
 | Planning docs, DRVs, visual plan, canvas | `docs/drivecode/...` |
 
@@ -120,17 +122,18 @@ Caption:
 **Docs:** [slice-2](../initiatives/task-satisfaction-observability/slice-2-local-session-rollup.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md).
 
 **Shipped:** FS reader over room + bank JSONL → `deriveSessionRollup`; hub `drive_session_rollups`; Drive Settings “Dump last rollups”; CLI `doctor session-rollups`.
-### 2.3 P2 failure stickiness (event or correlated)
 
-**Why.** Rollup `failureStickyCount` is hard-coded `0` — no failure bank event exists; only `lastFailure` on disk.
+### ~~2.3 P2 failure stickiness (event or correlated)~~ ✅ done
 
-| Option | Choice needed |
+**Why.** Rollup `failureStickyCount` was hard-coded `0` — no failure bank event existed; only `lastFailure` on disk.
+
+| Option | Choice |
 |---|---|
-| A | Emit `drive_task_failed` (or reuse note on a typed event) from `recordTaskFailure` |
-| B | Derive P2 offline from task files + complete events (FS archaeology) |
+| **A (shipped)** | Emit `drive_task_failed` (taskId only; note stays on disk `lastFailure`) from `recordTaskFailure` |
+| B | Derive P2 offline from task files + complete events (FS archaeology) — not chosen |
 
-**Recommended default:** A — keep event-stream honesty for Slice 2/3.  
-**Docs:** update PRD 10 P2 + `sessionRollup` once chosen.
+**P2 definition:** count of distinct `taskId`s with ≥1 in-session `drive_task_failed` and no later `drive_task_completed` for that id (recovery pressure still open).  
+**Docs:** PRD 10 P2 + [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md).
 
 ### 2.4 Slice 3 — diagnose → propose → gate
 
@@ -227,7 +230,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 3. ~~W1.2 Return loop (call_end + handoff)~~ ✅ (resume CTA / Plan-reentry Drive tab still open — see §3 W1.2)
 4. ~~W1.3 Stuck recovery (manual)~~ ✅ (auto classifier / full recruit still open — see §3 W1.3)
 5. ~~Slice 2 UI reader (2.2)~~ ✅
-6. Failure event for P2 (2.3)
+6. ~~Failure event for P2 (2.3)~~ ✅
 7. W2.1 Clean-drain
 8. W2.2 Plan re-entry
 9. W2.3 Recruit-on-stall (+ agentId)
@@ -245,6 +248,7 @@ No calendar estimates — order is dependency-only.
 |---|---|
 | After 2.1 | Mark slice-1 “product path wired”; update DRV-TASK-BANK agent tasks |
 | After 2.2 | ~~Mark slice-2 UI done; link Status~~ ✅ |
+| After 2.3 | ~~P2 via `drive_task_failed`; PRD 10 / DRV-TASK-METRICS~~ ✅ |
 | Before W1 freeze | Resolve §3 W1 forks in BRIEF or DEC |
 | On ARD-0015 accept | Flip status board Proposed → Accepted |
 | After each DRV lands | Check off ACs on feature file; update this remaining list |

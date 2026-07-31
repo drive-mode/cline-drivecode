@@ -72,7 +72,7 @@ Observe → Diagnose → Propose → Gate → Improve. Proposals may be planning
 | E2 | Intent refresh (new/activated plan or title) after progress | Positive goal redirect |
 | E3 | Tasks / session-minute | Throughput diagnostic |
 | P1 | Mid-plan add churn | Plan quality |
-| P2 | Failure stickiness | Recovery pressure |
+| P2 | Failure stickiness | Distinct taskIds with ≥1 in-session `drive_task_failed` and no later `drive_task_completed` (note stays on disk `lastFailure`; event is taskId-only) | Recovery pressure |
 | A1/A2 | Diagnose→propose / propose→accept | Closed-loop health |
 
 ### R3 · Local dashboard / export

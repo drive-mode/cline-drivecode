@@ -25,7 +25,11 @@ export type SessionRollup = {
 	tasksPerSessionMinute: number | null;
 	/** P1 — mid-plan additive task ids after activate */
 	midPlanAddCount: number;
-	/** P2 — reserved until failure events exist */
+	/**
+	 * P2 — failure stickiness (PRD 10 / research 15): distinct taskIds with
+	 * ≥1 in-session `drive_task_failed` and no later `drive_task_completed`
+	 * for that taskId (recovery pressure still open at session end).
+	 */
 	failureStickyCount: number;
 };
 
@@ -148,6 +152,16 @@ export function deriveSessionRollup(
 		tasksPerSessionMinute = tasksCompleted / (durationMs / 60_000);
 	}
 
+	// P2: tasks that failed and were not completed later in-session.
+	const stickyFailedTaskIds = new Set<string>();
+	for (const event of bankEvents) {
+		if (event.type === "drive_task_failed") {
+			stickyFailedTaskIds.add(event.taskId);
+		} else if (event.type === "drive_task_completed") {
+			stickyFailedTaskIds.delete(event.taskId);
+		}
+	}
+
 	return {
 		callSessionId,
 		roomId,
@@ -159,6 +173,6 @@ export function deriveSessionRollup(
 		intentRefresh,
 		tasksPerSessionMinute,
 		midPlanAddCount,
-		failureStickyCount: 0,
+		failureStickyCount: stickyFailedTaskIds.size,
 	};
 }
