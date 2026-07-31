@@ -47,6 +47,39 @@ describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
 		});
 	});
 
+	it("applies PRODUCT_DEFAULT_MAX_ITERATIONS when options.maxIterations is unset (SDK-5.1)", async () => {
+		const { PRODUCT_DEFAULT_MAX_ITERATIONS } = await import("@cline/core");
+		const root = mkdtempSync(join(tmpdir(), "hub-session-budget-"));
+
+		const input = buildSessionStartInput({
+			workspaceRoot: root,
+			cwd: root,
+			providerId: "anthropic",
+			modelId: "claude-sonnet-4-5",
+		});
+
+		expect(input.config.maxIterations).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS);
+		expect(input.sessionMetadata?.maxIterations).toBe(
+			PRODUCT_DEFAULT_MAX_ITERATIONS,
+		);
+	});
+
+	it("lets explicit options.maxIterations override the product default (SDK-5.1)", () => {
+		const root = mkdtempSync(join(tmpdir(), "hub-session-budget-override-"));
+
+		const input = buildSessionStartInput(
+			{
+				workspaceRoot: root,
+				cwd: root,
+				providerId: "anthropic",
+				modelId: "claude-sonnet-4-5",
+			},
+			{ maxIterations: 12 },
+		);
+
+		expect(input.config.maxIterations).toBe(12);
+	});
+
 	it("populates pluginPaths when a fixture plugin exists under .cline/plugins/", () => {
 		const root = makeFixturePluginRoot();
 

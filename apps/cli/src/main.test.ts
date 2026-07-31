@@ -609,6 +609,23 @@ describe("runCli lightweight command dispatch", () => {
 		);
 	});
 
+	it("applies PRODUCT_DEFAULT_MAX_ITERATIONS when unset (SDK-5.1)", async () => {
+		forcePromptModeInput();
+		process.argv = ["bun", "src/index.ts", "budget default"];
+
+		const { PRODUCT_DEFAULT_MAX_ITERATIONS } = await import("@cline/core");
+		const { runCli } = await import("./main");
+
+		await expect(runCli()).resolves.toBeUndefined();
+		expect(runtimeMocks.runAgent).toHaveBeenCalledWith(
+			"budget default",
+			expect.objectContaining({
+				maxIterations: PRODUCT_DEFAULT_MAX_ITERATIONS,
+			}),
+			expect.anything(),
+		);
+	});
+
 	it("discovers fixture plugins via --cwd into session pluginPaths (SDK-4.1)", async () => {
 		forcePromptModeInput();
 		const root = mkdtempSync(join(tmpdir(), "cli-plugin-fixture-"));

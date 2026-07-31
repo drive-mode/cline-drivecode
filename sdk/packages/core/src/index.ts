@@ -805,6 +805,21 @@ export {
 	resolveProductSessionFeatures,
 } from "./session/product-session-defaults";
 export type {
+	CreateUsageBudgetAbortHandlerOptions,
+	EvaluateUsageBudgetInput,
+	UsageBudgetAbortDecision,
+	UsageBudgetPricing,
+	UsageForBudget,
+} from "./session/usage-budget-abort";
+export {
+	createUsageBudgetAbortHandler,
+	DEFAULT_USAGE_BUDGET_ABORT_REASON,
+	estimateUsageCost,
+	evaluateUsageBudget,
+	shouldAbortForUsageBudget,
+	usageFromSessionEvent,
+} from "./session/usage-budget-abort";
+export type {
 	BuildSessionPluginInjectionInput,
 	ResolveSessionPluginLoadInput,
 	ResolveSessionPluginPathsInput,

@@ -523,7 +523,10 @@ export class AcpAgent implements Agent {
 			mode: session.currentMode,
 		});
 		const cliBuildInfo = getCliBuildInfo();
-		const sessionFeatures = resolveProductSessionFeatures({ host: "acp" });
+		const sessionFeatures = resolveProductSessionFeatures({
+			host: "acp",
+			applyDefaultMaxIterations: true,
+		});
 		const sessionPlugins = buildSessionPluginInjection({
 			cwd,
 			workspaceRoot,
@@ -545,6 +548,9 @@ export class AcpAgent implements Agent {
 			toolPolicies: { "*": { autoApprove: false } },
 			enableSpawnAgent: sessionFeatures.enableSpawnAgent,
 			enableAgentTeams: sessionFeatures.enableAgentTeams,
+			...(sessionFeatures.maxIterations !== undefined
+				? { maxIterations: sessionFeatures.maxIterations }
+				: {}),
 			enableTools: true,
 			cwd,
 			workspaceRoot,

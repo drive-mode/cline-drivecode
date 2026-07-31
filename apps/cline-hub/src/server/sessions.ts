@@ -98,6 +98,10 @@ export function buildSessionStartInput(
 	const reasoningOptions = toRuntimeReasoningOptions(options?.reasonLevel);
 	const sessionFeatures = resolveProductSessionFeatures({
 		host: "hub",
+		applyDefaultMaxIterations: true,
+		...(typeof options?.maxIterations === "number"
+			? { maxIterations: options.maxIterations }
+			: {}),
 		...(typeof options?.enableSpawn === "boolean"
 			? { enableSpawnAgent: options.enableSpawn }
 			: {}),
@@ -121,7 +125,9 @@ export function buildSessionStartInput(
 			systemPrompt: options?.systemPrompt ?? "",
 			mode,
 			...reasoningOptions,
-			maxIterations: options?.maxIterations,
+			...(sessionFeatures.maxIterations !== undefined
+				? { maxIterations: sessionFeatures.maxIterations }
+				: {}),
 			enableTools: options?.enableTools !== false,
 			enableSpawnAgent: sessionFeatures.enableSpawnAgent,
 			enableAgentTeams: sessionFeatures.enableAgentTeams,
@@ -140,7 +146,7 @@ export function buildSessionStartInput(
 			source: options?.source ?? SessionSource.WEB,
 			mode,
 			systemPrompt: options?.systemPrompt,
-			maxIterations: options?.maxIterations,
+			maxIterations: sessionFeatures.maxIterations,
 			reasonLevel: options?.reasonLevel,
 			autoApproveTools: options?.autoApproveTools,
 			...(options?.sessionMetadata ?? {}),

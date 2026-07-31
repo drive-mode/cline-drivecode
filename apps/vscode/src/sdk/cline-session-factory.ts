@@ -945,7 +945,11 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		fetch,
 	}
 
-	const sessionFeatures = resolveProductSessionFeatures({ host: "vscode" })
+	// No VS Code setting for maxIterations yet — apply product default (D4).
+	const sessionFeatures = resolveProductSessionFeatures({
+		host: "vscode",
+		applyDefaultMaxIterations: true,
+	})
 	const pluginPaths = resolveSessionPluginPaths({ cwd, workspaceRoot })
 
 	const config: CoreSessionConfig = {
@@ -981,7 +985,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		...reasoningConfig,
 		...(maxTokensPerTurn !== undefined ? { maxTokensPerTurn } : {}),
 		...(temperature !== undefined ? { temperature } : {}),
-		maxIterations: undefined,
+		...(sessionFeatures.maxIterations !== undefined ? { maxIterations: sessionFeatures.maxIterations } : {}),
 		logger: sdkLogger,
 		extensionContext: {
 			user: distinctId ? { distinctId } : undefined,

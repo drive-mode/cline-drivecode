@@ -224,7 +224,16 @@ export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 			: readPositiveInteger(
 					config.thinkingBudgetTokens ?? config.thinking_budget_tokens,
 				);
-	const sessionFeatures = resolveProductSessionFeatures({ host: "desktop" });
+	const explicitMaxIterations = readPositiveInteger(
+		config.maxIterations ?? config.max_iterations,
+	);
+	const sessionFeatures = resolveProductSessionFeatures({
+		host: "desktop",
+		applyDefaultMaxIterations: true,
+		...(explicitMaxIterations !== undefined
+			? { maxIterations: explicitMaxIterations }
+			: {}),
+	});
 	const enableSpawnAgent =
 		config.enableSpawn ??
 		config.enableSpawnAgent ??
@@ -253,7 +262,9 @@ export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 		...(workspaceRoot ? { workspaceRoot } : {}),
 		...(cwd ? { cwd } : {}),
 		systemPrompt: config.systemPrompt ?? config.system_prompt ?? "",
-		maxIterations: config.maxIterations ?? config.max_iterations,
+		...(sessionFeatures.maxIterations !== undefined
+			? { maxIterations: sessionFeatures.maxIterations }
+			: {}),
 		enableTools: config.enableTools ?? config.enable_tools ?? true,
 		enableSpawnAgent,
 		enableAgentTeams,

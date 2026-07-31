@@ -197,7 +197,30 @@ Core helpers (Phase 1): `resolveSessionPluginPaths`, `buildSessionExtensionWorks
 
 ## Phase 5 · Budgets
 
-`SDK-5.1` Shared `maxIterations` · `SDK-5.2` Optional usage abort.
+Shared `maxIterations` defaults (+ optional usage abort helper); hosts may override via settings/UI (**D4**).
+
+`PRODUCT_DEFAULT_MAX_ITERATIONS` is **50**. Hosts opt in via `resolveProductSessionFeatures({ …, applyDefaultMaxIterations: true, maxIterations?: explicit })` and apply `sessionFeatures.maxIterations` onto session config when defined. Explicit host UI/args/settings win over the product default.
+
+### Agent task `SDK-5.1` — Shared `maxIterations`
+
+| | |
+|---|---|
+| **Depends on** | SDK-1.1, D4 (locked) |
+| **Owner surface** | Hosts: CLI, ACP, Hub, Desktop, VS Code |
+| **Goal** | Call `resolveProductSessionFeatures` with `applyDefaultMaxIterations: true` (and pass explicit overrides when present). |
+| **Verify** | Host unit tests assert `maxIterations === PRODUCT_DEFAULT_MAX_ITERATIONS` (50) when unset; explicit overrides still win. |
+| **Status** | **Done** — CLI `main.ts`, ACP `acpAgent.ts`, Hub `sessions.ts`, Desktop `chat-session.ts`, VS Code `cline-session-factory.ts` (no VS Code setting yet → product default) |
+
+### Agent task `SDK-5.2` — Optional usage abort
+
+| | |
+|---|---|
+| **Depends on** | D4 (locked) |
+| **Owner surface** | `@cline/core` (+ one host wire) |
+| **Goal** | Pure helper encoding the [going-to-production](/sdk/guides/going-to-production) cost-control pattern: estimate cost, evaluate budget, abort once over limit. |
+| **API** | `estimateUsageCost`, `evaluateUsageBudget` / `shouldAbortForUsageBudget`, `usageFromSessionEvent`, `createUsageBudgetAbortHandler` |
+| **Verify** | Focused `@cline/core` unit tests; CLI opt-in via `CLINE_MAX_SESSION_COST`. |
+| **Status** | **Partial** — core helper + tests + CLI one-shot (`run-agent.ts` / `CLINE_MAX_SESSION_COST`) done. Remaining host wires (Hub, Desktop, VS Code, CLI interactive) tracked in [integration backlog](/sdk/architecture/integration-backlog). |
 
 ## Phase 6 · Hub ClineCore depth
 
@@ -236,7 +259,8 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-3.1 Align scheduled-agents guide (D2) | **Done** |
 | SDK-3.2 Optional automation bridge | **Deferred** (no merge of Hub schedules ↔ automation) |
 | SDK-4.1–4.3 Plugins on session | **Done** |
-| SDK-5.1–5.2 Budgets | Open |
+| SDK-5.1 Shared `maxIterations` | **Done** |
+| SDK-5.2 Optional usage abort | **Partial** (core + CLI env; see backlog) |
 | SDK-6.1–6.3 Hub depth | Open |
 | SDK-7.1–7.2 VS Code hooks/MCP | Open |
 | SDK-8.1–8.2 Observability | Open |
@@ -244,6 +268,7 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 ## Related
 
 - [Usage analysis](/sdk/architecture/usage-analysis)
+- [Integration backlog](/sdk/architecture/integration-backlog)
 - [Public SDK overview](https://docs.cline.bot/sdk/overview)
 - [ClineCore](https://docs.cline.bot/sdk/clinecore)
 - [Multi-agent teams](https://docs.cline.bot/sdk/guides/multi-agent-teams)

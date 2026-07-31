@@ -1,0 +1,38 @@
+---
+title: "SDK integration backlog"
+sidebarTitle: "Integration backlog"
+description: "Follow-ups from Phase 4–8 review/test agents. Non-blocking unless marked otherwise."
+---
+
+# SDK integration backlog
+
+Items filed by post-task review and test-coverage agents. Address after the current phase strip unless severity rises.
+
+## From Phase 4 (plugins on session)
+
+| ID | Title | Source | Notes |
+|----|-------|--------|-------|
+| BL-4.1 | Prefer thin test helpers over exporting full Hub/Desktop session builders | review | Match ACP `buildAcpSessionPluginInjection` pattern; shrink export surface |
+| BL-4.2 | Fix Phase 1 vs Phase 4 attribution for `buildSessionPluginInjection` | review | Helper landed in Phase 4; update SDK-1.2 / Phase 4 intro wording |
+| BL-4.3 | Optional `mode` on `buildSessionExtensionWorkspace` | review | Let shared helper carry VS Code workspace fields |
+| BL-4.4 | Consider host-side workspace-only injection | review | If product trusts bootstrap discovery alone |
+| BL-4.5 | YOLO path assertion for plugin injection | test | Same compose path; low risk |
+| BL-4.6 | Disabled-plugin filtering asserted at host layer | test | Core already filters; host coverage optional |
+| BL-4.7 | Explicit `pluginPaths` override passthrough tests | test | |
+| BL-4.8 | `resolveSessionPluginLoad` fixture success path | test | Empty-only today |
+| BL-4.9 | Desktop pathless start plugin injection assert | test | |
+
+## From Phase 5 (budgets)
+
+| ID | Title | Source | Notes |
+|----|-------|--------|-------|
+| BL-5.1 | Wire usage-budget abort on Hub Chat sessions | SDK-5.2 | Use `createUsageBudgetAbortHandler` on hub session event subscribe; need product budget source (UI field / setting) |
+| BL-5.2 | Wire usage-budget abort on Desktop sidecar | SDK-5.2 | Same helper; budget from chat config / settings |
+| BL-5.3 | Wire usage-budget abort on VS Code | SDK-5.2 | Add setting + subscribe hook; no maxIterations setting yet either |
+| BL-5.4 | CLI interactive TUI usage-budget abort | SDK-5.2 | One-shot `run-agent` honors `CLINE_MAX_SESSION_COST`; interactive path does not yet |
+| BL-5.5 | VS Code `maxIterations` setting | SDK-5.1 | Host applies product default today; expose override in settings UI when ready |
+| BL-5.6 | CLI `--max-iterations` / config override | SDK-5.1 | No CLI arg today; product default always applied |
+
+## Open (to be filled by later phases)
+
+_Phase 6+ items appended below as agents complete reviews._

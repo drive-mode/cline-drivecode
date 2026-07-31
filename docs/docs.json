@@ -222,7 +222,8 @@
 							"sdk/architecture/overview",
 							"sdk/architecture/hub-spoke",
 							"sdk/architecture/usage-analysis",
-							"sdk/architecture/integration-build"
+							"sdk/architecture/integration-build",
+							"sdk/architecture/integration-backlog"
 						]
 					},
 					{

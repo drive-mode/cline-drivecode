@@ -326,6 +326,15 @@ describe("buildSessionConfig", () => {
 		expect(config.enableAgentTeams).toBe(true)
 	})
 
+	it("applies PRODUCT_DEFAULT_MAX_ITERATIONS when unset (SDK-5.1)", async () => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
+		const { PRODUCT_DEFAULT_MAX_ITERATIONS } = await import("@cline/core")
+
+		const config = await buildSessionConfig({ cwd: "/tmp/workspace" })
+
+		expect(config.maxIterations).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS)
+	})
+
 	it("injects pluginPaths on session start (SDK-4.3)", async () => {
 		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
 

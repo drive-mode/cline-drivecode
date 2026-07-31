@@ -43,6 +43,10 @@ import {
 import { describeAbortSource, resolveMistakeLimitDecision } from "./format";
 import { buildUserInputMessage } from "./prompt";
 import { subscribeToAgentEvents } from "./session-events";
+import {
+	createCliUsageBudgetAbortHandler,
+	readCliMaxSessionCostUsd,
+} from "./usage-budget";
 
 function printModelProviderInfo(config: Config): void {
 	const catalog = config.knownModels ? "live" : "bundled";
@@ -191,7 +195,35 @@ export async function runAgent(
 	const displayedErrorMessages = new Set<string>();
 	const shouldZeroCost = await shouldZeroClineFreeModelCost(config);
 
+	// --- Abort & signal handling (declared early so usage-budget can call it) ---
+	let abortRequested = false;
+	let timedOut = false;
+	let activeSessionId: string | undefined;
+
+	const abortAll = (reason?: string) => {
+		if (abortRequested) return false;
+		abortRequested = true;
+		if (activeSessionId) {
+			sessionManager
+				.abort(
+					activeSessionId,
+					new Error(reason ?? "Run-agent runtime abort requested"),
+				)
+				.catch(() => {});
+		}
+		return true;
+	};
+	setActiveRuntimeAbort(abortAll);
+
+	const usageBudgetAbort = createCliUsageBudgetAbortHandler({
+		maxCostUsd: readCliMaxSessionCostUsd(),
+		abort: (reason) => {
+			abortAll(reason);
+		},
+	});
+
 	const onAgentEvent = (rawEvent: AgentEvent): void => {
+		usageBudgetAbort?.(rawEvent);
 		const event = zeroCliAgentEventCost(rawEvent, shouldZeroCost);
 		if (event.type === "content_start" && event.contentType === "reasoning") {
 			reasoningChunkCount += 1;
@@ -216,23 +248,6 @@ export async function runAgent(
 	const unsubscribe = subscribeToAgentEvents(sessionManager, onAgentEvent, {
 		sessionId: plannedSessionId,
 	});
-
-	// --- Abort & signal handling ---
-	let abortRequested = false;
-	let timedOut = false;
-	let activeSessionId: string | undefined;
-
-	const abortAll = () => {
-		if (abortRequested) return false;
-		abortRequested = true;
-		if (activeSessionId) {
-			sessionManager
-				.abort(activeSessionId, new Error("Run-agent runtime abort requested"))
-				.catch(() => {});
-		}
-		return true;
-	};
-	setActiveRuntimeAbort(abortAll);
 
 	let cleanupDone: Promise<void> | undefined;
 	const cleanupRuntime = () => {

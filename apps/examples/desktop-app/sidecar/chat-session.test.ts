@@ -38,6 +38,34 @@ describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
 		});
 	});
 
+	it("applies PRODUCT_DEFAULT_MAX_ITERATIONS when unset (SDK-5.1)", async () => {
+		const { PRODUCT_DEFAULT_MAX_ITERATIONS } = await import("@cline/core");
+		const root = mkdtempSync(join(tmpdir(), "desktop-budget-"));
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+		});
+
+		expect(config.maxIterations).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS);
+	});
+
+	it("lets explicit maxIterations override the product default (SDK-5.1)", () => {
+		const root = mkdtempSync(join(tmpdir(), "desktop-budget-override-"));
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+			maxIterations: 7,
+		});
+
+		expect(config.maxIterations).toBe(7);
+	});
+
 	it("populates pluginPaths when a fixture plugin exists under .cline/plugins/", () => {
 		const root = mkdtempSync(join(tmpdir(), "desktop-plugin-"));
 		const pluginDir = join(root, ".cline", "plugins", "demo");

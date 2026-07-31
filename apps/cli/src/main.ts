@@ -1118,6 +1118,7 @@ export async function runCli(): Promise<void> {
 		const sessionFeatures = resolveProductSessionFeatures({
 			yolo: isYoloMode,
 			host: "cli",
+			applyDefaultMaxIterations: true,
 		});
 		const sessionPlugins = buildSessionPluginInjection({
 			cwd,
@@ -1159,6 +1160,9 @@ export async function runCli(): Promise<void> {
 			toolPolicies,
 			enableSpawnAgent: sessionFeatures.enableSpawnAgent,
 			enableAgentTeams: sessionFeatures.enableAgentTeams,
+			...(sessionFeatures.maxIterations !== undefined
+				? { maxIterations: sessionFeatures.maxIterations }
+				: {}),
 			enableTools: true,
 			cwd,
 			workspaceRoot,
