@@ -1,6 +1,6 @@
 # DRV-STATUS-SESSIONS · Status Hub accomplishment lens
 
-Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-status-accomplishment](../initiatives/session-satisfaction-moments/req-status-accomplishment.md).
+Back to [README](../README.md). Phase 2+ **Landed (W3.1)**. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-status-accomplishment](../initiatives/session-satisfaction-moments/req-status-accomplishment.md).
 
 ## Problem / user value
 
@@ -20,23 +20,23 @@ Rollups are framed as eng/debug. Users and leads need a product lens: did sessio
 
 ## Surfaces touched
 
-- Status Hub mode or Status-adjacent panel (`StatusSnapshotSource` / teams ports)
-- Drill-down to bank / room / plan
+- Status Hub **sessions** mode (`StatusSessionRollupSource` / teams ports)
+- Drill-down to bank / room / plan via `callSessionId` + `roomId`
 - Localhost product stance once Obs R1 green
 
 ## Agent tasks
 
-- [ ] Add accomplishment lens listing recent `SessionRollup`s with S2/S3/E1 chips (no raw JSONL).
-  - Owner package: `@cline/cline-hub` (+ shared port types if needed)
-  - Verify: fixture renders for clean / churny / continue / stickiness
+- [x] Add accomplishment lens listing recent `SessionRollup`s with S2/S3/E1 chips (no raw JSONL).
+  - Owner package: `@cline/cline-hub` (+ `@cline/drive` `statusSessions.ts`)
+  - Verify: fixture renders for clean / churny / continue / stickiness (`STATUS_SESSION_FIXTURES` + demo adapter)
   - Done when: list is labeled distinct from Board/Changelog/Dependency map.
-- [ ] Wire row drill-down to bank and room/plan context.
+- [x] Wire row drill-down to bank and room/plan context.
   - Owner package: `@cline/cline-hub`
-  - Verify: click-through smoke
+  - Verify: click-through smoke (Open room / Drive)
   - Done when: row opens bank/plan/room without leaving localhost.
-- [ ] Enforce no utterance inputs and no default cloud egress on the lens.
-  - Owner package: `@cline/shared` / hub composition
-  - Verify: privacy tests + composition-root demo wiring only
+- [x] Enforce no utterance inputs and no default cloud egress on the lens.
+  - Owner package: `@cline/drive` / hub composition
+  - Verify: privacy tests + composition-root demo wiring only (`?demoSessions=1`)
   - Done when: forbidden keys rejected; demos not in view layer.
 
 ## Risks

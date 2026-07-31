@@ -47,7 +47,7 @@ Drive needs local, privacy-safe rollups: tasks completed per session, plan clean
   - Owner package: `@cline/core` + `@cline/cline-hub` + `@cline/cli`
   - Verify: `readSessionRollups` tests; hub `drive_session_rollups`; Drive Settings dump; `cline doctor session-rollups`
   - Done when: rollup visible without network egress.
-  - Note: Status Hub fourth mode (DRV-STATUS-SESSIONS) still open — consume `SessionRollupSource` / `readSessionRollups` at composition root.
+  - Note: Status Hub sessions mode (DRV-STATUS-SESSIONS / W3.1) consumes `SessionRollupSource` / `readSessionRollups` at composition root.
 
 ## Risks
 

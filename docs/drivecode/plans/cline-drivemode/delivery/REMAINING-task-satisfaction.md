@@ -42,13 +42,14 @@ flowchart TD
     CleanDrain["Clean-drain ritual invite"]
     PlanReentry["Plan re-entry row + chips"]
     RecruitStall["Recruit-on-stall + agentId"]
+    StatusSessions["Status Hub sessions lens"]
   end
   subgraph OpenObs["Open · observability"]
     S3["Stall classify + gated propose"]
   end
   subgraph OpenMoments["Open · product moments"]
     W1["W1.2 return / W1.3 stuck"]
-    W3["W3 Status / digest / SDLC bank"]
+    W3["W3.2 digest / W3.3 SDLC bank"]
     W4["W4 auto stall"]
   end
   Done -->|"honesty gate"| OpenObs
@@ -59,7 +60,8 @@ flowchart TD
   W1 --> W3
   CleanDrain --> W3
   PlanReentry --> W3
-  RecruitStall --> W3
+  RecruitStall --> StatusSessions
+  StatusSessions --> W3
 ```
 
 Caption:
@@ -71,7 +73,7 @@ Caption:
 - Clean-drain ritual (W2.1) NowNext successor + soft invite landed; invite ≠ auto E1.
 - Plan re-entry (W2.2) unfinished-plan row + rollup chips + Resume landed.
 - Recruit-on-stall (W2.3) Who-should-take-this + `call_seat` + optional `agentId` on bind/complete landed.
-- Status Hub fourth mode (W3.1) still open — consume `SessionRollupSource` / `readSessionRollups`.
+- Status Hub sessions mode (W3.1) landed — `StatusSessionRollupSource` / `statusSessions.ts` + hub `/status` fourth mode.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
 
@@ -90,6 +92,7 @@ Caption:
 | Clean-drain (W2.1): S3 gate + NowNext successor invite (invite ≠ E1) | `@cline/drive` `cleanDrain.ts`; NowNext successor; Chat counters |
 | Plan re-entry (W2.2): unfinished-plan row + rollup chips + Resume | `planReentry.ts`, `PlanReentryRow`; Drive chrome off-call |
 | Recruit-on-stall (W2.3): Who-should-take-this + call_seat + agentId | `recruit/scoreNeed.ts`, `RecruitStallPicker`, `call_seat`, bank `agentId` |
+| Status Hub sessions (W3.1): fourth mode + S2/S3/E1 + drill | `@cline/drive` `statusSessions.ts`; hub `StatusSessionsPanel`; `StatusSessionRollupSource`; `?demoSessions=1` |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1–P2) | `@cline/drive` `sessionRollup.ts` |
 | `drive_task_failed` emit + P2 stickiness | `bankStore.recordTaskFailure` → `deriveSessionRollup.failureStickyCount` |
@@ -126,7 +129,7 @@ Caption:
 |---|---|---|
 | ~~Reader: load room JSONL + bank JSONL for a `callSessionId` (or recent sessions)~~ | `@cline/core` | `readSessionRollups` / `createFsSessionRollupSource` + tests |
 | ~~Debug panel or CLI dump of last N `SessionRollup`s~~ | hub + CLI | Drive Settings dump + `cline doctor session-rollups`; localhost only |
-| ~~Wire rollup chips into future Status lens (see 3.6) without duplicating store~~ | composition root | Shared `SessionRollupSource` port; Status mode still open (W3.1) |
+| ~~Wire rollup chips into future Status lens (see 3.6) without duplicating store~~ | composition root | Shared `SessionRollupSource` port; **W3.1 Status sessions mode landed** |
 
 **Deps:** 2.1 for honest live data.  
 **Docs:** [slice-2](../initiatives/task-satisfaction-observability/slice-2-local-session-rollup.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md).
@@ -205,7 +208,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 
 | ID | Component | Req | Key remaining work |
 |---|---|---|---|
-| W3.1 | [DRV-STATUS-SESSIONS](../features/DRV-STATUS-SESSIONS.md) | [req-status-accomplishment](../initiatives/session-satisfaction-moments/req-status-accomplishment.md) | Fourth Status mode (or adjacent); S2/S3/E1 list; drill to bank/room; port-only |
+| W3.1 | [DRV-STATUS-SESSIONS](../features/DRV-STATUS-SESSIONS.md) | [req-status-accomplishment](../initiatives/session-satisfaction-moments/req-status-accomplishment.md) | **Landed:** Status Hub `sessions` mode; S2/S3/E1 chips; drill to room/bank via `callSessionId`; port-only (`StatusSessionRollupSource`); demo at composition root (`?demoSessions=1`) |
 | W3.2 | [DRV-SHIPPED-DIGEST](../features/DRV-SHIPPED-DIGEST.md) | [req-value-proof-digest](../initiatives/session-satisfaction-moments/req-value-proof-digest.md) | Opt-in export schema + UI/CLI; redaction tests; default off |
 | W3.3 | Amends [DRV-SDLC-GUIDE](../features/DRV-SDLC-GUIDE.md) | [req-sdlc-bankable](../initiatives/session-satisfaction-moments/req-sdlc-bankable.md) | W-44 freeze → accept path creates `DriveTask`s + plan refs so S2 can credit guided sessions |
 
@@ -244,8 +247,9 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 7. ~~W2.1 Clean-drain~~ ✅
 8. ~~W2.2 Plan re-entry~~ ✅
 9. ~~W2.3 Recruit-on-stall (+ agentId)~~ ✅
-10. W3 Status + digest + SDLC bankable
-11. Slice 3 + W4 auto stall
+10. ~~W3.1 Status sessions lens~~ ✅
+11. W3.2 digest + W3.3 SDLC bankable
+12. Slice 3 + W4 auto stall
 ```
 
 No calendar estimates — order is dependency-only.

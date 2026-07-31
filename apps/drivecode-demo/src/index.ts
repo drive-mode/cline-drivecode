@@ -4,6 +4,7 @@ export { DrivePlansDemoStatusSnapshotSource } from "./drive-plans-demo-status-so
 export { DrivePlansDemoTeamsSource } from "./drive-plans-demo-teams-source";
 export type { DrivecodeDemoHubBootstrap } from "./hub-query";
 export { readDrivecodeDemoHubBootstrap } from "./hub-query";
+export { DriveSessionsDemoRollupSource } from "./drive-sessions-demo-rollup-source";
 export {
 	PLAN_DEPENDENCY_DEMO_TEAM,
 	PLAN_DEPENDENCY_DEMO_TEAMS,

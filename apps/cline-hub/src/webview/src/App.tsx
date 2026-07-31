@@ -1,9 +1,14 @@
 import {
 	DrivePlansDemoTeamsSource,
+	DriveSessionsDemoRollupSource,
 	readDrivecodeDemoHubBootstrap,
 } from "@cline/drivecode-demo";
+import type { StatusSessionRow } from "@cline/drive";
+import { HubStatusSessionRollupSource } from "./status/hub-status-session-rollup-source";
 import { HubStatusTeamsSource } from "./status/hub-status-teams-source";
+import type { StatusSessionRollupSource } from "./status/status-session-rollup-source";
 import type { StatusTeamsSource } from "./status/status-teams-source";
+import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import {
 	ActivityIcon,
 	ArrowUpDownIcon,
@@ -1172,6 +1177,8 @@ function App() {
 	const [recentSessions, setRecentSessions] = useState<WebviewSessionSummary[]>(
 		[],
 	);
+	const [workspaceRoot, setWorkspaceRoot] = useState("");
+	const workspaceRootRef = useRef("");
 	const [locationSearch, setLocationSearch] = useState(
 		() => (typeof window !== "undefined" ? window.location.search : ""),
 	);
@@ -1189,6 +1196,19 @@ function App() {
 		}
 		return new HubStatusTeamsSource();
 	}, [demoHub.useDemoTeamsAdapter]);
+	const statusSessionSource = useMemo((): StatusSessionRollupSource => {
+		if (demoHub.useDemoSessionsAdapter) {
+			return new DriveSessionsDemoRollupSource();
+		}
+		return new HubStatusSessionRollupSource(() => {
+			const fromDefaults = workspaceRoot.trim() || workspaceRootRef.current.trim();
+			if (fromDefaults) {
+				return fromDefaults;
+			}
+			return recentSessions.find((s) => s.workspaceRoot?.trim())
+				?.workspaceRoot;
+		});
+	}, [demoHub.useDemoSessionsAdapter, recentSessions, workspaceRoot]);
 
 	useEffect(() => {
 		syncHubTheme();
@@ -1227,6 +1247,15 @@ function App() {
 				if (message.connected) {
 					setRestartPending(false);
 				}
+				return;
+			}
+			if (message.type === "defaults") {
+				const root =
+					typeof message.defaults?.workspaceRoot === "string"
+						? message.defaults.workspaceRoot
+						: "";
+				workspaceRootRef.current = root;
+				setWorkspaceRoot(root);
 				return;
 			}
 			if (message.type === "sessions") {
@@ -1282,6 +1311,16 @@ function App() {
 			current?.id === requestId ? null : current,
 		);
 	}, []);
+
+	const openStatusSessionRoom = useCallback(
+		(row: StatusSessionRow) => {
+			openDriveCall({
+				action: "join",
+				roomId: row.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID,
+			});
+		},
+		[openDriveCall],
+	);
 
 	const openSession = useCallback((sessionId: string) => {
 		lastChatSessionIdRef.current = sessionId;
@@ -1353,6 +1392,8 @@ function App() {
 			return (
 				<StatusView
 					initialMode={demoHub.initialStatusMode}
+					onOpenSessionRoom={openStatusSessionRoom}
+					sessionSource={statusSessionSource}
 					teamsSource={statusTeamsSource}
 				/>
 			);
@@ -1464,6 +1505,8 @@ function App() {
 		demoHub.useShareScreenSpotlightDemo,
 		acknowledgeDriveLaunch,
 		driveLaunchRequest,
+		openStatusSessionRoom,
+		statusSessionSource,
 		statusTeamsSource,
 		hubState,
 		deleteSession,

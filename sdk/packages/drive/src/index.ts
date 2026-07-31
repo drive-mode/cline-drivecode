@@ -187,6 +187,18 @@ export {
 	type PlanReentryRowModel,
 } from "./planReentry.js";
 export {
+	STATUS_SESSION_FIXTURES,
+	STATUS_SESSION_FORBIDDEN_KEYS,
+	buildStatusSessionChips,
+	buildStatusSessionRow,
+	statusSessionRowFromUnknown,
+	statusSessionRowIsPrivate,
+	type StatusSessionChip,
+	type StatusSessionChipId,
+	type StatusSessionRollupSlice,
+	type StatusSessionRow,
+} from "./statusSessions.js";
+export {
 	buildRecruitNeed,
 	rankRecruitCandidates,
 	RECRUIT_FORBIDDEN_KEYS,

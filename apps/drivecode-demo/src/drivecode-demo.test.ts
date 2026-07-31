@@ -61,6 +61,7 @@ describe("readDrivecodeDemoHubBootstrap", () => {
 	it("defaults to demos off when search is empty", () => {
 		expect(readDrivecodeDemoHubBootstrap()).toEqual({
 			useDemoTeamsAdapter: false,
+			useDemoSessionsAdapter: false,
 			useShareScreenSpotlightDemo: false,
 			useChatForkDemo: false,
 			initialStatusMode: undefined,
@@ -73,10 +74,19 @@ describe("readDrivecodeDemoHubBootstrap", () => {
 		);
 		expect(boot).toEqual({
 			useDemoTeamsAdapter: true,
+			useDemoSessionsAdapter: false,
 			useShareScreenSpotlightDemo: true,
 			useChatForkDemo: true,
 			initialStatusMode: "dependency-map",
 		});
+	});
+
+	it("parses demoSessions and sessions statusMode", () => {
+		const boot = readDrivecodeDemoHubBootstrap(
+			"?demoSessions=1&statusMode=sessions",
+		);
+		expect(boot.useDemoSessionsAdapter).toBe(true);
+		expect(boot.initialStatusMode).toBe("sessions");
 	});
 
 	it("accepts URLSearchParams and board/changelog modes", () => {
@@ -86,6 +96,7 @@ describe("readDrivecodeDemoHubBootstrap", () => {
 		});
 		expect(readDrivecodeDemoHubBootstrap(params)).toEqual({
 			useDemoTeamsAdapter: true,
+			useDemoSessionsAdapter: false,
 			useShareScreenSpotlightDemo: false,
 			useChatForkDemo: false,
 			initialStatusMode: "changelog",

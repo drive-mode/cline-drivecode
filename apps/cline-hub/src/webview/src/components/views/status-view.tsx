@@ -1,7 +1,7 @@
 /**
  * Status Hub — the changelog for every agent.
  *
- * Three lenses over one operational surface:
+ * Four lenses over one operational surface:
  *
  * **Board** answers "where is everything, and what needs me?" It shows one row
  * per subject (the current status), ordered by attention (blocked, then failed,
@@ -16,6 +16,9 @@
  * the `teamsSource` prop from the composition root (App.tsx) — this
  * view does not read demo query params or import fixtures.
  *
+ * **Sessions** answers "did Drive sessions get work done?" It lists local
+ * SessionRollups with S2/S3/E1 chips via `sessionSource` (composition root).
+ *
  * Board and Changelog page server-side with a keyset cursor, so opening this
  * view never pulls the whole log.
  */
@@ -26,13 +29,16 @@ import type {
 	StatusUpdate,
 	TeamRuntimeState,
 } from "@cline/shared";
+import type { StatusSessionRow } from "@cline/drive";
 import { ActivityIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { StatusSessionRollupSource } from "../../status/status-session-rollup-source";
 import type { StatusTeamsSource } from "../../status/status-teams-source";
+import { StatusSessionsPanel } from "../../status/StatusSessionsPanel";
 import { postToHost } from "../../vscode";
 import { PageEmptyState, PageFrame, PageHeader } from "./page-layout";
 import { DependencyMap } from "./dependency-map";
@@ -45,7 +51,11 @@ import { relativeTime, STATE_STYLES, StatusRow } from "./status-row";
 
 const PAGE_LIMIT = 50;
 
-export type StatusViewMode = "board" | "changelog" | "dependency-map";
+export type StatusViewMode =
+	| "board"
+	| "changelog"
+	| "dependency-map"
+	| "sessions";
 
 /** Board section order — what needs a human first. */
 const BOARD_SECTIONS: ReadonlyArray<{ state: StatusState; blurb: string }> = [
@@ -65,6 +75,13 @@ const TILE_STATES: readonly StatusState[] = [
 	"queued",
 	"done",
 ];
+
+const MODE_LABELS: Record<StatusViewMode, string> = {
+	board: "board",
+	changelog: "changelog",
+	"dependency-map": "dependency-map",
+	sessions: "sessions",
+};
 
 function StatTile({
 	label,
@@ -104,9 +121,17 @@ function StatTile({
 
 export function StatusView(props: {
 	teamsSource: StatusTeamsSource;
+	sessionSource: StatusSessionRollupSource;
 	initialMode?: StatusViewMode;
+	/** Open Drive room for bank/plan correlation (sessions drill-down). */
+	onOpenSessionRoom?: (row: StatusSessionRow) => void;
 }) {
-	const { teamsSource, initialMode = "board" } = props;
+	const {
+		teamsSource,
+		sessionSource,
+		initialMode = "board",
+		onOpenSessionRoom,
+	} = props;
 	const [mode, setMode] = useState<StatusViewMode>(initialMode);
 	const [updates, setUpdates] = useState<StatusUpdate[]>([]);
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
@@ -120,7 +145,14 @@ export function StatusView(props: {
 	const [search, setSearch] = useState("");
 	const [teams, setTeams] = useState<TeamRuntimeState[]>([]);
 	const [tasksLoading, setTasksLoading] = useState(false);
+	const [sessionRows, setSessionRows] = useState<StatusSessionRow[]>([]);
+	const [sessionsLoading, setSessionsLoading] = useState(false);
+	const [sessionsError, setSessionsError] = useState<string | null>(null);
+	const [selectedCallSessionId, setSelectedCallSessionId] = useState<
+		string | null
+	>(null);
 	const tasksRequestRef = useRef<string | null>(null);
+	const sessionsRequestRef = useRef<string | null>(null);
 
 	/**
 	 * Only the newest request may write results. Without this, a slow first
@@ -176,9 +208,34 @@ export function StatusView(props: {
 		});
 	}, [teamsSource]);
 
+	const requestSessions = useCallback(() => {
+		const requestId = `status-sessions-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		sessionsRequestRef.current = requestId;
+		setSessionsLoading(true);
+		setSessionsError(null);
+		void sessionSource
+			.loadSessions({ limit: 20 })
+			.then((rows) => {
+				if (sessionsRequestRef.current !== requestId) return;
+				setSessionRows(rows);
+				setSessionsLoading(false);
+			})
+			.catch((err) => {
+				if (sessionsRequestRef.current !== requestId) return;
+				setSessionsError(
+					err instanceof Error ? err.message : String(err),
+				);
+				setSessionRows([]);
+				setSessionsLoading(false);
+			});
+	}, [sessionSource]);
+
 	useEffect(() => {
+		if (mode === "sessions" || mode === "dependency-map") {
+			return;
+		}
 		request(null, true);
-	}, [request]);
+	}, [mode, request]);
 
 	useEffect(() => {
 		requestSummary();
@@ -187,6 +244,10 @@ export function StatusView(props: {
 	useEffect(() => {
 		if (mode === "dependency-map") requestTasks();
 	}, [mode, requestTasks]);
+
+	useEffect(() => {
+		if (mode === "sessions") requestSessions();
+	}, [mode, requestSessions]);
 
 	useEffect(() => {
 		function onMessage(event: MessageEvent) {
@@ -227,9 +288,6 @@ export function StatusView(props: {
 
 			if (message.type === "status_updated") {
 				const live = message.update as StatusUpdate;
-				// A broadcast row is not necessarily part of the view being shown.
-				// Prepending it unconditionally surfaced rows that contradict the
-				// active filters until the next refresh.
 				const matches = matchesStatusFilters(live, {
 					stateFilter,
 					agentFilter,
@@ -237,9 +295,6 @@ export function StatusView(props: {
 				});
 				setUpdates((current) => {
 					if (current.some((u) => u.updateId === live.updateId)) return current;
-					// The board shows one row per subject, so a live update for a
-					// subject already on screen replaces it rather than stacking —
-					// and drops the row when the new state no longer matches filters.
 					if (mode === "board") {
 						const withoutSubject = current.filter(
 							(u) => u.subject !== live.subject,
@@ -249,7 +304,6 @@ export function StatusView(props: {
 					if (!matches) return current;
 					return [live, ...current];
 				});
-				// Counts moved, so the tiles are now stale.
 				requestSummary();
 			}
 		}
@@ -266,7 +320,6 @@ export function StatusView(props: {
 		);
 	}, []);
 
-	/** Board groups the page under state headings; changelog stays flat. */
 	const sections = useMemo(() => {
 		if (mode !== "board") return null;
 		return BOARD_SECTIONS.map((section) => ({
@@ -276,26 +329,35 @@ export function StatusView(props: {
 	}, [mode, updates]);
 
 	const refreshAll = useCallback(() => {
-		request(null, true);
+		if (mode === "sessions") {
+			requestSessions();
+			return;
+		}
+		if (mode !== "dependency-map") {
+			request(null, true);
+		}
 		requestSummary();
 		if (mode === "dependency-map") requestTasks();
-	}, [mode, request, requestSummary, requestTasks]);
+	}, [mode, request, requestSummary, requestTasks, requestSessions]);
 
 	const activeAgent = summary?.byAgent.find((a) => a.agentId === agentFilter);
+
+	const description =
+		mode === "board"
+			? "Where every agent is right now ? one row per piece of work, most urgent first."
+			: mode === "dependency-map"
+				? "Task prerequisites and dependent work from active teams."
+				: mode === "sessions"
+					? "Drive session accomplishment — tasks completed, clean-drain, continue (local rollups)."
+					: "Everything that has happened, newest first, including superseded updates.";
 
 	return (
 		<PageFrame>
 			<PageHeader
-				description={
-					mode === "board"
-						? "Where every agent is right now ? one row per piece of work, most urgent first."
-						: mode === "dependency-map"
-							? "Task prerequisites and dependent work from active teams."
-							: "Everything that has happened, newest first, including superseded updates."
-				}
+				description={description}
 				icon={ActivityIcon}
 				meta={
-					summary?.lastUpdatedAt ? (
+					summary?.lastUpdatedAt && mode !== "sessions" ? (
 						<Badge className="text-[10px]" variant="outline">
 							last update {relativeTime(summary.lastUpdatedAt)}
 						</Badge>
@@ -304,24 +366,24 @@ export function StatusView(props: {
 				title="Status Hub"
 				actions={
 					<Button
-						disabled={loading}
+						disabled={loading || sessionsLoading}
 						onClick={refreshAll}
 						size="sm"
 						type="button"
 						variant="outline"
 					>
 						<RefreshCwIcon
-							className={cn("size-3.5", loading && "animate-spin")}
+							className={cn(
+								"size-3.5",
+								(loading || sessionsLoading) && "animate-spin",
+							)}
 						/>
 						Refresh
 					</Button>
 				}
 			/>
 
-			{/* Counts come from the server across every live row, not from this
-			    page -- a board that says "3 blocked" when 40 are blocked is worse
-			    than no board. */}
-			{summary ? (
+			{summary && mode !== "sessions" ? (
 				<div className="mb-4 flex flex-wrap gap-2">
 					{TILE_STATES.map((state) => (
 						<StatTile
@@ -337,7 +399,14 @@ export function StatusView(props: {
 
 			<div className="mb-4 flex flex-wrap items-center gap-2">
 				<div className="flex overflow-hidden rounded-md border">
-					{(["board", "changelog", "dependency-map"] as const).map((value) => (
+					{(
+						[
+							"board",
+							"changelog",
+							"dependency-map",
+							"sessions",
+						] as const
+					).map((value) => (
 						<button
 							className={cn(
 								"px-3 py-1.5 text-xs capitalize transition-colors",
@@ -350,44 +419,45 @@ export function StatusView(props: {
 							onClick={() => setMode(value)}
 							type="button"
 						>
-							{value}
+							{MODE_LABELS[value]}
 						</button>
 					))}
 				</div>
 
-				<form
-					className="flex items-center gap-2"
-					onSubmit={(event) => {
-						event.preventDefault();
-						setSearch(searchDraft.trim());
-					}}
-				>
-					<div className="relative">
-						<SearchIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-						<Input
-							className="h-8 w-56 pl-7 text-xs"
-							onChange={(event) => setSearchDraft(event.target.value)}
-							placeholder="Search status text"
-							value={searchDraft}
-						/>
-					</div>
-					{search ? (
-						<Button
-							onClick={() => {
-								setSearchDraft("");
-								setSearch("");
-							}}
-							size="sm"
-							type="button"
-							variant="ghost"
-						>
-							Clear
-						</Button>
-					) : null}
-				</form>
+				{mode !== "sessions" && mode !== "dependency-map" ? (
+					<form
+						className="flex items-center gap-2"
+						onSubmit={(event) => {
+							event.preventDefault();
+							setSearch(searchDraft.trim());
+						}}
+					>
+						<div className="relative">
+							<SearchIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								className="h-8 w-56 pl-7 text-xs"
+								onChange={(event) => setSearchDraft(event.target.value)}
+								placeholder="Search status text"
+								value={searchDraft}
+							/>
+						</div>
+						{search ? (
+							<Button
+								onClick={() => {
+									setSearchDraft("");
+									setSearch("");
+								}}
+								size="sm"
+								type="button"
+								variant="ghost"
+							>
+								Clear
+							</Button>
+						) : null}
+					</form>
+				) : null}
 
-				{/* Agent filter, ordered by who is most blocked. */}
-				{summary && summary.byAgent.length > 0 ? (
+				{summary && summary.byAgent.length > 0 && mode !== "sessions" ? (
 					<div className="flex flex-wrap items-center gap-1">
 						{summary.byAgent.slice(0, 6).map((agent) => (
 							<Button
@@ -414,7 +484,8 @@ export function StatusView(props: {
 					</div>
 				) : null}
 
-				{stateFilter.length > 0 || agentFilter || search ? (
+				{mode !== "sessions" &&
+				(stateFilter.length > 0 || agentFilter || search) ? (
 					<Button
 						className="h-7 px-2 text-xs"
 						onClick={() => {
@@ -432,7 +503,7 @@ export function StatusView(props: {
 				) : null}
 			</div>
 
-			{activeAgent ? (
+			{activeAgent && mode !== "sessions" ? (
 				<p className="mb-3 text-xs text-muted-foreground">
 					Showing {activeAgent.agentName ?? activeAgent.agentId} —{" "}
 					{activeAgent.total} active, {activeAgent.running} running,{" "}
@@ -440,7 +511,7 @@ export function StatusView(props: {
 				</p>
 			) : null}
 
-			{error ? (
+			{error && mode !== "sessions" ? (
 				<div
 					className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
 					role="alert"
@@ -449,7 +520,16 @@ export function StatusView(props: {
 				</div>
 			) : null}
 
-			{mode === "dependency-map" ? (
+			{mode === "sessions" ? (
+				<StatusSessionsPanel
+					error={sessionsError}
+					loading={sessionsLoading}
+					onOpenRoom={onOpenSessionRoom}
+					onSelect={(row) => setSelectedCallSessionId(row.callSessionId)}
+					rows={sessionRows}
+					selectedCallSessionId={selectedCallSessionId}
+				/>
+			) : mode === "dependency-map" ? (
 				<DependencyMap loading={tasksLoading} teams={teams} />
 			) : updates.length === 0 && !loading ? (
 				<div className="rounded-lg border bg-card">
@@ -500,7 +580,7 @@ export function StatusView(props: {
 				</div>
 			)}
 
-			{mode !== "dependency-map" ? (
+			{mode !== "dependency-map" && mode !== "sessions" ? (
 				<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
 					<span>
 						{updates.length} shown
