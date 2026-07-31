@@ -199,6 +199,20 @@ export {
 	type StatusSessionRow,
 } from "./statusSessions.js";
 export {
+	SHIPPED_DIGEST_FORBIDDEN_KEYS,
+	assertShippedDigestPrivate,
+	buildShippedDigest,
+	findForbiddenShippedDigestKey,
+	formatShippedDigestJson,
+	formatShippedDigestMarkdown,
+	shippedDigestIsPrivate,
+	type BuildShippedDigestInput,
+	type ShippedDigest,
+	type ShippedDigestRollupInput,
+	type ShippedDigestSession,
+	type ShippedDigestTaskRef,
+} from "./shippedDigest.js";
+export {
 	buildRecruitNeed,
 	rankRecruitCandidates,
 	RECRUIT_FORBIDDEN_KEYS,

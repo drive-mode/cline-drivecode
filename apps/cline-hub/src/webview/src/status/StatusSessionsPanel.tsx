@@ -17,6 +17,12 @@ export type StatusSessionsPanelProps = {
 	onSelect: (row: StatusSessionRow) => void;
 	/** Open Drive / join room for bank + plan correlation. */
 	onOpenRoom?: (row: StatusSessionRow) => void;
+	/**
+	 * Opt-in shipped digest export (DRV-SHIPPED-DIGEST). Default off —
+	 * only runs when the user clicks Export.
+	 */
+	onExportShippedDigest?: () => void | Promise<void>;
+	exportBusy?: boolean;
 };
 
 function formatDuration(ms: number | null): string {
@@ -39,6 +45,8 @@ export function StatusSessionsPanel({
 	selectedCallSessionId,
 	onSelect,
 	onOpenRoom,
+	onExportShippedDigest,
+	exportBusy,
 }: StatusSessionsPanelProps) {
 	const selected =
 		rows.find((row) => row.callSessionId === selectedCallSessionId) ?? null;
@@ -72,6 +80,27 @@ export function StatusSessionsPanel({
 				Board or Changelog. Chips are S2 tasks done, S3 clean-drain, E1
 				post-success continue.
 			</p>
+
+			{onExportShippedDigest ? (
+				<div className="flex flex-wrap items-center gap-2">
+					<Button
+						className="h-7 text-xs"
+						data-testid="status-export-shipped-digest"
+						disabled={exportBusy || loading || rows.length === 0}
+						onClick={() => {
+							void onExportShippedDigest();
+						}}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						{exportBusy ? "Exporting…" : "Export shipped digest"}
+					</Button>
+					<span className="text-[10px] text-muted-foreground">
+						Opt-in local Markdown only — no cloud telemetry.
+					</span>
+				</div>
+			) : null}
 
 			<div className="rounded-lg border bg-card">
 				<ul>

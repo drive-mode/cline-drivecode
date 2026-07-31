@@ -27,6 +27,12 @@ import {
 } from "./useDriveSession";
 import { Button } from "@/components/ui/button";
 import type { PlanReentryRowModel } from "@cline/drive";
+import {
+	buildShippedDigest,
+	formatShippedDigestMarkdown,
+	statusSessionRowFromUnknown,
+} from "@cline/drive";
+import { downloadTextFile } from "../status/downloadTextFile";
 import { useEffect, useState } from "react";
 
 /** Call strip, settings, now/next, join note — mounts above the conversation. */
@@ -186,6 +192,31 @@ export function DriveRoomChrome({
 							limit: 10,
 						});
 						return result.dump;
+					}}
+					onExportShippedDigest={async () => {
+						const root = session.workspaceRoot?.trim();
+						if (!root) {
+							return "workspaceRoot is required (connect Drive with a workspace).";
+						}
+						const result = await requestSessionRollupsDump(root, {
+							limit: 20,
+						});
+						const rollups = result.rollups
+							.map(statusSessionRowFromUnknown)
+							.filter(
+								(row): row is NonNullable<typeof row> =>
+									row != null,
+							);
+						const digest = buildShippedDigest({ rollups });
+						const markdown = formatShippedDigestMarkdown(digest);
+						const stamp = digest.generatedAt
+							.slice(0, 19)
+							.replace(/[:T]/g, "-");
+						downloadTextFile(
+							`drive-shipped-digest-${stamp}.md`,
+							markdown,
+						);
+						return `Downloaded drive-shipped-digest-${stamp}.md (${digest.sessionCount} sessions, ${digest.tasksCompletedTotal} tasks).`;
 					}}
 					presentSampleDisabled={disabled || !drive.active}
 					providerId={providerId}

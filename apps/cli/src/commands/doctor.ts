@@ -610,7 +610,7 @@ export function createDoctorCommand(
 			}
 		});
 
-	doctor
+			doctor
 		.command("session-rollups")
 		.description(
 			"Dump local Drive SessionRollups from room + bank JSONL (no network)",
@@ -639,6 +639,51 @@ export function createDoctorCommand(
 				io.writeln(JSON.stringify({ rollups }, null, 2));
 			} else {
 				io.writeln(formatSessionRollupsDump(rollups));
+			}
+			setExitCode(0);
+		});
+
+	doctor
+		.command("shipped-digest")
+		.description(
+			"Opt-in local export of what Drive shipped (SessionRollups → Markdown/JSON; no network)",
+		)
+		.option("--cwd <path>", "Workspace root", process.cwd())
+		.option("--limit <n>", "Max sessions (newest first)", "20")
+		.option("--call-session <id>", "Filter to one callSessionId")
+		.option("--format <fmt>", "md or json", "md")
+		.option("--out <file>", "Write to local file (default: stdout)")
+		.action(async function (this: Command) {
+			const opts = this.opts<{
+				cwd: string;
+				limit: string;
+				callSession?: string;
+				format: string;
+				out?: string;
+			}>();
+			const { readSessionRollups } = await import("@cline/core/hub");
+			const {
+				buildShippedDigest,
+				formatShippedDigestJson,
+				formatShippedDigestMarkdown,
+			} = await import("@cline/drive");
+			const { writeFileSync } = await import("node:fs");
+			const limit = Math.max(1, Number.parseInt(opts.limit, 10) || 20);
+			const rollups = readSessionRollups(opts.cwd, {
+				limit,
+				callSessionId: opts.callSession,
+			});
+			const digest = buildShippedDigest({ rollups });
+			const fmt = opts.format.trim().toLowerCase();
+			const body =
+				fmt === "json"
+					? formatShippedDigestJson(digest)
+					: formatShippedDigestMarkdown(digest);
+			if (opts.out?.trim()) {
+				writeFileSync(opts.out.trim(), body, "utf8");
+				io.writeln(`Wrote shipped digest to ${opts.out.trim()}`);
+			} else {
+				io.writeln(body);
 			}
 			setExitCode(0);
 		});

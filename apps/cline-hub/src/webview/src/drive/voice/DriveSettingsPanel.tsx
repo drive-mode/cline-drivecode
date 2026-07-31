@@ -36,6 +36,7 @@ export function DriveSettingsPanel({
 	onAdvanceSampleScript,
 	onSetShowPlannerMode,
 	onDumpSessionRollups,
+	onExportShippedDigest,
 	presentSampleDisabled,
 }: {
 	providerId: string;
@@ -57,6 +58,8 @@ export function DriveSettingsPanel({
 	onSetShowPlannerMode?: (mode: "off" | "heuristic") => void;
 	/** Local SessionRollup dump (Slice 2) — no network egress. */
 	onDumpSessionRollups?: () => Promise<string>;
+	/** Opt-in shipped digest export (DRV-SHIPPED-DIGEST) — local file only. */
+	onExportShippedDigest?: () => Promise<string>;
 	presentSampleDisabled?: boolean;
 }) {
 	const llm = resolveLlmEgressForUi({
@@ -76,6 +79,8 @@ export function DriveSettingsPanel({
 	const volumePercent = Math.round(voice.hardware.outputVolume * 100);
 	const [rollupDump, setRollupDump] = useState<string | null>(null);
 	const [rollupBusy, setRollupBusy] = useState(false);
+	const [digestBusy, setDigestBusy] = useState(false);
+	const [digestNote, setDigestNote] = useState<string | null>(null);
 
 	return (
 		<div className="space-y-3 border-t bg-muted/20 px-3 py-3 text-sm">
@@ -282,6 +287,43 @@ export function DriveSettingsPanel({
 						>
 							{rollupDump}
 						</pre>
+					) : null}
+					{onExportShippedDigest ? (
+						<>
+							<Button
+								data-testid="drive-export-shipped-digest"
+								disabled={digestBusy || presentSampleDisabled}
+								onClick={() => {
+									setDigestBusy(true);
+									setDigestNote(null);
+									void onExportShippedDigest()
+										.then((note) => setDigestNote(note))
+										.catch((error) =>
+											setDigestNote(
+												error instanceof Error
+													? error.message
+													: String(error),
+											),
+										)
+										.finally(() => setDigestBusy(false));
+								}}
+								size="sm"
+								type="button"
+								variant="outline"
+							>
+								{digestBusy
+									? "Exporting…"
+									: "Export shipped digest"}
+							</Button>
+							{digestNote ? (
+								<p
+									className="text-[11px] text-muted-foreground"
+									data-testid="drive-shipped-digest-note"
+								>
+									{digestNote}
+								</p>
+							) : null}
+						</>
 					) : null}
 				</div>
 			) : null}

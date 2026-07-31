@@ -30,6 +30,10 @@ import type {
 	TeamRuntimeState,
 } from "@cline/shared";
 import type { StatusSessionRow } from "@cline/drive";
+import {
+	buildShippedDigest,
+	formatShippedDigestMarkdown,
+} from "@cline/drive";
 import { ActivityIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +43,7 @@ import { cn } from "@/lib/utils";
 import type { StatusSessionRollupSource } from "../../status/status-session-rollup-source";
 import type { StatusTeamsSource } from "../../status/status-teams-source";
 import { StatusSessionsPanel } from "../../status/StatusSessionsPanel";
+import { downloadTextFile } from "../../status/downloadTextFile";
 import { postToHost } from "../../vscode";
 import { PageEmptyState, PageFrame, PageHeader } from "./page-layout";
 import { DependencyMap } from "./dependency-map";
@@ -151,6 +156,7 @@ export function StatusView(props: {
 	const [selectedCallSessionId, setSelectedCallSessionId] = useState<
 		string | null
 	>(null);
+	const [exportBusy, setExportBusy] = useState(false);
 	const tasksRequestRef = useRef<string | null>(null);
 	const sessionsRequestRef = useRef<string | null>(null);
 
@@ -327,6 +333,24 @@ export function StatusView(props: {
 			rows: updates.filter((update) => update.state === section.state),
 		})).filter((section) => section.rows.length > 0);
 	}, [mode, updates]);
+
+	const exportShippedDigest = useCallback(async () => {
+		setExportBusy(true);
+		try {
+			const rows =
+				sessionRows.length > 0
+					? sessionRows
+					: await sessionSource.loadSessions({ limit: 20 });
+			const digest = buildShippedDigest({ rollups: rows });
+			const markdown = formatShippedDigestMarkdown(digest);
+			const stamp = digest.generatedAt.slice(0, 19).replace(/[:T]/g, "-");
+			downloadTextFile(`drive-shipped-digest-${stamp}.md`, markdown);
+		} catch (err) {
+			setSessionsError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setExportBusy(false);
+		}
+	}, [sessionRows, sessionSource]);
 
 	const refreshAll = useCallback(() => {
 		if (mode === "sessions") {
@@ -523,7 +547,9 @@ export function StatusView(props: {
 			{mode === "sessions" ? (
 				<StatusSessionsPanel
 					error={sessionsError}
+					exportBusy={exportBusy}
 					loading={sessionsLoading}
+					onExportShippedDigest={exportShippedDigest}
 					onOpenRoom={onOpenSessionRoom}
 					onSelect={(row) => setSelectedCallSessionId(row.callSessionId)}
 					rows={sessionRows}

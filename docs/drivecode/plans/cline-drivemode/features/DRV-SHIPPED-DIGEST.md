@@ -1,6 +1,6 @@
 # DRV-SHIPPED-DIGEST · Opt-in “what Drive shipped” digest
 
-Back to [README](../README.md). Phase 2+ Planned. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-value-proof-digest](../initiatives/session-satisfaction-moments/req-value-proof-digest.md).
+Back to [README](../README.md). Phase 2+ **Landed (W3.2)**. Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Requirements: [req-value-proof-digest](../initiatives/session-satisfaction-moments/req-value-proof-digest.md).
 
 ## Problem / user value
 
@@ -20,22 +20,23 @@ Task-as-unit is the honest alternative to token narratives, but users cannot exp
 
 ## Surfaces touched
 
-- Status / Drive settings opt-in control and/or CLI dump
-- Pure digest builder in `@cline/drive`
-- Local file or clipboard only
+- Status sessions “Export shipped digest” + Drive Settings opt-in control
+- CLI: `cline doctor shipped-digest` (`--format md|json`, `--out <file>`)
+- Pure digest builder in `@cline/drive` (`shippedDigest.ts`)
+- Local file download / stdout only
 
 ## Agent tasks
 
-- [ ] Define digest schema (counts, ids, titles, S3 flags) with forbidden utterance/audio/transcript keys.
-  - Owner package: `@cline/shared`
+- [x] Define digest schema (counts, ids, titles, S3 flags) with forbidden utterance/audio/transcript keys.
+  - Owner package: `@cline/drive` (`SHIPPED_DIGEST_FORBIDDEN_KEYS`)
   - Verify: privacy / forbidden-key tests
   - Done when: schema rejects utterance payloads; redaction inherits DRV-PRIVACY.
-- [ ] Implement pure digest builder from local SessionRollups → Markdown and/or JSON.
+- [x] Implement pure digest builder from local SessionRollups → Markdown and/or JSON.
   - Owner package: `@cline/drive`
   - Verify: unit fixture from one synthetic session
   - Done when: readable digest names completed tasks and drained plans.
-- [ ] Add opt-in export control (hub button and/or CLI); default off; localhost destination only.
-  - Owner package: `@cline/cline-hub` and/or `@cline/cli`
+- [x] Add opt-in export control (hub button and/or CLI); default off; localhost destination only.
+  - Owner package: `@cline/cline-hub` + `@cline/cli`
   - Verify: smoke export; no network egress
   - Done when: user trigger required; no core-events telemetry added.
 
