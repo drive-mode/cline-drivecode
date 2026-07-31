@@ -1,7 +1,7 @@
 # Remaining work · Task satisfaction + session moments
 
 **Status.** Living backlog (update as slices land)  
-**Branch context.** Observability W0 kernel landed; product moments and remaining observability slices are **not** implemented.  
+**Branch context.** Observability W0–W3 + Slice 2/P2 landed; **Slice 3 + W4.1/W4.2 landed** (stall classifier, auto recovery fork, gated plan-improve). Residual gaps below.  
 **Related.** [task-satisfaction-observability](../initiatives/task-satisfaction-observability/) · [session-satisfaction-moments](../initiatives/session-satisfaction-moments/) · [PRD 10](../prd/prd-task-satisfaction-observability.md) · [ARD-0015](../ard/ARD-0015-task-session-observability.md) (Proposed)
 
 This document is the **implementation checklist** for everything still open after the planning wave and the W0 instrumentation commit. Prefer amending this file over inventing parallel backlogs.
@@ -45,19 +45,22 @@ flowchart TD
     StatusSessions["Status Hub sessions lens"]
     ShippedDigest["Opt-in shipped digest"]
     SdlcBank["SDLC freeze → bankable tasks"]
+    StallClass["Stall classifier + auto fork"]
+    PlanImprove["Gated plan-improve propose/accept"]
   end
   subgraph OpenObs["Open · observability"]
-    S3["Stall classify + gated propose"]
+    Retention["Retention caps + privacy facets"]
   end
-  subgraph OpenMoments["Open · product moments"]
-    W1["W1.2 return / W1.3 stuck"]
-    W4["W4 auto stall"]
+  subgraph OpenMoments["Open · residual moments"]
+    W1Gaps["W1.1 redirect / feed narration"]
+    HostSkill["Host .driveagent skill compile"]
   end
   Done -->|"honesty gate"| OpenObs
   Done -->|"honesty gate"| OpenMoments
   Bridge --> Reader
-  Reader --> S3
-  Felt --> W1
+  Reader --> StallClass
+  StallClass --> PlanImprove
+  Felt --> W1Gaps
   CleanDrain --> SdlcBank
   PlanReentry --> StatusSessions
   RecruitStall --> StatusSessions
@@ -77,6 +80,7 @@ Caption:
 - Status Hub sessions mode (W3.1) landed — `StatusSessionRollupSource` / `statusSessions.ts` + hub `/status` fourth mode.
 - Shipped digest (W3.2) landed — opt-in Markdown/JSON export (`shippedDigest.ts`, Status/Settings button, `cline doctor shipped-digest`).
 - SDLC bankable (W3.3) landed — `sdlcBankable.ts` + `drive_bank_accept_sdlc_freeze` + Plan-posture accept chip; **stage freeze cards still stubbed**.
+- **Slice 3 + W4.1/W4.2 landed:** pure `classifyStall` / `diagnoseAndPropose`; auto stall opens same gated `StuckRecoveryFork` (deduped with manual lastFailure); post-session `PlanImproveGate` (`kind: planning`) with accept→`.drive/plan-improve/` only (host `.driveagent` skill compile still out of band).
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
 
@@ -98,6 +102,8 @@ Caption:
 | Status Hub sessions (W3.1): fourth mode + S2/S3/E1 + drill | `@cline/drive` `statusSessions.ts`; hub `StatusSessionsPanel`; `StatusSessionRollupSource`; `?demoSessions=1` |
 | Shipped digest (W3.2): opt-in Markdown/JSON export | `@cline/drive` `shippedDigest.ts`; Status/Settings export; `cline doctor shipped-digest` |
 | SDLC bankable (W3.3): freeze accept → DriveTasks + plan | `@cline/drive` `sdlcBankable.ts`; hub `drive_bank_accept_sdlc_freeze`; `SdlcFreezeAcceptChip` (stage UI stubbed) |
+| Stall classifier + auto fork (W4.1): `classifyStall` → same gated `StuckRecoveryFork` | `@cline/drive` `stallClassifier.ts`; hub `stuckRecovery` autoStallOffer + Chat Spotlight |
+| Plan-improve Slice 3 (W4.2): diagnose → `kind: planning` → accept/reject/mute | `@cline/shared` `planningProposal.ts`; `@cline/drive` `planImprove.ts`; hub `PlanImproveGate` + `drive_plan_improve_resolve` |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1–P2) | `@cline/drive` `sessionRollup.ts` |
 | `drive_task_failed` emit + P2 stickiness | `bankStore.recordTaskFailure` → `deriveSessionRollup.failureStickyCount` |
@@ -153,18 +159,26 @@ Caption:
 **P2 definition:** count of distinct `taskId`s with ≥1 in-session `drive_task_failed` and no later `drive_task_completed` for that id (recovery pressure still open).  
 **Docs:** PRD 10 P2 + [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md).
 
-### 2.4 Slice 3 — diagnose → propose → gate
+### ~~2.4 Slice 3 — diagnose → propose → gate~~ ✅ done
 
 See [slice-3](../initiatives/task-satisfaction-observability/slice-3-diagnose-propose-gate.md) and [DRV-PLAN-IMPROVE](../features/DRV-PLAN-IMPROVE.md).
 
 | Work | Owner | AC |
 |---|---|---|
-| Pure stall classifier (`SessionRollup` + open `lastFailure`) → reason codes | `@cline/drive` | Fixtures for low S2 / high P1 / sticky failure |
-| Proposal schema `kind: planning` (evidence = event ids / paths / skill ids only) | `@cline/shared` | Forbidden-key tests |
-| Accept \| reject \| mute UI (reuse learn queue + kind tag) | hub | Reject leaves disk unchanged |
-| Host planning skill invocation (not in harness) | agent / `.driveagent` | Accept writes only allowed targets |
+| ~~Pure stall classifier (`SessionRollup` + open `lastFailure`) → reason codes~~ | `@cline/drive` | `classifyStall` fixtures: low S2 / high P1 / sticky P2 |
+| ~~Proposal schema `kind: planning` (evidence = event ids / paths / skill ids only)~~ | `@cline/shared` | Forbidden-key tests on `PlanningProposal` |
+| ~~Accept \| reject \| mute UI (parallel queue tagged `kind: planning`)~~ | hub | `PlanImproveGate`; reject/mute leave disk unchanged |
+| ~~Accept durable write (allowed targets only)~~ | hub + `@cline/drive` | Accept → `.drive/plan-improve/` artifact or skill enqueue file; **not** `.driveagent` compile |
 
-**Deps:** 2.1–2.2. Distinct from in-call [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md).
+**Deps:** 2.1–2.2. Distinct from in-call [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) (post-session / after End only).
+
+**Residual gaps (honest):**
+
+- Host planning-skill **compile into `.driveagent/`** is still out of band — accept enqueues `planning_skill` under `.drive/plan-improve/queue/` for the host; no second agent runtime in `@cline/drive`.
+- Unified learn-queue UI with knowledge-graph learn (ARD-0004 W-39) not merged — parallel `kind: planning` gate shipped instead.
+- Stall policy thresholds are constants (`DEFAULT_STALL_POLICY`); facet `privacy` / stall facets not in live catalog yet.
+- Feed narration of recovery / plan-improve proposals still open (W1.3 residual).
+- Mid-call auto fork uses session counters + open `lastFailure`, not a full JSONL re-rollup each tick.
 
 ### 2.5 Retention caps + privacy facets
 
@@ -185,15 +199,17 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 |---|---|---|---|
 | W1.1 | [DRV-FELT-AGENCY](../features/DRV-FELT-AGENCY.md) | [req-felt-agency](../initiatives/session-satisfaction-moments/req-felt-agency.md) | **Landed (partial):** agency interrupt chrome (finishing/paused); PlanEditor → BankSnapshot consequence banner; recovery vs collaborative add (`nowLastFailure`); mid-turn send → steer pending prompts + Composer chip + “Steer applied”. **Still open:** interrupt redirect Now rewrite announce (W-13); optional plan-ref `source` facet; Spotlight delta beyond NowNext/agency banner |
 | W1.2 | [DRV-RETURN-LOOP](../features/DRV-RETURN-LOOP.md) | [req-leave-end-return](../initiatives/session-satisfaction-moments/req-leave-end-return.md) | **Landed (partial):** `call_end` + `control.end`; pure `handoff.ts` Tier-0 packet; End narration; rejoin “since you left” line; Leave≠End chrome. **Still open:** End→next-task resume CTA / Drive tab row (W2.2 PLAN-REENTRY) |
-| W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | **Landed (partial):** Spotlight `StuckRecoveryFork` after `nowLastFailure` (manual-only); gated narrow / fix-up / recruit→W2.3 picker / pause(Ask+raise-hand); dismiss mutes identical offerKey. **Still open:** auto stall classifier (W4.1); feed narration of proposal |
+| W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | **Landed:** Spotlight `StuckRecoveryFork` after `nowLastFailure` **and** auto stall classifier (W4.1); gated narrow / fix-up / recruit→W2.3 picker / pause(Ask+raise-hand); dismiss mutes identical offerKey; manual+auto deduped. **Still open:** feed narration of proposal |
 
 **W1 honesty deps:** 2.1 bank bridge; interrupt/steer/now-next already partially shipped.
 
 **Leadership forks still open (block freeze):**
 
-1. Stuck fork: manual-only vs auto (default: manual first).  
+1. Stuck fork: manual-only vs auto — **shipped both (deduped)**; leadership may still prefer manual-only.  
 2. Pause-plan semantics (default: Ask override, no new status).  
 3. Must every in-band fix-up gate? (tension ARD-0008 “may propose” vs ARD-0015 accept).
+4. Host `.driveagent` compile on plan-improve accept vs enqueue-only (enqueue shipped).
+5. Unify planning gate with gated-learn knowledge queue?
 
 ### W2 — Habit + multi-agent
 
@@ -217,12 +233,14 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 | W3.2 | [DRV-SHIPPED-DIGEST](../features/DRV-SHIPPED-DIGEST.md) | [req-value-proof-digest](../initiatives/session-satisfaction-moments/req-value-proof-digest.md) | **Landed:** opt-in schema + Markdown/JSON builder; Status sessions + Drive Settings export; `cline doctor shipped-digest`; privacy/redaction tests; default off |
 | W3.3 | Amends [DRV-SDLC-GUIDE](../features/DRV-SDLC-GUIDE.md) | [req-sdlc-bankable](../initiatives/session-satisfaction-moments/req-sdlc-bankable.md) | **Landed (partial):** `buildSdlcFreezeAcceptPlan` / `acceptSdlcFreeze` / hub `drive_bank_accept_sdlc_freeze` / Plan accept chip. **Stub:** W-44 stage freeze checklist UI — set `pendingSdlcFreeze` to exercise accept |
 
-### W4 — Auto + post-session
+### ~~W4 — Auto + post-session~~ ✅ done (residuals noted)
 
 | ID | Component | Key remaining work |
 |---|---|---|
-| W4.1 | Auto stall → Spotlight fork | Classifier from 2.4 drives W1.3 without waiting for raise-hand |
-| W4.2 | Post-session plan-improve | Slice 3 full loop (skills/templates), orthogonal to in-call recovery |
+| ~~W4.1~~ | Auto stall → Spotlight fork | **Landed:** `classifyStall` drives W1.3 fork without raise-hand; deduped with manual lastFailure |
+| ~~W4.2~~ | Post-session plan-improve | **Landed:** Slice 3 diagnose → `PlanImproveGate` after End; accept → `.drive/plan-improve/` only |
+
+**W4 residuals for leadership:** host `.driveagent` skill compile path; unified learn queue; stall policy as facet; feed narration.
 
 ---
 
@@ -232,7 +250,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 |---|---|---|
 | ARD-0015 leadership accept | Proposed | Accept or amend on status board |
 | Dual proxy default (S3+E1) | Leadership default in brief | Confirm or elevate S1 |
-| Accept-queue unification (`kind`: learn / planning / recovery) | Default: reuse | Spec schema once for all three |
+| Accept-queue unification (`kind`: learn / planning / recovery) | Default: reuse | **Partial:** `kind: planning` + `kind: recovery` shipped as parallel gates; knowledge learn queue unify still open |
 | TASK-GRAPH indexing | Satisfaction DRVs not in phase gates yet | Add Phase 2+ optional gate note when W1 starts |
 | CLI Drive join/leave parity | CLI chrome often local-only | Required if CLI counts toward metrics ([DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md)) |
 | `call_end` still missing from hub command union | Done (W1.2) | `HubCommandName` + transport + webview + End chrome |
@@ -246,7 +264,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 1. ~~Hub bank bridge (2.1)~~ ✅
 2. ~~W1.1 Felt agency~~ ✅ (chrome + steer path; redirect Now rewrite + plan-ref `source` still open — see §3 W1.1)
 3. ~~W1.2 Return loop (call_end + handoff)~~ ✅ (resume CTA / Plan-reentry Drive tab still open — see §3 W1.2)
-4. ~~W1.3 Stuck recovery (manual)~~ ✅ (auto classifier / full recruit still open — see §3 W1.3)
+4. ~~W1.3 Stuck recovery (manual)~~ ✅ (+ W4.1 auto classifier)
 5. ~~Slice 2 UI reader (2.2)~~ ✅
 6. ~~Failure event for P2 (2.3)~~ ✅
 7. ~~W2.1 Clean-drain~~ ✅
@@ -255,7 +273,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 10. ~~W3.1 Status sessions lens~~ ✅
 11. ~~W3.2 Shipped digest~~ ✅
 12. ~~W3.3 SDLC bankable (accept writer; stage UI stub)~~ ✅
-13. Slice 3 + W4 auto stall
+13. ~~Slice 3 + W4 auto stall / plan-improve~~ ✅ (host skill compile + unified learn queue still open — see §2.4 residuals)
 ```
 
 No calendar estimates — order is dependency-only.
@@ -269,6 +287,7 @@ No calendar estimates — order is dependency-only.
 | After 2.1 | Mark slice-1 “product path wired”; update DRV-TASK-BANK agent tasks |
 | After 2.2 | ~~Mark slice-2 UI done; link Status~~ ✅ |
 | After 2.3 | ~~P2 via `drive_task_failed`; PRD 10 / DRV-TASK-METRICS~~ ✅ |
+| After 2.4 / W4 | ~~Mark slice-3 + W4.1/W4.2; note host skill / unified queue residuals~~ ✅ |
 | Before W1 freeze | Resolve §3 W1 forks in BRIEF or DEC |
 | On ARD-0015 accept | Flip status board Proposed → Accepted |
 | After each DRV lands | Check off ACs on feature file; update this remaining list |
@@ -295,12 +314,14 @@ From research / briefs / reqs — still unresolved:
 3. Hub task completion as hard gate for any satisfaction *claims*? (**Satisfied by 2.1 bridge.**)  
 4. Healthy mid-plan add churn threshold?  
 5. Backfill local history vs clock at instrumentation-complete?  
-6. Stuck auto vs manual?  
+6. Stuck auto vs manual? **Default shipped: both** (manual lastFailure + auto classifier; deduped). Leadership may still prefer manual-only.  
 7. Pause-plan meaning?  
 8. Clean-drain home surface?  
 9. Plan re-entry on list vs after join?  
-10. `agentId` on bank complete events?  
-11. Digest format / window / include P*?  
-12. SDLC Musts → 1:1 tasks vs epic?
+10. `agentId` on bank complete events? **Shipped optional.**  
+11. Digest format / window / include P*? **Shipped opt-in Markdown/JSON.**  
+12. SDLC Musts → 1:1 tasks vs epic? **Accept writer ships 1:1; stage UI stub.**  
+13. Host `.driveagent` compile on plan-improve accept vs enqueue-only? **Enqueue-only shipped; compile still open.**  
+14. Unify planning gate with gated-learn knowledge queue? **Parallel `kind: planning` shipped; unify still open.**
 
 Track answers in [BRIEF-task-satisfaction](../leadership/BRIEF-task-satisfaction.md) or a DEC when decided.

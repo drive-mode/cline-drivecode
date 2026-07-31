@@ -28,18 +28,21 @@ When users cannot complete tasks in Drive, the system should help **next** sessi
 
 ## Agent tasks
 
-- [ ] Specify proposal schema fields (kind, evidence event ids, target skill/path) without transcript blobs.
+- [x] Specify proposal schema fields (kind, evidence event ids, target skill/path) without transcript blobs.
   - Owner package: `@cline/shared`
   - Verify: privacy/forbidden-key tests
   - Done when: schema rejects utterance payloads.
-- [ ] Implement stall classifier from SessionRollup (pure).
+  - Landed: `PlanningProposal` / `parsePlanningProposal` + forbidden-key walker (`planningProposal.ts`).
+- [x] Implement stall classifier from SessionRollup (pure).
   - Owner package: `@cline/drive`
   - Verify: unit fixtures for low-completion + high-churn
   - Done when: classifier returns stable reason codes.
-- [ ] Wire propose → accept path reusing gated-learn hub ops (or thin parallel tagged queue).
-  - Owner package: `@cline/core` + hub webview
+  - Landed: `classifyStall` (`low_s2` / `high_p1` / `sticky_p2`) + `diagnoseAndPropose`.
+- [x] Wire propose → accept path reusing gated-learn hub ops (or thin parallel tagged queue).
+  - Owner package: hub webview (+ `@cline/drive` apply)
   - Verify: integration test accept writes only on accept
   - Done when: reject leaves disk unchanged.
+  - Landed: post-session `PlanImproveGate` (`kind: planning`); hub `drive_plan_improve_resolve`; accept → `.drive/plan-improve/` only. **Boundary:** host `.driveagent` skill compile is enqueue-only (`planning_skill` queue file); no harness skill runtime.
 
 ## Risks
 

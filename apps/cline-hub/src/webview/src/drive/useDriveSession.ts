@@ -95,6 +95,7 @@ function readPersistedDriveUi(): DriveUiState {
 				cleanDrainInvite: null,
 				attributionAgentId: null,
 				pendingSdlcFreeze: null,
+				pendingPlanningImprove: null,
 			};
 		}
 	} catch {

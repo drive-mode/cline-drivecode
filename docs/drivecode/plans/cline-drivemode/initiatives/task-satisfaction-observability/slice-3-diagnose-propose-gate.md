@@ -26,7 +26,10 @@ Stall patterns produce gated planning proposals with evidence event ids. Accept 
 
 A stalled fixture session yields one reviewable proposal; accepting it is the only durable write.
 
+**Landed (2026-07-31):** `diagnoseAndPropose` + hub `PlanImproveGate` + `drive_plan_improve_resolve`. Accept writes under `.drive/plan-improve/` (template artifact or skill enqueue). Reject/mute leave disk unchanged. Host `.driveagent` compile remains out of band.
+
 ## Non-goals this slice
 
 - Training or shipping a learned next-task sole writer
 - Automatic plan mutation without accept
+- Host skill compile into `.driveagent/` (enqueue file only)

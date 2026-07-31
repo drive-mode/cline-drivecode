@@ -10,6 +10,7 @@ import {
 import type {
 	BankSnapshot,
 	Participant,
+	PlanningProposal,
 	RoomSnapshot,
 	StageCard,
 	StagePin,
@@ -109,6 +110,11 @@ export type DriveUiState = {
 	 * Plan-posture accept → DriveTasks. Cleared on accept/dismiss.
 	 */
 	pendingSdlcFreeze: SdlcFreezeProposal | null;
+	/**
+	 * Post-session / after-End planning improve proposal (DRV-PLAN-IMPROVE).
+	 * Distinct from in-call StuckRecoveryFork. Cleared on accept/reject/mute.
+	 */
+	pendingPlanningImprove: PlanningProposal | null;
 };
 
 /** Stable ids until hub roster provides real participant UUIDs. */
@@ -154,6 +160,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	cleanDrainInvite: null,
 	attributionAgentId: null,
 	pendingSdlcFreeze: null,
+	pendingPlanningImprove: null,
 };
 
 /** Map Drive sub-mode onto native Cline plan|act for send config. */

@@ -24,6 +24,7 @@ import {
 import { handleDesktopCommand } from "./server/desktop-commands";
 import { handleDriveAgentHomeWebviewCommand } from "./server/drive-agent-home";
 import { handleDriveBankWebviewCommand } from "./server/drive-bank";
+import { handleDrivePlanImproveWebviewCommand } from "./server/drive-plan-improve";
 import { handleDriveSessionRollupsWebviewCommand } from "./server/drive-session-rollups";
 import { handleCallCommand } from "./server/drive-calls";
 import { handleDriveWebviewCommand } from "./server/drive-commands";
@@ -373,6 +374,12 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						await handleDriveBankWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_session_rollups") {
 						await handleDriveSessionRollupsWebviewCommand(
+							ctx,
+							peer,
+							frame,
+						);
+					} else if (frame.type === "drive_plan_improve_resolve") {
+						await handleDrivePlanImproveWebviewCommand(
 							ctx,
 							peer,
 							frame,

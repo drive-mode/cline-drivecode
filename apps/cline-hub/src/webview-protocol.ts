@@ -472,6 +472,14 @@ export type WebviewInboundMessage =
 			callSessionId?: string;
 	  }
 	| {
+			/** Gated plan-improve accept | reject | mute (DRV-PLAN-IMPROVE). */
+			type: "drive_plan_improve_resolve";
+			workspaceRoot: string;
+			decision: "accept" | "reject" | "mute";
+			proposal: unknown;
+			requestId?: string;
+	  }
+	| {
 			type: "drive_agent_home_get";
 			workspaceRoot: string;
 			slug: string;
@@ -705,6 +713,20 @@ export type WebviewOutboundMessage =
 	  }
 	| {
 			type: "drive_session_rollups_error";
+			text: string;
+			code?: string;
+			requestId?: string;
+	  }
+	| {
+			type: "drive_plan_improve_resolved";
+			decision: "accept" | "reject" | "mute";
+			wrote: boolean;
+			relativePath?: string;
+			offerKey: string;
+			requestId?: string;
+	  }
+	| {
+			type: "drive_plan_improve_error";
 			text: string;
 			code?: string;
 			requestId?: string;

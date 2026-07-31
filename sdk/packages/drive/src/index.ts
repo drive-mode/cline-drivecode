@@ -178,6 +178,25 @@ export {
 	type StallRollupSlice,
 } from "./stallClassifier.js";
 export {
+	applyPlanImproveAccept,
+	createMemoryPlanImproveStore,
+	diagnoseAndPropose,
+	planImproveIsPrivate,
+	planPlanImproveResolve,
+	planningImproveOfferKey,
+	PLAN_IMPROVE_ACCEPTED_DIR,
+	PLAN_IMPROVE_DEFAULT_SKILL_ID,
+	PLAN_IMPROVE_DEFAULT_TEMPLATE_ID,
+	PLAN_IMPROVE_FORBIDDEN_KEYS,
+	PLAN_IMPROVE_ROOT,
+	type DiagnoseAndProposeInput,
+	type PlanImproveAcceptPlan,
+	type PlanImproveAcceptedArtifact,
+	type PlanImproveDecision,
+	type PlanImproveProposalStore,
+	type PlanImproveQueueEntry,
+} from "./planImprove.js";
+export {
 	buildCleanDrainInvite,
 	CLEAN_DRAIN_FORBIDDEN_KEYS,
 	cleanDrainInviteIsPrivate,

@@ -32,6 +32,7 @@ Mid-call task failure without a recovery path causes abandon. Post-session plan-
   - Verify: unit + hub fixture for failure → fork options
   - Done when: failure leaves task open; fork appears; reject writes nothing.
   - Landed (W1.3): tool_event failed → `mutateBankRecordFailure` → `BankSnapshot.nowLastFailure`; Spotlight `StuckRecoveryFork` when Drive active; Dismiss mutes identical `offerKey` with no bank write.
+  - Landed (W4.1): `classifyStall` auto-offers the same fork without raise-hand; deduped with manual lastFailure via `resolveRecoveryOfferTarget`.
 - [x] Implement accept paths for narrow-task and add-fix-up (bank + NowNext from snapshot).
   - Owner package: `@cline/drive` + `@cline/core`
   - Verify: `bun -F @cline/drive test`, hub accept integration

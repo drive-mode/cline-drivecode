@@ -19,6 +19,8 @@ import {
 import { requestSessionRollupsDump } from "./sessionRollupsDump";
 import { PlanReentryRow } from "./PlanReentryRow";
 import { loadPlanReentryRow } from "./planReentryLoad";
+import { PlanImproveGate } from "./PlanImproveGate";
+import { requestPlanImproveResolve } from "./planImproveResolve";
 import {
 	applyHardwarePrefsPatch,
 	applyVoiceFacetPatch,
@@ -28,8 +30,11 @@ import {
 import { Button } from "@/components/ui/button";
 import type { PlanReentryRowModel } from "@cline/drive";
 import {
+	applyPlanImproveAccept,
 	buildShippedDigest,
+	createMemoryBankFs,
 	formatShippedDigestMarkdown,
+	planPlanImproveResolve,
 	statusSessionRowFromUnknown,
 } from "@cline/drive";
 import { downloadTextFile } from "../status/downloadTextFile";
@@ -43,6 +48,7 @@ export function DriveRoomChrome({
 	turnInFlight = false,
 	onCleanDrainContinue,
 	onCleanDrainDismiss,
+	onPlanningImproveResolved,
 }: {
 	session: UseDriveSessionResult;
 	disabled: boolean;
@@ -50,6 +56,11 @@ export function DriveRoomChrome({
 	turnInFlight?: boolean;
 	onCleanDrainContinue?: () => void;
 	onCleanDrainDismiss?: () => void;
+	/** After accept/reject/mute — parent may mute identical offerKeys. */
+	onPlanningImproveResolved?: (
+		decision: "accept" | "reject" | "mute",
+		offerKey: string,
+	) => void;
 }) {
 	const {
 		drive,
@@ -95,6 +106,42 @@ export function DriveRoomChrome({
 		};
 	}, [drive.active, workspaceRoot]);
 
+	const resolvePlanningImprove = async (
+		decision: "accept" | "reject" | "mute",
+	) => {
+		const proposal = drive.pendingPlanningImprove;
+		if (!proposal) {
+			return;
+		}
+		const root = workspaceRoot?.trim();
+		if (root) {
+			try {
+				await requestPlanImproveResolve(root, proposal, decision);
+			} catch {
+				if (decision === "accept") {
+					// Keep card so the user can retry durable accept.
+					return;
+				}
+				// reject/mute must not write — clear locally even if hub errors.
+			}
+		} else {
+			// Demo / no workspace: memory BankFs only (still gated).
+			const plan = planPlanImproveResolve({ proposal, decision });
+			await applyPlanImproveAccept(createMemoryBankFs(), plan);
+		}
+		setDrive((current) => ({
+			...current,
+			pendingPlanningImprove: null,
+			agencyBanner:
+				decision === "accept"
+					? "Planning improve accepted"
+					: decision === "mute"
+						? "Planning improve muted"
+						: "Planning improve rejected",
+		}));
+		onPlanningImproveResolved?.(decision, proposal.offerKey);
+	};
+
 	return (
 		<>
 			<DriveCallStrip
@@ -105,6 +152,22 @@ export function DriveRoomChrome({
 				workersOpen={workersPanelOpen}
 				{...stripHandlers}
 			/>
+			{!drive.active && drive.pendingPlanningImprove ? (
+				<PlanImproveGate
+					className="mx-4 mt-2"
+					disabled={disabled}
+					onAccept={() => {
+						void resolvePlanningImprove("accept");
+					}}
+					onMute={() => {
+						void resolvePlanningImprove("mute");
+					}}
+					onReject={() => {
+						void resolvePlanningImprove("reject");
+					}}
+					proposal={drive.pendingPlanningImprove}
+				/>
+			) : null}
 			{!drive.active && planReentry ? (
 				<PlanReentryRow
 					disabled={disabled}

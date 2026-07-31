@@ -76,6 +76,7 @@ import {
 } from "./drive/stuckRecovery";
 import {
 	classifyStall,
+	diagnoseAndPropose,
 	stallRollupSliceFromCounters,
 	type StallOpenFailure,
 } from "@cline/drive";
@@ -278,6 +279,11 @@ export default function Chat({
 	const [dismissedRecoveryOfferKey, setDismissedRecoveryOfferKey] = useState<
 		string | null
 	>(null);
+	const [dismissedPlanImproveOfferKey, setDismissedPlanImproveOfferKey] =
+		useState<string | null>(null);
+	const wasDriveActiveRef = useRef(false);
+	/** Last callSessionId while on-call — End clears chrome before diagnose. */
+	const lastCallSessionIdRef = useRef<string | null>(null);
 	/** Mute identical clean-drain invites (one soft ask per drain). */
 	const [dismissedCleanDrainInviteKey, setDismissedCleanDrainInviteKey] =
 		useState<string | null>(null);
@@ -300,7 +306,7 @@ export default function Chat({
 	});
 
 	/** Mid-call stall slice (W4.1) — counters + open lastFailure; no utterance. */
-	const openStallFailures: StallOpenFailure[] = (() => {
+	const openStallFailures: StallOpenFailure[] = useMemo(() => {
 		const byId = new Map<string, StallOpenFailure>();
 		for (const task of planEditorTasks) {
 			byId.set(task.id, {
@@ -316,7 +322,11 @@ export default function Chat({
 			});
 		}
 		return [...byId.values()];
-	})();
+	}, [
+		drive.bankSnapshot.nowLastFailure,
+		drive.bankSnapshot.nowTaskId,
+		planEditorTasks,
+	]);
 	const stallClassification = classifyStall({
 		rollup: stallRollupSliceFromCounters({
 			tasksCompleted: cleanDrainCountersRef.current.completedCount,
@@ -484,6 +494,70 @@ export default function Chat({
 		drive.bankSnapshot.activePlanId,
 		drive.bankSnapshot.openTaskIds,
 		planEditorTasks,
+	]);
+
+	/**
+	 * Post-session plan-improve (W4.2 / Slice 3): after End / leave (active→inactive),
+	 * diagnose stall and offer a gated planning proposal — not the in-call fork.
+	 */
+	useEffect(() => {
+		const wasActive = wasDriveActiveRef.current;
+		wasDriveActiveRef.current = drive.active;
+		if (drive.active) {
+			if (drive.callSessionId?.trim()) {
+				lastCallSessionIdRef.current = drive.callSessionId.trim();
+			}
+			// Clear post-session card when rejoining a call.
+			if (drive.pendingPlanningImprove) {
+				setDrive((current) => ({
+					...current,
+					pendingPlanningImprove: null,
+				}));
+			}
+			return;
+		}
+		if (!wasActive) {
+			return;
+		}
+		if (drive.pendingPlanningImprove) {
+			return;
+		}
+		const proposal = diagnoseAndPropose({
+			rollup: stallRollupSliceFromCounters({
+				tasksCompleted: cleanDrainCountersRef.current.completedCount,
+				midPlanAddCount: cleanDrainCountersRef.current.midPlanAddCount,
+				openFailures: openStallFailures,
+			}),
+			openFailures: openStallFailures,
+			nowTaskId: drive.bankSnapshot.nowTaskId,
+			callSessionId:
+				drive.callSessionId ?? lastCallSessionIdRef.current,
+			evidence: {
+				taskIds: openStallFailures.map((entry) => entry.taskId),
+				...(drive.bankSnapshot.activePlanId
+					? { planIds: [drive.bankSnapshot.activePlanId] }
+					: {}),
+			},
+		});
+		if (!proposal) {
+			return;
+		}
+		if (dismissedPlanImproveOfferKey === proposal.offerKey) {
+			return;
+		}
+		setDrive((current) => ({
+			...current,
+			pendingPlanningImprove: proposal,
+		}));
+	}, [
+		dismissedPlanImproveOfferKey,
+		drive.active,
+		drive.bankSnapshot.activePlanId,
+		drive.bankSnapshot.nowTaskId,
+		drive.callSessionId,
+		drive.pendingPlanningImprove,
+		openStallFailures,
+		setDrive,
 	]);
 
 	const acceptStuckRecovery = useCallback(
@@ -1694,6 +1768,11 @@ export default function Chat({
 					disabled={isHydrating}
 					onCleanDrainContinue={continueCleanDrain}
 					onCleanDrainDismiss={dismissCleanDrain}
+					onPlanningImproveResolved={(decision, offerKey) => {
+						if (decision === "mute" || decision === "reject") {
+							setDismissedPlanImproveOfferKey(offerKey);
+						}
+					}}
 					providerId={provider}
 					session={driveSession}
 					turnInFlight={sending}

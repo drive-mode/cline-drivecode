@@ -35,6 +35,20 @@ export {
 	parseDriveTask,
 } from "./bank";
 export {
+	assertNoForbiddenPlanningProposalKeys,
+	parsePlanningProposal,
+	PLANNING_PROPOSAL_FORBIDDEN_KEYS,
+	planningProposalIsPrivate,
+	type PlanningProposal,
+	PlanningProposalEvidenceSchema,
+	type PlanningProposalEvidence,
+	PlanningProposalSchema,
+	PlanningProposalTargetSchema,
+	type PlanningProposalTarget,
+	StallReasonCodeSchema,
+	type SharedStallReasonCode,
+} from "./planningProposal";
+export {
 	type ChatForkLifecycleState,
 	ChatForkLifecycleStateSchema,
 	type ChatForkRecord,
