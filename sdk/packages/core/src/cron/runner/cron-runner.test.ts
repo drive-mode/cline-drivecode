@@ -125,6 +125,7 @@ describe("CronRunner", () => {
 		expect(calls.send).toBe(1);
 		expect(calls.stop).toBe(1);
 		expect(calls.startRequests[0]?.mode).toBe("yolo");
+		expect(calls.startRequests[0]?.maxIterations).toBe(50);
 		expect(calls.startRequests[0]?.toolPolicies?.["*"]).toEqual({
 			autoApprove: true,
 		});

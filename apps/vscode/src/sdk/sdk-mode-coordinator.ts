@@ -255,6 +255,7 @@ export class SdkModeCoordinator {
 			const config = await this.options.sessionConfigBuilder.build({
 				cwd,
 				mode: newMode,
+				isResume: true,
 			})
 			Logger.log(
 				`[SdkController] Mode rebuild config: mode=${newMode}, provider=${config.providerId}, model=${config.modelId}, hasApiKey=${!!config.apiKey}`,

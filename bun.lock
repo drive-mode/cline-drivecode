@@ -33,6 +33,7 @@
         "@chat-adapter/whatsapp": "^4.23.0",
         "@clack/prompts": "^1.2.0",
         "@cline/cline-hub": "workspace:*",
+        "@cline/drive": "workspace:*",
         "@cline/drivecode-demo": "workspace:*",
         "@gramio/format": "^0.7.0",
         "@opentui-ui/dialog": "^0.1.2",
@@ -136,6 +137,7 @@
       "name": "@cline/drivecode-demo",
       "version": "0.0.0",
       "dependencies": {
+        "@cline/drive": "workspace:*",
         "@cline/shared": "workspace:*",
       },
       "devDependencies": {

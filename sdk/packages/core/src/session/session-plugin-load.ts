@@ -30,6 +30,8 @@ export interface SessionExtensionWorkspaceInput {
 	workspaceName?: string;
 	ide?: string;
 	platform?: string;
+	/** Optional plan/act (or host) mode for plugin setup() workspace context. */
+	mode?: string;
 }
 
 /**
@@ -64,6 +66,7 @@ export function buildSessionExtensionWorkspace(
 		workspaceName: input.workspaceName?.trim() || basename(rootPath),
 		ide: input.ide,
 		platform: input.platform ?? process.platform,
+		...(input.mode !== undefined ? { mode: input.mode } : {}),
 	};
 }
 

@@ -102,7 +102,7 @@ describe("DriveRoomStore", () => {
 				displayName: "Partner",
 				role: "partner",
 				status: "idle",
-				profileId: "pair",
+				seatSources: [],
 			},
 			at: "2026-07-30T10:00:02.000Z",
 		});

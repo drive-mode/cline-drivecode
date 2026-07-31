@@ -3,6 +3,7 @@ import {
 	type ClineCoreStartInput,
 	type SessionRecord,
 	buildSessionPluginInjection,
+	resolveHubHostAgentHooksEnabled,
 	resolveProductSessionFeatures,
 	SessionSource,
 } from "@cline/core";
@@ -25,6 +26,21 @@ import type { HubContext } from "./state";
 import { broadcastHubState, hubStatePayload } from "./state-payloads";
 import type { BrowserPeer, SessionContext } from "./types";
 import { asNumber, asString } from "./utils";
+
+/**
+ * Hub Chat session plugin + workspace injection (D3 / SDK-4.2).
+ * Thin helper for tests — prefer over exporting full start-input builders.
+ */
+export function buildHubSessionPluginInjection(
+	cwd: string,
+	workspaceRoot: string = cwd,
+) {
+	return buildSessionPluginInjection({
+		cwd,
+		workspaceRoot,
+		ide: "Cline Hub",
+	});
+}
 
 function toRuntimeReasoningOptions(
 	reasonLevel?: WebviewReasonLevel,
@@ -110,11 +126,16 @@ export function buildSessionStartInput(
 			? { enableAgentTeams: options.enableTeams }
 			: {}),
 	});
-	const sessionPlugins = buildSessionPluginInjection({
-		cwd: context.cwd,
-		workspaceRoot: context.workspaceRoot,
-		ide: "Cline Hub",
-	});
+	const sessionPlugins = buildHubSessionPluginInjection(
+		context.cwd,
+		context.workspaceRoot,
+	);
+	// BL-6.2 — Hub host AgentHooks (CLI createRuntimeHooks) are gated by
+	// resolveHubHostAgentHooksEnabled(). Default off = Desktop parity; file
+	// hooks still run on the hub daemon. When the policy flips on, wire
+	// createRuntimeHooks here (needs ingestHookEvent adapter). Until then,
+	// surface the resolved flag in sessionMetadata only.
+	const attachHostHooks = resolveHubHostAgentHooksEnabled();
 	return {
 		source: options?.source ?? SessionSource.WEB,
 		interactive: true,
@@ -142,8 +163,7 @@ export function buildSessionStartInput(
 			compaction: resolveHubSessionCompaction(),
 			// File-based hooks (.clinerules/hooks) are injected by Core's
 			// local-runtime-bootstrap on the hub daemon for hub-backed sessions.
-			// Host AgentHooks (CLI createRuntimeHooks / VS Code hooks-adapter)
-			// are intentionally omitted — Desktop parity. See SDK-6.3.
+			// Host AgentHooks stay undefined until attachHostHooks wiring lands.
 			pluginPaths: sessionPlugins.pluginPaths,
 			extensionContext: {
 				workspace: sessionPlugins.workspace,
@@ -156,6 +176,7 @@ export function buildSessionStartInput(
 			maxIterations: sessionFeatures.maxIterations,
 			reasonLevel: options?.reasonLevel,
 			autoApproveTools: options?.autoApproveTools,
+			hostAgentHooks: attachHostHooks,
 			...(options?.sessionMetadata ?? {}),
 		},
 		...(options?.initialMessages

@@ -68,6 +68,18 @@ const cline = await ClineCore.create({
 })
 ```
 
+Product hosts (CLI, Hub Chat, Desktop, and the VS Code **SDK session** path) build telemetry config via `createClineTelemetryServiceConfig` / `createConfiguredTelemetryHandle`. Env knobs (standard OpenTelemetry first, then enterprise aliases):
+
+| Purpose | Preferred | Fallback |
+|---------|-----------|----------|
+| Enable telemetry | `OTEL_TELEMETRY_ENABLED=1` | `CLINE_OTEL_TELEMETRY_ENABLED=1` |
+| OTLP endpoint | `OTEL_EXPORTER_OTLP_ENDPOINT` | `CLINE_OTEL_EXPORTER_OTLP_ENDPOINT` |
+| OTLP headers | `OTEL_EXPORTER_OTLP_HEADERS` | `CLINE_OTEL_EXPORTER_OTLP_HEADERS` |
+| Traces-specific OTLP | `OTEL_EXPORTER_OTLP_TRACES_{PROTOCOL,ENDPOINT,HEADERS}` | `CLINE_OTEL_EXPORTER_OTLP_TRACES_*` |
+| Metrics / logs OTLP | `OTEL_EXPORTER_OTLP_{METRICS,LOGS}_*` | `CLINE_OTEL_EXPORTER_OTLP_{METRICS,LOGS}_*` |
+
+`CLINE_OTEL_TELEMETRY_ENABLED=1` enables the **SDK** telemetry path above. It does **not** turn on VS Code’s legacy extension `TelemetryService` / `otel-config.ts` stack (that path still reads `CLINE_OTEL_*` independently).
+
 Events emitted include:
 - `agent_created` -- agent initialized with config
 - `tool_usage` -- tool called with name, duration, success/failure

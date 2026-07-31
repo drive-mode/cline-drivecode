@@ -2,6 +2,7 @@ import type { ConsecutiveMistakeLimitContext, ConsecutiveMistakeLimitDecision } 
 import type { ClineAskQuestion, ClineMessage, TurnPhase } from "@shared/ExtensionMessage"
 import type { ClineAskResponse } from "@shared/WebviewMessage"
 import { Logger } from "@/shared/services/Logger"
+import { emitHostNotificationHook } from "./host-notification-hook"
 import { MessageIdMinter } from "./message-id-minter"
 import { buildToolApprovalAskMessage } from "./message-translator"
 import type { SdkMessageCoordinator } from "./sdk-message-coordinator"
@@ -108,6 +109,17 @@ export class SdkInteractionCoordinator {
 			payload: { sessionId: this.options.getSessionId(), status: "running" },
 		})
 		this.options.setTurnPhase?.("awaiting_approval", toolAskMessage.ts)
+		// BL-7.2: host Notification at approval boundary (OS notification sites not wired).
+		void emitHostNotificationHook({
+			event: "user_attention",
+			source: "tool_approval",
+			sourceType: "tool",
+			sourceId: request.toolCallId,
+			message: `Awaiting approval for tool: ${request.toolName}`,
+			waitingForUserInput: true,
+			requiresUserAction: true,
+			severity: "info",
+		})
 		await this.options.postStateToWebview()
 
 		return new Promise<{ approved: boolean; reason?: string }>((resolve) => {

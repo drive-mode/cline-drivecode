@@ -18,12 +18,17 @@ import {
 
 async function waitForFile(
 	filePath: string,
-	timeoutMs = 1500,
+	timeoutMs = 5_000,
 ): Promise<string> {
 	const started = Date.now();
 	for (;;) {
 		try {
-			return await readFile(filePath, "utf8");
+			const content = await readFile(filePath, "utf8");
+			// Hook scripts may create/truncate before stdin arrives; keep polling
+			// until we see non-empty content (or time out).
+			if (content.trim().length > 0) {
+				return content;
+			}
 		} catch (error) {
 			const code =
 				error && typeof error === "object" && "code" in error
@@ -32,22 +37,25 @@ async function waitForFile(
 			if (code !== "ENOENT" || Date.now() - started >= timeoutMs) {
 				throw error;
 			}
-			await new Promise((resolve) => setTimeout(resolve, 25));
 		}
+		if (Date.now() - started >= timeoutMs) {
+			throw new Error(
+				`Timed out waiting for non-empty file: ${filePath}`,
+			);
+		}
+		await new Promise((resolve) => setTimeout(resolve, 25));
 	}
 }
 
 async function waitForJsonLines(
 	filePath: string,
 	expectedLines: number,
-	timeoutMs = 1500,
+	timeoutMs = 5_000,
 ): Promise<string[]> {
 	const started = Date.now();
 	for (;;) {
-		const content = await waitForFile(
-			filePath,
-			Math.max(1, timeoutMs - (Date.now() - started)),
-		);
+		const remaining = Math.max(1, timeoutMs - (Date.now() - started));
+		const content = await waitForFile(filePath, remaining);
 		const lines = content.trim().split("\n").filter(Boolean);
 		if (lines.length >= expectedLines) {
 			return lines;

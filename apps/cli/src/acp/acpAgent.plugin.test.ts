@@ -2,7 +2,10 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildAcpSessionPluginInjection } from "./acpAgent";
+import {
+	buildAcpSessionFeatures,
+	buildAcpSessionPluginInjection,
+} from "./acpAgent";
 
 describe("buildAcpSessionPluginInjection (SDK-4.1)", () => {
 	it("returns empty pluginPaths and workspace for an empty cwd", () => {
@@ -46,5 +49,16 @@ describe("buildAcpSessionPluginInjection (SDK-4.1)", () => {
 			true,
 		);
 		expect(injected.workspace.rootPath).toBe(root);
+	});
+});
+
+describe("buildAcpSessionFeatures (BL-5.7)", () => {
+	it("applies PRODUCT_DEFAULT_MAX_ITERATIONS for ACP host", async () => {
+		const { PRODUCT_DEFAULT_MAX_ITERATIONS } = await import("@cline/core");
+		const features = buildAcpSessionFeatures();
+		expect(features.maxIterations).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS);
+		expect(features.enableSpawnAgent).toBe(true);
+		// ACP special-case: spawn on, teams off (product-session-defaults).
+		expect(features.enableAgentTeams).toBe(false);
 	});
 });

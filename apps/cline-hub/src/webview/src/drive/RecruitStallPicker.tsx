@@ -25,14 +25,13 @@ export function RecruitStallPicker({
 	onDismiss,
 }: RecruitStallPickerProps) {
 	return (
-		<div
+		<section
 			aria-label="Recruit on stall"
 			className={cn(
 				"space-y-2 rounded-md border border-violet-500/40 bg-violet-500/5 p-3",
 				className,
 			)}
 			data-slot="recruit-stall-picker"
-			role="region"
 		>
 			<div className="text-xs font-medium text-violet-900 dark:text-violet-100">
 				Who should take this?
@@ -111,6 +110,6 @@ export function RecruitStallPicker({
 			>
 				Dismiss
 			</Button>
-		</div>
+		</section>
 	);
 }

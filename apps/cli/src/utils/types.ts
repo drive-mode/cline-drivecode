@@ -75,6 +75,8 @@ export interface ParsedArgs {
 	modeExplicitlySet?: boolean;
 	timeoutSeconds?: number;
 	invalidTimeoutSeconds?: string;
+	maxIterations?: number;
+	invalidMaxIterations?: string;
 	thinking: boolean;
 	/** Whether --thinking was explicitly provided on the command line */
 	thinkingExplicitlySet?: boolean;

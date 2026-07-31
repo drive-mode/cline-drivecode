@@ -24,12 +24,19 @@ function isEnvEnabled(value: string | undefined): boolean {
 	return value === "1" || value === "true";
 }
 
+/**
+ * Parse a positive integer from env. Non-finite / ≤0 / empty → undefined so
+ * callers keep their defaults (aligned with VS Code legacy `Math.max(1, …)`).
+ */
 function parsePositiveInt(value: string | undefined): number | undefined {
 	if (value === undefined) {
 		return undefined;
 	}
 	const parsed = Number.parseInt(value, 10);
-	return Number.isFinite(parsed) ? parsed : undefined;
+	if (!Number.isFinite(parsed) || parsed < 1) {
+		return undefined;
+	}
+	return parsed;
 }
 
 /**
@@ -115,6 +122,23 @@ export function getTelemetryBuildTimeConfig(): OpenTelemetryClientConfig {
 			"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 			"CLINE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 		),
+		otlpTracesProtocol: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
+			"CLINE_OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
+		),
+		otlpTracesEndpoint: readTelemetryEnv(
+			"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+			"CLINE_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+		),
+		otlpTracesHeaders: (() => {
+			const tracesHeadersRaw = readTelemetryEnv(
+				"OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+				"CLINE_OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+			);
+			return tracesHeadersRaw
+				? parseKeyPairsIntoRecord(tracesHeadersRaw)
+				: undefined;
+		})(),
 		metricExportInterval: parsePositiveInt(metricIntervalRaw),
 		otlpHeaders: headersRaw
 			? parseKeyPairsIntoRecord(headersRaw)

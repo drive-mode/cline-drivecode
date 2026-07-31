@@ -857,6 +857,13 @@ export async function runCli(): Promise<void> {
 		process.exitCode = 1;
 		return;
 	}
+	if (args.invalidMaxIterations) {
+		writeErr(
+			`invalid --max-iterations "${args.invalidMaxIterations}" (expected integer >= 1)`,
+		);
+		process.exitCode = 1;
+		return;
+	}
 	if (args.invalidRetries) {
 		writeln(
 			`${c.dim}[warn] ignoring invalid --retries value "${args.invalidRetries}" (expected integer >= 1)${c.reset}`,
@@ -1119,6 +1126,9 @@ export async function runCli(): Promise<void> {
 			yolo: isYoloMode,
 			host: "cli",
 			applyDefaultMaxIterations: true,
+			...(typeof args.maxIterations === "number"
+				? { maxIterations: args.maxIterations }
+				: {}),
 		});
 		const sessionPlugins = buildSessionPluginInjection({
 			cwd,

@@ -626,6 +626,28 @@ describe("runCli lightweight command dispatch", () => {
 		);
 	});
 
+	it("lets --max-iterations override PRODUCT_DEFAULT_MAX_ITERATIONS (BL-5.6)", async () => {
+		forcePromptModeInput();
+		process.argv = [
+			"bun",
+			"src/index.ts",
+			"--max-iterations",
+			"7",
+			"budget override",
+		];
+
+		const { runCli } = await import("./main");
+
+		await expect(runCli()).resolves.toBeUndefined();
+		expect(runtimeMocks.runAgent).toHaveBeenCalledWith(
+			"budget override",
+			expect.objectContaining({
+				maxIterations: 7,
+			}),
+			expect.anything(),
+		);
+	});
+
 	it("discovers fixture plugins via --cwd into session pluginPaths (SDK-4.1)", async () => {
 		forcePromptModeInput();
 		const root = mkdtempSync(join(tmpdir(), "cli-plugin-fixture-"));
@@ -1511,6 +1533,40 @@ describe("runCli lightweight command dispatch", () => {
 
 		await expect(runCli()).resolves.toBeUndefined();
 		expect(runtimeMocks.runAgent).toHaveBeenCalledTimes(1);
+		expect(hubRuntimeMocks.ensureCliHubServer).not.toHaveBeenCalled();
+	});
+
+	it("injects pluginPaths + workspace for yolo runs (BL-4.5)", async () => {
+		forcePromptModeInput();
+		const root = mkdtempSync(join(tmpdir(), "cli-yolo-plugin-"));
+		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
+		process.argv = [
+			"bun",
+			"src/index.ts",
+			"--yolo",
+			"--cwd",
+			root,
+			"say hello",
+		];
+
+		const { runCli } = await import("./main");
+
+		await expect(runCli()).resolves.toBeUndefined();
+		expect(runtimeMocks.runAgent).toHaveBeenCalledWith(
+			"say hello",
+			expect.objectContaining({
+				cwd: root,
+				pluginPaths: [],
+				extensionContext: expect.objectContaining({
+					workspace: expect.objectContaining({
+						cwd: root,
+						rootPath: root,
+						ide: "Terminal Shell",
+					}),
+				}),
+			}),
+			expect.anything(),
+		);
 		expect(hubRuntimeMocks.ensureCliHubServer).not.toHaveBeenCalled();
 	});
 

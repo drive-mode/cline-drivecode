@@ -127,7 +127,7 @@ This is intentional adapter debt, not a one-line flip. **SDK-7.2 spike: Done —
 | **Depends on** | D3 (locked) |
 | **Goal** | `{ pluginPaths, extensions, extensionContext }` for `CoreSessionConfig`. |
 | **Verify** | `bun run build:sdk`; fixture plugin unit test. |
-| **Status** | **Done** — `resolveSessionPluginPaths` / `buildSessionExtensionWorkspace` / `resolveSessionPluginLoad` + tests in `@cline/core` (hosts inject in Phase 4) |
+| **Status** | **Done** — `resolveSessionPluginPaths` / `buildSessionExtensionWorkspace` / `resolveSessionPluginLoad` + tests in `@cline/core` (hosts inject in Phase 4; sync compose helper `buildSessionPluginInjection` lands with Phase 4) |
 
 ---
 
@@ -163,7 +163,7 @@ This is intentional adapter debt, not a one-line flip. **SDK-7.2 spike: Done —
 
 Installed/enabled plugins load into `CoreSessionConfig` via `pluginPaths` / `extensions` + `extensionContext.workspace` on session start (**D3**).
 
-Core helpers (Phase 1): `resolveSessionPluginPaths`, `buildSessionExtensionWorkspace`, `buildSessionPluginInjection` (sync compose), and async `resolveSessionPluginLoad`. Hosts prefer the sync path unless they already have loaded extensions. Core `local-runtime-bootstrap` still discovers plugins when the `"plugins"` config extension is enabled — hosts still pass `pluginPaths` + workspace so hub/remote/plugin `setup()` stay consistent.
+Core helpers (Phase 1): `resolveSessionPluginPaths`, `buildSessionExtensionWorkspace`, and async `resolveSessionPluginLoad`. Phase 4 adds the sync compose helper `buildSessionPluginInjection` that hosts prefer unless they already have loaded extensions. Core `local-runtime-bootstrap` still discovers plugins when the `"plugins"` config extension is enabled — hosts still pass `pluginPaths` + workspace so hub/remote/plugin `setup()` stay consistent.
 
 ### Agent task `SDK-4.1` — CLI (+ ACP)
 
@@ -220,7 +220,7 @@ Shared `maxIterations` defaults (+ optional usage abort helper); hosts may overr
 | **Goal** | Pure helper encoding the [going-to-production](/sdk/guides/going-to-production) cost-control pattern: estimate cost, evaluate budget, abort once over limit. |
 | **API** | `estimateUsageCost`, `evaluateUsageBudget` / `shouldAbortForUsageBudget`, `usageFromSessionEvent`, `createUsageBudgetAbortHandler` |
 | **Verify** | Focused `@cline/core` unit tests; CLI opt-in via `CLINE_MAX_SESSION_COST` (one-shot path). |
-| **Status** | **Partial** — core helper + tests + CLI one-shot env hook (`run-agent.ts` / `CLINE_MAX_SESSION_COST`, including abort during `start()`). Not a product-wide budget: Hub, Desktop, VS Code, and CLI interactive still open — see [integration backlog](/sdk/architecture/integration-backlog). |
+| **Status** | **Done** — core helper + tests; CLI one-shot + interactive (`CLINE_MAX_SESSION_COST`); Hub Chat + Desktop sidecar env hooks. VS Code USD setting / UI still open — see [integration backlog](/sdk/architecture/integration-backlog). |
 
 ## Phase 6 · Hub ClineCore depth
 

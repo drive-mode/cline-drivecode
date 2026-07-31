@@ -34,7 +34,7 @@ export function StuckRecoveryFork({
 	onDismiss,
 }: StuckRecoveryForkProps) {
 	return (
-		<div
+		<section
 			aria-label="Stuck recovery"
 			className={cn(
 				"space-y-2 rounded-md border border-rose-500/40 bg-rose-500/5 p-3",
@@ -42,7 +42,6 @@ export function StuckRecoveryFork({
 			)}
 			data-recovery-source={source}
 			data-slot="stuck-recovery-fork"
-			role="region"
 		>
 			<div className="text-xs font-medium text-rose-800 dark:text-rose-200">
 				{source === "auto_stall" ? "Session stall" : "Now is stuck"}
@@ -92,6 +91,6 @@ export function StuckRecoveryFork({
 					Dismiss
 				</Button>
 			</div>
-		</div>
+		</section>
 	);
 }

@@ -1,3 +1,5 @@
+import { PRODUCT_VSCODE_LEGACY_OTEL_USE_SHARED_ENV } from "@cline/core"
+import { getTelemetryBuildTimeConfig } from "@cline/shared"
 import { parseKeyPairsIntoRecord } from "@opentelemetry/core"
 import { BUILD_CONSTANTS } from "@/shared/constants"
 import { RemoteConfigFields } from "@/shared/storage/state-keys"
@@ -121,9 +123,55 @@ export function remoteConfigToOtelConfig(settings: Partial<RemoteConfigFields>):
 	}
 }
 
-function getOtelConfig(): OpenTelemetryClientConfig {
+/**
+ * Prefer primary when set; otherwise fall back to shared env reader (BL-8.1).
+ * BUILD_CONSTANTS / explicit CLINE_OTEL_* values win when present.
+ */
+function mergeOtelWithSharedFallback(primary: OpenTelemetryClientConfig): OpenTelemetryClientConfig {
+	if (!PRODUCT_VSCODE_LEGACY_OTEL_USE_SHARED_ENV) {
+		return primary
+	}
+	const shared = getTelemetryBuildTimeConfig()
+	const pickString = (value: string | undefined, fallback: string | undefined): string | undefined =>
+		value !== undefined && value !== "" ? value : fallback
+	const pickNumber = (value: number | undefined, fallback: number | undefined): number | undefined =>
+		value !== undefined ? value : fallback
+	const pickHeaders = (
+		value: Record<string, string> | undefined,
+		fallback: Record<string, string> | undefined,
+	): Record<string, string> | undefined => (value !== undefined ? value : fallback)
+	const pickBoolean = (value: boolean | undefined, fallback: boolean | undefined): boolean | undefined =>
+		value !== undefined ? value : fallback
+
+	// enabled: primary wins when its source set a value; getOtelConfig / getRuntimeOtelConfig
+	// encode that via `enabledSourceSet`.
 	return {
-		enabled: BUILD_CONSTANTS.OTEL_TELEMETRY_ENABLED === "1" || BUILD_CONSTANTS.OTEL_TELEMETRY_ENABLED === "true",
+		enabled: (primary as OpenTelemetryClientConfig & { enabledSourceSet?: boolean }).enabledSourceSet
+			? primary.enabled
+			: primary.enabled || shared.enabled,
+		metricsExporter: pickString(primary.metricsExporter, shared.metricsExporter),
+		logsExporter: pickString(primary.logsExporter, shared.logsExporter),
+		otlpProtocol: pickString(primary.otlpProtocol, shared.otlpProtocol),
+		otlpEndpoint: pickString(primary.otlpEndpoint, shared.otlpEndpoint),
+		otlpHeaders: pickHeaders(primary.otlpHeaders, shared.otlpHeaders),
+		otlpMetricsProtocol: pickString(primary.otlpMetricsProtocol, shared.otlpMetricsProtocol),
+		otlpMetricsEndpoint: pickString(primary.otlpMetricsEndpoint, shared.otlpMetricsEndpoint),
+		otlpLogsProtocol: pickString(primary.otlpLogsProtocol, shared.otlpLogsProtocol),
+		otlpLogsEndpoint: pickString(primary.otlpLogsEndpoint, shared.otlpLogsEndpoint),
+		metricExportInterval: pickNumber(primary.metricExportInterval, shared.metricExportInterval),
+		otlpInsecure: pickBoolean(primary.otlpInsecure, shared.otlpInsecure),
+		logBatchSize: pickNumber(primary.logBatchSize, shared.logBatchSize),
+		logBatchTimeout: pickNumber(primary.logBatchTimeout, shared.logBatchTimeout),
+		logMaxQueueSize: pickNumber(primary.logMaxQueueSize, shared.logMaxQueueSize),
+	}
+}
+
+function getOtelConfig(): OpenTelemetryClientConfig {
+	const enabledRaw = BUILD_CONSTANTS.OTEL_TELEMETRY_ENABLED
+	const enabledSourceSet = enabledRaw !== undefined && enabledRaw !== ""
+	const primary: OpenTelemetryClientConfig & { enabledSourceSet?: boolean } = {
+		enabled: enabledRaw === "1" || enabledRaw === "true",
+		enabledSourceSet,
 		metricsExporter: BUILD_CONSTANTS.OTEL_METRICS_EXPORTER,
 		logsExporter: BUILD_CONSTANTS.OTEL_LOGS_EXPORTER,
 		otlpProtocol: BUILD_CONSTANTS.OTEL_EXPORTER_OTLP_PROTOCOL,
@@ -135,6 +183,7 @@ function getOtelConfig(): OpenTelemetryClientConfig {
 			? parseKeyPairsIntoRecord(BUILD_CONSTANTS.OTEL_EXPORTER_OTLP_HEADERS)
 			: undefined,
 	}
+	return mergeOtelWithSharedFallback(primary)
 }
 
 /**
@@ -163,13 +212,19 @@ function getOtelConfig(): OpenTelemetryClientConfig {
  * - CLINE_OTEL_LOG_BATCH_TIMEOUT: Maximum time to wait before exporting logs in ms (default: 5000)
  * - CLINE_OTEL_LOG_MAX_QUEUE_SIZE: Maximum queue size for log records (default: 2048)
  *
+ * When PRODUCT_VSCODE_LEGACY_OTEL_USE_SHARED_ENV is true, unset fields also fall
+ * back to `@cline/shared` getTelemetryBuildTimeConfig() (OTEL_* then CLINE_OTEL_*).
+ *
  * @private
  * @see .env.example for development setup
  * @see .github/workflows/ext-vscode-publish-stable.yml for production environment variable injection
  */
 function getRuntimeOtelConfig(): OpenTelemetryClientConfig {
-	return {
-		enabled: process.env.CLINE_OTEL_TELEMETRY_ENABLED === "true",
+	const enabledRaw = process.env.CLINE_OTEL_TELEMETRY_ENABLED
+	const enabledSourceSet = enabledRaw !== undefined && enabledRaw !== ""
+	const primary: OpenTelemetryClientConfig & { enabledSourceSet?: boolean } = {
+		enabled: enabledRaw === "true",
+		enabledSourceSet,
 		metricsExporter: process.env.CLINE_OTEL_METRICS_EXPORTER,
 		logsExporter: process.env.CLINE_OTEL_LOGS_EXPORTER,
 		otlpProtocol: process.env.CLINE_OTEL_EXPORTER_OTLP_PROTOCOL,
@@ -181,7 +236,12 @@ function getRuntimeOtelConfig(): OpenTelemetryClientConfig {
 		metricExportInterval: process.env.CLINE_OTEL_METRIC_EXPORT_INTERVAL
 			? Number.parseInt(process.env.CLINE_OTEL_METRIC_EXPORT_INTERVAL, 10)
 			: undefined,
-		otlpInsecure: process.env.CLINE_OTEL_EXPORTER_OTLP_INSECURE === "true",
+		otlpInsecure:
+			process.env.CLINE_OTEL_EXPORTER_OTLP_INSECURE === "true"
+				? true
+				: process.env.CLINE_OTEL_EXPORTER_OTLP_INSECURE !== undefined
+					? false
+					: undefined,
 		logBatchSize: process.env.CLINE_OTEL_LOG_BATCH_SIZE
 			? Math.max(1, Number.parseInt(process.env.CLINE_OTEL_LOG_BATCH_SIZE, 10))
 			: undefined,
@@ -195,6 +255,7 @@ function getRuntimeOtelConfig(): OpenTelemetryClientConfig {
 			? parseKeyPairsIntoRecord(process.env.CLINE_OTEL_EXPORTER_OTLP_HEADERS)
 			: undefined,
 	}
+	return mergeOtelWithSharedFallback(primary)
 }
 
 export function isOpenTelemetryConfigValid(config: OpenTelemetryClientConfig): config is OpenTelemetryClientValidConfig {

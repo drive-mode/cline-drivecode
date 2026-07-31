@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildSessionStartInput } from "./sessions";
+import { buildHubSessionPluginInjection, buildSessionStartInput } from "./sessions";
 
 const mocks = vi.hoisted(() => ({
 	readCompactionModeGlobally: vi.fn(),
@@ -39,6 +39,29 @@ function makeFixturePluginRoot(): string {
 	);
 	return root;
 }
+
+describe("buildHubSessionPluginInjection (BL-4.1)", () => {
+	it("returns empty pluginPaths and Hub workspace for an empty cwd", () => {
+		const root = mkdtempSync(join(tmpdir(), "hub-thin-empty-"));
+		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
+
+		const injected = buildHubSessionPluginInjection(root);
+		expect(injected.pluginPaths).toEqual([]);
+		expect(injected.workspace).toMatchObject({
+			rootPath: root,
+			cwd: root,
+			ide: "Cline Hub",
+		});
+	});
+
+	it("discovers fixture plugins under .cline/plugins/", () => {
+		const root = makeFixturePluginRoot();
+		const injected = buildHubSessionPluginInjection(root);
+		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(
+			true,
+		);
+	});
+});
 
 describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
 	beforeEach(() => {
@@ -142,7 +165,7 @@ describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
 		expect(input.config.compaction).toEqual({ enabled: false });
 	});
 
-	it("omits host AgentHooks — file hooks via Core bootstrap (SDK-6.3)", () => {
+	it("omits host AgentHooks — file hooks via Core bootstrap (SDK-6.3 / BL-6.2)", () => {
 		const root = mkdtempSync(join(tmpdir(), "hub-session-hooks-"));
 
 		const input = buildSessionStartInput({
@@ -154,7 +177,9 @@ describe("buildSessionStartInput plugin injection (SDK-4.2)", () => {
 
 		// Desktop parity: no host AgentHooks on session config. File-based
 		// hooks under .clinerules/hooks are loaded by Core local-runtime-bootstrap
-		// on the hub daemon for hub-backed sessions.
+		// on the hub daemon for hub-backed sessions. Policy flag is surfaced
+		// in metadata (default false via resolveHubHostAgentHooksEnabled).
 		expect(input.config.hooks).toBeUndefined();
+		expect(input.sessionMetadata?.hostAgentHooks).toBe(false);
 	});
 });

@@ -67,6 +67,10 @@ import { assertInteractivePreflight } from "./interactive/preflight";
 import { createInteractiveSessionRuntime } from "./interactive/session-runtime";
 import { buildUserInputMessage } from "./prompt";
 import { getUIEventEmitter } from "./session-events";
+import {
+	createCliUsageBudgetAbortHandler,
+	readCliMaxSessionCostUsd,
+} from "./usage-budget";
 
 type ModelChangeReasoningConfig = {
 	thinking?: boolean;
@@ -234,7 +238,9 @@ export async function runInteractive(
 	const providerSettingsManager = new ProviderSettingsManager();
 	let zeroCurrentTurnCost = false;
 
-	const sessionRuntime = createInteractiveSessionRuntime({
+	let usageBudgetAbort: ((event: unknown) => void) | undefined;
+	let sessionRuntime!: ReturnType<typeof createInteractiveSessionRuntime>;
+	sessionRuntime = createInteractiveSessionRuntime({
 		config,
 		providerSettingsManager,
 		userInstructionService,
@@ -246,6 +252,7 @@ export async function runInteractive(
 		resolveMistakeLimitDecision,
 		switchToActModeTool,
 		onAgentEvent: (event) => {
+			usageBudgetAbort?.(event);
 			uiEvents.emit("agent", zeroCliAgentEventCost(event, zeroCurrentTurnCost));
 		},
 		onTeamEvent: (event) => {
@@ -256,6 +263,13 @@ export async function runInteractive(
 		},
 		onPendingPromptSubmitted: (event) => {
 			uiEvents.emit("pending-prompt-submitted", event);
+		},
+	});
+	usageBudgetAbort = createCliUsageBudgetAbortHandler({
+		maxCostUsd: readCliMaxSessionCostUsd(),
+		abort: (reason) => {
+			writeErr(reason);
+			sessionRuntime.abortAll();
 		},
 	});
 	let modeChangePromise: Promise<void> | undefined;

@@ -32,6 +32,12 @@ const MANAGED_KEYS = [
 	"CLINE_OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
 	"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 	"CLINE_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+	"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
+	"CLINE_OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
+	"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+	"CLINE_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+	"OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+	"CLINE_OTEL_EXPORTER_OTLP_TRACES_HEADERS",
 	"OTEL_LOG_BATCH_SIZE",
 	"CLINE_OTEL_LOG_BATCH_SIZE",
 	"OTEL_LOG_BATCH_TIMEOUT",
@@ -194,5 +200,45 @@ describe("getTelemetryBuildTimeConfig / createClineTelemetryServiceConfig", () =
 		expect(config.metricExportInterval).toBe(12000);
 		expect(config.logBatchTimeout).toBe(3500);
 		expect(config.logMaxQueueSize).toBe(1024);
+	});
+
+	it("maps OTEL_EXPORTER_OTLP_TRACES_* (and CLINE_OTEL_* fallback)", () => {
+		stashEnv();
+		process.env.OTEL_EXPORTER_OTLP_TRACES_PROTOCOL = "http/protobuf";
+		process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT =
+			"https://traces.example:4318";
+		process.env.OTEL_EXPORTER_OTLP_TRACES_HEADERS = "x-trace-key=t1";
+
+		const config = getTelemetryBuildTimeConfig();
+		expect(config.otlpTracesProtocol).toBe("http/protobuf");
+		expect(config.otlpTracesEndpoint).toBe("https://traces.example:4318");
+		expect(config.otlpTracesHeaders).toEqual({ "x-trace-key": "t1" });
+	});
+
+	it("falls back to CLINE_OTEL_EXPORTER_OTLP_TRACES_* when OTEL_* unset", () => {
+		stashEnv();
+		process.env.CLINE_OTEL_EXPORTER_OTLP_TRACES_PROTOCOL = "grpc";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT =
+			"https://cline-traces.example";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_TRACES_HEADERS = "auth=cline";
+
+		const config = getTelemetryBuildTimeConfig();
+		expect(config.otlpTracesProtocol).toBe("grpc");
+		expect(config.otlpTracesEndpoint).toBe("https://cline-traces.example");
+		expect(config.otlpTracesHeaders).toEqual({ auth: "cline" });
+	});
+
+	it("ignores non-finite and non-positive OTEL numeric env values", () => {
+		stashEnv();
+		process.env.OTEL_METRIC_EXPORT_INTERVAL = "NaN";
+		process.env.OTEL_LOG_BATCH_SIZE = "0";
+		process.env.OTEL_LOG_BATCH_TIMEOUT = "-1";
+		process.env.OTEL_LOG_MAX_QUEUE_SIZE = "not-a-number";
+
+		const config = getTelemetryBuildTimeConfig();
+		expect(config.metricExportInterval).toBeUndefined();
+		expect(config.logBatchSize).toBeUndefined();
+		expect(config.logBatchTimeout).toBeUndefined();
+		expect(config.logMaxQueueSize).toBeUndefined();
 	});
 });

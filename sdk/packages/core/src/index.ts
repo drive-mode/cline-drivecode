@@ -795,15 +795,35 @@ export type {
 	CoreSessionSnapshot,
 } from "./session/session-snapshot";
 export { createCoreSessionSnapshot } from "./session/session-snapshot";
+export {
+	PRODUCT_DEFAULT_MAX_ITERATIONS,
+	resolveProductSessionFeatures,
+} from "./session/product-session-defaults";
 export type {
 	ProductSessionFeatures,
 	ProductSessionHostKind,
 	ResolveProductSessionFeaturesInput,
 } from "./session/product-session-defaults";
 export {
-	PRODUCT_DEFAULT_MAX_ITERATIONS,
-	resolveProductSessionFeatures,
-} from "./session/product-session-defaults";
+	isEnvFlagEnabled,
+	PRODUCT_HOST_WORKSPACE_ONLY_PLUGIN_INJECTION,
+	PRODUCT_HUB_CHAT_CLINE_TYPE,
+	PRODUCT_HUB_CHAT_PLATFORM,
+	PRODUCT_HUB_DAEMON_CLINE_TYPE,
+	PRODUCT_HUB_DAEMON_PLATFORM,
+	PRODUCT_HUB_HOST_AGENT_HOOKS_DEFAULT,
+	PRODUCT_HUB_HOST_AGENT_HOOKS_ENV,
+	PRODUCT_HUB_RECREATE_TELEMETRY_ON_OPT_OUT,
+	PRODUCT_MAX_SESSION_COST_ENV,
+	PRODUCT_PRECOMPACT_CANCEL_ABORTS,
+	PRODUCT_VSCODE_LEGACY_OTEL_USE_SHARED_ENV,
+	PRODUCT_VSCODE_NOTIFICATION_HOOKS,
+	PRODUCT_VSCODE_PRECOMPACT_HOOKS,
+	PRODUCT_VSCODE_SESSION_SHUTDOWN_AS_NOTIFICATION,
+	PRODUCT_VSCODE_TASK_ERROR_AS_NOTIFICATION,
+	readProductMaxSessionCostUsd,
+	resolveHubHostAgentHooksEnabled,
+} from "./session/product-host-policy";
 export type {
 	CreateUsageBudgetAbortHandlerOptions,
 	EvaluateUsageBudgetInput,

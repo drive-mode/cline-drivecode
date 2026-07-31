@@ -611,6 +611,15 @@ export class Controller {
 			setTurnPhase: (phase, anchorTs) => this.turnStateTracker.set(phase, anchorTs),
 			captureProviderApiError: (event) => this.captureProviderFailure(event),
 			beginProviderFailureTelemetryTurn: () => this.beginProviderFailureTelemetryTurn(),
+			abortSession: (reason) => {
+				const activeSession = this.sessions.getActiveSession()
+				if (!activeSession) {
+					return
+				}
+				void activeSession.sdkHost.abort(activeSession.sessionId, reason).catch((error) => {
+					Logger.error("[SdkController] Failed to abort session after usage budget:", error)
+				})
+			},
 		})
 		// Subscribe to MCP tool list changes so we can restart the SDK session
 		// when servers are added/removed/reconnected. The SDK's DefaultSessionBuilder

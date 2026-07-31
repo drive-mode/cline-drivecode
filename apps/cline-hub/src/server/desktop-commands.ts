@@ -5,6 +5,7 @@ import {
 	ensureCustomProvidersLoaded,
 	executeClineAccountAction,
 	formatProviderOAuthApiKey,
+	type GlobalCompactionMode,
 	getLocalProviderModels,
 	getPersistedProviderApiKey,
 	getProviderOAuthCredentialsFromSettings,
@@ -13,14 +14,17 @@ import {
 	loginAndSaveLocalProviderOAuthCredentials,
 	markLocalProviderEnabled,
 	normalizeOAuthProvider,
+	PRODUCT_HUB_RECREATE_TELEMETRY_ON_OPT_OUT,
 	type ProviderCapability,
 	type ProviderClient,
 	type ProviderProtocol,
 	type ProviderSettings,
+	readCompactionModeGlobally,
 	readGlobalSettings,
 	saveLocalProviderOAuthCredentials,
 	saveLocalProviderSettings,
 	setAutoUpdateEnabledGlobally,
+	setCompactionModeGlobally,
 	setDisabledPlugin,
 	setDisabledTools,
 	setTelemetryOptOutGlobally,
@@ -33,6 +37,7 @@ import {
 	stopConnectorChannel,
 } from "./connectors";
 import { providerSettingsManager, workspaceRoot } from "./deps";
+import { restartHub } from "./hub";
 import {
 	installMarketplaceEntryForDesktopCommand,
 	listMarketplaceInstalledEntries,
@@ -53,6 +58,19 @@ import { broadcastHubState } from "./state-payloads";
 import type { JsonRecord } from "./types";
 import { listUserInstructionConfigs } from "./user-instructions";
 import { openExternalUrl, readProviderSettingsUpdate } from "./utils";
+
+const COMPACTION_MODES = new Set<GlobalCompactionMode>([
+	"off",
+	"basic",
+	"agentic",
+]);
+
+function hubGlobalSettingsResponse() {
+	return {
+		...readGlobalSettings(),
+		compactionMode: readCompactionModeGlobally() ?? null,
+	};
+}
 
 const ROUTINE_SCHEDULE_COMMANDS = new Set([
 	"list_routine_schedules",
@@ -199,21 +217,39 @@ export async function handleDesktopCommand(
 		);
 	}
 	if (command === "get_global_settings") {
-		return readGlobalSettings();
+		return hubGlobalSettingsResponse();
 	}
 	if (command === "set_telemetry_opt_out") {
 		if (typeof args?.telemetry_opt_out !== "boolean") {
 			throw new Error("telemetry_opt_out must be a boolean");
 		}
 		setTelemetryOptOutGlobally(args.telemetry_opt_out);
-		return readGlobalSettings();
+		if (PRODUCT_HUB_RECREATE_TELEMETRY_ON_OPT_OUT) {
+			try {
+				await restartHub(ctx);
+			} catch (error) {
+				console.warn(
+					"restartHub after telemetry opt-out failed; settings still applied:",
+					error,
+				);
+			}
+		}
+		return hubGlobalSettingsResponse();
+	}
+	if (command === "set_compaction_mode") {
+		const mode = String(args?.mode ?? "").trim() as GlobalCompactionMode;
+		if (!COMPACTION_MODES.has(mode)) {
+			throw new Error('mode must be "off", "basic", or "agentic"');
+		}
+		setCompactionModeGlobally(mode);
+		return hubGlobalSettingsResponse();
 	}
 	if (command === "set_auto_update_enabled") {
 		if (typeof args?.auto_update_enabled !== "boolean") {
 			throw new Error("auto_update_enabled must be a boolean");
 		}
 		setAutoUpdateEnabledGlobally(args.auto_update_enabled);
-		return readGlobalSettings();
+		return hubGlobalSettingsResponse();
 	}
 	if (command === "list_connector_channels") {
 		return connectorChannelsPayload();

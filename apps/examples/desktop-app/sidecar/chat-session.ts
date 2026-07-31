@@ -3,17 +3,20 @@ import { basename, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import {
 	buildConnectionUpdate,
-	buildSessionPluginInjection,
 	buildWorkspaceMetadata,
 	type ClineCore,
 	type ClineCoreStartConfig,
+	type CoreCompactionConfig,
 	createSessionCompactionState,
+	type GlobalCompactionMode,
 	projectSessionCompactionState,
+	readCompactionModeGlobally,
 	resolveProductSessionFeatures,
 	type SessionCompactionState,
 	type SessionPendingPrompt,
 	SessionSource,
 	splitCoreSessionConfig,
+	buildSessionPluginInjection,
 } from "@cline/core";
 import type { Message } from "@cline/llms";
 import { buildClineSystemPrompt } from "@cline/shared";
@@ -206,6 +209,40 @@ function readPositiveInteger(value: unknown): number | undefined {
 	return undefined;
 }
 
+/**
+ * Desktop session plugin + workspace injection (D3 / SDK-4.2).
+ * Thin helper for tests — match ACP `buildAcpSessionPluginInjection`.
+ */
+export function buildDesktopSessionPluginInjection(
+	cwd: string,
+	workspaceRoot: string = cwd,
+) {
+	return buildSessionPluginInjection({
+		cwd,
+		workspaceRoot,
+		ide: "Cline Desktop",
+	});
+}
+
+/**
+ * Maps a CLI/global compaction mode onto Core session config (Hub parity / BL-6.5).
+ */
+export function buildDesktopCompactionConfig(
+	mode?: GlobalCompactionMode,
+): CoreCompactionConfig {
+	if (mode === undefined) {
+		return { enabled: true };
+	}
+	if (mode === "off") {
+		return { enabled: false };
+	}
+	return { enabled: true, strategy: mode };
+}
+
+export function resolveDesktopSessionCompaction(): CoreCompactionConfig {
+	return buildDesktopCompactionConfig(readCompactionModeGlobally());
+}
+
 export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 	const rawWorkspaceRoot = config.workspaceRoot ?? config.workspace_root;
 	const workspaceRoot =
@@ -245,11 +282,10 @@ export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 		config.enable_teams ??
 		sessionFeatures.enableAgentTeams;
 	const pluginCwd = cwd || workspaceRoot || process.cwd();
-	const sessionPlugins = buildSessionPluginInjection({
-		cwd: pluginCwd,
-		workspaceRoot: workspaceRoot || pluginCwd,
-		ide: "Cline Desktop",
-	});
+	const sessionPlugins = buildDesktopSessionPluginInjection(
+		pluginCwd,
+		workspaceRoot || pluginCwd,
+	);
 	return {
 		sessionId: config.sessionId ?? config.session_id,
 		providerId: config.provider ?? config.providerId ?? "",
@@ -279,6 +315,7 @@ export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 		missionLogIntervalMs:
 			config.missionTimeIntervalMs ?? config.missionLogIntervalMs,
 		checkpoint: { enabled: true },
+		compaction: resolveDesktopSessionCompaction(),
 		sessions: config.sessions,
 		initialMessages: config.initialMessages,
 		pluginPaths: sessionPlugins.pluginPaths,

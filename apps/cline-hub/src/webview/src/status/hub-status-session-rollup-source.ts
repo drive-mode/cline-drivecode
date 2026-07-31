@@ -10,7 +10,11 @@ import type { StatusSessionRollupSource } from "./status-session-rollup-source";
  * (FS-backed SessionRollupSource on the daemon). Requires workspaceRoot.
  */
 export class HubStatusSessionRollupSource implements StatusSessionRollupSource {
-	constructor(private readonly getWorkspaceRoot: () => string | undefined) {}
+	private readonly getWorkspaceRoot: () => string | undefined;
+
+	constructor(getWorkspaceRoot: () => string | undefined) {
+		this.getWorkspaceRoot = getWorkspaceRoot;
+	}
 
 	async loadSessions(options?: {
 		limit?: number;

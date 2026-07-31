@@ -9,6 +9,7 @@ import { nowIso } from "@cline/shared/db";
 import type { ResolveCronSpecsDirOptions } from "@cline/shared/storage";
 import { DefaultToolNames } from "../../extensions/tools/constants";
 import { mergeRulesForSystemPrompt } from "../../runtime/safety/rules";
+import { PRODUCT_DEFAULT_MAX_ITERATIONS } from "../../session/product-session-defaults";
 import { buildWorkspaceMetadata } from "../../services/workspace/workspace-manifest";
 import { writeCronRunReport } from "../reports/cron-report-writer";
 import type { HubScheduleRuntimeHandlers } from "../service/schedule-service";
@@ -540,7 +541,12 @@ export class CronRunner {
 				mode,
 				provider,
 			),
-			maxIterations: spec.maxIterations,
+			maxIterations:
+				typeof spec.maxIterations === "number" &&
+				Number.isFinite(spec.maxIterations) &&
+				spec.maxIterations > 0
+					? Math.trunc(spec.maxIterations)
+					: PRODUCT_DEFAULT_MAX_ITERATIONS,
 			enableTools: runtimeOptions?.enableTools ?? true,
 			enableSpawn: runtimeOptions?.enableSpawn ?? true,
 			enableTeams: runtimeOptions?.enableTeams ?? true,

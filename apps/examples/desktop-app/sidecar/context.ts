@@ -30,12 +30,45 @@ import type {
 	PromptInQueue,
 	SidecarContext,
 } from "./types";
+import {
+	createDesktopUsageBudgetAbortHandler,
+	readDesktopMaxSessionCostUsd,
+} from "./usage-budget";
 
 const ASK_QUESTION_TIMEOUT_MS = 5 * 60_000;
 const hubClientInitialization = new WeakMap<
 	SidecarContext,
 	Promise<NodeHubClient>
 >();
+
+/** Per-session usage-budget handlers (BL-5.2 / `CLINE_MAX_SESSION_COST`). */
+const usageBudgetHandlers = new Map<string, (event: unknown) => void>();
+
+function usageBudgetHandlerForSession(
+	ctx: SidecarContext,
+	sessionId: string,
+): ((event: unknown) => void) | undefined {
+	const maxCostUsd = readDesktopMaxSessionCostUsd();
+	if (maxCostUsd === undefined) {
+		return undefined;
+	}
+	let handler = usageBudgetHandlers.get(sessionId);
+	if (!handler) {
+		handler = createDesktopUsageBudgetAbortHandler({
+			maxCostUsd,
+			abort: (reason) => {
+				usageBudgetHandlers.delete(sessionId);
+				void ctx.sessionManager
+					?.abort(sessionId, reason)
+					.catch(() => {});
+			},
+		});
+		if (handler) {
+			usageBudgetHandlers.set(sessionId, handler);
+		}
+	}
+	return handler;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers — WebSocket broadcast
@@ -338,6 +371,7 @@ function handleCoreSessionEvent(
 		}
 		case "agent_event": {
 			const { sessionId, event: agentEvent } = event.payload;
+			usageBudgetHandlerForSession(ctx, sessionId)?.(agentEvent);
 			handleAgentEvent(ctx, sessionId, agentEvent);
 			break;
 		}
@@ -402,6 +436,7 @@ function handleCoreSessionEvent(
 		}
 		case "ended": {
 			const { sessionId, reason } = event.payload;
+			usageBudgetHandlers.delete(sessionId);
 			const session = ctx.liveSessions.get(sessionId);
 			if (session) {
 				session.busy = false;

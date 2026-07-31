@@ -1,10 +1,11 @@
-import type {
-	CoreSessionEvent,
-	ITelemetryService,
-	PreparedRemoteConfigCoreIntegration,
-	RestoreInput,
-	RestoreResult,
-	StartSessionResult,
+import {
+	type CoreSessionEvent,
+	type ITelemetryService,
+	PRODUCT_VSCODE_SESSION_SHUTDOWN_AS_NOTIFICATION,
+	type PreparedRemoteConfigCoreIntegration,
+	type RestoreInput,
+	type RestoreResult,
+	type StartSessionResult,
 } from "@cline/core"
 import { formatModeSwitchNotice, type ModeSwitchNotice } from "@cline/shared"
 import { StateManager } from "@/core/storage/StateManager"
@@ -12,6 +13,7 @@ import type { VscodeTerminalManager } from "@/hosts/vscode/terminal/VscodeTermin
 import { McpHub } from "@/services/mcp/McpHub"
 import { Logger } from "@/shared/services/Logger"
 import type { ActiveSession } from "./cline-session-factory"
+import { emitHostNotificationHook } from "./host-notification-hook"
 import type { SdkForegroundCommandCoordinator } from "./sdk-foreground-command-coordinator"
 import { buildToolPolicies } from "./sdk-tool-policies"
 import type { SdkSessionHost } from "./session-host"
@@ -248,6 +250,18 @@ export class SdkSessionLifecycle {
 	}
 
 	async dispose(reason = "SdkSessionLifecycle.dispose"): Promise<void> {
+		const sessionId = this.activeSession?.sessionId ?? ""
+		if (PRODUCT_VSCODE_SESSION_SHUTDOWN_AS_NOTIFICATION) {
+			await emitHostNotificationHook({
+				event: "session_shutdown",
+				severity: "info",
+				message: reason,
+				source: "vscode",
+				sourceType: "session",
+				sourceId: sessionId,
+			})
+		}
+
 		await this.endActiveSession(reason, { awaitStop: true })
 
 		const sharedHost = this.sharedHost ?? (await this.sharedHostPromise?.catch(() => undefined))

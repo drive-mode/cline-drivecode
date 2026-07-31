@@ -14,8 +14,19 @@ import type {
 	BankSnapshot,
 	DriveEvent,
 } from "@cline/shared";
-import { DRIVE_EVENT_FORBIDDEN_KEYS } from "@cline/shared";
 import type { SessionRollup } from "./sessionRollup.js";
+
+/** Mirrors `@cline/shared` DRIVE_EVENT_FORBIDDEN_KEYS (value-import banned). */
+const DRIVE_EVENT_FORBIDDEN_KEYS = [
+	"audio",
+	"rawAudio",
+	"pcm",
+	"wav",
+	"transcript",
+	"fullTranscript",
+	"rawTranscript",
+	"speechAudio",
+] as const;
 
 /** Keys that must never appear on a Tier-0 handoff packet (privacy gate). */
 export const HANDOFF_FORBIDDEN_KEYS = [

@@ -5,6 +5,10 @@ import {
 } from "@cline/shared";
 import type { AuthSettings } from "../../services/llms/provider-settings";
 import { ProviderSettingsManager } from "../../services/storage/provider-settings-manager";
+import {
+	PRODUCT_HUB_DAEMON_CLINE_TYPE,
+	PRODUCT_HUB_DAEMON_PLATFORM,
+} from "../../session/product-host-policy";
 import { identifyAccount } from "../../services/telemetry/core-events";
 import { createConfiguredTelemetryHandle } from "../../services/telemetry/OpenTelemetryProvider";
 import { CORE_BUILD_VERSION } from "../../version";
@@ -37,8 +41,8 @@ export function createHubDaemonTelemetry(): HubDaemonTelemetry {
 			// "hub", not "cli": daemon-hosted sessions can be triggered by the
 			// CLI, desktop app, or connectors, so daemon-emitted events must be
 			// distinguishable from the CLI process's own events.
-			cline_type: "hub",
-			platform: "cline-hub-daemon",
+			cline_type: PRODUCT_HUB_DAEMON_CLINE_TYPE,
+			platform: PRODUCT_HUB_DAEMON_PLATFORM,
 			platform_version: process.version,
 			os_type: process.platform,
 			os_version: release(),

@@ -347,7 +347,7 @@ Desktop-integrated approval mode is also supported via env wiring (`CLINE_TOOL_A
 - `CLINE_LOG_PATH` - Runtime log file path (default `<CLINE_DATA_DIR>/logs/cline.log`)
 - `CLINE_LOG_NAME` - Logger name embedded in runtime log records
 - `CLINE_DEBUG` - Set to `1`/`true` to print wrapper diagnostics (e.g. the CA bundle summary)
-- `CLINE_MAX_SESSION_COST` - Opt-in USD session budget for one-shot runs; aborts when estimated/reported cost exceeds this value
+- `CLINE_MAX_SESSION_COST` - Opt-in USD session budget for CLI runs (one-shot and interactive TUI); Hub Chat and Desktop sidecar honor the same env. Aborts when estimated/reported cost exceeds this value
 
 `--key` takes precedence over environment variables.
 

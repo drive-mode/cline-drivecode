@@ -48,6 +48,20 @@ describe("buildSessionExtensionWorkspace", () => {
 			workspaceName: "only",
 		});
 	});
+
+	it("forwards optional mode for VS Code-style workspace fields (BL-4.3)", () => {
+		expect(
+			buildSessionExtensionWorkspace({
+				cwd: "/tmp/proj",
+				workspaceRoot: "/tmp/proj",
+				ide: "VS Code",
+				mode: "plan",
+			}),
+		).toMatchObject({
+			mode: "plan",
+			ide: "VS Code",
+		});
+	});
 });
 
 describe("resolveSessionPluginPaths", () => {
@@ -100,6 +114,25 @@ describe("resolveSessionPluginLoad", () => {
 		});
 		expect(loaded.pluginPaths).toEqual([]);
 		expect(loaded.extensions).toEqual([]);
+		expect(loaded.failures).toEqual([]);
+	});
+
+	it("loads a fixture plugin successfully (BL-4.8)", async () => {
+		const root = await makeTempDir("cline-plugin-load-ok-");
+		const entry = join(root, "demo-plugin.js");
+		await writeFile(
+			entry,
+			"export default { name: 'demo', manifest: { capabilities: ['hooks'] }, setup() {} };\n",
+			"utf8",
+		);
+		const loaded = await resolveSessionPluginLoad({
+			cwd: root,
+			workspaceRoot: root,
+			mode: "in_process",
+			pluginPaths: [entry],
+		});
+		expect(loaded.pluginPaths).toContain(entry);
+		expect(loaded.extensions.some((ext) => ext.name === "demo")).toBe(true);
 		expect(loaded.failures).toEqual([]);
 	});
 });
@@ -158,5 +191,58 @@ describe("buildSessionPluginInjection", () => {
 			workspaceName: "fixture",
 			ide: "VS Code",
 		});
+	});
+
+	it("passes through explicit pluginPaths overrides (BL-4.7)", async () => {
+		const root = await makeTempDir("cline-plugin-override-");
+		const entry = join(root, "explicit-plugin.js");
+		await writeFile(entry, "export default { name: 'explicit', setup() {} }\n", "utf8");
+		const injected = buildSessionPluginInjection({
+			cwd: root,
+			workspaceRoot: root,
+			pluginPaths: [entry],
+			ide: "Terminal Shell",
+		});
+		expect(injected.pluginPaths).toContain(entry);
+	});
+
+	it("omits plugins disabled in global settings (BL-4.6)", async () => {
+		const { setHomeDir } = await import("@cline/shared/storage");
+		const root = await makeTempDir("cline-plugin-disabled-");
+		const previousHome = process.env.HOME;
+		const previousSettings = process.env.CLINE_GLOBAL_SETTINGS_PATH;
+		try {
+			process.env.HOME = root;
+			setHomeDir(root);
+			const enabledPlugin = join(root, "enabled.js");
+			const disabledPlugin = join(root, "disabled.js");
+			const settingsPath = join(root, "global-settings.json");
+			process.env.CLINE_GLOBAL_SETTINGS_PATH = settingsPath;
+			await writeFile(enabledPlugin, "export default {}", "utf8");
+			await writeFile(disabledPlugin, "export default {}", "utf8");
+			await writeFile(
+				settingsPath,
+				JSON.stringify({ disabledPlugins: [disabledPlugin] }, null, 2),
+				"utf8",
+			);
+
+			const injected = buildSessionPluginInjection({
+				cwd: root,
+				workspaceRoot: root,
+				pluginPaths: [enabledPlugin, disabledPlugin],
+			});
+			expect(injected.pluginPaths).toEqual([enabledPlugin]);
+		} finally {
+			if (previousHome === undefined) {
+				delete process.env.HOME;
+			} else {
+				process.env.HOME = previousHome;
+			}
+			if (previousSettings === undefined) {
+				delete process.env.CLINE_GLOBAL_SETTINGS_PATH;
+			} else {
+				process.env.CLINE_GLOBAL_SETTINGS_PATH = previousSettings;
+			}
+		}
 	});
 });

@@ -61,6 +61,10 @@ export function addRootOptions(cmd: Command): Command {
 				"Optional timeout in seconds (default: 0 for no timeout)",
 			)
 			.option(
+				"--max-iterations <n>",
+				"Maximum agent loop iterations (default: product default of 50)",
+			)
+			.option(
 				"--acp",
 				"Run in Agent Client Protocol (ACP) mode for editor integration",
 			)
@@ -168,6 +172,16 @@ export function commanderToParsedArgs(program: Command): ParsedArgs {
 			result.timeoutSeconds = parsed;
 		} else if (raw) {
 			result.invalidTimeoutSeconds = raw;
+		}
+	}
+
+	if (opts.maxIterations !== undefined) {
+		const raw = String(opts.maxIterations).trim();
+		const parsed = Number.parseInt(raw, 10);
+		if (raw && Number.isInteger(parsed) && parsed >= 1) {
+			result.maxIterations = parsed;
+		} else if (raw) {
+			result.invalidMaxIterations = raw;
 		}
 	}
 

@@ -24,9 +24,12 @@
 // which the SDK does not treat as a runtime command, so the model improvised a
 // fake "Conversation Summary" instead of compacting (CLINE-2503).
 
+import { PRODUCT_PRECOMPACT_CANCEL_ABORTS, PRODUCT_VSCODE_PRECOMPACT_HOOKS } from "@cline/core"
 import type { Message as SdkMessage } from "@cline/llms"
 import type { ClineCompactionInfo, ClineMessage } from "@shared/ExtensionMessage"
 import type { Mode } from "@shared/storage/types"
+import { HookFactory } from "@/core/hooks/hook-factory"
+import { getHooksEnabledSafe } from "@/core/hooks/hooks-utils"
 import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
 import { buildCompactionMessage, parseCompactionNoticeMetadata } from "./message-translator"
@@ -43,6 +46,7 @@ const COMPACTION_FAILURE_MESSAGE = "Couldn't compact the conversation. Please tr
 const COMPACTION_UNSUPPORTED_MESSAGE = "Compaction is not supported by this runtime yet. Please update Cline and try again."
 const COMPACTION_TURN_RUNNING_MESSAGE =
 	"Cannot compact while a response is in progress. Try again once the current turn finishes."
+const COMPACTION_CANCELLED_BY_HOOK_MESSAGE = "Compaction cancelled by PreCompact hook."
 
 export interface SdkCompactionCoordinatorOptions {
 	stateManager: StateManager
@@ -214,7 +218,22 @@ export class SdkCompactionCoordinator {
 
 		const cwd = await this.options.getWorkspaceRoot()
 		const mode = this.getCurrentMode()
-		const config = await this.options.sessionConfigBuilder.build({ cwd, mode })
+		const config = await this.options.sessionConfigBuilder.build({ cwd, mode, isResume: true })
+
+		const compactionStrategy =
+			typeof config.compaction?.strategy === "string" && config.compaction.strategy.length > 0
+				? config.compaction.strategy
+				: "manual"
+		const preCompactCancelled = await this.runPreCompactHook({
+			sessionId,
+			contextSize: messagesBefore,
+			compactionStrategy,
+		})
+		if (preCompactCancelled) {
+			this.emitInfo(COMPACTION_CANCELLED_BY_HOOK_MESSAGE, sessionId)
+			await this.options.postStateToWebview()
+			return
+		}
 
 		// A live divider row, updated in place (same ts) from "started" to its
 		// terminal state — the same UX as the CLI's compaction divider.
@@ -288,6 +307,56 @@ export class SdkCompactionCoordinator {
 	private getCurrentMode(): Mode {
 		const m = this.options.stateManager.getGlobalSettingsKey("mode")
 		return m === "plan" ? m : "act"
+	}
+
+	/**
+	 * Host-side PreCompact before compactSessionMessages (BL-7.1).
+	 * Returns true when compaction should abort (hook cancel + policy).
+	 */
+	private async runPreCompactHook(input: {
+		sessionId: string
+		contextSize: number
+		compactionStrategy: string
+	}): Promise<boolean> {
+		if (!PRODUCT_VSCODE_PRECOMPACT_HOOKS) {
+			return false
+		}
+		try {
+			if (!getHooksEnabledSafe(this.options.stateManager.getGlobalSettingsKey("hooksEnabled"))) {
+				return false
+			}
+			const factory = new HookFactory()
+			if (!(await factory.hasHook("PreCompact"))) {
+				return false
+			}
+			const runner = await factory.create("PreCompact")
+			const result = await runner.run({
+				taskId: input.sessionId,
+				preCompact: {
+					taskId: input.sessionId,
+					ulid: "",
+					contextSize: input.contextSize,
+					compactionStrategy: input.compactionStrategy,
+					previousApiReqIndex: 0,
+					tokensIn: 0,
+					tokensOut: 0,
+					tokensInCache: 0,
+					tokensOutCache: 0,
+					deletedRangeStart: 0,
+					deletedRangeEnd: 0,
+					contextJsonPath: "",
+					contextRawPath: "",
+				},
+			})
+			if (result.cancel && PRODUCT_PRECOMPACT_CANCEL_ABORTS) {
+				Logger.log(`[SdkController] PreCompact hook cancelled compaction for ${input.sessionId}`)
+				return true
+			}
+			return false
+		} catch (error) {
+			Logger.error("[SdkController] PreCompact hook failed:", error)
+			return false
+		}
 	}
 
 	/** Append or update-in-place (same ts) the compaction divider row. */

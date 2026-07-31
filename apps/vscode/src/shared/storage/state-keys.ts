@@ -284,6 +284,9 @@ const USER_SETTINGS_FIELDS = {
 	backgroundEditEnabled: { default: false as boolean },
 	optOutOfRemoteConfig: { default: false as boolean },
 	showFeatureTips: { default: true as boolean },
+	// Undefined = use product defaults / env (BL-5.3 / BL-5.5)
+	maxIterations: { default: undefined as number | undefined },
+	maxSessionCostUsd: { default: undefined as number | undefined },
 
 	// OpenTelemetry configuration
 	openTelemetryEnabled: { default: true as boolean },

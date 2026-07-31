@@ -28,11 +28,10 @@ export function SdlcFreezeAcceptChip({
 			: `Freeze: ${plan.planTitle} (${plan.tasks.length} task${plan.tasks.length === 1 ? "" : "s"})`;
 
 	return (
-		<div
+		<section
 			aria-label="Accept SDLC freeze into bank"
 			className="flex flex-wrap items-center gap-2 border-b border-violet-500/25 bg-violet-500/5 px-4 py-2"
 			data-slot="sdlc-freeze-accept-chip"
-			role="region"
 		>
 			<div className="min-w-0 flex-1 space-y-0.5">
 				<div className="text-[10px] font-medium uppercase tracking-wide text-violet-800 dark:text-violet-200">
@@ -69,6 +68,6 @@ export function SdlcFreezeAcceptChip({
 					Dismiss
 				</Button>
 			</div>
-		</div>
+		</section>
 	);
 }

@@ -31,7 +31,7 @@ export function PlanImproveGate({
 			: `template:${proposal.target.templateId}`;
 
 	return (
-		<div
+		<section
 			aria-label="Plan improve proposal"
 			className={cn(
 				"space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3",
@@ -39,7 +39,6 @@ export function PlanImproveGate({
 			)}
 			data-proposal-kind="planning"
 			data-slot="plan-improve-gate"
-			role="region"
 		>
 			<div className="text-xs font-medium text-amber-900 dark:text-amber-200">
 				Planning improve
@@ -102,6 +101,6 @@ export function PlanImproveGate({
 					Mute
 				</Button>
 			</div>
-		</div>
+		</section>
 	);
 }

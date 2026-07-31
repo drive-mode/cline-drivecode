@@ -73,6 +73,7 @@ describe("SdkModeCoordinator", () => {
 		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({
 			cwd: "/workspace",
 			mode: "plan",
+			isResume: true,
 		})
 		expect(options.buildStartSessionInput).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "old-session" }), {
 			cwd: "/workspace",

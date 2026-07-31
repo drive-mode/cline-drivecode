@@ -123,17 +123,17 @@ CLI, Hub, Desktop, and Menubar treat hub discovery / `HubSessionClient` / `HubUI
 
 | Knob | Situation | Opportunity |
 |------|-----------|-------------|
-| `maxIterations` | Product default 50 via `resolveProductSessionFeatures` + `applyDefaultMaxIterations` (SDK-5.1); host UI overrides still uneven | Surface overrides in VS Code settings / CLI args (BL-5.5–5.6) |
+| `maxIterations` | Product default 50 via `resolveProductSessionFeatures` + `applyDefaultMaxIterations` (SDK-5.1); CLI `--max-iterations` + cron/schedule default (BL-5.6/5.9) | Surface override in VS Code settings (BL-5.5) |
 | `maxTokensPerTurn` / temperature / thinking | Set when user/provider supplies them | Cost-control presets by task type |
 | `enableSpawnAgent` / `enableAgentTeams` | Phase 2 / D1: hosts call `resolveProductSessionFeatures`; VS Code needs setting + honest UI | Finish VS Code product exposure |
-| `pluginPaths` / `extensions` | Phase 4 D3: all product hosts inject on session start | Optional host-side filtering / override tests (BL-4.*) |
+| `pluginPaths` / `extensions` | Phase 4 D3: all product hosts inject on session start | Host thin helpers + override/disabled tests (BL-4.*) |
 | `automation: true` / `cline.automation.*` | Unused in apps; D2: Hub schedules are product-canonical | Embedder-only path; no store merge (SDK-3.2 deferred) |
 | `backendMode: "remote"` | Unused | Only if remote runtime productizes |
 | `ToolPresets` (`act`/`plan`/`search`/`minimal`/`yolo`) | Mode/yolo paths use policies; presets under-documented in hosts | Prefer Core presets over host-copied policy maps where possible |
 | Resource / websocket policies | Hub uses `resolveResourcePolicy` for transport | Broader sandboxes / resource profiles in CLI & Desktop |
 | Mistake limit / loop detection | CLI strong; VS Code wires mistake-limit callback | Share CLI defaults across hosts |
-| Hub `ClineCore.create` telemetry / hooks / compaction | Telemetry + compaction on Hub Chat; host AgentHooks omitted (file hooks via daemon) | Optional host AgentHooks bridge (BL-6.2); Desktop compaction parity (BL-6.5) |
-| OpenTelemetry via `loadOpenTelemetryAdapter` / shared env | SDK-8.1: hosts use `createConfiguredTelemetryHandle`; shared config accepts `OTEL_*` + `CLINE_OTEL_*` | Optional unify VS Code legacy stack (BL-8.1); production-guide env note (BL-8.3) |
+| Hub `ClineCore.create` telemetry / hooks / compaction | Telemetry + logger + compaction on Hub Chat; Desktop compaction parity (BL-6.5); host AgentHooks omitted (file hooks via daemon) | Optional host AgentHooks bridge (BL-6.2); live opt-out rebind (BL-6.8) |
+| OpenTelemetry via `loadOpenTelemetryAdapter` / shared env | SDK-8.1: hosts use `createConfiguredTelemetryHandle`; shared config accepts `OTEL_*` + `CLINE_OTEL_*` (+ traces keys) | Optional unify VS Code legacy stack (BL-8.1) |
 
 **Bottom line:** we are past “minimal SDK wrap.” Configuration is deep for providers, tools, session identity, plugins-on-session, and shared session feature defaults. Remaining room is mostly **VS Code multi-agent UI honesty, usage-budget abort beyond CLI, VS Code OTEL dual-stack cleanup, and situational remote/gateway paths**.
 
@@ -147,10 +147,10 @@ From SDK docs / skill references vs app code:
 4. **Direct `Agent` + `createTool` for embedders** — well covered by examples; intentionally not the product-host path.
 5. **LLM gateway (`DefaultGateway` / `createGateway`)** — documented for direct model access; hosts stay on `ClineCore` / `ProviderSettingsManager`.
 6. **`backendMode: "remote"`** — documented; no product host uses it.
-7. **Production cost abort patterns** — **Partial (SDK-5.2):** CLI one-shot `CLINE_MAX_SESSION_COST`; Hub/Desktop/VS Code/interactive still open (BL-5.1–5.4).
-8. **Full hook coverage** — VS Code wires TaskResume; TaskError/SessionShutdown are wontfix; PreCompact/Notification + rebuild `isResume` remain backlog (BL-7.1–7.2, BL-7.9).
-9. **Hub runtime depth** — Hub Chat now attaches telemetry + session compaction (SDK-6.1/6.2). Host `AgentHooks` intentionally omitted (file hooks via Core hub-daemon bootstrap; Desktop parity).
-10. **OpenTelemetry** — **Partial→Done incremental (SDK-8.1):** shared env fallback; VS Code legacy stack remains (BL-8.1). Event projection shared layer **Deferred (SDK-8.2)**.
+7. **Production cost abort patterns** — **Mostly done (SDK-5.2):** CLI one-shot + interactive, Hub Chat, Desktop honor `CLINE_MAX_SESSION_COST`; VS Code USD setting still open (BL-5.3/5.5).
+8. **Full hook coverage** — VS Code wires TaskResume; mid-task rebuilds preserve `isResume` (BL-7.9); TaskError/SessionShutdown are wontfix; PreCompact/Notification remain backlog (BL-7.1–7.2).
+9. **Hub runtime depth** — Hub Chat attaches telemetry + logger + session compaction (SDK-6.1/6.2/BL-6.3); Desktop compaction parity (BL-6.5). Host `AgentHooks` intentionally omitted (file hooks via Core hub-daemon bootstrap).
+10. **OpenTelemetry** — **Done incremental (SDK-8.1 + BL-8.* hygiene):** shared env fallback + traces keys + positive-int clamp; VS Code legacy stack remains (BL-8.1). Event projection shared layer **Deferred (SDK-8.2)**.
 
 ### Docs / skill drift (maintenance)
 
@@ -211,7 +211,7 @@ Prioritized by product leverage (not calendar estimates). Ordering reflects depe
 
 We use the SDK **enough for a full product runtime** — especially session, providers, tools, hub, MCP, and telemetry. We do **not** under-use the basic agent loop.
 
-The highest-value remaining gaps are **VS Code multi-agent UI honesty**, **usage-budget abort beyond CLI one-shot**, and **optional VS Code OTEL dual-stack cleanup**. Phases 0–8 closed shared defaults, plugins-on-session, Hub depth, VS Code hooks/MCP honesty, and incremental OTEL env alignment.
+The highest-value remaining gaps are **VS Code multi-agent UI honesty**, **VS Code usage-budget / maxIterations settings UI**, and **optional VS Code OTEL dual-stack cleanup**. Phases 0–8 closed shared defaults, plugins-on-session, Hub depth, VS Code hooks/MCP honesty, and incremental OTEL env alignment.
 
 ## Next
 

@@ -2,26 +2,26 @@
 //
 // Runtime hooks use typed in-process lifecycle callbacks (AgentRuntimeHooks):
 //   TaskStart        -> beforeRun (new session)
-//   TaskResume       -> beforeRun when isResume (product path). CLINE_HOOK_AGENT_RESUME=1
-//                      is CLI/test parity only — do not rely on process-wide env in VS Code.
+//   TaskResume       -> beforeRun when isResume option is true (product path).
+//                      CLINE_HOOK_AGENT_RESUME=1 is CLI/test parity only —
+//                      the extension host must not set that env; pass isResume.
 //   UserPromptSubmit -> beforeRun with the latest submitted user message
 //   PreToolUse       -> beforeTool
 //   PostToolUse      -> afterTool
 //   TaskComplete     -> afterRun when completed
 //   TaskCancel       -> afterRun when aborted
 //
-// Coverage matrix (SDK-7.1):
+// Coverage matrix (SDK-7.1 / BL-7.*):
 //   Wired:     TaskStart, TaskResume, UserPromptSubmit, PreToolUse, PostToolUse,
 //              TaskComplete, TaskCancel
-//   Wontfix:   TaskError — AgentHooks can express via afterRun(status=failed), but
-//              VS Code HookFactory/proto have no TaskError kind (Core-only file name)
-//   Wontfix:   SessionShutdown — not on AgentRuntimeHooks (Core uses a separate
-//              subprocess shutdown() / session_shutdown path; HookFactory lacks it)
-//   Backlog:   PreCompact — Core HOOK_CONFIG_FILE_EVENT_MAP maps it to undefined;
-//              HookFactory has the kind; needs a host-side call before compaction
-//   Backlog:   Notification — not on AgentRuntimeHooks; HookFactory has the kind;
-//              needs host-side calls on notification events
+//   Policy:    TaskError → Notification (event=task_error) when
+//              PRODUCT_VSCODE_TASK_ERROR_AS_NOTIFICATION (BL-7.3)
+//   Policy:    SessionShutdown → Notification (event=session_shutdown) from
+//              sdk-session-lifecycle when PRODUCT_VSCODE_SESSION_SHUTDOWN_AS_NOTIFICATION (BL-7.4)
+//   Host-side: PreCompact — sdk-compaction-coordinator (BL-7.1)
+//   Host-side: Notification — host-notification-hook.ts (BL-7.2)
 
+import { PRODUCT_VSCODE_TASK_ERROR_AS_NOTIFICATION } from "@cline/core"
 import type {
 	AgentAfterToolContext,
 	AgentBeforeToolContext,
@@ -34,14 +34,16 @@ import { Logger } from "@shared/services/Logger"
 import { HookFactory } from "@/core/hooks/hook-factory"
 import { getHooksEnabledSafe } from "@/core/hooks/hooks-utils"
 import type { StateManager } from "@/core/storage/StateManager"
+import { emitHostNotificationHook } from "./host-notification-hook"
 
 export type HookMessageEmitter = (message: ClineMessage) => void
 
 export interface BuildAgentHooksOptions {
 	/**
 	 * When true, beforeRun fires TaskResume instead of TaskStart.
-	 * Product VS Code path: pass this from resume/history builders — do not set
-	 * process-wide `CLINE_HOOK_AGENT_RESUME` (that env is CLI/test parity only).
+	 * Product path: pass this from resume / mid-task rebuild builders.
+	 * Do not set process-wide `CLINE_HOOK_AGENT_RESUME` from the extension host
+	 * (that env is CLI/test parity only).
 	 */
 	isResume?: boolean
 }
@@ -89,8 +91,9 @@ function latestUserPrompt(ctx: AgentRunLifecycleContext): string {
 }
 
 function shouldRunTaskResume(options?: BuildAgentHooksOptions): boolean {
-	// Prefer explicit isResume. Env fallback matches CLI subprocess hooks and unit
-	// tests only — rebuild coordinators must pass isResume (see BL-7.9 / BL-7.10).
+	// Prefer explicit isResume (product path). Env fallback is CLI/test parity
+	// only — the extension host must not set CLINE_HOOK_AGENT_RESUME; mid-task
+	// rebuild coordinators pass isResume (BL-7.9 / BL-7.10).
 	return options?.isResume === true || process.env.CLINE_HOOK_AGENT_RESUME === "1"
 }
 
@@ -240,8 +243,30 @@ export function buildAgentHooks(
 					return
 				}
 
-				// TaskError (Core agent_error / afterRun failed) is intentionally
-				// not mapped: VS Code HookFactory has no TaskError kind.
+				if (ctx.result.status === "failed") {
+					// No TaskError HookFactory kind — emit Notification instead (BL-7.3).
+					if (PRODUCT_VSCODE_TASK_ERROR_AS_NOTIFICATION) {
+						const error = ctx.result.error
+						const message =
+							error instanceof Error
+								? error.message
+								: typeof error === "string"
+									? error
+									: error != null
+										? String(error)
+										: ctx.result.outputText || "Task failed"
+						await emitHostNotificationHook({
+							event: "task_error",
+							severity: "error",
+							message,
+							source: "vscode",
+							sourceType: "task",
+							sourceId: taskIdFromSnapshot(ctx.snapshot),
+						})
+					}
+					return
+				}
+
 				hookName =
 					ctx.result.status === "completed"
 						? "TaskComplete"

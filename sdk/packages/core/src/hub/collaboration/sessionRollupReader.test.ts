@@ -23,13 +23,18 @@ import {
 } from "./sessionRollupReader";
 
 function bank(
-	partial: Omit<BankDriveEvent, "schemaVersion" | "id"> & { id?: string },
+	partial: Record<string, unknown> & {
+		id?: string;
+		at: string;
+		roomId: string;
+		type: BankDriveEvent["type"];
+	},
 ): BankDriveEvent {
 	return {
 		schemaVersion: 1,
 		id: partial.id ?? `e-${Math.random().toString(36).slice(2, 8)}`,
 		...partial,
-	} as BankDriveEvent;
+	} as unknown as BankDriveEvent;
 }
 
 function joinEvent(

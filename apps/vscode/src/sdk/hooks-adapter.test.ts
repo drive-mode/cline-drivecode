@@ -22,7 +22,11 @@ function makeUsage(overrides?: Partial<AgentUsage>): AgentUsage {
 }
 
 const mocks = vi.hoisted(() => {
-	const run = vi.fn(async () => ({ cancel: false }))
+	const run = vi.fn(
+		async (): Promise<{ cancel: boolean; errorMessage?: string }> => ({
+			cancel: false,
+		}),
+	)
 	const hasHook = vi.fn(async (_name: string) => true)
 	const create = vi.fn(async (_name: string) => ({ run }))
 	return {
@@ -31,6 +35,7 @@ const mocks = vi.hoisted(() => {
 		create,
 		getHooksEnabledSafe: vi.fn((_value: unknown) => true),
 		getGlobalSettingsKey: vi.fn(() => true),
+		emitHostNotificationHook: vi.fn(async () => {}),
 	}
 })
 
@@ -47,6 +52,10 @@ vi.mock("@/core/hooks/hooks-utils", () => ({
 
 vi.mock("@shared/services/Logger", () => ({
 	Logger: { error: vi.fn(), warn: vi.fn(), debug: vi.fn(), log: vi.fn() },
+}))
+
+vi.mock("./host-notification-hook", () => ({
+	emitHostNotificationHook: mocks.emitHostNotificationHook,
 }))
 
 function makeStateManager() {
@@ -78,6 +87,7 @@ describe("buildAgentHooks", () => {
 		mocks.create.mockClear()
 		mocks.getHooksEnabledSafe.mockClear()
 		mocks.getGlobalSettingsKey.mockClear()
+		mocks.emitHostNotificationHook.mockClear()
 		mocks.hasHook.mockResolvedValue(true)
 		mocks.run.mockResolvedValue({ cancel: false })
 		delete process.env.CLINE_HOOK_AGENT_RESUME
@@ -133,6 +143,18 @@ describe("buildAgentHooks", () => {
 		)
 	})
 
+	it("maps TaskResume cancel to AgentStopControl (BL-7.6)", async () => {
+		mocks.run.mockResolvedValue({ cancel: true, errorMessage: "resume cancelled" })
+		const hooks = buildAgentHooks(makeStateManager(), undefined, { isResume: true })
+		const control = await hooks.beforeRun?.(makeLifecycleCtx())
+
+		expect(mocks.create).toHaveBeenCalledWith("TaskResume")
+		expect(control).toEqual({
+			stop: true,
+			reason: "resume cancelled",
+		})
+	})
+
 	it("fires TaskResume when CLINE_HOOK_AGENT_RESUME=1 (CLI env parity)", async () => {
 		process.env.CLINE_HOOK_AGENT_RESUME = "1"
 		const hooks = buildAgentHooks(makeStateManager())
@@ -142,7 +164,7 @@ describe("buildAgentHooks", () => {
 		expect(mocks.create).not.toHaveBeenCalledWith("TaskStart")
 	})
 
-	it("maps afterRun completed/aborted and skips failed (TaskError wontfix)", async () => {
+	it("maps afterRun completed/aborted and emits Notification on failed (BL-7.3)", async () => {
 		const hooks = buildAgentHooks(makeStateManager())
 
 		await hooks.afterRun?.({
@@ -189,6 +211,14 @@ describe("buildAgentHooks", () => {
 			},
 		})
 		expect(mocks.create).not.toHaveBeenCalled()
+		expect(mocks.emitHostNotificationHook).toHaveBeenCalledWith(
+			expect.objectContaining({
+				event: "task_error",
+				severity: "error",
+				message: "boom",
+				sourceId: "task-1",
+			}),
+		)
 	})
 
 	it("skips TaskResume when the hook file is absent", async () => {

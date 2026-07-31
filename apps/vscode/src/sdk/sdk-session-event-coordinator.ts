@@ -12,6 +12,7 @@ import type { SdkMessageCoordinator } from "./sdk-message-coordinator"
 import type { SdkSessionLifecycle } from "./sdk-session-lifecycle"
 import type { SdkTaskHistory } from "./sdk-task-history"
 import type { TaskProxy } from "./task-proxy"
+import { createVsCodeUsageBudgetAbortHandler, readVsCodeMaxSessionCostUsd } from "./usage-budget"
 
 function normalizeModelId(modelId: string): string {
 	return modelId.trim().toLowerCase()
@@ -37,10 +38,17 @@ export interface SdkSessionEventCoordinatorOptions {
 	setTurnPhase?: (phase: TurnPhase, anchorTs?: number) => void
 	captureProviderApiError?: (event: ProviderFailureTelemetry) => void
 	beginProviderFailureTelemetryTurn?: () => void
+	/**
+	 * Abort the active session when usage exceeds the configured USD budget (BL-5.3).
+	 * SdkController wires this to `activeSession.sdkHost.abort(...)`.
+	 */
+	abortSession?: (reason: string) => void
 }
 
 export class SdkSessionEventCoordinator {
 	private readonly translateSessionEvent: (event: CoreSessionEvent, state: MessageTranslatorState) => TranslationResult
+	private usageBudgetHandler: ((event: unknown) => void) | undefined
+	private usageBudgetMaxCost: number | undefined
 
 	constructor(private readonly options: SdkSessionEventCoordinatorOptions) {
 		this.translateSessionEvent = options.translateSessionEvent ?? translateSessionEvent
@@ -61,6 +69,10 @@ export class SdkSessionEventCoordinator {
 			this.options.postStateToWebview().catch((err) => {
 				Logger.error("[SdkController] Failed to post pending-prompt state update:", err)
 			})
+		}
+
+		if (event.type === "agent_event") {
+			this.getUsageBudgetHandler()?.(event.payload.event)
 		}
 
 		const result = this.translateSessionEvent(event, this.options.messageTranslatorState)
@@ -277,6 +289,26 @@ export class SdkSessionEventCoordinator {
 			return mode === "plan" ? apiConfig.planModeClinePassModelId : apiConfig.actModeClinePassModelId
 		}
 		return mode === "plan" ? apiConfig.planModeClineModelId : apiConfig.actModeClineModelId
+	}
+
+	private getUsageBudgetHandler(): ((event: unknown) => void) | undefined {
+		const maxCostUsd = readVsCodeMaxSessionCostUsd(this.options.stateManager)
+		if (maxCostUsd === undefined) {
+			this.usageBudgetHandler = undefined
+			this.usageBudgetMaxCost = undefined
+			return undefined
+		}
+		if (!this.usageBudgetHandler || this.usageBudgetMaxCost !== maxCostUsd) {
+			this.usageBudgetMaxCost = maxCostUsd
+			this.usageBudgetHandler = createVsCodeUsageBudgetAbortHandler({
+				maxCostUsd,
+				abort: (reason) => {
+					Logger.warn(`[SdkController] Usage budget exceeded; aborting session: ${reason}`)
+					this.options.abortSession?.(reason)
+				},
+			})
+		}
+		return this.usageBudgetHandler
 	}
 
 	private logQueueEvents(event: CoreSessionEvent): void {

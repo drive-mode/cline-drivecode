@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { desktopClient } from "@/lib/desktop-client";
@@ -43,10 +44,29 @@ const navCategories = [
 ] as const;
 
 export type SettingsSection = (typeof navCategories)[number];
+type CompactionMode = "off" | "basic" | "agentic";
 type GlobalSettingsResponse = {
 	telemetryOptOut: boolean;
 	autoUpdateEnabled: boolean;
+	compactionMode?: CompactionMode | null;
 };
+
+const COMPACTION_MODE_OPTIONS: { value: CompactionMode; label: string }[] = [
+	{ value: "off", label: "Off" },
+	{ value: "basic", label: "Basic" },
+	{ value: "agentic", label: "Agentic" },
+];
+
+const DEFAULT_COMPACTION_MODE: CompactionMode = "agentic";
+
+function resolveCompactionMode(
+	value: CompactionMode | null | undefined,
+): CompactionMode {
+	if (value === "off" || value === "basic" || value === "agentic") {
+		return value;
+	}
+	return DEFAULT_COMPACTION_MODE;
+}
 
 const PROVIDER_CATALOG_CACHE_TTL_MS = 60_000;
 
@@ -542,25 +562,36 @@ function GeneralSettingsContent() {
 	const [autoUpdateLoading, setAutoUpdateLoading] = useState(true);
 	const [autoUpdateSaving, setAutoUpdateSaving] = useState(false);
 	const [autoUpdateError, setAutoUpdateError] = useState<string | null>(null);
+	const [compactionMode, setCompactionMode] = useState<CompactionMode>(
+		DEFAULT_COMPACTION_MODE,
+	);
+	const [compactionLoading, setCompactionLoading] = useState(true);
+	const [compactionSaving, setCompactionSaving] = useState(false);
+	const [compactionError, setCompactionError] = useState<string | null>(null);
 
 	const loadGlobalSettings = useCallback(async () => {
 		setTelemetryLoading(true);
 		setTelemetryError(null);
 		setAutoUpdateLoading(true);
 		setAutoUpdateError(null);
+		setCompactionLoading(true);
+		setCompactionError(null);
 		try {
 			const settings = await desktopClient.invoke<GlobalSettingsResponse>(
 				"get_global_settings",
 			);
 			setTelemetryOptOut(settings.telemetryOptOut);
 			setAutoUpdateEnabled(settings.autoUpdateEnabled);
+			setCompactionMode(resolveCompactionMode(settings.compactionMode));
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			setTelemetryError(message);
 			setAutoUpdateError(message);
+			setCompactionError(message);
 		} finally {
 			setTelemetryLoading(false);
 			setAutoUpdateLoading(false);
+			setCompactionLoading(false);
 		}
 	}, []);
 
@@ -584,6 +615,7 @@ function GeneralSettingsContent() {
 				},
 			);
 			setTelemetryOptOut(settings.telemetryOptOut);
+			setCompactionMode(resolveCompactionMode(settings.compactionMode));
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			setTelemetryOptOut(previousValue);
@@ -606,12 +638,33 @@ function GeneralSettingsContent() {
 				},
 			);
 			setAutoUpdateEnabled(settings.autoUpdateEnabled);
+			setCompactionMode(resolveCompactionMode(settings.compactionMode));
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			setAutoUpdateEnabled(previousValue);
 			setAutoUpdateError(message);
 		} finally {
 			setAutoUpdateSaving(false);
+		}
+	};
+
+	const updateCompactionMode = async (nextMode: CompactionMode) => {
+		const previousMode = compactionMode;
+		setCompactionMode(nextMode);
+		setCompactionSaving(true);
+		setCompactionError(null);
+		try {
+			const settings = await desktopClient.invoke<GlobalSettingsResponse>(
+				"set_compaction_mode",
+				{ mode: nextMode },
+			);
+			setCompactionMode(resolveCompactionMode(settings.compactionMode));
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			setCompactionMode(previousMode);
+			setCompactionError(message);
+		} finally {
+			setCompactionSaving(false);
 		}
 	};
 
@@ -663,6 +716,42 @@ function GeneralSettingsContent() {
 						disabled={autoUpdateLoading || autoUpdateSaving}
 						onCheckedChange={(checked) => void updateAutoUpdateEnabled(checked)}
 					/>
+				</div>
+				<div className="flex min-h-20 items-center justify-between gap-5 border-b max-[720px]:flex-col max-[720px]:items-stretch max-[720px]:py-4">
+					<div>
+						<p className="text-[17px] font-semibold text-foreground">
+							Context compaction
+						</p>
+						<p className="mt-1 text-[15px] text-muted-foreground">
+							How Hub Chat shrinks long conversations when context fills up.
+						</p>
+						{compactionError ? (
+							<p className="mt-2 text-xs text-destructive">
+								Failed to update compaction setting: {compactionError}
+							</p>
+						) : null}
+					</div>
+					<NativeSelect
+						aria-label="Context compaction"
+						disabled={compactionLoading || compactionSaving}
+						onChange={(event) => {
+							const next = event.target.value as CompactionMode;
+							if (
+								next === "off" ||
+								next === "basic" ||
+								next === "agentic"
+							) {
+								void updateCompactionMode(next);
+							}
+						}}
+						value={compactionMode}
+					>
+						{COMPACTION_MODE_OPTIONS.map((option) => (
+							<NativeSelectOption key={option.value} value={option.value}>
+								{option.label}
+							</NativeSelectOption>
+						))}
+					</NativeSelect>
 				</div>
 				<div className="flex min-h-20 items-center justify-between gap-5 border-b max-[720px]:flex-col max-[720px]:items-stretch max-[720px]:py-4">
 					<div>

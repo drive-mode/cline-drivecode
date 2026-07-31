@@ -3,13 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { StateManager } from "@/core/storage/StateManager"
 import { SdkCompactionCoordinator, type SdkCompactionCoordinatorOptions } from "./sdk-compaction-coordinator"
 
-vi.mock("@cline/core", () => ({
-	createContextCompactionPrepareTurn: vi.fn(),
-	createSessionCompactionState: vi.fn((input: { compactedMessages: unknown[] }) => ({
-		version: 1,
-		messages: input.compactedMessages,
-	})),
-}))
+vi.mock("@cline/core", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@cline/core")>()
+	return {
+		...actual,
+		createContextCompactionPrepareTurn: vi.fn(),
+		createSessionCompactionState: vi.fn((input: { compactedMessages: unknown[] }) => ({
+			version: 1,
+			messages: input.compactedMessages,
+		})),
+		// Keep PreCompact host path off in these unit tests unless a case opts in.
+		PRODUCT_VSCODE_PRECOMPACT_HOOKS: false,
+		PRODUCT_PRECOMPACT_CANCEL_ABORTS: true,
+	}
+})
 
 const mockCreateContextCompactionPrepareTurn = createContextCompactionPrepareTurn as unknown as ReturnType<typeof vi.fn>
 
@@ -19,6 +26,13 @@ vi.mock("@/shared/services/Logger", () => ({
 		error: vi.fn(),
 		log: vi.fn(),
 		warn: vi.fn(),
+	},
+}))
+
+vi.mock("@/core/hooks/hook-factory", () => ({
+	HookFactory: class {
+		hasHook = vi.fn(async () => false)
+		create = vi.fn(async () => ({ run: vi.fn(async () => ({ cancel: false })) }))
 	},
 }))
 
@@ -404,7 +418,15 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 	}
 	const options = {
 		stateManager: {
-			getGlobalSettingsKey: vi.fn(() => "act"),
+			getGlobalSettingsKey: vi.fn((key: string) => {
+				if (key === "mode") {
+					return "act"
+				}
+				if (key === "hooksEnabled") {
+					return true
+				}
+				return undefined
+			}),
 		} as unknown as StateManager,
 		sessions: {
 			getActiveSession: vi.fn(() => activeSession),

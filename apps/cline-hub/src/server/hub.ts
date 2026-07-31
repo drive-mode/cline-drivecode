@@ -36,12 +36,14 @@ export function buildHubClineCoreCreateOptions(input: {
 	hubUrl: string;
 	hubAuthToken: string;
 	workspaceRoot: string;
+	logger: ClineCoreOptions["logger"];
 	telemetry: ClineCoreOptions["telemetry"];
 	requestToolApproval: NonNullable<RuntimeCapabilities["requestToolApproval"]>;
 }): ClineCoreOptions {
 	return {
 		clientName: "cline-hub",
 		backendMode: "hub",
+		logger: input.logger,
 		telemetry: input.telemetry,
 		capabilities: {
 			requestToolApproval: input.requestToolApproval,
@@ -145,6 +147,7 @@ export async function attachHub(ctx: HubContext): Promise<void> {
 				hubUrl: ctx.hubUrl,
 				hubAuthToken: ctx.hubAuthToken,
 				workspaceRoot,
+				logger: hubTelemetry.logger,
 				telemetry: hubTelemetry.telemetry,
 				requestToolApproval: (request) =>
 					requestToolApprovalFromWebview(ctx, request),

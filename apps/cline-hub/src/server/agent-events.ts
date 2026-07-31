@@ -4,7 +4,38 @@ import type { WebviewToolEvent } from "../webview-protocol";
 import { rejectPendingApprovalsForSession } from "./approvals";
 import type { HubContext } from "./state";
 import { broadcastHubState } from "./state-payloads";
+import {
+	createHubUsageBudgetAbortHandler,
+	readHubMaxSessionCostUsd,
+} from "./usage-budget";
 import { asString, chunkText } from "./utils";
+
+/** Per-session usage-budget handlers (BL-5.1 / `CLINE_MAX_SESSION_COST`). */
+const usageBudgetHandlers = new Map<string, (event: unknown) => void>();
+
+function usageBudgetHandlerForSession(
+	ctx: HubContext,
+	sessionId: string,
+): ((event: unknown) => void) | undefined {
+	const maxCostUsd = readHubMaxSessionCostUsd();
+	if (maxCostUsd === undefined) {
+		return undefined;
+	}
+	let handler = usageBudgetHandlers.get(sessionId);
+	if (!handler) {
+		handler = createHubUsageBudgetAbortHandler({
+			maxCostUsd,
+			abort: (reason) => {
+				usageBudgetHandlers.delete(sessionId);
+				void ctx.cline?.abort(sessionId, reason).catch(() => {});
+			},
+		});
+		if (handler) {
+			usageBudgetHandlers.set(sessionId, handler);
+		}
+	}
+	return handler;
+}
 
 async function recordDriveWorkFromTool(
 	ctx: HubContext,
@@ -187,6 +218,7 @@ export function handleSessionEvent(
 		sendChunkToSelectedPeers(ctx, sessionId, text);
 	} else if (event.type === "agent_event") {
 		if (event.payload.teamRole === "teammate") return;
+		usageBudgetHandlerForSession(ctx, sessionId)?.(event.payload.event);
 		forwardAgentEvent(ctx, sessionId, event.payload.event);
 	} else if (event.type === "status") {
 		const status = asString((payload as Record<string, unknown>).status);
@@ -205,6 +237,7 @@ export function handleSessionEvent(
 		}
 		broadcastHubState(ctx);
 	} else if (event.type === "ended") {
+		usageBudgetHandlers.delete(sessionId);
 		rejectPendingApprovalsForSession(
 			ctx,
 			sessionId,

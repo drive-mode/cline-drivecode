@@ -523,15 +523,8 @@ export class AcpAgent implements Agent {
 			mode: session.currentMode,
 		});
 		const cliBuildInfo = getCliBuildInfo();
-		const sessionFeatures = resolveProductSessionFeatures({
-			host: "acp",
-			applyDefaultMaxIterations: true,
-		});
-		const sessionPlugins = buildSessionPluginInjection({
-			cwd,
-			workspaceRoot,
-			ide: "Terminal Shell",
-		});
+		const sessionFeatures = buildAcpSessionFeatures();
+		const sessionPlugins = buildAcpSessionPluginInjection(cwd, workspaceRoot);
 
 		return {
 			providerId,
@@ -567,6 +560,16 @@ export class AcpAgent implements Agent {
 			},
 		};
 	}
+}
+
+/**
+ * ACP product session features (D1/D4 / SDK-5.1). Exported for host-level asserts.
+ */
+export function buildAcpSessionFeatures() {
+	return resolveProductSessionFeatures({
+		host: "acp",
+		applyDefaultMaxIterations: true,
+	});
 }
 
 /**

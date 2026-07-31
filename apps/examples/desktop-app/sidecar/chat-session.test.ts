@@ -1,22 +1,107 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { materializeUserFiles } from "./attachments";
 import {
 	buildCoreSessionConfig,
+	buildDesktopCompactionConfig,
+	buildDesktopSessionPluginInjection,
 	buildSessionConnectionUpdate,
 	consumeWorkspaceMetadata,
 	handleChatSessionCommand,
 	hasProviderChanged,
 	mergeSessionConfig,
 	prewarmWorkspaceMetadata,
+	resolveDesktopSessionCompaction,
 	shouldUpdateSessionConnection,
 	WORKSPACE_METADATA_PREWARM_TTL_MS,
 } from "./chat-session";
 import type { SidecarContext } from "./types";
 
+const mocks = vi.hoisted(() => ({
+	readCompactionModeGlobally: vi.fn(),
+}));
+
+vi.mock("@cline/core", async () => {
+	const actual =
+		await vi.importActual<typeof import("@cline/core")>("@cline/core");
+	return {
+		...actual,
+		readCompactionModeGlobally: mocks.readCompactionModeGlobally,
+	};
+});
+
+function makeFixturePluginRoot(): string {
+	const root = mkdtempSync(join(tmpdir(), "desktop-plugin-"));
+	const pluginDir = join(root, ".cline", "plugins", "demo");
+	mkdirSync(pluginDir, { recursive: true });
+	writeFileSync(
+		join(pluginDir, "index.ts"),
+		`export default { name: "demo", setup() {} }\n`,
+		"utf8",
+	);
+	writeFileSync(
+		join(pluginDir, "package.json"),
+		JSON.stringify({
+			name: "demo-plugin",
+			type: "module",
+			cline: {
+				plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }],
+			},
+		}),
+		"utf8",
+	);
+	return root;
+}
+
+describe("buildDesktopSessionPluginInjection (BL-4.1)", () => {
+	it("returns empty pluginPaths and Desktop workspace for an empty cwd", () => {
+		const root = mkdtempSync(join(tmpdir(), "desktop-thin-empty-"));
+		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
+
+		const injected = buildDesktopSessionPluginInjection(root);
+		expect(injected.pluginPaths).toEqual([]);
+		expect(injected.workspace).toMatchObject({
+			rootPath: root,
+			cwd: root,
+			ide: "Cline Desktop",
+		});
+	});
+
+	it("discovers fixture plugins under .cline/plugins/", () => {
+		const root = makeFixturePluginRoot();
+		const injected = buildDesktopSessionPluginInjection(root);
+		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(
+			true,
+		);
+	});
+});
+
+describe("buildDesktopCompactionConfig (BL-6.5)", () => {
+	it("defaults to { enabled: true } when mode is unset", () => {
+		expect(buildDesktopCompactionConfig(undefined)).toEqual({ enabled: true });
+	});
+
+	it("maps off / strategy modes", () => {
+		expect(buildDesktopCompactionConfig("off")).toEqual({ enabled: false });
+		expect(buildDesktopCompactionConfig("basic")).toEqual({
+			enabled: true,
+			strategy: "basic",
+		});
+		expect(buildDesktopCompactionConfig("agentic")).toEqual({
+			enabled: true,
+			strategy: "agentic",
+		});
+	});
+});
+
 describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
+	beforeEach(() => {
+		mocks.readCompactionModeGlobally.mockReset();
+		mocks.readCompactionModeGlobally.mockReturnValue(undefined);
+	});
+
 	it("sets pluginPaths: [] and workspace when cwd has no plugins", () => {
 		const root = mkdtempSync(join(tmpdir(), "desktop-plugin-empty-"));
 		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
@@ -66,26 +151,36 @@ describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
 		expect(config.maxIterations).toBe(7);
 	});
 
+	it("includes compaction: { enabled: true } when global mode unset (BL-6.5)", () => {
+		const root = mkdtempSync(join(tmpdir(), "desktop-compaction-"));
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+		});
+
+		expect(config.compaction).toEqual({ enabled: true });
+		expect(resolveDesktopSessionCompaction()).toEqual({ enabled: true });
+	});
+
+	it("honors global compaction mode on session config (BL-6.5)", () => {
+		mocks.readCompactionModeGlobally.mockReturnValue("off");
+		const root = mkdtempSync(join(tmpdir(), "desktop-compaction-off-"));
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+		});
+
+		expect(config.compaction).toEqual({ enabled: false });
+	});
+
 	it("populates pluginPaths when a fixture plugin exists under .cline/plugins/", () => {
-		const root = mkdtempSync(join(tmpdir(), "desktop-plugin-"));
-		const pluginDir = join(root, ".cline", "plugins", "demo");
-		mkdirSync(pluginDir, { recursive: true });
-		writeFileSync(
-			join(pluginDir, "index.ts"),
-			`export default { name: "demo", setup() {} }\n`,
-			"utf8",
-		);
-		writeFileSync(
-			join(pluginDir, "package.json"),
-			JSON.stringify({
-				name: "demo-plugin",
-				type: "module",
-				cline: {
-					plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }],
-				},
-			}),
-			"utf8",
-		);
+		const root = makeFixturePluginRoot();
 
 		const config = buildCoreSessionConfig({
 			provider: "cline",
@@ -256,6 +351,22 @@ describe("pathless session starts", () => {
 		expect(ctx.liveSessions.get("session-pathless")?.config).toMatchObject({
 			cwd: "/home/host/.cline/data/workspaces/chat",
 			workspaceRoot: "/home/host/.cline/data/workspaces/chat",
+		});
+
+		// BL-4.9: pathless starts still inject pluginPaths + workspace (cwd fallback).
+		const startArgs = start.mock.calls[0]?.[0] as {
+			config?: { pluginPaths?: unknown };
+			localRuntime?: {
+				extensionContext?: {
+					workspace?: { rootPath?: string; cwd?: string; ide?: string };
+				};
+			};
+		};
+		expect(Array.isArray(startArgs.config?.pluginPaths)).toBe(true);
+		expect(startArgs.localRuntime?.extensionContext?.workspace).toMatchObject({
+			rootPath: process.cwd(),
+			cwd: process.cwd(),
+			ide: "Cline Desktop",
 		});
 	});
 });

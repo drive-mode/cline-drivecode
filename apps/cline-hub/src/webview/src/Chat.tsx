@@ -426,7 +426,7 @@ export default function Chat({
 				agencyBanner: "Ready for the next goal — add tasks when you like",
 			};
 		});
-	}, [dismissCleanDrain, setDrive, setMode]);
+	}, [dismissCleanDrain, setDrive]);
 
 	const seatRecruitCandidate = useCallback(
 		(entry: RankedRecruit) => {
@@ -760,9 +760,7 @@ export default function Chat({
 			planEditorTasks,
 			sending,
 			setDrive,
-			setMode,
 			setPlanEditorTasks,
-			setStatus,
 		],
 	);
 
@@ -896,6 +894,7 @@ export default function Chat({
 	}, [
 		bankSessionRef,
 		drive.active,
+		drive.attributionAgentId,
 		drive.bankSnapshot.nowTaskId,
 		drive.callSessionId,
 		drive.roomId,
@@ -903,6 +902,8 @@ export default function Chat({
 		setDrive,
 	]);
 
+	// Intentional mount-once listener: reads latest state via refs / stable setters.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: message bus effect must not re-subscribe
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent<WebviewOutboundMessage>) => {
 			const message = event.data;

@@ -11,12 +11,10 @@
  * or records an enqueue intent (planning_skill) for the host to consume later.
  */
 
-import {
-	assertNoForbiddenPlanningProposalKeys,
-	parsePlanningProposal,
-	type PlanningProposal,
-	type PlanningProposalEvidence,
-	type PlanningProposalTarget,
+import type {
+	PlanningProposal,
+	PlanningProposalEvidence,
+	PlanningProposalTarget,
 } from "@cline/shared";
 import {
 	classifyStall,
@@ -41,6 +39,63 @@ export const PLAN_IMPROVE_FORBIDDEN_KEYS = [
 	"fullTranscript",
 	"audio",
 ] as const;
+
+/** Local runtime copies — `@cline/drive` must not value-import `@cline/shared`. */
+function assertNoForbiddenPlanningProposalKeys(
+	value: unknown,
+	path: string[] = [],
+): void {
+	if (value === null || typeof value !== "object") {
+		return;
+	}
+	if (Array.isArray(value)) {
+		for (const [index, item] of value.entries()) {
+			assertNoForbiddenPlanningProposalKeys(item, [...path, String(index)]);
+		}
+		return;
+	}
+	for (const [key, child] of Object.entries(value)) {
+		const lower = key.toLowerCase();
+		for (const forbidden of PLAN_IMPROVE_FORBIDDEN_KEYS) {
+			if (lower === forbidden || lower.includes(forbidden)) {
+				throw new Error(
+					`Planning proposal must not include forbidden key "${key}" at ${[...path, key].join(".") || "(root)"}`,
+				);
+			}
+		}
+		assertNoForbiddenPlanningProposalKeys(child, [...path, key]);
+	}
+}
+
+function parsePlanningProposal(input: unknown): PlanningProposal {
+	assertNoForbiddenPlanningProposalKeys(input);
+	if (input === null || typeof input !== "object" || Array.isArray(input)) {
+		throw new Error("Planning proposal must be an object");
+	}
+	const record = input as Record<string, unknown>;
+	if (record.kind !== "planning") {
+		throw new Error('Planning proposal kind must be "planning"');
+	}
+	if (typeof record.id !== "string" || !record.id.trim()) {
+		throw new Error("Planning proposal requires id");
+	}
+	if (typeof record.offerKey !== "string" || !record.offerKey.trim()) {
+		throw new Error("Planning proposal requires offerKey");
+	}
+	if (typeof record.label !== "string" || !record.label.trim()) {
+		throw new Error("Planning proposal requires label");
+	}
+	if (!Array.isArray(record.reasons) || record.reasons.length < 1) {
+		throw new Error("Planning proposal requires reasons");
+	}
+	if (record.evidence === null || typeof record.evidence !== "object") {
+		throw new Error("Planning proposal requires evidence");
+	}
+	if (record.target === null || typeof record.target !== "object") {
+		throw new Error("Planning proposal requires target");
+	}
+	return input as PlanningProposal;
+}
 
 export type PlanImproveDecision = "accept" | "reject" | "mute";
 

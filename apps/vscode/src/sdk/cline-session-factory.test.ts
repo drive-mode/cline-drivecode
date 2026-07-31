@@ -39,8 +39,8 @@ const mocks = vi.hoisted(() => {
 				actModeApiModelId: "claude-sonnet-4-6",
 				apiKey: "test-key",
 			})),
-			getGlobalSettingsKey: vi.fn((key: string): boolean | undefined => {
-				if (key === "subagentsEnabled" || key === "useAutoCondense") {
+			getGlobalSettingsKey: vi.fn((_key: string): unknown => {
+				if (_key === "subagentsEnabled" || _key === "useAutoCondense") {
 					return false
 				}
 				return undefined
@@ -333,6 +333,23 @@ describe("buildSessionConfig", () => {
 		const config = await buildSessionConfig({ cwd: "/tmp/workspace" })
 
 		expect(config.maxIterations).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS)
+	})
+
+	it("lets maxIterations setting override PRODUCT_DEFAULT_MAX_ITERATIONS (BL-5.5)", async () => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
+		mocks.stateManager.getGlobalSettingsKey.mockImplementation((key: string): unknown => {
+			if (key === "maxIterations") {
+				return 7
+			}
+			if (key === "subagentsEnabled" || key === "useAutoCondense") {
+				return false
+			}
+			return undefined
+		})
+
+		const config = await buildSessionConfig({ cwd: "/tmp/workspace" })
+
+		expect(config.maxIterations).toBe(7)
 	})
 
 	it("injects pluginPaths on session start (SDK-4.3)", async () => {

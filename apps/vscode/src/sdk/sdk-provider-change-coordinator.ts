@@ -79,7 +79,7 @@ export class SdkProviderChangeCoordinator {
 		Logger.log(`[SdkController] Restarting session ${oldSessionId} for provider change`)
 
 		try {
-			const config = await this.options.sessionConfigBuilder.build({ cwd, mode })
+			const config = await this.options.sessionConfigBuilder.build({ cwd, mode, isResume: true })
 			config.sessionId = oldSessionId
 
 			const initialMessages = await this.options.loadInitialMessages(oldManager, oldSessionId)

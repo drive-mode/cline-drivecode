@@ -22,14 +22,13 @@ export function PlanReentryRow({
 	className,
 }: PlanReentryRowProps) {
 	return (
-		<div
+		<section
 			aria-label="Unfinished plan"
 			className={cn(
 				"flex flex-wrap items-center gap-2 border-b border-sky-500/25 bg-sky-500/5 px-4 py-2",
 				className,
 			)}
 			data-slot="plan-reentry-row"
-			role="region"
 		>
 			<div className="min-w-0 flex-1 space-y-0.5">
 				<div className="text-[10px] font-medium uppercase tracking-wide text-sky-700 dark:text-sky-300">
@@ -64,6 +63,6 @@ export function PlanReentryRow({
 			>
 				Resume
 			</Button>
-		</div>
+		</section>
 	);
 }
