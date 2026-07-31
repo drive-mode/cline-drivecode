@@ -4,39 +4,26 @@ sidebarTitle: "Scheduled Agents"
 description: "Run agents on cron schedules for recurring automations like daily summaries, code reviews, and maintenance tasks."
 ---
 
-The SDK supports running agents on cron schedules. Scheduled agents persist across process restarts and run independently of any client application.
+Cline supports recurring and one-shot agent runs. There are **two scheduling paths** — pick the one that matches your host:
 
-## How Scheduling Works
+| Path | Who uses it | Surface |
+|------|-------------|---------|
+| **Hub `schedule.*` (product-canonical)** | CLI, Hub dashboard, Desktop routines | Hub WebSocket commands + `HubSessionClient` schedule methods |
+| **`cline.automation` (embedder / SDK-local)** | Custom apps embedding `ClineCore` without Hub schedule UI | File-based cron specs + `ClineCore.create({ automation: true })` |
 
-1. You define a schedule (cron expression + prompt + config)
-2. The SDK stores the schedule and manages execution
-3. At each trigger time a new session is created and the agent is run
-4. Results are stored and can be routed to connectors (Slack, email, etc.)
+Product hosts (CLI / Hub / Desktop) **do not** create schedules through `cline.automation`. That API is the embedder alternative for in-process file/event automation. Do not treat the two stores as interchangeable.
 
-Scheduled agents rely on the [hub-spoke architecture](/sdk/architecture/hub-spoke) that is part of `ClineCore`. The hub runs as a background process on your machine. It starts automatically when needed and persists schedules across restarts.
+Scheduled product runs rely on the [hub-spoke architecture](/sdk/architecture/hub-spoke). The hub daemon persists Hub schedules across restarts and executes them when no client is attached.
 
-## Creating Schedules Programmatically with Cline SDK
+## Product path: CLI + Hub `schedule.*`
 
-```typescript
-import { ClineCore } from "@cline/sdk"
+### Schedule wizard
 
-const cline = await ClineCore.create({
-  clientName: "scheduler",
-  automation: true,
-})
+An easy way to manage schedules is the Cline CLI (install via `npm i -g cline` or run from this monorepo with `bun run cli`).
 
-await cline.automation.start()
+Run `cline schedule` for an interactive menu: create/list schedules, trigger now, pause/resume, execution history, and stats.
 
-// Use cline.automation to reconcile specs, ingest events, and list runs.
-```
-
-## Schedule Wizard with Cline CLI
-
-An easy way to schedule task is to use Cline CLI for scheduling task, if you've already installed via `npm i -g cline`
-
-Run `cline schedule` to open an interactive menu for creating and managing schedules, browsing execution history, and viewing performance statistics.
-
-## Creating Schedules with Flags
+### Creating schedules with flags
 
 ```bash
 # Daily at 9 AM on weekdays
@@ -58,29 +45,124 @@ cline schedule create "Weekly digest" \
   --prompt "Summarize last week's commits, PRs merged, and issues closed"
 ```
 
-## Managing Schedules
+The CLI ensures a local hub is running, then issues Hub commands such as `schedule.create`, `schedule.list`, `schedule.trigger`, `schedule.disable` / `schedule.enable`, and `schedule.delete`.
+
+### Managing schedules
 
 ```bash
-# List all schedules
 cline schedule list
-
-# Trigger a schedule immediately (without waiting for cron)
 cline schedule trigger <schedule-id>
-
-# Pause a schedule
 cline schedule pause <schedule-id>
-
-# Resume a paused schedule
 cline schedule resume <schedule-id>
-
-# Delete a schedule
 cline schedule delete <schedule-id>
-
-# View execution history
 cline schedule executions <schedule-id>
 ```
 
-## Cron Expression Reference
+See also the CLI guide: [Scheduling](/cli/scheduling).
+
+### Programmatic Hub schedules
+
+Hosts and embedders that talk to the hub can use `HubSessionClient` (from `@cline/sdk` or `@cline/core/hub`). Ensure a hub is reachable (CLI/`ensureDetachedHubServer` starts one when needed), then call schedule methods that map 1:1 to Hub `schedule.*` commands:
+
+```typescript
+import {
+  ensureDetachedHubServer,
+  HubSessionClient,
+} from "@cline/sdk"
+
+const hub = await ensureDetachedHubServer(process.cwd())
+const client = new HubSessionClient({
+  address: hub.url,
+  authToken: hub.authToken,
+  clientId: "my-scheduler",
+  workspaceRoot: process.cwd(),
+})
+
+try {
+  const schedule = await client.createSchedule({
+    name: "PR summary",
+    cronPattern: "0 9 * * MON-FRI",
+    prompt: "List open PRs and their review status",
+    workspaceRoot: process.cwd(),
+    mode: "yolo",
+  })
+
+  await client.listSchedules()
+  if (schedule?.scheduleId) {
+    await client.triggerScheduleNow(String(schedule.scheduleId))
+  }
+} finally {
+  client.close()
+}
+```
+
+| Client method | Hub command |
+|---------------|-------------|
+| `createSchedule` | `schedule.create` |
+| `listSchedules` | `schedule.list` |
+| `getSchedule` | `schedule.get` |
+| `updateSchedule` | `schedule.update` |
+| `pauseSchedule` | `schedule.disable` |
+| `resumeSchedule` | `schedule.enable` |
+| `deleteSchedule` | `schedule.delete` |
+| `triggerScheduleNow` | `schedule.trigger` |
+| `listScheduleExecutions` | `schedule.list_executions` |
+
+Create payloads follow `HubScheduleCreateInput` in `@cline/shared` (`name`, `cronPattern`, `prompt`, `workspaceRoot`, optional `mode`, `modelSelection`, limits, tags, metadata).
+
+## Embedder path: `cline.automation`
+
+Use this when you embed `ClineCore` and want **SDK-local** cron/event automation (Markdown specs under `~/.cline/cron/` or a workspace `.cline/cron/`), not the Hub schedule store that CLI/Desktop/Hub UI manage.
+
+```typescript
+import { ClineCore } from "@cline/sdk"
+
+const cline = await ClineCore.create({
+  clientName: "scheduler",
+  automation: true,
+})
+
+await cline.automation.start()
+await cline.automation.reconcileNow()
+
+const specs = cline.automation.listSpecs()
+const runs = cline.automation.listRuns()
+
+await cline.automation.stop()
+await cline.dispose()
+```
+
+| Method | Role |
+|--------|------|
+| `start` / `stop` | Start or stop the in-process cron automation service |
+| `reconcileNow` | Re-read specs from the configured cron directory |
+| `ingestEvent` | Push an external event into matching event-triggered specs |
+| `listSpecs` / `listRuns` / `listEvents` | Inspect reconciled specs, runs, and ingested events |
+
+File-based specs support `trigger: schedule | one_off | event`. Example recurring spec:
+
+```markdown
+---
+trigger: schedule
+schedule: "0 9 * * MON-FRI"
+timezone: America/New_York
+mode: exclusive
+prompt: "Check for dependency updates and create PRs for outdated packages."
+modelSelection:
+  providerId: anthropic
+  modelId: claude-sonnet-4-6
+tools:
+  enabled: true
+---
+
+Additional context for the agent goes in the body.
+```
+
+Concurrency: `mode: exclusive` skips overlapping runs; `concurrent` allows them. Completed runs write reports under `.cline/cron/reports/`.
+
+The Hub daemon may also optionally start a file-based `CronService` via hub `cronOptions` — that is still the **automation/spec** path, parallel to Hub `schedule.*` product schedules. Do not migrate product Hub schedules onto `cline.automation` without an explicit product decision.
+
+## Cron expression reference
 
 | Expression | Schedule |
 |-----------|----------|
@@ -91,9 +173,9 @@ cline schedule executions <schedule-id>
 | `0 0 1 * *` | Midnight on the 1st of each month |
 | `*/30 * * * *` | Every 30 minutes |
 
-## Use Cases
+## Use cases (CLI / Hub schedules)
 
-### Daily Standup Summary
+### Daily standup summary
 
 ```bash
 cline schedule create "Standup prep" \
@@ -102,7 +184,7 @@ cline schedule create "Standup prep" \
   --workspace /path/to/repo
 ```
 
-### Automated Dependency Updates
+### Automated dependency updates
 
 ```bash
 cline schedule create "Dependency check" \
@@ -111,7 +193,7 @@ cline schedule create "Dependency check" \
   --workspace /path/to/project
 ```
 
-### Codebase Health Report
+### Codebase health report
 
 ```bash
 cline schedule create "Code health" \
@@ -120,17 +202,15 @@ cline schedule create "Code health" \
   --workspace /path/to/project
 ```
 
-## Concurrency and Resource Limits
+## Concurrency and resource limits
 
-The scheduler enforces limits to prevent resource exhaustion:
+For **Hub schedules**, concurrency is controlled per schedule (`maxParallel` and related runtime options). If a previous execution is still running when the next trigger fires, behavior follows those limits (queue or skip). The hub coordinates execution through spokes.
 
-- Schedules have configurable concurrency limits
-- If a previous execution is still running when the next trigger fires, the new execution is queued or skipped (configurable)
-- The hub monitors resource usage and can pause schedules if the system is under load
+For **`cline.automation` specs**, use `mode: exclusive | concurrent` on the Markdown front matter as described above.
 
-## Routing Results
+## Routing results
 
-Combine scheduled agents with [connectors](/cli/connectors) in CLI to route results to messaging platforms:
+Combine Hub/CLI scheduled agents with [connectors](/cli/connectors) to route results to messaging platforms:
 
 ```bash
 # Start a Telegram connector

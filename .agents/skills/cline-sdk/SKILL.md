@@ -77,7 +77,8 @@ Which API?
 +-- I want built-in file/shell/search/web tools
 |   +-- clinecore/ (has built-in tools; Agent does not)
 +-- I want scheduled or recurring agents
-|   +-- clinecore/ (automation API)
+|   +-- Product (CLI/Hub/Desktop): scheduling/REFERENCE.md (Hub schedule.*)
+|   +-- Embedder file/event cron: scheduling/REFERENCE.md (cline.automation)
 +-- I need multi-process or multi-client session sharing
 |   +-- clinecore/ (hub-backed runtime)
 +-- I'm building a browser-compatible agent
@@ -144,10 +145,10 @@ Multi-agent?
 
 ```
 Scheduling?
-+-- Recurring cron jobs -> scheduling/REFERENCE.md
-+-- One-off scheduled tasks -> scheduling/REFERENCE.md
-+-- Event-driven triggers -> scheduling/REFERENCE.md
-+-- CLI schedule management -> scheduling/REFERENCE.md
++-- Product CLI / Hub / Desktop routines -> scheduling/REFERENCE.md (Hub schedule.*)
++-- Programmatic HubSessionClient schedules -> scheduling/REFERENCE.md
++-- Embedder file-based cron / events -> scheduling/REFERENCE.md (cline.automation)
++-- Plugin event ingestion -> scheduling/REFERENCE.md + plugins/REFERENCE.md
 ```
 
 ### "I need to go to production"
@@ -188,7 +189,7 @@ Production?
 | Events | `./references/events/REFERENCE.md` | Real-time streaming events |
 | Providers | `./references/providers/REFERENCE.md` | LLM provider configuration |
 | Production | `./references/production/REFERENCE.md` | Deployment, security, observability |
-| Scheduling | `./references/scheduling/REFERENCE.md` | Cron jobs and automation |
+| Scheduling | `./references/scheduling/REFERENCE.md` | Hub `schedule.*` (product) + `cline.automation` (embedder) |
 | Multi-Agent | `./references/multi-agent/REFERENCE.md` | Teams and sub-agents |
 
 ### Package Map

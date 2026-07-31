@@ -275,14 +275,15 @@ const cline = await ClineCore.create({
   automation: true,
 })
 
-// Access automation methods
-cline.automation.start()
-cline.automation.stop()
-cline.automation.reconcile(specs)
+// Access automation methods (embedder / file-based CronService path).
+// Product CLI/Hub/Desktop schedules use Hub `schedule.*` instead — see scheduling/REFERENCE.md.
+await cline.automation.start()
+await cline.automation.reconcileNow()
 cline.automation.ingestEvent(event)
 cline.automation.listEvents()
 cline.automation.listSpecs()
 cline.automation.listRuns()
+await cline.automation.stop()
 ```
 
 ## Settings API

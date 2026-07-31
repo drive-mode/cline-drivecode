@@ -166,8 +166,7 @@ Prioritized by product leverage (not calendar estimates). Ordering reflects depe
 1. **Align multi-agent defaults across hosts**  
    CLI, Hub Chat, Desktop, and VS Code disagree on `enableSpawnAgent` / `enableAgentTeams`. VS Code still has subagent-aware UI/event translation but hard-disables both flags. Either enable behind a shared product flag (CLI semantics), or remove dead UI affordances so the SDK contract matches the product.
 
-2. **Unify scheduling on one SDK story**  
-   Hub schedule commands work, but `cline.automation` is the documented SDK surface. Pick one canonical integration path for Desktop/CLI/Hub so external SDK users and in-repo hosts share the same mental model.
+2. **Unify scheduling on one SDK story** — **Done (D2 / SDK-3.1):** Hub `schedule.*` / CLI / Desktop are product-canonical; `cline.automation` is the embedder path. Docs + skill aligned; no store merge (SDK-3.2 deferred).
 
 3. **Inject installed plugins into session config**  
    CLI already resolves plugins for slash commands (`resolveAndLoadAgentPlugins`). Extending that into `extensions` / `pluginPaths` (+ workspace `extensionContext`) on `start` would make marketplace plugins participate in the agent loop the way docs describe.

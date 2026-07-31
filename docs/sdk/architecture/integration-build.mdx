@@ -141,7 +141,23 @@ This is intentional adapter debt, not a one-line flip. Do not enable VS Code set
 
 ## Phase 3 · Scheduling story
 
-`SDK-3.1` Align public scheduled-agents guide · `SDK-3.2` optional automation bridge.
+### Agent task `SDK-3.1` — Align public scheduled-agents guide
+
+| | |
+|---|---|
+| **Depends on** | D2 (locked) |
+| **Owner surface** | `docs/sdk/guides/scheduled-agents.mdx` + `.agents/skills/cline-sdk` scheduling refs |
+| **Goal** | Public guide and skill lead with product-canonical Hub `schedule.*` / CLI / Desktop path; document `cline.automation` as the embedder/SDK-local alternative (file specs + `reconcileNow` / ingest / list*). Fix API drift (`reconcile` → `reconcileNow`). |
+| **Verify** | Ripgrep: `HubSessionClient` schedule methods, `ClineCoreAutomationApi`, `HubScheduleCreateInput`, Hub command names match docs. |
+| **Status** | **Done** — guide + skill + `clinecore/api.md` automation snippet aligned to D2 |
+
+### Agent task `SDK-3.2` — Optional automation bridge
+
+| | |
+|---|---|
+| **Depends on** | D2 (locked), SDK-3.1 |
+| **Goal** | Optional code bridge between Hub `schedule.*` and `cline.automation` / file cron (only if product wants one store). |
+| **Status** | **Deferred** — plan has no acceptance criteria; D2 forbids replacing Hub schedules with automation. Hub already optionally runs a parallel `CronService` via `cronOptions` without merging stores. Revisit only with an explicit product decision + scoped design. |
 
 ## Phase 4 · Plugins on session
 
@@ -185,7 +201,8 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-1.1 Product session features helper | **Done** |
 | SDK-1.2 Session plugin load helper | **Done** |
 | SDK-2.1–2.4 Multi-agent hosts | **Done** |
-| SDK-3.1–3.2 Scheduling | Open (next) |
+| SDK-3.1 Align scheduled-agents guide (D2) | **Done** |
+| SDK-3.2 Optional automation bridge | **Deferred** (no merge of Hub schedules ↔ automation) |
 | SDK-4.1–4.3 Plugins on session | Open |
 | SDK-5.1–5.2 Budgets | Open |
 | SDK-6.1–6.3 Hub depth | Open |
