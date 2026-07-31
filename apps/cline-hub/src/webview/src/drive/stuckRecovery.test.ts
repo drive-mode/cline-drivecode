@@ -149,7 +149,7 @@ describe("planRecoveryAccept", () => {
 			action: "recruit",
 			offerKey: recoveryOfferKey("t1", "tests red"),
 			taskId: "t1",
-			agencyBanner: "Recruit offered for t1",
+			agencyBanner: "Who should take t1?",
 		});
 		expect(JSON.stringify(plan)).not.toMatch(/utterance/i);
 	});

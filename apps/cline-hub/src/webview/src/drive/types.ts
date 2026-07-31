@@ -97,6 +97,11 @@ export type DriveUiState = {
 	 * Invite alone does not set E1; dismissible and non-blocking.
 	 */
 	cleanDrainInvite: CleanDrainInvite | null;
+	/**
+	 * Last seated agent for bind/complete attribution (DRV-RECRUIT-STALL).
+	 * Seating does not rewrite bank next-task truth.
+	 */
+	attributionAgentId: string | null;
 };
 
 /** Stable ids until hub roster provides real participant UUIDs. */
@@ -140,6 +145,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	addressFollowsFocusParticipantId: null,
 	agencyBanner: null,
 	cleanDrainInvite: null,
+	attributionAgentId: null,
 };
 
 /** Map Drive sub-mode onto native Cline plan|act for send config. */

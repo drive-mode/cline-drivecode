@@ -45,8 +45,10 @@ export interface BankStore {
 	getSnapshot(): Promise<BankSnapshot>;
 	getTask(taskId: string): Promise<DriveTask | null>;
 	getPlan(planId: string): Promise<DrivePlan | null>;
-	bindNowTask(): Promise<{ plan: DrivePlan; task: DriveTask } | null>;
-	completeTask(taskId: string): Promise<void>;
+	bindNowTask(options?: {
+		agentId?: string;
+	}): Promise<{ plan: DrivePlan; task: DriveTask } | null>;
+	completeTask(taskId: string, options?: { agentId?: string }): Promise<void>;
 	recordTaskFailure(taskId: string, note: string): Promise<DriveTask>;
 	editPlanTaskIds(planId: string, taskIds: string[]): Promise<DrivePlan>;
 	closeAndArchivePlan(planId: string): Promise<void>;
@@ -220,7 +222,7 @@ export function createBankStore(
 		getTask: readTask,
 		getPlan: readPlan,
 
-		async bindNowTask() {
+		async bindNowTask(bindOptions) {
 			const plan = await findActivePlan();
 			if (!plan) {
 				return null;
@@ -242,6 +244,9 @@ export function createBankStore(
 						...session,
 						taskId: bound.id,
 						planId: plan.id,
+						...(bindOptions?.agentId?.trim()
+							? { agentId: bindOptions.agentId.trim() }
+							: {}),
 					}),
 				);
 				return { plan, task: bound };
@@ -249,7 +254,7 @@ export function createBankStore(
 			return { plan, task };
 		},
 
-		async completeTask(taskId) {
+		async completeTask(taskId, completeOptions) {
 			const activePath = taskPath(root, taskId);
 			const archivePath = archivedTaskPath(root, taskId);
 			if (await fs.exists(archivePath)) {
@@ -267,6 +272,9 @@ export function createBankStore(
 				createDriveTaskCompletedEvent({
 					...session,
 					taskId,
+					...(completeOptions?.agentId?.trim()
+						? { agentId: completeOptions.agentId.trim() }
+						: {}),
 				}),
 			);
 			emit?.(

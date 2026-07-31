@@ -93,6 +93,7 @@ function readPersistedDriveUi(): DriveUiState {
 				// One-shot banners should not survive reload.
 				agencyBanner: null,
 				cleanDrainInvite: null,
+				attributionAgentId: null,
 			};
 		}
 	} catch {

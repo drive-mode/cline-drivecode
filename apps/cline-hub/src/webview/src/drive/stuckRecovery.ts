@@ -181,7 +181,7 @@ export function planRecoveryAccept(input: {
 				action: "recruit",
 				offerKey,
 				taskId,
-				agencyBanner: `Recruit offered for ${taskId}`,
+				agencyBanner: `Who should take ${taskId}?`,
 			};
 		case "pause":
 			return {
@@ -263,8 +263,8 @@ export const RECOVERY_OPTIONS: ReadonlyArray<{
 	},
 	{
 		option: "recruit",
-		label: "Recruit",
-		hint: "Offer recruit (seating lands in DRV-RECRUIT-STALL)",
+		label: "Who should take this?",
+		hint: "Rank agents for this stuck task and seat via hub (DRV-RECRUIT-STALL)",
 	},
 	{
 		option: "pause",

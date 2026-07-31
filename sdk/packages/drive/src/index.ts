@@ -187,6 +187,15 @@ export {
 	type PlanReentryRowModel,
 } from "./planReentry.js";
 export {
+	buildRecruitNeed,
+	rankRecruitCandidates,
+	RECRUIT_FORBIDDEN_KEYS,
+	recruitNeedIsPrivate,
+	type RankedRecruit,
+	type RecruitCandidate,
+	type RecruitNeed,
+} from "./recruit/scoreNeed.js";
+export {
 	assembleHandoffPacket,
 	assertNoForbiddenHandoffKeys,
 	formatHandoffNarration,

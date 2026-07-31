@@ -367,6 +367,16 @@ export type WebviewInboundMessage =
 			driveActive?: boolean;
 	  }
 	| {
+			type: "call_seat";
+			roomId: string;
+			agent: {
+				id: string;
+				displayName: string;
+				role?: "partner" | "specialist" | "recorder";
+			};
+			seatCap?: number;
+	  }
+	| {
 			type: "call_get_room";
 			roomId?: string;
 			sessionId?: string;
@@ -415,6 +425,8 @@ export type WebviewInboundMessage =
 			requestId?: string;
 			roomId?: string;
 			callSessionId?: string;
+			/** Optional seated agent attribution (DRV-RECRUIT-STALL). */
+			agentId?: string;
 	  }
 	| {
 			type: "drive_bank_bind_now";
@@ -422,6 +434,8 @@ export type WebviewInboundMessage =
 			requestId?: string;
 			roomId?: string;
 			callSessionId?: string;
+			/** Optional seated agent attribution (DRV-RECRUIT-STALL). */
+			agentId?: string;
 	  }
 	| {
 			type: "drive_bank_activate_plan";

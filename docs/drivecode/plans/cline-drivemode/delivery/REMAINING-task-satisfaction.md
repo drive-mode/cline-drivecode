@@ -41,13 +41,13 @@ flowchart TD
     P2ev["drive_task_failed / P2 stickiness"]
     CleanDrain["Clean-drain ritual invite"]
     PlanReentry["Plan re-entry row + chips"]
+    RecruitStall["Recruit-on-stall + agentId"]
   end
   subgraph OpenObs["Open · observability"]
     S3["Stall classify + gated propose"]
   end
   subgraph OpenMoments["Open · product moments"]
     W1["W1.2 return / W1.3 stuck"]
-    W2["W2.3 recruit"]
     W3["W3 Status / digest / SDLC bank"]
     W4["W4 auto stall"]
   end
@@ -56,10 +56,10 @@ flowchart TD
   Bridge --> Reader
   Reader --> S3
   Felt --> W1
-  W1 --> W2
-  CleanDrain --> W2
-  PlanReentry --> W2
-  W2 --> W3
+  W1 --> W3
+  CleanDrain --> W3
+  PlanReentry --> W3
+  RecruitStall --> W3
 ```
 
 Caption:
@@ -70,6 +70,7 @@ Caption:
 - Felt agency (W1.1) chrome + mid-turn steer path landed; return loop (W1.2) + stuck recovery fork (W1.3 manual) landed.
 - Clean-drain ritual (W2.1) NowNext successor + soft invite landed; invite ≠ auto E1.
 - Plan re-entry (W2.2) unfinished-plan row + rollup chips + Resume landed.
+- Recruit-on-stall (W2.3) Who-should-take-this + `call_seat` + optional `agentId` on bind/complete landed.
 - Status Hub fourth mode (W3.1) still open — consume `SessionRollupSource` / `readSessionRollups`.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
@@ -88,6 +89,7 @@ Caption:
 | Stuck recovery (W1.3): Spotlight fork after `nowLastFailure`; gated narrow / fix-up / recruit stub / pause(Ask) | `stuckRecovery.ts`, `StuckRecoveryFork.tsx`, Chat Spotlight |
 | Clean-drain (W2.1): S3 gate + NowNext successor invite (invite ≠ E1) | `@cline/drive` `cleanDrain.ts`; NowNext successor; Chat counters |
 | Plan re-entry (W2.2): unfinished-plan row + rollup chips + Resume | `planReentry.ts`, `PlanReentryRow`; Drive chrome off-call |
+| Recruit-on-stall (W2.3): Who-should-take-this + call_seat + agentId | `recruit/scoreNeed.ts`, `RecruitStallPicker`, `call_seat`, bank `agentId` |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1–P2) | `@cline/drive` `sessionRollup.ts` |
 | `drive_task_failed` emit + P2 stickiness | `bankStore.recordTaskFailure` → `deriveSessionRollup.failureStickyCount` |
@@ -175,7 +177,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 |---|---|---|---|
 | W1.1 | [DRV-FELT-AGENCY](../features/DRV-FELT-AGENCY.md) | [req-felt-agency](../initiatives/session-satisfaction-moments/req-felt-agency.md) | **Landed (partial):** agency interrupt chrome (finishing/paused); PlanEditor → BankSnapshot consequence banner; recovery vs collaborative add (`nowLastFailure`); mid-turn send → steer pending prompts + Composer chip + “Steer applied”. **Still open:** interrupt redirect Now rewrite announce (W-13); optional plan-ref `source` facet; Spotlight delta beyond NowNext/agency banner |
 | W1.2 | [DRV-RETURN-LOOP](../features/DRV-RETURN-LOOP.md) | [req-leave-end-return](../initiatives/session-satisfaction-moments/req-leave-end-return.md) | **Landed (partial):** `call_end` + `control.end`; pure `handoff.ts` Tier-0 packet; End narration; rejoin “since you left” line; Leave≠End chrome. **Still open:** End→next-task resume CTA / Drive tab row (W2.2 PLAN-REENTRY) |
-| W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | **Landed (partial):** Spotlight `StuckRecoveryFork` after `nowLastFailure` (manual-only); gated narrow / fix-up / recruit stub / pause(Ask+raise-hand); dismiss mutes identical offerKey. **Still open:** auto stall classifier (W4.1); full recruit seating (W2.3); feed narration of proposal |
+| W1.3 | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) | [req-stuck-recovery](../initiatives/session-satisfaction-moments/req-stuck-recovery.md) | **Landed (partial):** Spotlight `StuckRecoveryFork` after `nowLastFailure` (manual-only); gated narrow / fix-up / recruit→W2.3 picker / pause(Ask+raise-hand); dismiss mutes identical offerKey. **Still open:** auto stall classifier (W4.1); feed narration of proposal |
 
 **W1 honesty deps:** 2.1 bank bridge; interrupt/steer/now-next already partially shipped.
 
@@ -191,7 +193,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 |---|---|---|---|
 | W2.1 | [DRV-CLEAN-DRAIN](../features/DRV-CLEAN-DRAIN.md) | [req-clean-drain-ritual](../initiatives/session-satisfaction-moments/req-clean-drain-ritual.md) | **Landed:** S3 gate via snapshot transition + session counters; NowNext successor + narration invite; Set next goal → Plan mode (invite ≠ E1); dismissible |
 | W2.2 | [DRV-PLAN-REENTRY](../features/DRV-PLAN-REENTRY.md) | [req-cross-day-return](../initiatives/session-satisfaction-moments/req-cross-day-return.md) | **Landed:** off-call PlanReentryRow (title + open count + S2/S3/E1 chips); Resume → joinDrive; drafts omitted |
-| W2.3 | [DRV-RECRUIT-STALL](../features/DRV-RECRUIT-STALL.md) | [req-recruit-on-stall](../initiatives/session-satisfaction-moments/req-recruit-on-stall.md) | Stuck-task “Who should take this?”; structured need only; seat via hub; **agentId on complete/bind** for attribution |
+| W2.3 | [DRV-RECRUIT-STALL](../features/DRV-RECRUIT-STALL.md) | [req-recruit-on-stall](../initiatives/session-satisfaction-moments/req-recruit-on-stall.md) | **Landed:** Who-should-take-this picker; lexical rank; `call_seat`; optional `agentId` on bind/complete |
 
 **W2 forks:**
 
@@ -241,7 +243,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 6. ~~Failure event for P2 (2.3)~~ ✅
 7. ~~W2.1 Clean-drain~~ ✅
 8. ~~W2.2 Plan re-entry~~ ✅
-9. W2.3 Recruit-on-stall (+ agentId)
+9. ~~W2.3 Recruit-on-stall (+ agentId)~~ ✅
 10. W3 Status + digest + SDLC bankable
 11. Slice 3 + W4 auto stall
 ```

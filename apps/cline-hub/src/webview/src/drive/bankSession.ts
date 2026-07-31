@@ -151,6 +151,7 @@ export type HubBankOpPayload = {
 	note?: string;
 	roomId?: string;
 	callSessionId?: string;
+	agentId?: string;
 };
 
 /**
@@ -247,6 +248,9 @@ export function requestHubBankOp(
 					requestId,
 					workspaceRoot: payload.workspaceRoot,
 					taskId: payload.taskId ?? "",
+					...(payload.agentId?.trim()
+						? { agentId: payload.agentId.trim() }
+						: {}),
 					...correlation,
 				});
 				break;
@@ -255,6 +259,9 @@ export function requestHubBankOp(
 					type: "drive_bank_bind_now",
 					requestId,
 					workspaceRoot: payload.workspaceRoot,
+					...(payload.agentId?.trim()
+						? { agentId: payload.agentId.trim() }
+						: {}),
 					...correlation,
 				});
 				break;
@@ -434,7 +441,7 @@ export async function mutateBankEditPlanTasks(
 export async function mutateBankCompleteTask(
 	session: DriveBankSession,
 	workspaceRoot: string | undefined,
-	input: { taskId: string },
+	input: { taskId: string; agentId?: string },
 	correlation?: BankOpSessionContext,
 ): Promise<BankMutationResult> {
 	return hubMutationOrLocal(
@@ -444,10 +451,18 @@ export async function mutateBankCompleteTask(
 			requestHubBankOp("drive_bank_complete_task", {
 				workspaceRoot: workspaceRoot!.trim(),
 				taskId: input.taskId,
+				...(input.agentId?.trim()
+					? { agentId: input.agentId.trim() }
+					: {}),
 				...bankCorrelationFields(correlation),
 			}),
 		async () => {
-			await session.store.completeTask(input.taskId);
+			await session.store.completeTask(
+				input.taskId,
+				input.agentId?.trim()
+					? { agentId: input.agentId.trim() }
+					: undefined,
+			);
 		},
 	);
 }
@@ -456,18 +471,20 @@ export async function mutateBankCompleteTask(
 export async function mutateBankBindNow(
 	session: DriveBankSession,
 	workspaceRoot: string | undefined,
-	correlation?: BankOpSessionContext,
+	correlation?: BankOpSessionContext & { agentId?: string },
 ): Promise<BankMutationResult> {
+	const agentId = correlation?.agentId?.trim();
 	return hubMutationOrLocal(
 		session,
 		workspaceRoot,
 		() =>
 			requestHubBankOp("drive_bank_bind_now", {
 				workspaceRoot: workspaceRoot!.trim(),
+				...(agentId ? { agentId } : {}),
 				...bankCorrelationFields(correlation),
 			}),
 		async () => {
-			await session.store.bindNowTask();
+			await session.store.bindNowTask(agentId ? { agentId } : undefined);
 		},
 	);
 }

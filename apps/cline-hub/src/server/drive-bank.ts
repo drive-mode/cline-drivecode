@@ -32,6 +32,7 @@ export type DriveBankWebviewFrame = {
 	note?: string;
 	roomId?: string;
 	callSessionId?: string;
+	agentId?: string;
 	[key: string]: unknown;
 };
 
@@ -96,6 +97,9 @@ export async function handleDriveBankWebviewCommand(
 	}
 	if (typeof frame.callSessionId === "string" && frame.callSessionId.trim()) {
 		payload.callSessionId = frame.callSessionId.trim();
+	}
+	if (typeof frame.agentId === "string" && frame.agentId.trim()) {
+		payload.agentId = frame.agentId.trim();
 	}
 
 	try {

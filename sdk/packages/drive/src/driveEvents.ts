@@ -59,6 +59,7 @@ export function createDriveTaskBoundEvent(input: {
 	taskId: string;
 	planId: string;
 	callSessionId?: string;
+	agentId?: string;
 }): BankDriveEvent {
 	return asBankEvent({
 		schemaVersion: DRIVE_BANK_EVENT_SCHEMA_VERSION,
@@ -68,6 +69,7 @@ export function createDriveTaskBoundEvent(input: {
 		type: "drive_task_bound",
 		taskId: input.taskId,
 		planId: input.planId,
+		...(input.agentId?.trim() ? { agentId: input.agentId.trim() } : {}),
 	});
 }
 
@@ -75,6 +77,7 @@ export function createDriveTaskCompletedEvent(input: {
 	roomId: string;
 	taskId: string;
 	callSessionId?: string;
+	agentId?: string;
 }): BankDriveEvent {
 	return asBankEvent({
 		schemaVersion: DRIVE_BANK_EVENT_SCHEMA_VERSION,
@@ -83,6 +86,7 @@ export function createDriveTaskCompletedEvent(input: {
 		...withSession(input),
 		type: "drive_task_completed",
 		taskId: input.taskId,
+		...(input.agentId?.trim() ? { agentId: input.agentId.trim() } : {}),
 	});
 }
 

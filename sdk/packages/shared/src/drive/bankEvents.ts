@@ -28,11 +28,15 @@ export const DriveTaskBoundEventSchema = DriveEventBaseSchema.extend({
 	type: z.literal("drive_task_bound"),
 	taskId: z.string().min(1),
 	planId: z.string().min(1),
+	/** Optional seated agent attribution (DRV-RECRUIT-STALL). */
+	agentId: z.string().min(1).optional(),
 }).strict();
 
 export const DriveTaskCompletedEventSchema = DriveEventBaseSchema.extend({
 	type: z.literal("drive_task_completed"),
 	taskId: z.string().min(1),
+	/** Optional seated agent attribution (DRV-RECRUIT-STALL). */
+	agentId: z.string().min(1).optional(),
 }).strict();
 
 /** Failure stickiness (P2) — taskId only; note stays on disk lastFailure. */

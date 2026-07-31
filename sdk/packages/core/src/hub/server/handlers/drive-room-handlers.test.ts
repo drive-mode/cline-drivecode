@@ -940,4 +940,63 @@ describe("handleDriveRoomCommand", () => {
 		expect(String(rejoined.payload?.whileAwayNote)).toMatch(/^Since you left:/);
 		expect(String(rejoined.payload?.whileAwayNote)).toContain("bun test");
 	});
+
+	it("call_seat seats a specialist without rewriting other participants", async () => {
+		resetDriveRoomStoreForTests();
+		const ctx = makeCtx();
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "j_seat",
+			payload: {
+				roomId: "room_seat",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Adam" },
+			},
+		});
+		const seated = await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_seat",
+			requestId: "s1",
+			payload: {
+				roomId: "room_seat",
+				agent: {
+					id: "security-reviewer",
+					displayName: "Security Reviewer",
+					role: "specialist",
+				},
+			},
+		});
+		expect(seated.ok).toBe(true);
+		expect(seated.payload?.seated).toBe(true);
+		expect(seated.payload?.agentId).toBe("security-reviewer");
+		const snap = seated.payload?.snapshot as {
+			participants: Array<{
+				id: string;
+				kind: string;
+				seatSources?: Array<{ kind: string }>;
+			}>;
+		};
+		const agent = snap.participants.find((p) => p.id === "security-reviewer");
+		expect(agent?.kind).toBe("agent");
+		expect(agent?.seatSources).toEqual([{ kind: "manual" }]);
+		expect(snap.participants.some((p) => p.id === "adam")).toBe(true);
+
+		const capped = await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_seat",
+			requestId: "s2",
+			payload: {
+				roomId: "room_seat",
+				agent: {
+					id: "test-fixer",
+					displayName: "Test Fixer",
+					role: "specialist",
+				},
+				seatCap: 2,
+			},
+		});
+		expect(capped.ok).toBe(false);
+		expect(capped.error?.code).toBe("seat_cap_exceeded");
+	});
 });

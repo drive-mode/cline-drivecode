@@ -137,6 +137,19 @@ const CallRemoveRosterPackPayloadSchema = RoomIdSchema.extend({
 	workspaceRoot: z.string().min(1).optional(),
 }).strict();
 
+/** Seat one agent via hub (DRV-RECRUIT-STALL) — never writes plan order. */
+const CallSeatPayloadSchema = RoomIdSchema.extend({
+	agent: z
+		.object({
+			id: z.string().min(1),
+			displayName: z.string().min(1),
+			role: z.enum(["partner", "specialist", "recorder"]).optional(),
+		})
+		.strict(),
+	/** Soft multi-agent ceiling; omit for unlimited. */
+	seatCap: z.number().int().positive().optional(),
+}).strict();
+
 const WorkEditSchema = z
 	.object({
 		kind: z.literal("edit"),
@@ -861,6 +874,69 @@ export async function handleDriveRoomCommand(
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
+				);
+			}
+			case "call_seat": {
+				const payload = CallSeatPayloadSchema.parse(envelope.payload ?? {});
+				store.create(payload.roomId);
+				const before = store.get(payload.roomId);
+				if (!before) {
+					return errorReply(
+						envelope,
+						"room_not_found",
+						`room_not_found:${payload.roomId}`,
+					);
+				}
+				const existing = before.participants.find(
+					(participant) => participant.id === payload.agent.id,
+				);
+				if (existing?.kind === "agent") {
+					return okReply(
+						envelope,
+						snapshotPayload(before, store.lastSeq(payload.roomId), [], {
+							seated: false,
+							alreadySeated: true,
+						}),
+					);
+				}
+				const agentCount = before.participants.filter(
+					(participant) => participant.kind === "agent",
+				).length;
+				if (
+					payload.seatCap != null &&
+					agentCount >= payload.seatCap
+				) {
+					return errorReply(
+						envelope,
+						"seat_cap_exceeded",
+						`seatCap ${payload.seatCap} already reached`,
+					);
+				}
+				const agent: Participant = {
+					id: payload.agent.id,
+					kind: "agent",
+					displayName: payload.agent.displayName,
+					role: payload.agent.role ?? "specialist",
+					status: "idle",
+					seatSources: [{ kind: "manual" }],
+				};
+				const committed = store.join({
+					roomId: payload.roomId,
+					participant: agent,
+				});
+				publishRoomEvent(
+					ctx,
+					payload.roomId,
+					committed.snapshot,
+					committed.event,
+					committed.seq,
+				);
+				return okReply(
+					envelope,
+					snapshotPayload(committed.snapshot, committed.seq, [], {
+						seated: true,
+						agentId: agent.id,
+					}),
 				);
 			}
 			case "call_add_roster_pack": {

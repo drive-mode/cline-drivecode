@@ -2,9 +2,14 @@
 
 import {
 	buildCleanDrainInvite,
+	buildRecruitNeed,
 	buildVoiceAckNarration,
 	formatCleanDrainNarration,
+	rankRecruitCandidates,
 	shouldOfferCleanDrain,
+	type RankedRecruit,
+	type RecruitCandidate,
+	type RecruitNeed,
 } from "@cline/drive";
 import type { AddressSet } from "@cline/shared";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -60,6 +65,7 @@ import {
 } from "./drive/routeSuggest";
 import { Spotlight } from "./drive/Spotlight";
 import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
+import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import {
 	planRecoveryAccept,
 	shouldOfferRecoveryFork,
@@ -71,10 +77,12 @@ import {
 	applySubModeIntent,
 	DRIVE_DEFAULT_ROOM_ID,
 	DRIVE_PARTICIPANT_HUMAN,
+	DRIVE_PARTICIPANT_PARTNER,
 	drivePersonaSystemHint,
 	toNativeMode,
 	toSharedDriveSubMode,
 } from "./drive/types";
+import { resolveRosterParticipants } from "./drive/rosterHelpers";
 import { useDriveSession } from "./drive/useDriveSession";
 import { createVoiceStack } from "./drive/voice/createVoiceStack";
 import { shouldSpeakDriveTts } from "./drive/voice/driveVoiceUi";
@@ -265,6 +273,11 @@ export default function Chat({
 	/** Mute identical clean-drain invites (one soft ask per drain). */
 	const [dismissedCleanDrainInviteKey, setDismissedCleanDrainInviteKey] =
 		useState<string | null>(null);
+	/** Recruit-on-stall picker (opened from stuck recovery “Who should take this?”). */
+	const [recruitStall, setRecruitStall] = useState<{
+		need: RecruitNeed;
+		ranked: RankedRecruit[];
+	} | null>(null);
 	/** Session counters for S3 detection without re-reading bank JSONL mid-call. */
 	const cleanDrainCountersRef = useRef<{
 		activateTaskIds: string[];
@@ -353,6 +366,39 @@ export default function Chat({
 		});
 	}, [dismissCleanDrain, setDrive, setMode]);
 
+	const seatRecruitCandidate = useCallback(
+		(entry: RankedRecruit) => {
+			const roomId =
+				driveRef.current.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID;
+			postToHost({
+				type: "call_seat",
+				roomId,
+				agent: {
+					id: entry.slug,
+					displayName: entry.displayName,
+					role:
+						entry.slug === DRIVE_PARTICIPANT_PARTNER ||
+						entry.slug === "pair-partner"
+							? "partner"
+							: "specialist",
+				},
+			});
+			setDrive((current) => ({
+				...current,
+				attributionAgentId: entry.slug,
+				agencyBanner: `Seated ${entry.displayName} for Now — cursor unchanged`,
+			}));
+			setRecruitStall(null);
+			// Bind execution to current now without reordering plan.
+			void mutateBankBindNow(bankSessionRef.current, defaults.workspaceRoot, {
+				roomId: driveRef.current.roomId,
+				callSessionId: driveRef.current.callSessionId,
+				agentId: entry.slug,
+			});
+		},
+		[bankSessionRef, defaults.workspaceRoot, setDrive],
+	);
+
 	/** Baseline activate task ids when a plan first appears this session. */
 	const lastCleanDrainPlanIdRef = useRef<string | null>(null);
 	useEffect(() => {
@@ -405,13 +451,69 @@ export default function Chat({
 					case "dismiss":
 						setDismissedRecoveryOfferKey(plan.offerKey);
 						return;
-					case "recruit":
+					case "recruit": {
 						setDismissedRecoveryOfferKey(plan.offerKey);
+						const need = buildRecruitNeed({
+							taskId: plan.taskId,
+							planId: snapshot.activePlanId,
+							title: snapshot.nowTitle,
+							failureNote: snapshot.nowLastFailure,
+						});
+						const candidates: RecruitCandidate[] = [];
+						const seen = new Set<string>();
+						for (const participant of resolveRosterParticipants(
+							driveRef.current,
+						)) {
+							if (participant.kind !== "agent") {
+								continue;
+							}
+							if (seen.has(participant.id)) {
+								continue;
+							}
+							seen.add(participant.id);
+							candidates.push({
+								slug: participant.id,
+								displayName: participant.displayName,
+								labels: [
+									participant.role,
+									participant.displayName,
+									participant.id,
+								],
+								domains: [],
+							});
+						}
+						// Builtin fixtures so lexical rank has something beyond the pair.
+						for (const fixture of [
+							{
+								slug: "security-reviewer",
+								displayName: "Security Reviewer",
+								labels: ["security", "auth", "review"],
+								domains: ["auth"],
+								suggestedPackIds: ["security-crew"],
+							},
+							{
+								slug: "test-fixer",
+								displayName: "Test Fixer",
+								labels: ["tests", "parser", "fixup"],
+								domains: ["qa"],
+							},
+						] as RecruitCandidate[]) {
+							if (seen.has(fixture.slug)) {
+								continue;
+							}
+							seen.add(fixture.slug);
+							candidates.push(fixture);
+						}
+						const ranked = rankRecruitCandidates(need, candidates, {
+							limit: 5,
+						});
+						setRecruitStall({ need, ranked });
 						setDrive((current) => ({
 							...current,
 							agencyBanner: plan.agencyBanner,
 						}));
 						return;
+					}
 					case "pause": {
 						setDismissedRecoveryOfferKey(plan.offerKey);
 						if (sending) {
@@ -642,6 +744,9 @@ export default function Chat({
 				{
 					roomId: drive.roomId,
 					callSessionId: drive.callSessionId,
+					...(drive.attributionAgentId
+						? { agentId: drive.attributionAgentId }
+						: {}),
 				},
 			);
 			if (defaultsRef.current.workspaceRoot?.trim() && !fromHub) {
@@ -1667,7 +1772,8 @@ export default function Chat({
 						>
 							{showStuckRecovery &&
 							drive.bankSnapshot.nowTaskId &&
-							drive.bankSnapshot.nowLastFailure ? (
+							drive.bankSnapshot.nowLastFailure &&
+							!recruitStall ? (
 								<StuckRecoveryFork
 									className="mb-3"
 									disabled={isHydrating}
@@ -1676,6 +1782,16 @@ export default function Chat({
 									onAccept={acceptStuckRecovery}
 									onDismiss={dismissStuckRecovery}
 									taskId={drive.bankSnapshot.nowTaskId}
+								/>
+							) : null}
+							{recruitStall ? (
+								<RecruitStallPicker
+									className="mb-3"
+									disabled={isHydrating}
+									need={recruitStall.need}
+									onDismiss={() => setRecruitStall(null)}
+									onSeat={seatRecruitCandidate}
+									ranked={recruitStall.ranked}
 								/>
 							) : null}
 							<StickyStagePane
@@ -1761,7 +1877,15 @@ export default function Chat({
 												await mutateBankCompleteTask(
 													bankSessionRef.current,
 													defaults.workspaceRoot,
-													{ taskId },
+													{
+														taskId,
+														...(driveRef.current.attributionAgentId
+															? {
+																	agentId:
+																		driveRef.current.attributionAgentId,
+																}
+															: {}),
+													},
 													{
 														roomId: drive.roomId,
 														callSessionId: drive.callSessionId,

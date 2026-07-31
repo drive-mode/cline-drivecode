@@ -27,18 +27,21 @@ Recruit is unused at the highest-intent moment: a stuck task. Multi-agent value 
 
 ## Agent tasks
 
-- [ ] From stuck task, build structured need and offer ranked recruit results with reviewable reasons.
+- [x] From stuck task, build structured need and offer ranked recruit results with reviewable reasons.
   - Owner package: `@cline/drive` + hub
   - Verify: fixture need → ranked agents/packs; no utterance in payload
   - Done when: “Who should take this?” returns reviewable ranking.
-- [ ] Seat via hub ops only; optional use-for-Now binds without reordering plan; honor seatCap/teamOpt.
+  - Landed (W2.3): `buildRecruitNeed` / `rankRecruitCandidates`; `RecruitStallPicker` from stuck fork.
+- [x] Seat via hub ops only; optional use-for-Now binds without reordering plan; honor seatCap/teamOpt.
   - Owner package: `@cline/core`
   - Verify: seat + bind unit tests; address set unchanged on seat
   - Done when: seat does not mutate plan order or auto-address.
-- [ ] Carry agent attribution on complete/bind (runtime context) for rollups.
+  - Landed (W2.3): hub `call_seat` (manual seatSource, optional seatCap); bind keeps bank cursor.
+- [x] Carry agent attribution on complete/bind (runtime context) for rollups.
   - Owner package: `@cline/shared` + `@cline/drive`
   - Verify: event schema + rollup fixture
   - Done when: completed stuck task correlates to seated agent without model prose.
+  - Landed (W2.3): optional `agentId` on `drive_task_bound` / `drive_task_completed`.
 
 ## Risks
 

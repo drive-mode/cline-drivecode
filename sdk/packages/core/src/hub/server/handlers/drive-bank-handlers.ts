@@ -201,12 +201,16 @@ export async function handleDriveBankCommand(
 					"taskId is required",
 				);
 			}
+			const agentId = readString(envelope.payload, "agentId");
 			try {
 				const store = openLoggedBankStore(
 					workspaceRoot,
 					envelope.payload,
 				);
-				await store.completeTask(taskId);
+				await store.completeTask(
+					taskId,
+					agentId ? { agentId } : undefined,
+				);
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, { snapshot });
 			} catch (error) {
@@ -218,12 +222,15 @@ export async function handleDriveBankCommand(
 			}
 		}
 		case "drive_bank_bind_now": {
+			const agentId = readString(envelope.payload, "agentId");
 			try {
 				const store = openLoggedBankStore(
 					workspaceRoot,
 					envelope.payload,
 				);
-				const bound = await store.bindNowTask();
+				const bound = await store.bindNowTask(
+					agentId ? { agentId } : undefined,
+				);
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, {
 					snapshot,

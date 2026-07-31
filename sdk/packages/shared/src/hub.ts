@@ -496,6 +496,7 @@ export type HubCommandName =
 	| "call_set_mode"
 	| "call_add_roster_pack"
 	| "call_remove_roster_pack"
+	| "call_seat"
 	| "call_record_work"
 	| "call_get_room"
 	| "cron.event.ingest"
