@@ -176,6 +176,17 @@ export {
 	type CleanDrainSessionCounters,
 } from "./cleanDrain.js";
 export {
+	buildPlanReentryChips,
+	buildPlanReentryRow,
+	PLAN_REENTRY_FORBIDDEN_KEYS,
+	planReentryRowIsPrivate,
+	planReentryRollupFromUnknown,
+	type PlanReentryChip,
+	type PlanReentryChipId,
+	type PlanReentryRollupSlice,
+	type PlanReentryRowModel,
+} from "./planReentry.js";
+export {
 	assembleHandoffPacket,
 	assertNoForbiddenHandoffKeys,
 	formatHandoffNarration,

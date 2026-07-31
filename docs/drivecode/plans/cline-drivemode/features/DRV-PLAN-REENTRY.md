@@ -26,18 +26,21 @@ Rooms persist, but Drive tab does not surface unfinished plans. Users who leave 
 
 ## Agent tasks
 
-- [ ] Surface active-plan summary on Drive tab rows (title + open task count).
+- [x] Surface active-plan summary on Drive tab rows (title + open task count).
   - Owner package: `@cline/cline-hub`
   - Verify: fixture rooms with/without open plans
   - Done when: unfinished plan is glanceable before join; empty/no-hub stays honest.
-- [ ] Attach counts-only last-session chips from local rollup / leave summary.
+  - Landed (W2.2): `PlanReentryRow` in Drive chrome while off-call; loads via `drive_bank_get`; drafts omitted.
+- [x] Attach counts-only last-session chips from local rollup / leave summary.
   - Owner package: `@cline/drive` + hub
   - Verify: rollup fixture; privacy forbid transcript keys
   - Done when: chips render without utterance fields.
-- [ ] Row select joins the same hub room as Chat Join; document draft-plan listing choice.
+  - Landed (W2.2): `buildPlanReentryRow` / chips from `SessionRollup` slice; `planReentryRowIsPrivate`.
+- [x] Row select joins the same hub room as Chat Join; document draft-plan listing choice.
   - Owner package: `@cline/cline-hub`
   - Verify: join parity smoke
   - Done when: one-click re-entry lands on NowNext with return-loop orientation.
+  - Landed (W2.2): Resume → `joinDrive()`; drafts omitted (documented in `DRIVE-TAB.md`).
 
 ## Risks
 

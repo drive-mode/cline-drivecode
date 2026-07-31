@@ -17,6 +17,8 @@ import {
 	tickShowDirector,
 } from "./sampleShowPresent";
 import { requestSessionRollupsDump } from "./sessionRollupsDump";
+import { PlanReentryRow } from "./PlanReentryRow";
+import { loadPlanReentryRow } from "./planReentryLoad";
 import {
 	applyHardwarePrefsPatch,
 	applyVoiceFacetPatch,
@@ -24,6 +26,8 @@ import {
 	type UseDriveSessionResult,
 } from "./useDriveSession";
 import { Button } from "@/components/ui/button";
+import type { PlanReentryRowModel } from "@cline/drive";
+import { useEffect, useState } from "react";
 
 /** Call strip, settings, now/next, join note — mounts above the conversation. */
 export function DriveRoomChrome({
@@ -50,7 +54,40 @@ export function DriveRoomChrome({
 		stripHandlers,
 		chatForks,
 		workersPanelOpen,
+		joinDrive,
+		workspaceRoot,
 	} = session;
+
+	const [planReentry, setPlanReentry] = useState<PlanReentryRowModel | null>(
+		null,
+	);
+
+	useEffect(() => {
+		if (drive.active) {
+			setPlanReentry(null);
+			return;
+		}
+		const root = workspaceRoot?.trim();
+		if (!root) {
+			setPlanReentry(null);
+			return;
+		}
+		let cancelled = false;
+		void loadPlanReentryRow(root)
+			.then((row) => {
+				if (!cancelled) {
+					setPlanReentry(row);
+				}
+			})
+			.catch(() => {
+				if (!cancelled) {
+					setPlanReentry(null);
+				}
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [drive.active, workspaceRoot]);
 
 	return (
 		<>
@@ -62,6 +99,15 @@ export function DriveRoomChrome({
 				workersOpen={workersPanelOpen}
 				{...stripHandlers}
 			/>
+			{!drive.active && planReentry ? (
+				<PlanReentryRow
+					disabled={disabled}
+					onResume={() => {
+						joinDrive();
+					}}
+					row={planReentry}
+				/>
+			) : null}
 			{drive.active ? (
 				<Roster
 					drive={drive}

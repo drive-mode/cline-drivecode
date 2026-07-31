@@ -70,6 +70,16 @@ Ship **A’s IA inside B’s chrome**. One Drive tab in the Cline hub left nav (
 
 Keep the existing Chat **Join call** as a shortcut that opens/focuses the active Drive room. Do not make the header toggle the only entry point.
 
+### Plan re-entry row (DRV-PLAN-REENTRY)
+
+Room list rows (and the Chat Drive chrome while off-call) surface an unfinished **active** plan when present:
+
+- `plan.title` + open task count
+- Optional last-session chips from local `SessionRollup` (S2 / S3 / E1 counts only — no transcript)
+- **Resume** → same `joinCall` / hub room as Chat Join; bank cursor stays on the next open task
+
+**Draft / non-active plans:** omitted on the list (one-active-plan-per-room). Archive hygiene keeps stale open plans from cluttering the row.
+
 ## Product implications for cline-drivecode
 
 1. Add a **Drive** activity / sidebar surface in `apps/cline-hub` (and later CLI list of rooms).
