@@ -10,6 +10,7 @@
 import { createEmptyRoomSnapshot, reduceRoom } from "@cline/drive";
 import type {
 	AddressSet,
+	CallSessionState,
 	DriveEvent,
 	DriveRoomLiveState,
 	DriveSubMode,
@@ -18,7 +19,11 @@ import type {
 	StagePin,
 	StageSharer,
 } from "@cline/shared";
-import { createEmptyDriveRoomLiveState } from "@cline/shared";
+import {
+	createEmptyDriveRoomLiveState,
+	durationMsBetween,
+	mintCallSessionId,
+} from "@cline/shared";
 import { resetDrivePauseAfterToolForTests } from "./drivePauseAfterTool";
 import type { RoomEventLog } from "./eventLog";
 import type { WorkRecordPayload } from "./work-from-tool";
@@ -48,6 +53,8 @@ export class DriveRoomStore {
 
 	private eventLog: RoomEventLog | undefined;
 	private readonly seqByRoom = new Map<string, number>();
+	/** Active call session per room (DRV-CALL-SESSION). */
+	private readonly callSessions = new Map<string, CallSessionState>();
 	private readonly appliedEventIds = new Set<string>();
 
 	attachEventLog(log: RoomEventLog): void {
@@ -139,31 +146,44 @@ export class DriveRoomStore {
 		return this.sessionToRoom.get(sessionId);
 	}
 
+	getActiveCallSessionId(roomId: string): string | undefined {
+		return this.callSessions.get(roomId)?.callSessionId;
+	}
+
+	getActiveCallSession(roomId: string): CallSessionState | undefined {
+		return this.callSessions.get(roomId);
+	}
+
 	/**
 	 * Append to durable log (when attached), then fold into live snapshot.
 	 * Idempotent on event.id within this process. Does not create rooms —
 	 * callers must create/join first.
 	 */
 	commit(event: DriveEvent): RoomCommitResult {
-		if (this.appliedEventIds.has(event.id)) {
+		const session = this.callSessions.get(event.roomId);
+		const stamped: DriveEvent =
+			session && !event.callSessionId
+				? { ...event, callSessionId: session.callSessionId }
+				: event;
+		if (this.appliedEventIds.has(stamped.id)) {
 			return {
-				snapshot: this.getOrThrow(event.roomId),
-				event,
-				seq: this.lastSeq(event.roomId),
+				snapshot: this.getOrThrow(stamped.roomId),
+				event: stamped,
+				seq: this.lastSeq(stamped.roomId),
 			};
 		}
 		let seq = 0;
 		if (this.eventLog) {
-			const record = this.eventLog.appendSync(event.roomId, event);
+			const record = this.eventLog.appendSync(stamped.roomId, stamped);
 			seq = record.seq;
-			this.seqByRoom.set(event.roomId, seq);
+			this.seqByRoom.set(stamped.roomId, seq);
 		}
-		const current = this.getOrThrow(event.roomId);
-		const next = reduceRoom(current, event);
-		this.rooms.set(event.roomId, next);
-		this.appliedEventIds.add(event.id);
+		const current = this.getOrThrow(stamped.roomId);
+		const next = reduceRoom(current, stamped);
+		this.rooms.set(stamped.roomId, next);
+		this.appliedEventIds.add(stamped.id);
 		this.syncLiveFromSnapshot(next);
-		return { snapshot: next, event, seq };
+		return { snapshot: next, event: stamped, seq };
 	}
 
 	/**
@@ -282,12 +302,22 @@ export class DriveRoomStore {
 		if (input.sessionId) {
 			this.linkSession(input.sessionId, input.roomId);
 		}
+		const at = input.at ?? nowIso();
+		let session = this.callSessions.get(input.roomId);
+		if (!session) {
+			session = {
+				callSessionId: mintCallSessionId(),
+				startedAt: at,
+			};
+			this.callSessions.set(input.roomId, session);
+		}
 		return this.commit({
 			schemaVersion: 1,
 			id: newEventId("join"),
 			roomId: input.roomId,
-			at: input.at ?? nowIso(),
+			at,
 			actorId: input.actorId ?? input.participant.id,
+			callSessionId: session.callSessionId,
 			type: "control.join",
 			track: "control",
 			participant: input.participant,
@@ -301,17 +331,40 @@ export class DriveRoomStore {
 		actorId?: string;
 		at?: string;
 	}): RoomCommitResult {
-		return this.commit({
+		const at = input.at ?? nowIso();
+		const session = this.callSessions.get(input.roomId);
+		const before = this.rooms.get(input.roomId);
+		const leaving = before?.participants.find(
+			(participant) => participant.id === input.participantId,
+		);
+		const humansBefore =
+			before?.participants.filter((participant) => participant.kind === "human")
+				.length ?? 0;
+		const closesSession =
+			Boolean(session) &&
+			leaving?.kind === "human" &&
+			humansBefore <= 1;
+		const result = this.commit({
 			schemaVersion: 1,
 			id: newEventId("leave"),
 			roomId: input.roomId,
-			at: input.at ?? nowIso(),
+			at,
 			actorId: input.actorId ?? input.participantId,
+			callSessionId: session?.callSessionId,
 			type: "control.leave",
 			track: "control",
 			participantId: input.participantId,
 			reason: input.reason,
+			...(closesSession && session
+				? {
+						durationMs: durationMsBetween(session.startedAt, at),
+					}
+				: {}),
 		});
+		if (closesSession) {
+			this.callSessions.delete(input.roomId);
+		}
+		return result;
 	}
 
 	mute(input: {

@@ -11,6 +11,7 @@ import { createNodeBankFs } from "./nodeBankFs";
 
 export type OpenWorkspaceBankStoreOptions = {
 	roomId?: string;
+	callSessionId?: string;
 	onBankEvent?: (event: BankDriveEvent) => void;
 };
 

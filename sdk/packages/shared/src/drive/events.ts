@@ -35,6 +35,8 @@ const DriveEventBaseSchema = z.object({
 	roomId: z.string().min(1),
 	at: IsoTimestampSchema,
 	actorId: z.string().min(1).optional(),
+	/** Correlates room events with a call join→leave window (DRV-CALL-SESSION). */
+	callSessionId: z.string().min(1).optional(),
 });
 
 // ── control ──────────────────────────────────────────────────────────────
@@ -50,6 +52,8 @@ export const ControlLeaveEventSchema = DriveEventBaseSchema.extend({
 	track: z.literal("control"),
 	participantId: z.string().min(1),
 	reason: z.string().optional(),
+	/** Present when this leave closes the measurable call session. */
+	durationMs: z.number().int().nonnegative().optional(),
 }).strict();
 
 export const ControlMuteEventSchema = DriveEventBaseSchema.extend({

@@ -20,6 +20,10 @@ import {
 import { deriveBankSnapshot } from "./bankSnapshot.js";
 import {
 	createDrivePlanActivatedEvent,
+	createDrivePlanArchivedEvent,
+	createDrivePlanStepEvent,
+	createDriveTaskArchivedEvent,
+	createDriveTaskBoundEvent,
 	createDriveTaskCompletedEvent,
 	createDriveTaskOpenedEvent,
 } from "./driveEvents.js";
@@ -48,17 +52,22 @@ export interface BankStore {
 	listOpenTasksForActivePlan(): Promise<DriveTask[]>;
 }
 
+export type CreateBankStoreOptions = {
+	roomId?: string;
+	callSessionId?: string;
+	onBankEvent?: (event: BankDriveEvent) => void;
+};
+
 export function createBankStore(
 	fs: BankFs,
 	workspaceRoot: string,
-	options?: {
-		roomId?: string;
-		onBankEvent?: (event: BankDriveEvent) => void;
-	},
+	options?: CreateBankStoreOptions,
 ): BankStore {
 	const root = workspaceRoot.replace(/[\\/]+$/, "");
 	const roomId = options?.roomId ?? "bank";
+	const callSessionId = options?.callSessionId;
 	const emit = options?.onBankEvent;
+	const session = { roomId, callSessionId };
 
 	async function readTask(taskId: string): Promise<DriveTask | null> {
 		const active = await fs.read(taskPath(root, taskId));
@@ -118,7 +127,7 @@ export function createBankStore(
 		return map;
 	}
 
-	return {
+	const store: BankStore = {
 		async createTask({ id, title, body }) {
 			if (await fs.exists(taskPath(root, id))) {
 				throw new Error(`Task already exists: ${id}`);
@@ -133,7 +142,13 @@ export function createBankStore(
 				status: "open",
 			};
 			await writeTask(task);
-			emit?.(createDriveTaskOpenedEvent({ roomId, taskId: id, title }));
+			emit?.(
+				createDriveTaskOpenedEvent({
+					...session,
+					taskId: id,
+					title,
+				}),
+			);
 			return task;
 		},
 
@@ -154,6 +169,15 @@ export function createBankStore(
 				status: activate ? "active" : "draft",
 			};
 			await writePlan(plan);
+			if (activate) {
+				emit?.(
+					createDrivePlanActivatedEvent({
+						...session,
+						planId: id,
+						title,
+					}),
+				);
+			}
 			return plan;
 		},
 
@@ -175,7 +199,7 @@ export function createBankStore(
 			await writePlan(next);
 			emit?.(
 				createDrivePlanActivatedEvent({
-					roomId,
+					...session,
 					planId,
 					title: next.title,
 				}),
@@ -212,6 +236,13 @@ export function createBankStore(
 			if (task.status === "open") {
 				const bound: DriveTask = { ...task, status: "in_progress" };
 				await writeTask(bound);
+				emit?.(
+					createDriveTaskBoundEvent({
+						...session,
+						taskId: bound.id,
+						planId: plan.id,
+					}),
+				);
 				return { plan, task: bound };
 			}
 			return { plan, task };
@@ -231,14 +262,25 @@ export function createBankStore(
 			const done: DriveTask = { ...task, status: "done" };
 			await fs.write(activePath, serializeDriveTask(done));
 			await fs.move(activePath, archivePath);
-			emit?.(createDriveTaskCompletedEvent({ roomId, taskId }));
+			emit?.(
+				createDriveTaskCompletedEvent({
+					...session,
+					taskId,
+				}),
+			);
+			emit?.(
+				createDriveTaskArchivedEvent({
+					...session,
+					taskId,
+				}),
+			);
 
 			const plan = await findActivePlan();
 			if (plan) {
 				const tasks = await loadTasks(plan.taskIds);
 				const snapshot = deriveBankSnapshot(plan, tasks);
 				if (snapshot.openTaskIds.length === 0) {
-					await this.closeAndArchivePlan(plan.id);
+					await store.closeAndArchivePlan(plan.id);
 				}
 			}
 		},
@@ -273,14 +315,24 @@ export function createBankStore(
 			) {
 				throw new Error(`Archived plan is read-only: ${planId}`);
 			}
-			for (const taskId of taskIds) {
-				if (await fs.exists(archivedTaskPath(root, taskId))) {
-					if (!(await fs.exists(taskPath(root, taskId)))) {
-					}
-				}
-			}
+			const previous = new Set(plan.taskIds);
 			const next: DrivePlan = { ...plan, taskIds: [...taskIds] };
 			await writePlan(next);
+			for (const [position, taskId] of taskIds.entries()) {
+				if (previous.has(taskId)) {
+					continue;
+				}
+				const task = await readTask(taskId);
+				emit?.(
+					createDrivePlanStepEvent({
+						...session,
+						planId,
+						taskId,
+						title: task?.title ?? taskId,
+						position,
+					}),
+				);
+			}
 			return next;
 		},
 
@@ -298,6 +350,12 @@ export function createBankStore(
 			const closed: DrivePlan = { ...plan, status: "closed" };
 			await fs.write(activePath, serializeDrivePlan(closed));
 			await fs.move(activePath, archivePath);
+			emit?.(
+				createDrivePlanArchivedEvent({
+					...session,
+					planId,
+				}),
+			);
 		},
 
 		async listOpenTasksForActivePlan() {
@@ -312,4 +370,6 @@ export function createBankStore(
 				.filter((task): task is DriveTask => Boolean(task));
 		},
 	};
+
+	return store;
 }

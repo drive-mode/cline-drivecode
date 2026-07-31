@@ -14,6 +14,8 @@ const DriveEventBaseSchema = z.object({
 	id: z.string().min(1),
 	at: z.string().datetime(),
 	roomId: z.string().min(1),
+	/** Correlates bank lifecycle with a call join→leave window (DRV-CALL-SESSION). */
+	callSessionId: z.string().min(1).optional(),
 });
 
 export const DriveTaskOpenedEventSchema = DriveEventBaseSchema.extend({

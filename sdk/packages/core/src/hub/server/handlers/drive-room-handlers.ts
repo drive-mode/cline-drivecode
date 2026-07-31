@@ -226,12 +226,14 @@ function snapshotPayload(
 	snapshot: RoomSnapshot,
 	seq: number,
 	gaps: Array<{ seq: number; event: unknown }> = [],
+	extra: Record<string, unknown> = {},
 ): Record<string, unknown> {
 	return {
 		roomId: snapshot.roomId,
 		snapshot,
 		seq,
 		...(gaps.length > 0 ? { events: gaps } : {}),
+		...extra,
 	};
 }
 
@@ -344,7 +346,12 @@ export async function handleDriveRoomCommand(
 				if (payload.sessionId) {
 					store.linkSession(payload.sessionId, payload.roomId);
 				}
-				return okReply(envelope, snapshotPayload(result.snapshot, result.seq));
+				return okReply(
+					envelope,
+					snapshotPayload(result.snapshot, result.seq, [], {
+						callSessionId: store.getActiveCallSessionId(payload.roomId),
+					}),
+				);
 			}
 			case "call_leave": {
 				const payload = CallLeavePayloadSchema.parse(envelope.payload ?? {});
@@ -365,7 +372,16 @@ export async function handleDriveRoomCommand(
 				);
 				return okReply(
 					envelope,
-					snapshotPayload(committed.snapshot, committed.seq),
+					snapshotPayload(committed.snapshot, committed.seq, [], {
+						callSessionId:
+							committed.event.type === "control.leave"
+								? committed.event.callSessionId
+								: undefined,
+						durationMs:
+							committed.event.type === "control.leave"
+								? committed.event.durationMs
+								: undefined,
+					}),
 				);
 			}
 			case "call_mute": {

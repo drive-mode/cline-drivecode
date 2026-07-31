@@ -232,4 +232,53 @@ describe("handleDriveBankCommand", () => {
 		expect(reply.ok).toBe(false);
 		expect(reply.error?.code).toBe("invalid_payload");
 	});
+
+	it("complete_task emits bank log events with room/session stamps", async () => {
+		const { readBankLogSince } = await import(
+			"../../collaboration/bankEventLog"
+		);
+		const root = await mkdtemp(join(tmpdir(), "drive-bank-complete-"));
+		dirs.push(root);
+
+		await handleDriveBankCommand(
+			ctx(),
+			command("drive_bank_seed", {
+				workspaceRoot: root,
+				roomId: "room-x",
+				callSessionId: "cs-x",
+			}),
+		);
+		const bound = await handleDriveBankCommand(
+			ctx(),
+			command("drive_bank_bind_now", {
+				workspaceRoot: root,
+				roomId: "room-x",
+				callSessionId: "cs-x",
+			}),
+		);
+		expect(bound.ok).toBe(true);
+		const completed = await handleDriveBankCommand(
+			ctx(),
+			command("drive_bank_complete_task", {
+				workspaceRoot: root,
+				taskId: "t-parse",
+				roomId: "room-x",
+				callSessionId: "cs-x",
+			}),
+		);
+		expect(completed.ok).toBe(true);
+		expect(completed.payload?.snapshot).toMatchObject({
+			nowTaskId: "t-tests",
+		});
+
+		const log = readBankLogSince(root, 0);
+		const types = log.map((entry) => entry.event.type);
+		expect(types).toContain("drive_task_completed");
+		expect(types).toContain("drive_task_bound");
+		const completedEvt = log.find(
+			(entry) => entry.event.type === "drive_task_completed",
+		);
+		expect(completedEvt?.event.roomId).toBe("room-x");
+		expect(completedEvt?.event.callSessionId).toBe("cs-x");
+	});
 });

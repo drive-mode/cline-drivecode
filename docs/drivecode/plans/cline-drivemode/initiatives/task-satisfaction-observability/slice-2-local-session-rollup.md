@@ -24,3 +24,8 @@ Pure `deriveSessionRollup` implements PRD 10 metrics S1–S3, E1–E3, P1–P2. 
 ## Done when
 
 Leadership can read a rollup from a smoke path without reading raw JSONL by hand.
+
+## Implementation status (2026-07-30)
+
+- Pure `deriveSessionRollup` landed in `@cline/drive` with unit fixtures (clean drain / mid-plan continue).
+- Local debug UI / Status lens still open (DRV-STATUS-SESSIONS).

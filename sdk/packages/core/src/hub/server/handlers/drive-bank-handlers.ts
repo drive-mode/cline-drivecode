@@ -5,6 +5,8 @@
 import { unlink } from "node:fs/promises";
 import { taskPath } from "@cline/drive";
 import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
+import { appendBankLogEvent } from "../../collaboration/bankEventLog";
+import { getDriveRoomStore } from "../../collaboration/room";
 import { openWorkspaceBankStore } from "../../collaboration/workspaceBankStore";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 
@@ -34,8 +36,30 @@ function readStringArray(
 	return out;
 }
 
-async function seedDemoIfEmpty(workspaceRoot: string) {
-	const store = openWorkspaceBankStore(workspaceRoot);
+function openLoggedBankStore(
+	workspaceRoot: string,
+	payload: Record<string, unknown> | undefined,
+) {
+	const roomId = readString(payload, "roomId");
+	const callSessionId =
+		readString(payload, "callSessionId") ??
+		(roomId
+			? getDriveRoomStore().getActiveCallSessionId(roomId)
+			: undefined);
+	return openWorkspaceBankStore(workspaceRoot, {
+		roomId: roomId ?? "bank",
+		callSessionId,
+		onBankEvent: (event) => {
+			appendBankLogEvent(workspaceRoot, event);
+		},
+	});
+}
+
+async function seedDemoIfEmpty(
+	workspaceRoot: string,
+	payload: Record<string, unknown> | undefined,
+) {
+	const store = openLoggedBankStore(workspaceRoot, payload);
 	const existing = await store.getSnapshot();
 	if (existing.activePlanId) {
 		return existing;
@@ -75,12 +99,15 @@ export async function handleDriveBankCommand(
 
 	switch (envelope.command) {
 		case "drive_bank_get": {
-			const store = openWorkspaceBankStore(workspaceRoot);
+			const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 			const snapshot = await store.getSnapshot();
 			return okReply(envelope, { snapshot });
 		}
 		case "drive_bank_seed": {
-			const snapshot = await seedDemoIfEmpty(workspaceRoot);
+			const snapshot = await seedDemoIfEmpty(
+				workspaceRoot,
+				envelope.payload,
+			);
 			return okReply(envelope, { snapshot });
 		}
 		case "drive_bank_create_task": {
@@ -97,7 +124,10 @@ export async function handleDriveBankCommand(
 			const body = typeof bodyRaw === "string" ? bodyRaw : "";
 			const planId = readString(envelope.payload, "planId");
 			try {
-				const store = openWorkspaceBankStore(workspaceRoot);
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
 				if (planId) {
 					const plan = await store.getPlan(planId);
 					if (!plan) {
@@ -109,7 +139,10 @@ export async function handleDriveBankCommand(
 					}
 					await store.createTask({ id, title, body });
 					try {
-						await store.editPlanTaskIds(planId, [...plan.taskIds, id]);
+						await store.editPlanTaskIds(planId, [
+							...plan.taskIds,
+							id,
+						]);
 					} catch (error) {
 						// Roll back the orphan task file so the durable bank
 						// stays consistent when the plan update fails.
@@ -144,7 +177,10 @@ export async function handleDriveBankCommand(
 				);
 			}
 			try {
-				const store = openWorkspaceBankStore(workspaceRoot);
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
 				await store.editPlanTaskIds(planId, taskIds);
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, { snapshot });
@@ -152,6 +188,103 @@ export async function handleDriveBankCommand(
 				return errorReply(
 					envelope,
 					"drive_bank_edit_plan_tasks_failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+		case "drive_bank_complete_task": {
+			const taskId = readString(envelope.payload, "taskId");
+			if (!taskId) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					"taskId is required",
+				);
+			}
+			try {
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
+				await store.completeTask(taskId);
+				const snapshot = await store.getSnapshot();
+				return okReply(envelope, { snapshot });
+			} catch (error) {
+				return errorReply(
+					envelope,
+					"drive_bank_complete_task_failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+		case "drive_bank_bind_now": {
+			try {
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
+				const bound = await store.bindNowTask();
+				const snapshot = await store.getSnapshot();
+				return okReply(envelope, {
+					snapshot,
+					task: bound?.task ?? null,
+					plan: bound?.plan ?? null,
+				});
+			} catch (error) {
+				return errorReply(
+					envelope,
+					"drive_bank_bind_now_failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+		case "drive_bank_activate_plan": {
+			const planId = readString(envelope.payload, "planId");
+			if (!planId) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					"planId is required",
+				);
+			}
+			try {
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
+				await store.activatePlan(planId);
+				const snapshot = await store.getSnapshot();
+				return okReply(envelope, { snapshot });
+			} catch (error) {
+				return errorReply(
+					envelope,
+					"drive_bank_activate_plan_failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+		case "drive_bank_record_failure": {
+			const taskId = readString(envelope.payload, "taskId");
+			const note = readString(envelope.payload, "note");
+			if (!taskId || !note) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					"taskId and note are required",
+				);
+			}
+			try {
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
+				const task = await store.recordTaskFailure(taskId, note);
+				const snapshot = await store.getSnapshot();
+				return okReply(envelope, { snapshot, task });
+			} catch (error) {
+				return errorReply(
+					envelope,
+					"drive_bank_record_failure_failed",
 					error instanceof Error ? error.message : String(error),
 				);
 			}

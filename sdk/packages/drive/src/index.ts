@@ -158,7 +158,12 @@ export {
 	serializeDriveTask,
 } from "./bankSerialize.js";
 export { deriveBankSnapshot } from "./bankSnapshot.js";
-export { createBankStore, type BankStore } from "./bankStore.js";
+export { createBankStore, type BankStore, type CreateBankStoreOptions } from "./bankStore.js";
+export {
+	deriveSessionRollup,
+	type DeriveSessionRollupInput,
+	type SessionRollup,
+} from "./sessionRollup.js";
 export {
 	createDrivePlanActivatedEvent,
 	createDrivePlanArchivedEvent,

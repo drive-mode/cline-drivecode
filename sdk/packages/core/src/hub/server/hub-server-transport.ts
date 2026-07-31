@@ -462,6 +462,10 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_bank_seed":
 			case "drive_bank_create_task":
 			case "drive_bank_edit_plan_tasks":
+			case "drive_bank_complete_task":
+			case "drive_bank_bind_now":
+			case "drive_bank_activate_plan":
+			case "drive_bank_record_failure":
 				return await handleDriveBankCommand(this.ctx, envelope);
 			case "drive_agent_home_get":
 				return await handleDriveHomeCommand(this.ctx, envelope);

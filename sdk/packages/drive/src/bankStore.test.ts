@@ -128,4 +128,38 @@ describe("bankStore", () => {
 		expect(failed.lastFailure).toBe("tests red");
 		expect(await fs.exists(archivedTaskPath(ROOT, "t1"))).toBe(false);
 	});
+
+	it("emits bound/completed/archived/plan_step/plan_archived events", async () => {
+		const fs = createMemoryBankFs();
+		const events: string[] = [];
+		const store = createBankStore(fs, ROOT, {
+			roomId: "room-1",
+			callSessionId: "cs-1",
+			onBankEvent: (event) => {
+				events.push(event.type);
+				expect(event.roomId).toBe("room-1");
+				expect(event.callSessionId).toBe("cs-1");
+			},
+		});
+		await store.createTask({ id: "t1", title: "One", body: "a" });
+		await store.createTask({ id: "t2", title: "Two", body: "b" });
+		await store.createPlan({
+			id: "p1",
+			title: "Plan",
+			taskIds: ["t1"],
+			activate: true,
+		});
+		const bound = await store.bindNowTask();
+		expect(bound?.task.status).toBe("in_progress");
+		await store.editPlanTaskIds("p1", ["t1", "t2"]);
+		await store.completeTask("t1");
+		await store.completeTask("t2");
+		expect(events).toContain("drive_task_opened");
+		expect(events).toContain("drive_plan_activated");
+		expect(events).toContain("drive_task_bound");
+		expect(events).toContain("drive_plan_step");
+		expect(events).toContain("drive_task_completed");
+		expect(events).toContain("drive_task_archived");
+		expect(events).toContain("drive_plan_archived");
+	});
 });

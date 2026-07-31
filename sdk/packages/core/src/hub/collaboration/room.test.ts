@@ -76,6 +76,76 @@ describe("DriveRoomStore", () => {
 		expect(afterLeave.driveActive).toBe(true);
 	});
 
+	it("mints callSessionId on join, reuses while open, and closes with durationMs", () => {
+		const store = new DriveRoomStore();
+		store.create("room_cs", "2026-07-30T10:00:00.000Z");
+		const first = store.join({
+			roomId: "room_cs",
+			participant: {
+				id: "you",
+				kind: "human",
+				displayName: "You",
+				role: "host",
+				status: "idle",
+			},
+			at: "2026-07-30T10:00:01.000Z",
+		});
+		expect(first.event.callSessionId).toBeTruthy();
+		const sessionId = first.event.callSessionId!;
+		expect(store.getActiveCallSessionId("room_cs")).toBe(sessionId);
+
+		const partner = store.join({
+			roomId: "room_cs",
+			participant: {
+				id: "partner",
+				kind: "agent",
+				displayName: "Partner",
+				role: "partner",
+				status: "idle",
+				profileId: "pair",
+			},
+			at: "2026-07-30T10:00:02.000Z",
+		});
+		expect(partner.event.callSessionId).toBe(sessionId);
+
+		const leftPartner = store.leave({
+			roomId: "room_cs",
+			participantId: "partner",
+			at: "2026-07-30T10:00:03.000Z",
+		});
+		expect(leftPartner.event.type).toBe("control.leave");
+		if (leftPartner.event.type === "control.leave") {
+			expect(leftPartner.event.durationMs).toBeUndefined();
+		}
+		expect(store.getActiveCallSessionId("room_cs")).toBe(sessionId);
+
+		const leftHuman = store.leave({
+			roomId: "room_cs",
+			participantId: "you",
+			at: "2026-07-30T10:05:01.000Z",
+		});
+		expect(leftHuman.event.type).toBe("control.leave");
+		if (leftHuman.event.type === "control.leave") {
+			expect(leftHuman.event.callSessionId).toBe(sessionId);
+			expect(leftHuman.event.durationMs).toBe(300_000);
+		}
+		expect(store.getActiveCallSessionId("room_cs")).toBeUndefined();
+
+		const rejoined = store.join({
+			roomId: "room_cs",
+			participant: {
+				id: "you",
+				kind: "human",
+				displayName: "You",
+				role: "host",
+				status: "idle",
+			},
+			at: "2026-07-30T11:00:00.000Z",
+		});
+		expect(rejoined.event.callSessionId).toBeTruthy();
+		expect(rejoined.event.callSessionId).not.toBe(sessionId);
+	});
+
 	it("syncLiveFromSnapshot always overwrites live spotlight from stage sharer", () => {
 		const store = new DriveRoomStore();
 		store.create("room_sync");
