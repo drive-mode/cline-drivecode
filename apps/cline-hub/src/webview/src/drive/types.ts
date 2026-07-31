@@ -4,6 +4,7 @@ import {
 	allowWorkspaceMutation,
 	type CleanDrainInvite,
 	type DrivePostureOverride,
+	type SdlcFreezeProposal,
 	resolveDriveLoop,
 } from "@cline/drive";
 import type {
@@ -102,6 +103,12 @@ export type DriveUiState = {
 	 * Seating does not rewrite bank next-task truth.
 	 */
 	attributionAgentId: string | null;
+	/**
+	 * Pending SDLC phase-entry freeze proposal (req-sdlc-bankable).
+	 * Stage freeze card UI is still stubbed — proposals land here for gated
+	 * Plan-posture accept → DriveTasks. Cleared on accept/dismiss.
+	 */
+	pendingSdlcFreeze: SdlcFreezeProposal | null;
 };
 
 /** Stable ids until hub roster provides real participant UUIDs. */
@@ -146,6 +153,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	agencyBanner: null,
 	cleanDrainInvite: null,
 	attributionAgentId: null,
+	pendingSdlcFreeze: null,
 };
 
 /** Map Drive sub-mode onto native Cline plan|act for send config. */

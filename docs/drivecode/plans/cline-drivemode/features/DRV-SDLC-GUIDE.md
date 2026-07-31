@@ -64,6 +64,11 @@ Without a named feature, that behavior stays accidental persona prose. With it, 
 - [ ] Define stage artifact event shapes (problem, constraint, requirement, option, decision, open_question, checklist, coverage_gap).
   - Owner package: `@cline/shared` / `@cline/drive`
   - Verify: schema tests; stage projection renders cards
+- [x] **Bankable freeze accept (req-sdlc-bankable / W3.3):** accept path creates `DriveTask`s + active plan refs so S2 can credit guided sessions.
+  - Owner package: `@cline/drive` `sdlcBankable.ts`; hub `drive_bank_accept_sdlc_freeze`; Chat `SdlcFreezeAcceptChip` + `mutateBankAcceptSdlcFreeze`
+  - Verify: `bun -F @cline/drive test src/sdlcBankable.test.ts`; hub bank handler test
+  - Done when: accept writes ≥1 task + active plan; Agent can `bindNowTask`
+  - **Stub:** Stage freeze checklist cards (W-44 stage UI) are not shipped — set `drive.pendingSdlcFreeze` (or call `mutateBankAcceptSdlcFreeze` directly) to exercise the accept boundary. Escape hatch = `kind: "escape"`.
 - [ ] Wire triggers into mode-intent / guidance-intent table (Tier 0 regex first).
   - Owner package: `@cline/drive`
   - Verify: `bun -F @cline/drive test`

@@ -367,7 +367,8 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						frame.type === "drive_bank_complete_task" ||
 						frame.type === "drive_bank_bind_now" ||
 						frame.type === "drive_bank_activate_plan" ||
-						frame.type === "drive_bank_record_failure"
+						frame.type === "drive_bank_record_failure" ||
+						frame.type === "drive_bank_accept_sdlc_freeze"
 					) {
 						await handleDriveBankWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_session_rollups") {

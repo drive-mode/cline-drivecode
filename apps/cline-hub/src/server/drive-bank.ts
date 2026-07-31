@@ -20,14 +20,17 @@ export type DriveBankWebviewFrame = {
 		| "drive_bank_complete_task"
 		| "drive_bank_bind_now"
 		| "drive_bank_activate_plan"
-		| "drive_bank_record_failure";
+		| "drive_bank_record_failure"
+		| "drive_bank_accept_sdlc_freeze";
 	workspaceRoot: string;
 	requestId?: string;
 	id?: string;
 	title?: string;
 	body?: string;
 	planId?: string;
+	planTitle?: string;
 	taskIds?: string[];
+	tasks?: Array<{ id?: string; title: string; body?: string }>;
 	taskId?: string;
 	note?: string;
 	roomId?: string;
@@ -100,6 +103,12 @@ export async function handleDriveBankWebviewCommand(
 	}
 	if (typeof frame.agentId === "string" && frame.agentId.trim()) {
 		payload.agentId = frame.agentId.trim();
+	}
+	if (typeof frame.planTitle === "string") {
+		payload.planTitle = frame.planTitle;
+	}
+	if (Array.isArray(frame.tasks)) {
+		payload.tasks = frame.tasks;
 	}
 
 	try {

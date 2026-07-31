@@ -467,6 +467,7 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_bank_bind_now":
 			case "drive_bank_activate_plan":
 			case "drive_bank_record_failure":
+			case "drive_bank_accept_sdlc_freeze":
 				return await handleDriveBankCommand(this.ctx, envelope);
 			case "drive_session_rollups":
 				return await handleDriveSessionRollupsCommand(this.ctx, envelope);

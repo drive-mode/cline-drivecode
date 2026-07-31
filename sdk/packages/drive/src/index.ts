@@ -213,6 +213,18 @@ export {
 	type ShippedDigestTaskRef,
 } from "./shippedDigest.js";
 export {
+	SDLC_BANKABLE_FORBIDDEN_KEYS,
+	acceptSdlcFreeze,
+	applySdlcFreezeAccept,
+	buildSdlcFreezeAcceptPlan,
+	sdlcFreezeIsPrivate,
+	type ApplySdlcFreezeAcceptResult,
+	type SdlcFreezeAcceptPlan,
+	type SdlcFreezeAcceptTask,
+	type SdlcFreezeProposal,
+	type SdlcFreezeSlice,
+} from "./sdlcBankable.js";
+export {
 	buildRecruitNeed,
 	rankRecruitCandidates,
 	RECRUIT_FORBIDDEN_KEYS,

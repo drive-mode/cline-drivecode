@@ -94,6 +94,7 @@ function readPersistedDriveUi(): DriveUiState {
 				agencyBanner: null,
 				cleanDrainInvite: null,
 				attributionAgentId: null,
+				pendingSdlcFreeze: null,
 			};
 		}
 	} catch {

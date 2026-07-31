@@ -43,6 +43,7 @@ import {
 import { PlanEditor } from "./components/PlanEditor";
 import {
 	listPlanTasks,
+	mutateBankAcceptSdlcFreeze,
 	mutateBankBindNow,
 	mutateBankCompleteTask,
 	mutateBankCreateTask,
@@ -57,6 +58,7 @@ import {
 	isChatForkSession,
 } from "./drive/ChatForkAuditPanel";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
+import { SdlcFreezeAcceptChip } from "./drive/SdlcFreezeAcceptChip";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
 import {
 	type RouteSuggestion,
@@ -1817,6 +1819,66 @@ export default function Chat({
 									Task bank cursor drives now/next. Edit plan refs below;
 									completed tasks archive under .drive/bank/archive/.
 								</p>
+								{drive.pendingSdlcFreeze ? (
+									<SdlcFreezeAcceptChip
+										disabled={isHydrating}
+										onAccept={() => {
+											const proposal = drive.pendingSdlcFreeze;
+											if (!proposal) {
+												return;
+											}
+											void (async () => {
+												const { snapshot, fromHub } =
+													await mutateBankAcceptSdlcFreeze(
+														bankSessionRef.current,
+														defaults.workspaceRoot,
+														proposal,
+														{
+															roomId: drive.roomId,
+															callSessionId: drive.callSessionId,
+														},
+													);
+												if (
+													defaults.workspaceRoot?.trim() &&
+													!fromHub
+												) {
+													setStatus(
+														"SDLC freeze not saved — workspace bank was not updated.",
+													);
+													return;
+												}
+												setDrive((prev) =>
+													applyBankSnapshot(
+														{
+															...prev,
+															pendingSdlcFreeze: null,
+															agencyBanner:
+																"Accepted phase-entry freeze into the bank",
+														},
+														snapshot,
+													),
+												);
+												const tasks = await listPlanTasks(
+													bankSessionRef.current,
+													snapshot.activePlanId ?? "",
+												);
+												setPlanEditorTasks(
+													tasks.map((t) => ({
+														id: t.id,
+														title: t.title,
+													})),
+												);
+											})();
+										}}
+										onDismiss={() => {
+											setDrive((prev) => ({
+												...prev,
+												pendingSdlcFreeze: null,
+											}));
+										}}
+										proposal={drive.pendingSdlcFreeze}
+									/>
+								) : null}
 								<PlanEditor
 									nowLastFailure={drive.bankSnapshot.nowLastFailure}
 									planId={drive.bankSnapshot.activePlanId}

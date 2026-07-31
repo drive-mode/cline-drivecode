@@ -281,4 +281,34 @@ describe("handleDriveBankCommand", () => {
 		expect(completedEvt?.event.roomId).toBe("room-x");
 		expect(completedEvt?.event.callSessionId).toBe("cs-x");
 	});
+
+	it("accept_sdlc_freeze creates DriveTasks + active plan", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drive-bank-sdlc-"));
+		dirs.push(root);
+
+		const reply = await handleDriveBankCommand(
+			ctx(),
+			command("drive_bank_accept_sdlc_freeze", {
+				workspaceRoot: root,
+				planId: "p-freeze",
+				planTitle: "Phase entry",
+				tasks: [
+					{ id: "t-first", title: "First slice", body: "verify" },
+					{ id: "t-must", title: "Follow-on Must" },
+				],
+				roomId: "room-sdlc",
+				callSessionId: "cs-sdlc",
+			}),
+		);
+		expect(reply.ok).toBe(true);
+		expect(reply.payload?.snapshot).toMatchObject({
+			activePlanId: "p-freeze",
+			openTaskIds: ["t-first", "t-must"],
+			nowTaskId: "t-first",
+		});
+
+		const store = openWorkspaceBankStore(root);
+		const bound = await store.bindNowTask();
+		expect(bound?.task.id).toBe("t-first");
+	});
 });

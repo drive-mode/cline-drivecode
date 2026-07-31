@@ -44,13 +44,13 @@ flowchart TD
     RecruitStall["Recruit-on-stall + agentId"]
     StatusSessions["Status Hub sessions lens"]
     ShippedDigest["Opt-in shipped digest"]
+    SdlcBank["SDLC freeze → bankable tasks"]
   end
   subgraph OpenObs["Open · observability"]
     S3["Stall classify + gated propose"]
   end
   subgraph OpenMoments["Open · product moments"]
     W1["W1.2 return / W1.3 stuck"]
-    W3["W3.3 SDLC bank"]
     W4["W4 auto stall"]
   end
   Done -->|"honesty gate"| OpenObs
@@ -58,13 +58,11 @@ flowchart TD
   Bridge --> Reader
   Reader --> S3
   Felt --> W1
-  W1 --> W3
-  CleanDrain --> W3
-  PlanReentry --> W3
+  CleanDrain --> SdlcBank
+  PlanReentry --> StatusSessions
   RecruitStall --> StatusSessions
   StatusSessions --> ShippedDigest
-  StatusSessions --> W3
-  ShippedDigest --> W3
+  StatusSessions --> SdlcBank
 ```
 
 Caption:
@@ -78,6 +76,7 @@ Caption:
 - Recruit-on-stall (W2.3) Who-should-take-this + `call_seat` + optional `agentId` on bind/complete landed.
 - Status Hub sessions mode (W3.1) landed — `StatusSessionRollupSource` / `statusSessions.ts` + hub `/status` fourth mode.
 - Shipped digest (W3.2) landed — opt-in Markdown/JSON export (`shippedDigest.ts`, Status/Settings button, `cline doctor shipped-digest`).
+- SDLC bankable (W3.3) landed — `sdlcBankable.ts` + `drive_bank_accept_sdlc_freeze` + Plan-posture accept chip; **stage freeze cards still stubbed**.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
 
@@ -98,6 +97,7 @@ Caption:
 | Recruit-on-stall (W2.3): Who-should-take-this + call_seat + agentId | `recruit/scoreNeed.ts`, `RecruitStallPicker`, `call_seat`, bank `agentId` |
 | Status Hub sessions (W3.1): fourth mode + S2/S3/E1 + drill | `@cline/drive` `statusSessions.ts`; hub `StatusSessionsPanel`; `StatusSessionRollupSource`; `?demoSessions=1` |
 | Shipped digest (W3.2): opt-in Markdown/JSON export | `@cline/drive` `shippedDigest.ts`; Status/Settings export; `cline doctor shipped-digest` |
+| SDLC bankable (W3.3): freeze accept → DriveTasks + plan | `@cline/drive` `sdlcBankable.ts`; hub `drive_bank_accept_sdlc_freeze`; `SdlcFreezeAcceptChip` (stage UI stubbed) |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1–P2) | `@cline/drive` `sessionRollup.ts` |
 | `drive_task_failed` emit + P2 stickiness | `bankStore.recordTaskFailure` → `deriveSessionRollup.failureStickyCount` |
@@ -215,7 +215,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 |---|---|---|---|
 | W3.1 | [DRV-STATUS-SESSIONS](../features/DRV-STATUS-SESSIONS.md) | [req-status-accomplishment](../initiatives/session-satisfaction-moments/req-status-accomplishment.md) | **Landed:** Status Hub `sessions` mode; S2/S3/E1 chips; drill to room/bank via `callSessionId`; port-only (`StatusSessionRollupSource`); demo at composition root (`?demoSessions=1`) |
 | W3.2 | [DRV-SHIPPED-DIGEST](../features/DRV-SHIPPED-DIGEST.md) | [req-value-proof-digest](../initiatives/session-satisfaction-moments/req-value-proof-digest.md) | **Landed:** opt-in schema + Markdown/JSON builder; Status sessions + Drive Settings export; `cline doctor shipped-digest`; privacy/redaction tests; default off |
-| W3.3 | Amends [DRV-SDLC-GUIDE](../features/DRV-SDLC-GUIDE.md) | [req-sdlc-bankable](../initiatives/session-satisfaction-moments/req-sdlc-bankable.md) | W-44 freeze → accept path creates `DriveTask`s + plan refs so S2 can credit guided sessions |
+| W3.3 | Amends [DRV-SDLC-GUIDE](../features/DRV-SDLC-GUIDE.md) | [req-sdlc-bankable](../initiatives/session-satisfaction-moments/req-sdlc-bankable.md) | **Landed (partial):** `buildSdlcFreezeAcceptPlan` / `acceptSdlcFreeze` / hub `drive_bank_accept_sdlc_freeze` / Plan accept chip. **Stub:** W-44 stage freeze checklist UI — set `pendingSdlcFreeze` to exercise accept |
 
 ### W4 — Auto + post-session
 
@@ -254,7 +254,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 9. ~~W2.3 Recruit-on-stall (+ agentId)~~ ✅
 10. ~~W3.1 Status sessions lens~~ ✅
 11. ~~W3.2 Shipped digest~~ ✅
-12. W3.3 SDLC bankable
+12. ~~W3.3 SDLC bankable (accept writer; stage UI stub)~~ ✅
 13. Slice 3 + W4 auto stall
 ```
 

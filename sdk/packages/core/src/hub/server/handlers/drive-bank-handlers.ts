@@ -3,7 +3,11 @@
  */
 
 import { unlink } from "node:fs/promises";
-import { taskPath } from "@cline/drive";
+import {
+	applySdlcFreezeAccept,
+	buildSdlcFreezeAcceptPlan,
+	taskPath,
+} from "@cline/drive";
 import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
 import { appendBankLogEvent } from "../../collaboration/bankEventLog";
 import { getDriveRoomStore } from "../../collaboration/room";
@@ -292,6 +296,70 @@ export async function handleDriveBankCommand(
 				return errorReply(
 					envelope,
 					"drive_bank_record_failure_failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+		case "drive_bank_accept_sdlc_freeze": {
+			const planId = readString(envelope.payload, "planId");
+			const planTitle = readString(envelope.payload, "planTitle");
+			const tasksRaw = envelope.payload?.tasks;
+			if (!Array.isArray(tasksRaw) || tasksRaw.length < 1) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					"tasks (non-empty array) is required",
+				);
+			}
+			const slices: Array<{ id?: string; title: string; body?: string }> =
+				[];
+			for (const item of tasksRaw) {
+				if (item === null || typeof item !== "object") {
+					return errorReply(
+						envelope,
+						"invalid_payload",
+						"each task needs title",
+					);
+				}
+				const record = item as Record<string, unknown>;
+				const title =
+					typeof record.title === "string" ? record.title.trim() : "";
+				if (!title) {
+					return errorReply(
+						envelope,
+						"invalid_payload",
+						"each task needs title",
+					);
+				}
+				slices.push({
+					title,
+					...(typeof record.id === "string" && record.id.trim()
+						? { id: record.id.trim() }
+						: {}),
+					...(typeof record.body === "string"
+						? { body: record.body }
+						: {}),
+				});
+			}
+			try {
+				const [firstSlice, ...followOnMusts] = slices;
+				const acceptPlan = buildSdlcFreezeAcceptPlan({
+					kind: "phase_entry",
+					firstSlice: firstSlice!,
+					...(followOnMusts.length > 0 ? { followOnMusts } : {}),
+					...(planId ? { planId } : {}),
+					...(planTitle ? { planTitle } : {}),
+				});
+				const store = openLoggedBankStore(
+					workspaceRoot,
+					envelope.payload,
+				);
+				const result = await applySdlcFreezeAccept(store, acceptPlan);
+				return okReply(envelope, { snapshot: result.snapshot });
+			} catch (error) {
+				return errorReply(
+					envelope,
+					"drive_bank_accept_sdlc_freeze_failed",
 					error instanceof Error ? error.message : String(error),
 				);
 			}

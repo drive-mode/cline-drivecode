@@ -1,5 +1,9 @@
 import {
 	type BankStore,
+	type SdlcFreezeAcceptPlan,
+	type SdlcFreezeProposal,
+	acceptSdlcFreeze,
+	buildSdlcFreezeAcceptPlan,
 	createBankStore,
 	createMemoryBankFs,
 } from "@cline/drive";
@@ -22,7 +26,8 @@ export type HubBankOpType =
 	| "drive_bank_complete_task"
 	| "drive_bank_bind_now"
 	| "drive_bank_activate_plan"
-	| "drive_bank_record_failure";
+	| "drive_bank_record_failure"
+	| "drive_bank_accept_sdlc_freeze";
 
 /** Optional room/call session correlation for bank JSONL. */
 export type BankOpSessionContext = {
@@ -146,7 +151,9 @@ export type HubBankOpPayload = {
 	title?: string;
 	body?: string;
 	planId?: string;
+	planTitle?: string;
 	taskIds?: string[];
+	tasks?: Array<{ id?: string; title: string; body?: string }>;
 	taskId?: string;
 	note?: string;
 	roomId?: string;
@@ -281,6 +288,17 @@ export function requestHubBankOp(
 					workspaceRoot: payload.workspaceRoot,
 					taskId: payload.taskId ?? "",
 					note: payload.note ?? "",
+					...correlation,
+				});
+				break;
+			case "drive_bank_accept_sdlc_freeze":
+				postToHost({
+					type: "drive_bank_accept_sdlc_freeze",
+					requestId,
+					workspaceRoot: payload.workspaceRoot,
+					planId: payload.planId,
+					planTitle: payload.planTitle,
+					tasks: payload.tasks ?? [],
 					...correlation,
 				});
 				break;
@@ -530,6 +548,36 @@ export async function mutateBankRecordFailure(
 			}),
 		async () => {
 			await session.store.recordTaskFailure(input.taskId, input.note);
+		},
+	);
+}
+
+/**
+ * Accept an SDLC phase-entry freeze into the bank (DRV-SDLC-GUIDE / W-44).
+ * Creates DriveTasks + activates a plan so Agent can bind and S2 can credit.
+ * Gated accept — does not silent-write; caller must pass an explicit proposal.
+ */
+export async function mutateBankAcceptSdlcFreeze(
+	session: DriveBankSession,
+	workspaceRoot: string | undefined,
+	proposal: SdlcFreezeProposal,
+	correlation?: BankOpSessionContext,
+): Promise<BankMutationResult> {
+	const acceptPlan: SdlcFreezeAcceptPlan =
+		buildSdlcFreezeAcceptPlan(proposal);
+	return hubMutationOrLocal(
+		session,
+		workspaceRoot,
+		() =>
+			requestHubBankOp("drive_bank_accept_sdlc_freeze", {
+				workspaceRoot: workspaceRoot!.trim(),
+				planId: acceptPlan.planId,
+				planTitle: acceptPlan.planTitle,
+				tasks: acceptPlan.tasks,
+				...bankCorrelationFields(correlation),
+			}),
+		async () => {
+			await acceptSdlcFreeze(session.store, proposal);
 		},
 	);
 }

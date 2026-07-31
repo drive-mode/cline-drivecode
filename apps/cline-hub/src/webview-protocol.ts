@@ -455,6 +455,16 @@ export type WebviewInboundMessage =
 			callSessionId?: string;
 	  }
 	| {
+			type: "drive_bank_accept_sdlc_freeze";
+			workspaceRoot: string;
+			requestId?: string;
+			planId?: string;
+			planTitle?: string;
+			tasks: Array<{ id?: string; title: string; body?: string }>;
+			roomId?: string;
+			callSessionId?: string;
+	  }
+	| {
 			type: "drive_session_rollups";
 			workspaceRoot: string;
 			requestId?: string;
