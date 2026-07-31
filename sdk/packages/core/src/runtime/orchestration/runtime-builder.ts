@@ -1,11 +1,15 @@
 import type {
 	AgentTool,
 	BasicLogger,
+	ITelemetryService,
 	ResourceAdmissionPolicy,
 	RuntimeConfigExtensionKind,
 	TeamTeammateSpec,
 } from "@cline/shared";
-import { hasRuntimeConfigExtension } from "@cline/shared";
+import {
+	hasRuntimeConfigExtension,
+	resolveMcpTimeoutSeconds,
+} from "@cline/shared";
 import { nanoid } from "nanoid";
 import { createUserInstructionConfigService } from "../../extensions/config";
 import {
@@ -133,6 +137,7 @@ function createBuiltinToolsList(
 	toolPolicies: CoreSessionConfig["toolPolicies"],
 	skillsExecutor?: SkillsExecutorWithMetadata,
 	executorOverrides?: Partial<ToolExecutors>,
+	telemetry?: ITelemetryService,
 ): AgentTool[] {
 	const preset = ToolPresets[resolveToolPresetName({ mode })];
 	const toolRoutingConfig = resolveToolRoutingConfig(
@@ -145,6 +150,7 @@ function createBuiltinToolsList(
 	return filterAvailableTools(
 		createBuiltinTools({
 			cwd,
+			telemetry,
 			...preset,
 			enableSkills: !!skillsExecutor,
 			...toolRoutingConfig,
@@ -218,7 +224,13 @@ async function loadConfiguredMcpTools(logger?: BasicLogger): Promise<{
 	const enabled = registrations.filter((r) => r.disabled !== true);
 	const results = await Promise.allSettled(
 		enabled.map((r) =>
-			createMcpTools({ serverName: r.name, provider: manager }),
+			createMcpTools({
+				serverName: r.name,
+				provider: manager,
+				// Keep the tool wrapper timeout in agreement with the MCP
+				// request timeout: both derive from the server's registration.
+				timeoutMs: resolveMcpTimeoutSeconds(r.timeoutSeconds) * 1000,
+			}),
 		),
 	);
 	const tools: AgentTool[] = [];
@@ -455,6 +467,7 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 					effectiveToolPolicies,
 					undefined,
 					toolExecutors,
+					telemetry ?? config.telemetry,
 				),
 			);
 			if (!normalized.disableMcpSettingsTools) {
@@ -527,6 +540,7 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 														)
 													: undefined,
 												toolExecutors,
+												telemetry ?? config.telemetry,
 											),
 											agent,
 										)
@@ -634,6 +648,7 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 									effectiveToolPolicies,
 									undefined,
 									toolExecutors,
+									telemetry ?? config.telemetry,
 								)
 						: undefined,
 					teammateConfigProvider: delegatedAgentConfigProvider,

@@ -10,12 +10,12 @@ import {
 	createTool,
 	getDefaultShell,
 	getShellKind,
+	type ITelemetryService,
 	type ShellKind,
 	validateWithZod,
 	zodToJsonSchema,
 } from "@cline/shared";
 import { captureRunCommandsTimeout } from "../../services/telemetry/core-events";
-import { getToolContextTelemetry } from "../../services/telemetry/tool-context";
 import { CommandExitError } from "./executors/bash";
 import {
 	MAX_COMMAND_OUTPUT_CHARS,
@@ -89,6 +89,7 @@ function getStringMetadata(
 }
 
 function captureRunCommandsTimeoutFromContext(
+	telemetry: ITelemetryService | undefined,
 	context: AgentToolContext,
 	properties: {
 		effectiveTimeoutMs: number;
@@ -97,7 +98,7 @@ function captureRunCommandsTimeoutFromContext(
 		durationMs: number;
 	},
 ): void {
-	captureRunCommandsTimeout(getToolContextTelemetry(context.metadata), {
+	captureRunCommandsTimeout(telemetry, {
 		tool_name: "run_commands",
 		effective_timeout_ms: properties.effectiveTimeoutMs,
 		timeout_source: properties.timeoutSource,
@@ -187,9 +188,11 @@ async function executeShellCommands(
 		context: AgentToolContext;
 		timeoutMs: number;
 		timeoutSource: "default_setting" | "configured_setting";
+		telemetry?: ITelemetryService;
 	},
 ): Promise<ToolOperationResult[]> {
-	const { executor, cwd, context, timeoutMs, timeoutSource } = options;
+	const { executor, cwd, context, timeoutMs, timeoutSource, telemetry } =
+		options;
 
 	return Promise.all(
 		commands.map(async (command): Promise<ToolOperationResult> => {
@@ -208,7 +211,7 @@ async function executeShellCommands(
 				};
 			} catch (error) {
 				if (error instanceof TimeoutError) {
-					captureRunCommandsTimeoutFromContext(context, {
+					captureRunCommandsTimeoutFromContext(telemetry, context, {
 						effectiveTimeoutMs: error.timeoutMs,
 						timeoutSource,
 						commandCount: commands.length,
@@ -456,7 +459,7 @@ export function buildRunCommandsDescription(
  */
 export function createShellTool(
 	executor: ShellExecutor,
-	config: Pick<DefaultToolsConfig, "cwd" | "bashTimeoutMs"> & {
+	config: Pick<DefaultToolsConfig, "cwd" | "bashTimeoutMs" | "telemetry"> & {
 		shell?: string | (() => string);
 	} = {},
 ): AgentTool<unknown, ToolOperationResult[]> {
@@ -493,6 +496,7 @@ export function createShellTool(
 				context,
 				timeoutMs,
 				timeoutSource,
+				telemetry: config.telemetry,
 			});
 		},
 	});

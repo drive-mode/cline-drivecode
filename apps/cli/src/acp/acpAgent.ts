@@ -30,11 +30,15 @@ import {
 	resolveProductSessionFeatures,
 	SessionSource,
 } from "@cline/core";
-import type { Message } from "@cline/shared";
+import { isLikelyAuthError, type Message } from "@cline/shared";
 import { getPersistedProviderApiKey } from "../commands/auth";
 import { resolveSystemPrompt } from "../runtime/prompt";
 import { subscribeToAgentEvents } from "../runtime/session-events";
 import { createCliCore } from "../session/session";
+import {
+	isClineOrgIndividualInferenceSubscriptionErrorMessage,
+	isClinePassSubscriptionError,
+} from "../utils/cline-pass-errors";
 import { getCliBuildInfo } from "../utils/common";
 import { randomSessionId, resolveWorkspaceRoot } from "../utils/helpers";
 import type { Config } from "../utils/types";
@@ -47,6 +51,7 @@ import {
 } from "./auth";
 import { requestAcpToolApproval } from "./permissions";
 import {
+	describeAgentError,
 	forwardAgentEvent,
 	sendConfigOptionUpdate,
 	sendCurrentModeUpdate,
@@ -71,6 +76,15 @@ interface SessionState {
 	abortController?: AbortController;
 	/** Unsubscribe function for the agent event listener. */
 	unsubscribe?: () => void;
+	/**
+	 * Most recent unrecoverable agent error for the in-flight turn.
+	 *
+	 * The runtime reports fatal failures (bad credentials, subscription
+	 * restrictions, provider outages) as an `error` event and still resolves
+	 * `send()` normally, so the message has to be stashed here for `prompt()` to
+	 * turn into an error response.
+	 */
+	fatalError?: Error;
 	/** Messages to inject into the next session manager for conversation continuity. */
 	pendingInitialMessages?: Message[];
 }
@@ -195,6 +209,7 @@ export class AcpAgent implements Agent {
 
 		const abortController = new AbortController();
 		session.abortController = abortController;
+		session.fatalError = undefined;
 
 		// If cancel() was already called before prompt() started, bail early.
 		if (abortController.signal.aborted) {
@@ -243,6 +258,17 @@ export class AcpAgent implements Agent {
 		sendSessionInfoUpdate(this.conn, params.sessionId, {
 			updatedAt: new Date().toISOString(),
 		});
+
+		// A cancelled turn always reports `cancelled`: the ACP spec
+		// requires agents to convert abort failures into the cancelled stop reason
+		// so clients don't show cancellations as errors.
+		if (stopReason !== "cancelled") {
+			const fatalError = session.fatalError;
+			session.fatalError = undefined;
+			if (fatalError) {
+				throw toAcpPromptError(fatalError);
+			}
+		}
 
 		return { stopReason };
 	}
@@ -493,6 +519,13 @@ export class AcpAgent implements Agent {
 		session.unsubscribe = subscribeToAgentEvents(
 			sessionManager,
 			(event: AgentEvent) => {
+				// Remember unrecoverable failures so prompt() can fail the turn.
+				if (event.type === "error" && !event.recoverable) {
+					session.fatalError =
+						event.error instanceof Error
+							? event.error
+							: new Error(describeAgentError(event.error));
+				}
 				forwardAgentEvent(this.conn, acpSessionId, event);
 			},
 		);
@@ -584,6 +617,29 @@ export function buildAcpSessionPluginInjection(
 		workspaceRoot,
 		ide: "Terminal Shell",
 	});
+}
+
+/**
+ * Convert a fatal agent error into a JSON-RPC error for the prompt response.
+ *
+ * Credential/subscription problems map to `auth_required` (-32000) so clients
+ * can offer a re-auth affordance rather than just printing text; everything
+ * else is an internal error.
+ *
+ * Classification goes through the shared CLI helpers, which check the error's
+ * type *and* its name/message. That matters because the runtime re-wraps errors
+ * as it forwards them across the event boundary, so `instanceof` alone fails on
+ * the object ACP actually receives.
+ */
+function toAcpPromptError(error: Error): RequestError {
+	const message = describeAgentError(error);
+	const isAuthProblem =
+		isLikelyAuthError(error) ||
+		isClinePassSubscriptionError(error) ||
+		isClineOrgIndividualInferenceSubscriptionErrorMessage(error);
+	return isAuthProblem
+		? RequestError.authRequired({ message }, message)
+		: RequestError.internalError({ message }, message);
 }
 
 async function buildProviderConfigOption(
