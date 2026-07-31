@@ -2,6 +2,7 @@ import process from "node:process";
 import {
 	type ClineCoreStartInput,
 	type SessionRecord,
+	buildSessionPluginInjection,
 	resolveProductSessionFeatures,
 	SessionSource,
 } from "@cline/core";
@@ -76,7 +77,7 @@ export function resolveLaunchContext(
 	};
 }
 
-function buildSessionStartInput(
+export function buildSessionStartInput(
 	context: SessionContext,
 	options?: {
 		mode?: "act" | "plan";
@@ -104,6 +105,11 @@ function buildSessionStartInput(
 			? { enableAgentTeams: options.enableTeams }
 			: {}),
 	});
+	const sessionPlugins = buildSessionPluginInjection({
+		cwd: context.cwd,
+		workspaceRoot: context.workspaceRoot,
+		ide: "Cline Hub",
+	});
 	return {
 		source: options?.source ?? SessionSource.WEB,
 		interactive: true,
@@ -125,6 +131,10 @@ function buildSessionStartInput(
 			missionLogIntervalSteps: 3,
 			missionLogIntervalMs: 120000,
 			checkpoint: { enabled: true },
+			pluginPaths: sessionPlugins.pluginPaths,
+			extensionContext: {
+				workspace: sessionPlugins.workspace,
+			},
 		},
 		sessionMetadata: {
 			source: options?.source ?? SessionSource.WEB,

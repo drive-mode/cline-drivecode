@@ -1,8 +1,10 @@
 import { fstatSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename } from "node:path";
 import type { ToolPolicy } from "@cline/core";
-import { resolveProductSessionFeatures } from "@cline/core";
+import {
+	buildSessionPluginInjection,
+	resolveProductSessionFeatures,
+} from "@cline/core";
 
 import { registerDisposable } from "@cline/shared";
 import type { Command } from "commander";
@@ -1117,6 +1119,11 @@ export async function runCli(): Promise<void> {
 			yolo: isYoloMode,
 			host: "cli",
 		});
+		const sessionPlugins = buildSessionPluginInjection({
+			cwd,
+			workspaceRoot,
+			ide: "Terminal Shell",
+		});
 		const config: Config = {
 			providerId: provider,
 			modelId:
@@ -1155,6 +1162,7 @@ export async function runCli(): Promise<void> {
 			enableTools: true,
 			cwd,
 			workspaceRoot,
+			pluginPaths: sessionPlugins.pluginPaths,
 			extensionContext: {
 				client: {
 					name: "cline-cli",
@@ -1163,13 +1171,7 @@ export async function runCli(): Promise<void> {
 					platformVersion: cliBuildInfo.version,
 					isMultiRoot: false,
 				},
-				workspace: {
-					rootPath: workspaceRoot,
-					cwd,
-					workspaceName: basename(cwd),
-					ide: "Terminal Shell",
-					platform: process.platform,
-				},
+				workspace: sessionPlugins.workspace,
 				logger: loggerAdapter.core,
 			},
 			teamName: sessionFeatures.enableAgentTeams

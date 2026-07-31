@@ -24,6 +24,7 @@ import { PROTOCOL_VERSION, RequestError } from "@agentclientprotocol/sdk";
 import {
 	type AgentEvent,
 	type ClineCore,
+	buildSessionPluginInjection,
 	Llms,
 	ProviderSettingsManager,
 	resolveProductSessionFeatures,
@@ -523,6 +524,11 @@ export class AcpAgent implements Agent {
 		});
 		const cliBuildInfo = getCliBuildInfo();
 		const sessionFeatures = resolveProductSessionFeatures({ host: "acp" });
+		const sessionPlugins = buildSessionPluginInjection({
+			cwd,
+			workspaceRoot,
+			ide: "Terminal Shell",
+		});
 
 		return {
 			providerId,
@@ -542,6 +548,7 @@ export class AcpAgent implements Agent {
 			enableTools: true,
 			cwd,
 			workspaceRoot,
+			pluginPaths: sessionPlugins.pluginPaths,
 			extensionContext: {
 				client: {
 					name: "cline-acp",
@@ -550,16 +557,24 @@ export class AcpAgent implements Agent {
 					platformVersion: cliBuildInfo.version,
 					isMultiRoot: false,
 				},
-				workspace: {
-					rootPath: workspaceRoot,
-					cwd,
-					workspaceName: cwd,
-					ide: "Terminal Shell",
-					platform: process.platform,
-				},
+				workspace: sessionPlugins.workspace,
 			},
 		};
 	}
+}
+
+/**
+ * ACP session plugin + workspace injection (D3 / SDK-4.1). Exported for tests.
+ */
+export function buildAcpSessionPluginInjection(
+	cwd: string,
+	workspaceRoot: string = resolveWorkspaceRoot(cwd),
+) {
+	return buildSessionPluginInjection({
+		cwd,
+		workspaceRoot,
+		ide: "Terminal Shell",
+	});
 }
 
 async function buildProviderConfigOption(

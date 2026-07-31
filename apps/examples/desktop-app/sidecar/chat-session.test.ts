@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { materializeUserFiles } from "./attachments";
 import {
+	buildCoreSessionConfig,
 	buildSessionConnectionUpdate,
 	consumeWorkspaceMetadata,
 	handleChatSessionCommand,
@@ -14,6 +15,63 @@ import {
 	WORKSPACE_METADATA_PREWARM_TTL_MS,
 } from "./chat-session";
 import type { SidecarContext } from "./types";
+
+describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
+	it("sets pluginPaths: [] and workspace when cwd has no plugins", () => {
+		const root = mkdtempSync(join(tmpdir(), "desktop-plugin-empty-"));
+		mkdirSync(join(root, ".cline", "plugins"), { recursive: true });
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+		});
+
+		expect(config.pluginPaths).toEqual([]);
+		expect(config.extensionContext).toMatchObject({
+			workspace: {
+				rootPath: root,
+				cwd: root,
+				ide: "Cline Desktop",
+			},
+		});
+	});
+
+	it("populates pluginPaths when a fixture plugin exists under .cline/plugins/", () => {
+		const root = mkdtempSync(join(tmpdir(), "desktop-plugin-"));
+		const pluginDir = join(root, ".cline", "plugins", "demo");
+		mkdirSync(pluginDir, { recursive: true });
+		writeFileSync(
+			join(pluginDir, "index.ts"),
+			`export default { name: "demo", setup() {} }\n`,
+			"utf8",
+		);
+		writeFileSync(
+			join(pluginDir, "package.json"),
+			JSON.stringify({
+				name: "demo-plugin",
+				type: "module",
+				cline: {
+					plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }],
+				},
+			}),
+			"utf8",
+		);
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+		});
+
+		expect(
+			Array.isArray(config.pluginPaths) &&
+				config.pluginPaths.some((p: string) => p.endsWith("index.ts")),
+		).toBe(true);
+	});
+});
 
 describe("buildSessionConnectionUpdate", () => {
 	it("does not clear reasoning settings when config omits reasoning fields", () => {

@@ -161,7 +161,39 @@ This is intentional adapter debt, not a one-line flip. Do not enable VS Code set
 
 ## Phase 4 · Plugins on session
 
-`SDK-4.1` CLI · `SDK-4.2` Hub+Desktop · `SDK-4.3` VS Code.
+Installed/enabled plugins load into `CoreSessionConfig` via `pluginPaths` / `extensions` + `extensionContext.workspace` on session start (**D3**).
+
+Core helpers (Phase 1): `resolveSessionPluginPaths`, `buildSessionExtensionWorkspace`, `buildSessionPluginInjection` (sync compose), and async `resolveSessionPluginLoad`. Hosts prefer the sync path unless they already have loaded extensions. Core `local-runtime-bootstrap` still discovers plugins when the `"plugins"` config extension is enabled — hosts still pass `pluginPaths` + workspace so hub/remote/plugin `setup()` stay consistent.
+
+### Agent task `SDK-4.1` — CLI (+ ACP)
+
+| | |
+|---|---|
+| **Depends on** | SDK-1.2 |
+| **Owner surface** | `apps/cli` (`main.ts` config assembly, `acp/acpAgent.ts` `buildConfig`) |
+| **Goal** | Inject `pluginPaths: resolveSessionPluginPaths(...)` (via `buildSessionPluginInjection`) and `extensionContext.workspace` from `buildSessionExtensionWorkspace`. |
+| **Verify** | Focused CLI unit tests: empty cwd → `pluginPaths: []` + workspace set; fixture under `.cline/plugins/` → non-empty `pluginPaths`. |
+| **Status** | **Done** — CLI main + ACP use `buildSessionPluginInjection`; tests in `main.test.ts` / `acpAgent.plugin.test.ts` |
+
+### Agent task `SDK-4.2` — Hub + Desktop
+
+| | |
+|---|---|
+| **Depends on** | SDK-1.2 |
+| **Owner surface** | `apps/cline-hub` `buildSessionStartInput`; Desktop `buildCoreSessionConfig` |
+| **Goal** | Same D3 injection on Hub Chat session start and Desktop sidecar session config. |
+| **Verify** | Hub `sessions.plugin.test.ts`; Desktop `chat-session.test.ts` (export builders). |
+| **Status** | **Done** — both hosts inject `pluginPaths` + `extensionContext.workspace` |
+
+### Agent task `SDK-4.3` — VS Code
+
+| | |
+|---|---|
+| **Depends on** | SDK-1.2 |
+| **Owner surface** | `apps/vscode` `cline-session-factory.ts` `buildSessionConfig` |
+| **Goal** | Add `pluginPaths` (workspace fragment already present). |
+| **Verify** | `cline-session-factory.test.ts` empty + fixture plugin cases. |
+| **Status** | **Done** — `resolveSessionPluginPaths` on `buildSessionConfig` |
 
 ## Phase 5 · Budgets
 
@@ -203,7 +235,7 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-2.1–2.4 Multi-agent hosts | **Done** |
 | SDK-3.1 Align scheduled-agents guide (D2) | **Done** |
 | SDK-3.2 Optional automation bridge | **Deferred** (no merge of Hub schedules ↔ automation) |
-| SDK-4.1–4.3 Plugins on session | Open |
+| SDK-4.1–4.3 Plugins on session | **Done** |
 | SDK-5.1–5.2 Budgets | Open |
 | SDK-6.1–6.3 Hub depth | Open |
 | SDK-7.1–7.2 VS Code hooks/MCP | Open |

@@ -805,12 +805,14 @@ export {
 	resolveProductSessionFeatures,
 } from "./session/product-session-defaults";
 export type {
+	BuildSessionPluginInjectionInput,
 	ResolveSessionPluginLoadInput,
 	ResolveSessionPluginPathsInput,
 	SessionExtensionWorkspaceInput,
 } from "./session/session-plugin-load";
 export {
 	buildSessionExtensionWorkspace,
+	buildSessionPluginInjection,
 	resolveSessionPluginLoad,
 	resolveSessionPluginPaths,
 } from "./session/session-plugin-load";

@@ -67,6 +67,26 @@ export function buildSessionExtensionWorkspace(
 	};
 }
 
+export type BuildSessionPluginInjectionInput = SessionExtensionWorkspaceInput &
+	Pick<ResolveSessionPluginPathsInput, "pluginPaths" | "workspacePath">;
+
+/**
+ * Sync `pluginPaths` + `extensionContext.workspace` for product hosts (D3).
+ * Prefer this over `resolveSessionPluginLoad` unless the host already has
+ * loaded extensions to pass through.
+ */
+export function buildSessionPluginInjection(
+	input: BuildSessionPluginInjectionInput,
+): {
+	pluginPaths: string[];
+	workspace: NonNullable<ExtensionContext["workspace"]>;
+} {
+	return {
+		pluginPaths: resolveSessionPluginPaths(input),
+		workspace: buildSessionExtensionWorkspace(input),
+	};
+}
+
 export interface ResolveSessionPluginLoadInput
 	extends ResolveAndLoadAgentPluginsOptions {
 	workspaceRoot?: string;

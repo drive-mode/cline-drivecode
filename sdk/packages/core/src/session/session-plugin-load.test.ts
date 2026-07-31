@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	buildSessionExtensionWorkspace,
+	buildSessionPluginInjection,
 	resolveSessionPluginLoad,
 	resolveSessionPluginPaths,
 } from "./session-plugin-load";
@@ -100,5 +101,62 @@ describe("resolveSessionPluginLoad", () => {
 		expect(loaded.pluginPaths).toEqual([]);
 		expect(loaded.extensions).toEqual([]);
 		expect(loaded.failures).toEqual([]);
+	});
+});
+
+describe("buildSessionPluginInjection", () => {
+	it("returns empty pluginPaths and a workspace fragment for an empty cwd", async () => {
+		const root = await makeTempDir("cline-plugin-inject-empty-");
+		await mkdir(join(root, ".cline", "plugins"), { recursive: true });
+		const injected = buildSessionPluginInjection({
+			cwd: root,
+			workspaceRoot: root,
+			ide: "Terminal Shell",
+		});
+		expect(injected.pluginPaths).toEqual([]);
+		expect(injected.workspace).toEqual({
+			rootPath: root,
+			cwd: root,
+			workspaceName: expect.any(String),
+			ide: "Terminal Shell",
+			platform: process.platform,
+		});
+	});
+
+	it("discovers fixture plugins and sets workspace", async () => {
+		const root = await makeTempDir("cline-plugin-inject-");
+		const pluginDir = join(root, ".cline", "plugins", "demo");
+		await mkdir(pluginDir, { recursive: true });
+		await writeFile(
+			join(pluginDir, "index.ts"),
+			`export default { name: "demo", setup() {} }\n`,
+			"utf8",
+		);
+		await writeFile(
+			join(pluginDir, "package.json"),
+			JSON.stringify({
+				name: "demo-plugin",
+				type: "module",
+				cline: {
+					plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }],
+				},
+			}),
+			"utf8",
+		);
+		const injected = buildSessionPluginInjection({
+			cwd: root,
+			workspaceRoot: root,
+			ide: "VS Code",
+			workspaceName: "fixture",
+		});
+		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(
+			true,
+		);
+		expect(injected.workspace).toMatchObject({
+			rootPath: root,
+			cwd: root,
+			workspaceName: "fixture",
+			ide: "VS Code",
+		});
 	});
 });

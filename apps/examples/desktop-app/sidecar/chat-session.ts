@@ -3,6 +3,7 @@ import { basename, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import {
 	buildConnectionUpdate,
+	buildSessionPluginInjection,
 	buildWorkspaceMetadata,
 	type ClineCore,
 	type ClineCoreStartConfig,
@@ -205,7 +206,7 @@ function readPositiveInteger(value: unknown): number | undefined {
 	return undefined;
 }
 
-function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
+export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 	const rawWorkspaceRoot = config.workspaceRoot ?? config.workspace_root;
 	const workspaceRoot =
 		typeof rawWorkspaceRoot === "string" ? rawWorkspaceRoot.trim() : "";
@@ -234,6 +235,12 @@ function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 		config.enableAgentTeams ??
 		config.enable_teams ??
 		sessionFeatures.enableAgentTeams;
+	const pluginCwd = cwd || workspaceRoot || process.cwd();
+	const sessionPlugins = buildSessionPluginInjection({
+		cwd: pluginCwd,
+		workspaceRoot: workspaceRoot || pluginCwd,
+		ide: "Cline Desktop",
+	});
 	return {
 		sessionId: config.sessionId ?? config.session_id,
 		providerId: config.provider ?? config.providerId ?? "",
@@ -263,6 +270,10 @@ function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 		checkpoint: { enabled: true },
 		sessions: config.sessions,
 		initialMessages: config.initialMessages,
+		pluginPaths: sessionPlugins.pluginPaths,
+		extensionContext: {
+			workspace: sessionPlugins.workspace,
+		},
 	};
 }
 

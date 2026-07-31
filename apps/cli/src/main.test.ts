@@ -577,6 +577,29 @@ describe("runCli lightweight command dispatch", () => {
 		);
 	});
 
+	it("injects pluginPaths and extensionContext.workspace on session config (SDK-4.1)", async () => {
+		forcePromptModeInput();
+		process.argv = ["bun", "src/index.ts", "hello plugins"];
+
+		const { runCli } = await import("./main");
+
+		await expect(runCli()).resolves.toBeUndefined();
+		expect(runtimeMocks.runAgent).toHaveBeenCalledWith(
+			"hello plugins",
+			expect.objectContaining({
+				pluginPaths: expect.any(Array),
+				extensionContext: expect.objectContaining({
+					workspace: expect.objectContaining({
+						cwd: expect.any(String),
+						rootPath: expect.any(String),
+						ide: "Terminal Shell",
+					}),
+				}),
+			}),
+			expect.anything(),
+		);
+	});
+
 	it("rejects unknown root flags before loading runtime modules", async () => {
 		const consoleError = vi
 			.spyOn(console, "error")

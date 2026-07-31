@@ -16,6 +16,7 @@ import {
 	readCompactionStrategyGlobally,
 	resolveProductSessionFeatures,
 	resolveProviderApiKeyFromSettings,
+	resolveSessionPluginPaths,
 	type StartSessionResult,
 } from "@cline/core"
 import type { ProviderApiLine, ModelInfo as SdkModelInfo } from "@cline/llms"
@@ -945,6 +946,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	}
 
 	const sessionFeatures = resolveProductSessionFeatures({ host: "vscode" })
+	const pluginPaths = resolveSessionPluginPaths({ cwd, workspaceRoot })
 
 	const config: CoreSessionConfig = {
 		providerId: sdkProviderId,
@@ -958,6 +960,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		...(knownModels && Object.keys(knownModels).length > 0 ? { knownModels } : {}),
 		cwd,
 		workspaceRoot,
+		pluginPaths,
 		systemPrompt,
 		enableTools: true,
 		checkpoint: {
