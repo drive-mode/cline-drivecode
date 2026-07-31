@@ -483,6 +483,7 @@ export type HubCommandName =
 	| "drive_bank_bind_now"
 	| "drive_bank_activate_plan"
 	| "drive_bank_record_failure"
+	| "drive_session_rollups"
 	| "drive_agent_home_get"
 	| "call_join"
 	| "call_leave"

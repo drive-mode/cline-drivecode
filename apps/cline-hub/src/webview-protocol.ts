@@ -441,6 +441,13 @@ export type WebviewInboundMessage =
 			callSessionId?: string;
 	  }
 	| {
+			type: "drive_session_rollups";
+			workspaceRoot: string;
+			requestId?: string;
+			limit?: number;
+			callSessionId?: string;
+	  }
+	| {
 			type: "drive_agent_home_get";
 			workspaceRoot: string;
 			slug: string;
@@ -662,6 +669,18 @@ export type WebviewOutboundMessage =
 	  }
 	| {
 			type: "drive_bank_error";
+			text: string;
+			code?: string;
+			requestId?: string;
+	  }
+	| {
+			type: "drive_session_rollups";
+			rollups: unknown[];
+			dump: string;
+			requestId?: string;
+	  }
+	| {
+			type: "drive_session_rollups_error";
 			text: string;
 			code?: string;
 			requestId?: string;

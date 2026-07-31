@@ -37,9 +37,9 @@ flowchart TD
     Rollup["deriveSessionRollup pure"]
     Bridge["Hub webview/CLI bank bridge"]
     Felt["Felt agency chrome + steer"]
+    Reader["Session rollup reader + debug dump"]
   end
   subgraph OpenObs["Open · observability"]
-    UI2["Local rollup debug / Status lens"]
     S3["Stall classify + gated propose"]
     P2ev["Failure event / P2 stickiness"]
   end
@@ -51,8 +51,8 @@ flowchart TD
   end
   Done -->|"honesty gate"| OpenObs
   Done -->|"honesty gate"| OpenMoments
-  Bridge --> UI2
-  UI2 --> S3
+  Bridge --> Reader
+  Reader --> S3
   Felt --> W1
   W1 --> W2
   W2 --> W3
@@ -60,9 +60,10 @@ flowchart TD
 
 Caption:
 
-- Kernel correlation + pure rollup exist; **product path** now emits complete/bind/failure via hub webview bank bridge.
+- Kernel correlation + pure rollup + local reader/debug dump exist; **product path** emits complete/bind/failure via hub webview bank bridge.
 - Hub commands + webview protocol expose complete/bind/activate/failure with `roomId` / `callSessionId`.
 - Felt agency (W1.1) chrome + mid-turn steer path landed; return loop (W1.2) + stuck recovery fork (W1.3 manual) landed.
+- Status Hub fourth mode (W3.1) still open — consume `SessionRollupSource` / `readSessionRollups`.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
 
@@ -80,6 +81,7 @@ Caption:
 | Stuck recovery (W1.3): Spotlight fork after `nowLastFailure`; gated narrow / fix-up / recruit stub / pause(Ask) | `stuckRecovery.ts`, `StuckRecoveryFork.tsx`, Chat Spotlight |
 | Join/leave reply includes `callSessionId` / `durationMs` | `drive-room-handlers` |
 | Pure `deriveSessionRollup` (S1–S3, E1–E3, P1; P2 stubbed at 0) | `@cline/drive` `sessionRollup.ts` |
+| Session rollup reader + local debug dump | `@cline/core` `sessionRollupReader.ts`; hub `drive_session_rollups`; Drive Settings dump; `cline doctor session-rollups` |
 | Planning docs, DRVs, visual plan, canvas | `docs/drivecode/...` |
 
 **Verified:** `@cline/drive` / `@cline/shared` tests green; core unit green aside from known cloud git `insteadOf` artifact.
@@ -104,19 +106,20 @@ Caption:
 **Docs:** amend [DRV-TASK-BANK](../features/DRV-TASK-BANK.md), [slice-1](../initiatives/task-satisfaction-observability/slice-1-instrumentation.md).
 
 **Shipped:** webview frames + server bridge; `DriveUiState.callSessionId` from join/leave `room_snapshot`; PlanEditor ✓ → `mutateBankCompleteTask`; Agent posture bind-once; failed `tool_event` → `mutateBankRecordFailure`; activate helper exported.
-### 2.2 Slice 2 UI — local rollup surface
+### ~~2.2 Slice 2 UI — local rollup surface~~ ✅ done
 
 **Why.** `deriveSessionRollup` is pure-only; nothing reads room+bank logs into a product or debug view.
 
 | Work | Owner | AC |
 |---|---|---|
-| Reader: load room JSONL + bank JSONL for a `callSessionId` (or recent sessions) | `@cline/core` or `@cline/drive` | Pure/fs helper with tests |
-| Debug panel or CLI dump of last N `SessionRollup`s | hub and/or CLI | Localhost only; no PostHog |
-| Wire rollup chips into future Status lens (see 3.6) without duplicating store | composition root | Port-only views |
+| ~~Reader: load room JSONL + bank JSONL for a `callSessionId` (or recent sessions)~~ | `@cline/core` | `readSessionRollups` / `createFsSessionRollupSource` + tests |
+| ~~Debug panel or CLI dump of last N `SessionRollup`s~~ | hub + CLI | Drive Settings dump + `cline doctor session-rollups`; localhost only |
+| ~~Wire rollup chips into future Status lens (see 3.6) without duplicating store~~ | composition root | Shared `SessionRollupSource` port; Status mode still open (W3.1) |
 
 **Deps:** 2.1 for honest live data.  
 **Docs:** [slice-2](../initiatives/task-satisfaction-observability/slice-2-local-session-rollup.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md).
 
+**Shipped:** FS reader over room + bank JSONL → `deriveSessionRollup`; hub `drive_session_rollups`; Drive Settings “Dump last rollups”; CLI `doctor session-rollups`.
 ### 2.3 P2 failure stickiness (event or correlated)
 
 **Why.** Rollup `failureStickyCount` is hard-coded `0` — no failure bank event exists; only `lastFailure` on disk.
@@ -223,7 +226,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 2. ~~W1.1 Felt agency~~ ✅ (chrome + steer path; redirect Now rewrite + plan-ref `source` still open — see §3 W1.1)
 3. ~~W1.2 Return loop (call_end + handoff)~~ ✅ (resume CTA / Plan-reentry Drive tab still open — see §3 W1.2)
 4. ~~W1.3 Stuck recovery (manual)~~ ✅ (auto classifier / full recruit still open — see §3 W1.3)
-5. Slice 2 UI reader (2.2)
+5. ~~Slice 2 UI reader (2.2)~~ ✅
 6. Failure event for P2 (2.3)
 7. W2.1 Clean-drain
 8. W2.2 Plan re-entry
@@ -241,7 +244,7 @@ No calendar estimates — order is dependency-only.
 | When | Doc updates |
 |---|---|
 | After 2.1 | Mark slice-1 “product path wired”; update DRV-TASK-BANK agent tasks |
-| After 2.2 | Mark slice-2 UI done; link Status |
+| After 2.2 | ~~Mark slice-2 UI done; link Status~~ ✅ |
 | Before W1 freeze | Resolve §3 W1 forks in BRIEF or DEC |
 | On ARD-0015 accept | Flip status board Proposed → Accepted |
 | After each DRV lands | Check off ACs on feature file; update this remaining list |

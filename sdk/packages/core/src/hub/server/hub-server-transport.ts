@@ -51,6 +51,7 @@ import {
 	type PendingCapabilityRequest,
 } from "./handlers/context";
 import { handleDriveBankCommand } from "./handlers/drive-bank-handlers";
+import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollups-handlers";
 import { handleDriveConfigCommand } from "./handlers/drive-config-handlers";
 import { handleDriveCommand } from "./handlers/drive-handlers";
 import { handleDriveForkCommand } from "./handlers/drive-fork-handlers";
@@ -467,6 +468,8 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_bank_activate_plan":
 			case "drive_bank_record_failure":
 				return await handleDriveBankCommand(this.ctx, envelope);
+			case "drive_session_rollups":
+				return await handleDriveSessionRollupsCommand(this.ctx, envelope);
 			case "drive_agent_home_get":
 				return await handleDriveHomeCommand(this.ctx, envelope);
 			case "call_join":

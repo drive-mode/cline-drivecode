@@ -610,5 +610,38 @@ export function createDoctorCommand(
 			}
 		});
 
+	doctor
+		.command("session-rollups")
+		.description(
+			"Dump local Drive SessionRollups from room + bank JSONL (no network)",
+		)
+		.option("--cwd <path>", "Workspace root", process.cwd())
+		.option("--limit <n>", "Max sessions (newest first)", "10")
+		.option("--call-session <id>", "Filter to one callSessionId")
+		.option("--json", "Output rollups as JSON")
+		.action(async function (this: Command) {
+			const opts = this.opts<{
+				cwd: string;
+				limit: string;
+				callSession?: string;
+				json?: boolean;
+			}>();
+			const {
+				formatSessionRollupsDump,
+				readSessionRollups,
+			} = await import("@cline/core/hub");
+			const limit = Math.max(1, Number.parseInt(opts.limit, 10) || 10);
+			const rollups = readSessionRollups(opts.cwd, {
+				limit,
+				callSessionId: opts.callSession,
+			});
+			if (opts.json) {
+				io.writeln(JSON.stringify({ rollups }, null, 2));
+			} else {
+				io.writeln(formatSessionRollupsDump(rollups));
+			}
+			setExitCode(0);
+		});
+
 	return doctor;
 }

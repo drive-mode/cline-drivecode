@@ -24,6 +24,7 @@ import {
 import { handleDesktopCommand } from "./server/desktop-commands";
 import { handleDriveAgentHomeWebviewCommand } from "./server/drive-agent-home";
 import { handleDriveBankWebviewCommand } from "./server/drive-bank";
+import { handleDriveSessionRollupsWebviewCommand } from "./server/drive-session-rollups";
 import { handleCallCommand } from "./server/drive-calls";
 import { handleDriveWebviewCommand } from "./server/drive-commands";
 import { rejectVoiceSendIfMuted } from "./server/drive-mute-gate";
@@ -368,6 +369,12 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						frame.type === "drive_bank_record_failure"
 					) {
 						await handleDriveBankWebviewCommand(ctx, peer, frame);
+					} else if (frame.type === "drive_session_rollups") {
+						await handleDriveSessionRollupsWebviewCommand(
+							ctx,
+							peer,
+							frame,
+						);
 					} else if (frame.type === "drive_agent_home_get") {
 						await handleDriveAgentHomeWebviewCommand(ctx, peer, frame);
 					} else if (

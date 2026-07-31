@@ -16,6 +16,7 @@ import {
 	setShowPlannerMode,
 	tickShowDirector,
 } from "./sampleShowPresent";
+import { requestSessionRollupsDump } from "./sessionRollupsDump";
 import {
 	applyHardwarePrefsPatch,
 	applyVoiceFacetPatch,
@@ -125,6 +126,16 @@ export function DriveRoomChrome({
 					}}
 					onSetShowPlannerMode={(mode) => {
 						setShowPlannerMode(mode, drive.roomId);
+					}}
+					onDumpSessionRollups={async () => {
+						const root = session.workspaceRoot?.trim();
+						if (!root) {
+							return "workspaceRoot is required (connect Drive with a workspace).";
+						}
+						const result = await requestSessionRollupsDump(root, {
+							limit: 10,
+						});
+						return result.dump;
 					}}
 					presentSampleDisabled={disabled || !drive.active}
 					providerId={providerId}

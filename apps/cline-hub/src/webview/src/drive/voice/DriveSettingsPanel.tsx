@@ -1,4 +1,5 @@
 import type { DriveFacetValues, DeploymentProfile } from "@cline/shared";
+import { useState } from "react";
 import {
 	MicSelector,
 	MicSelectorContent,
@@ -34,6 +35,7 @@ export function DriveSettingsPanel({
 	onAttachSampleScript,
 	onAdvanceSampleScript,
 	onSetShowPlannerMode,
+	onDumpSessionRollups,
 	presentSampleDisabled,
 }: {
 	providerId: string;
@@ -53,6 +55,8 @@ export function DriveSettingsPanel({
 	onAttachSampleScript?: () => void;
 	onAdvanceSampleScript?: () => void;
 	onSetShowPlannerMode?: (mode: "off" | "heuristic") => void;
+	/** Local SessionRollup dump (Slice 2) — no network egress. */
+	onDumpSessionRollups?: () => Promise<string>;
 	presentSampleDisabled?: boolean;
 }) {
 	const llm = resolveLlmEgressForUi({
@@ -70,6 +74,8 @@ export function DriveSettingsPanel({
 		slot: "tts",
 	});
 	const volumePercent = Math.round(voice.hardware.outputVolume * 100);
+	const [rollupDump, setRollupDump] = useState<string | null>(null);
+	const [rollupBusy, setRollupBusy] = useState(false);
 
 	return (
 		<div className="space-y-3 border-t bg-muted/20 px-3 py-3 text-sm">
@@ -237,6 +243,48 @@ export function DriveSettingsPanel({
 				{summarizeFacets(voice.facets)} ·{" "}
 				{summarizeHardware(voice.hardware)}
 			</p>
+
+			{onDumpSessionRollups ? (
+				<div className="space-y-2 rounded-md border border-dashed border-sky-500/40 bg-sky-500/5 p-3">
+					<div className="text-xs font-medium text-sky-800 dark:text-sky-200">
+						Session rollups (local)
+					</div>
+					<p className="text-[11px] text-muted-foreground">
+						Last N call-session metrics from room + bank JSONL on this
+						machine. No cloud telemetry.
+					</p>
+					<Button
+						data-testid="drive-dump-session-rollups"
+						disabled={rollupBusy || presentSampleDisabled}
+						onClick={() => {
+							setRollupBusy(true);
+							void onDumpSessionRollups()
+								.then((text) => setRollupDump(text))
+								.catch((error) =>
+									setRollupDump(
+										error instanceof Error
+											? error.message
+											: String(error),
+									),
+								)
+								.finally(() => setRollupBusy(false));
+						}}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						{rollupBusy ? "Loading…" : "Dump last rollups"}
+					</Button>
+					{rollupDump ? (
+						<pre
+							className="max-h-40 overflow-auto whitespace-pre-wrap rounded border bg-background p-2 font-mono text-[10px] leading-snug text-muted-foreground"
+							data-testid="drive-session-rollups-dump"
+						>
+							{rollupDump}
+						</pre>
+					) : null}
+				</div>
+			) : null}
 
 			{onPresentSampleDiagram ? (
 				<div className="space-y-2 rounded-md border border-dashed border-amber-500/40 bg-amber-500/5 p-3">

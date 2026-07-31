@@ -30,18 +30,19 @@ Drive needs local, privacy-safe rollups: tasks completed per session, plan clean
 
 ## Agent tasks
 
-- [ ] Land bank event emission gaps (plan-ref changed, plan archived, bound) on store + hub wire.
+- [x] Land bank event emission gaps (plan-ref changed, plan archived, bound) on store + hub wire.
   - Owner package: `@cline/drive` + `@cline/core`
   - Verify: `bun -F @cline/drive test`, `bun -F @cline/core test:unit`
   - Done when: completeTask / editPlanTaskIds / closeAndArchivePlan emit expected events in tests.
-- [ ] Implement `deriveSessionRollup(events) → SessionRollup` with metric ids from PRD 10.
+- [x] Implement `deriveSessionRollup(events) → SessionRollup` with metric ids from PRD 10.
   - Owner package: `@cline/drive`
   - Verify: fixture tests for S3 / E1 / P1 cases
   - Done when: fixtures pass; no forbidden keys in types.
-- [ ] Minimal local UI or CLI doctor-style dump of last N rollups (debug-gated).
-  - Owner package: `@cline/cline-hub` or `@cline/cli`
-  - Verify: manual smoke + unit render fixture
+- [x] Minimal local UI or CLI doctor-style dump of last N rollups (debug-gated).
+  - Owner package: `@cline/core` + `@cline/cline-hub` + `@cline/cli`
+  - Verify: `readSessionRollups` tests; hub `drive_session_rollups`; Drive Settings dump; `cline doctor session-rollups`
   - Done when: rollup visible without network egress.
+  - Note: Status Hub fourth mode (DRV-STATUS-SESSIONS) still open — consume `SessionRollupSource` / `readSessionRollups` at composition root.
 
 ## Risks
 

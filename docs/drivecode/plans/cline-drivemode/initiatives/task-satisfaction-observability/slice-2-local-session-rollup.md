@@ -25,7 +25,13 @@ Pure `deriveSessionRollup` implements PRD 10 metrics S1–S3, E1–E3, P1–P2. 
 
 Leadership can read a rollup from a smoke path without reading raw JSONL by hand.
 
-## Implementation status (2026-07-30)
+## Implementation status (2026-07-31)
 
 - Pure `deriveSessionRollup` landed in `@cline/drive` with unit fixtures (clean drain / mid-plan continue).
-- Local debug UI / Status lens still open (DRV-STATUS-SESSIONS).
+- Local reader + debug surfaces landed:
+  - `@cline/core` `readSessionRollups` / `createFsSessionRollupSource` (Status W3 port)
+  - Hub command `drive_session_rollups`
+  - Drive Settings → “Dump last rollups”
+  - CLI: `cline doctor session-rollups [--cwd] [--limit] [--json]`
+- Status Hub fourth mode (DRV-STATUS-SESSIONS / W3.1) still open — reuse the same source; do not duplicate stores.
+- P2 failure stickiness still stubbed at 0 (see REMAINING §2.3).
