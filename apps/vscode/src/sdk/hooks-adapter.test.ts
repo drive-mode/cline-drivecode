@@ -189,4 +189,51 @@ describe("buildAgentHooks", () => {
 		expect(mocks.create).not.toHaveBeenCalledWith("TaskResume")
 		expect(mocks.create).toHaveBeenCalledWith("UserPromptSubmit")
 	})
+
+	it("fires PreToolUse / PostToolUse on beforeTool / afterTool (existing hook regression)", async () => {
+		const hooks = buildAgentHooks(makeStateManager())
+		const snapshot = makeLifecycleCtx().snapshot
+		const toolCall = { toolCallId: "tc-1", toolName: "read_file" }
+
+		await hooks.beforeTool?.({
+			snapshot,
+			toolCall,
+			input: { path: "README.md" },
+		} as never)
+
+		expect(mocks.create).toHaveBeenCalledWith("PreToolUse")
+		expect(mocks.run).toHaveBeenCalledWith(
+			expect.objectContaining({
+				taskId: "task-1",
+				preToolUse: expect.objectContaining({
+					toolName: "read_file",
+					parameters: expect.objectContaining({ path: "README.md" }),
+				}),
+			}),
+		)
+
+		mocks.create.mockClear()
+		mocks.run.mockClear()
+
+		await hooks.afterTool?.({
+			snapshot,
+			toolCall,
+			input: { path: "README.md" },
+			result: { output: "ok", isError: false },
+			durationMs: 12,
+		} as never)
+
+		expect(mocks.create).toHaveBeenCalledWith("PostToolUse")
+		expect(mocks.run).toHaveBeenCalledWith(
+			expect.objectContaining({
+				taskId: "task-1",
+				postToolUse: expect.objectContaining({
+					toolName: "read_file",
+					result: "ok",
+					success: true,
+					executionTimeMs: 12,
+				}),
+			}),
+		)
+	})
 })

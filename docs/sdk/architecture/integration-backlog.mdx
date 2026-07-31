@@ -54,6 +54,10 @@ _Phase 6+ items appended below as agents complete reviews._
 | BL-6.5 | Desktop session compaction on start (parity) | SDK-6.2 | Desktop `buildCoreSessionConfig` still omits `compaction`; Hub now sets it |
 | BL-6.6 | `detachHub` disposes Hub Chat telemetry | test | Unit coverage hits `HubTelemetry.dispose` idempotency; no attach/detach wiring assert (would need heavy hub daemon mocks) |
 | BL-6.7 | ProviderSettingsManager throw path in `createHubTelemetry` | test | Identity enrichment is try/catch; missing-account path covered; throw-from-settings manager not asserted |
+| BL-6.8 | Recreate Hub telemetry on opt-out toggle | review | When user toggles telemetry opt-out/in, recreate or rebind Hub Chat telemetry so the live session reflects the new preference |
+| BL-6.9 | Refresh usage-analysis Hub rows | docs | Keep usage-analysis / integration-build Hub depth rows current as SDK-6.* landings drift |
+| BL-6.10 | `attachHub` try/finally telemetry dispose | review | Ensure attach failures still dispose partial Hub telemetry / avoid leaked reporters |
+| BL-6.11 | Hub↔CLI hooks gap matrix | docs | Explicit matrix of file-hook vs host-`AgentHooks` coverage between Hub daemon and CLI for product honesty |
 
 ## From Phase 7 (VS Code honesty)
 
@@ -64,3 +68,6 @@ _Phase 6+ items appended below as agents complete reviews._
 | BL-7.3 | Optional TaskError kind on VS Code HookFactory | SDK-7.1 | Core maps `afterRun(failed)` → TaskError files; VS Code proto/VALID_HOOK_TYPES lack TaskError. Add kind + adapter branch if product wants parity |
 | BL-7.4 | SessionShutdown on VS Code session dispose | SDK-7.1 | Not on AgentHooks; would need host dispose bridge + HookFactory kind (Core has SessionShutdown files; VS Code does not) |
 | BL-7.5 | Unify VS Code MCP onto Core settings tools | SDK-7.2 | **Deferred** — spike recommends keep `McpHub` adapter; see [vscode-mcp-spike](/sdk/architecture/vscode-mcp-spike) |
+| BL-7.6 | TaskResume `cancel` → AgentStopControl mapping | test | Adapter maps hook `cancel` via `mapStopControl`; covered for TaskStart path indirectly only — explicit TaskResume cancel assert optional |
+| BL-7.7 | `historyItem` implies `isResume` in session config builder | test | `buildAgentHooks(..., { isResume: true })` when `input.historyItem` set; `isResume: true` flag path covered |
+| BL-7.8 | HookFactory TaskResume bun:test in CI with vitest Phase 7 filter | test | Core `taskresume.test.ts` is bun:test (`test:unit`); Phase 7 verify doc lists vitest filters only — keep both in contributor checklist |

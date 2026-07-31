@@ -87,4 +87,21 @@ describe("SdkSessionConfigBuilder", () => {
 		expect(config.execution).toEqual({ maxRetries: 1 })
 		expect(config.onConsecutiveMistakeLimitReached).toBe(onConsecutiveMistakeLimitReached)
 	})
+
+	it("forwards isResume into buildAgentHooks for TaskResume wiring", async () => {
+		mocks.buildAgentHooks.mockClear()
+		mocks.buildSessionConfig.mockResolvedValueOnce({ hooks: {} })
+
+		const emitHookMessage = vi.fn()
+		const stateManager = { getGlobalSettingsKey: vi.fn(() => "act") }
+		const builder = new SdkSessionConfigBuilder({
+			stateManager: stateManager as never,
+			emitHookMessage,
+			onSwitchToActMode: vi.fn(),
+		})
+
+		await builder.build({ cwd: "/workspace", mode: "act", isResume: true })
+
+		expect(mocks.buildAgentHooks).toHaveBeenCalledWith(stateManager, emitHookMessage, { isResume: true })
+	})
 })
