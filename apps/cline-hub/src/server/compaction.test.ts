@@ -13,24 +13,36 @@ vi.mock("@cline/core", async () => {
 	};
 });
 
-describe("buildHubCompactionConfig (SDK-6.2)", () => {
-	it("defaults to enabled when mode is unset (CLI-ish)", async () => {
-		const { buildHubCompactionConfig } = await import("./compaction");
-		expect(buildHubCompactionConfig(undefined)).toEqual({ enabled: true });
-	});
+// importActual("@cline/core") is heavy under CI parallel load; keep headroom
+// above the default 5s so cold mock setup does not flake.
+const hubCoreImportTimeoutMs = 30_000;
 
-	it("maps off / basic / agentic modes", async () => {
-		const { buildHubCompactionConfig } = await import("./compaction");
-		expect(buildHubCompactionConfig("off")).toEqual({ enabled: false });
-		expect(buildHubCompactionConfig("basic")).toEqual({
-			enabled: true,
-			strategy: "basic",
-		});
-		expect(buildHubCompactionConfig("agentic")).toEqual({
-			enabled: true,
-			strategy: "agentic",
-		});
-	});
+describe("buildHubCompactionConfig (SDK-6.2)", () => {
+	it(
+		"defaults to enabled when mode is unset (CLI-ish)",
+		async () => {
+			const { buildHubCompactionConfig } = await import("./compaction");
+			expect(buildHubCompactionConfig(undefined)).toEqual({ enabled: true });
+		},
+		hubCoreImportTimeoutMs,
+	);
+
+	it(
+		"maps off / basic / agentic modes",
+		async () => {
+			const { buildHubCompactionConfig } = await import("./compaction");
+			expect(buildHubCompactionConfig("off")).toEqual({ enabled: false });
+			expect(buildHubCompactionConfig("basic")).toEqual({
+				enabled: true,
+				strategy: "basic",
+			});
+			expect(buildHubCompactionConfig("agentic")).toEqual({
+				enabled: true,
+				strategy: "agentic",
+			});
+		},
+		hubCoreImportTimeoutMs,
+	);
 });
 
 describe("resolveHubSessionCompaction (SDK-6.2)", () => {
@@ -38,29 +50,41 @@ describe("resolveHubSessionCompaction (SDK-6.2)", () => {
 		mocks.readCompactionModeGlobally.mockReset();
 	});
 
-	it("uses the global mode when persisted", async () => {
-		mocks.readCompactionModeGlobally.mockReturnValue("basic");
-		const { resolveHubSessionCompaction } = await import("./compaction");
-		expect(resolveHubSessionCompaction()).toEqual({
-			enabled: true,
-			strategy: "basic",
-		});
-	});
+	it(
+		"uses the global mode when persisted",
+		async () => {
+			mocks.readCompactionModeGlobally.mockReturnValue("basic");
+			const { resolveHubSessionCompaction } = await import("./compaction");
+			expect(resolveHubSessionCompaction()).toEqual({
+				enabled: true,
+				strategy: "basic",
+			});
+		},
+		hubCoreImportTimeoutMs,
+	);
 
-	it("maps global off and agentic through resolve", async () => {
-		const { resolveHubSessionCompaction } = await import("./compaction");
-		mocks.readCompactionModeGlobally.mockReturnValue("off");
-		expect(resolveHubSessionCompaction()).toEqual({ enabled: false });
-		mocks.readCompactionModeGlobally.mockReturnValue("agentic");
-		expect(resolveHubSessionCompaction()).toEqual({
-			enabled: true,
-			strategy: "agentic",
-		});
-	});
+	it(
+		"maps global off and agentic through resolve",
+		async () => {
+			const { resolveHubSessionCompaction } = await import("./compaction");
+			mocks.readCompactionModeGlobally.mockReturnValue("off");
+			expect(resolveHubSessionCompaction()).toEqual({ enabled: false });
+			mocks.readCompactionModeGlobally.mockReturnValue("agentic");
+			expect(resolveHubSessionCompaction()).toEqual({
+				enabled: true,
+				strategy: "agentic",
+			});
+		},
+		hubCoreImportTimeoutMs,
+	);
 
-	it("falls back to enabled when no global mode is set", async () => {
-		mocks.readCompactionModeGlobally.mockReturnValue(undefined);
-		const { resolveHubSessionCompaction } = await import("./compaction");
-		expect(resolveHubSessionCompaction()).toEqual({ enabled: true });
-	});
+	it(
+		"falls back to enabled when no global mode is set",
+		async () => {
+			mocks.readCompactionModeGlobally.mockReturnValue(undefined);
+			const { resolveHubSessionCompaction } = await import("./compaction");
+			expect(resolveHubSessionCompaction()).toEqual({ enabled: true });
+		},
+		hubCoreImportTimeoutMs,
+	);
 });

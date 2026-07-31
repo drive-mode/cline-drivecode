@@ -35,6 +35,10 @@ vi.mock("@cline/core", async () => {
 	};
 });
 
+// importActual("@cline/core") is heavy under CI parallel load; keep headroom
+// above the default 5s so cold mock setup does not flake.
+const hubCoreImportTimeoutMs = 30_000;
+
 describe("createHubTelemetry (SDK-6.1)", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -53,70 +57,86 @@ describe("createHubTelemetry (SDK-6.1)", () => {
 		});
 	});
 
-	it("configures hub telemetry metadata, identity, and activation", async () => {
-		const { createHubTelemetry } = await import("./telemetry");
-		const handle = createHubTelemetry();
+	it(
+		"configures hub telemetry metadata, identity, and activation",
+		async () => {
+			const { createHubTelemetry } = await import("./telemetry");
+			const handle = createHubTelemetry();
 
-		expect(mocks.createClineTelemetryServiceConfig).toHaveBeenCalledWith({
-			metadata: expect.objectContaining({
-				cline_type: "hub",
-				platform: "Cline Hub",
-			}),
-		});
-		expect(mocks.createConfiguredTelemetryHandle).toHaveBeenCalled();
-		expect(mocks.identifyAccount).toHaveBeenCalledWith(telemetry, {
-			id: "account-1",
-			provider: "cline",
-			organizationId: "org-1",
-			organizationName: "Org",
-			memberId: "member-1",
-		});
-		expect(mocks.captureExtensionActivated).toHaveBeenCalledWith(telemetry);
-		expect(handle.telemetry).toBe(telemetry);
-		expect(handle.provider).toEqual({ kind: "otel" });
+			expect(mocks.createClineTelemetryServiceConfig).toHaveBeenCalledWith({
+				metadata: expect.objectContaining({
+					cline_type: "hub",
+					platform: "Cline Hub",
+				}),
+			});
+			expect(mocks.createConfiguredTelemetryHandle).toHaveBeenCalled();
+			expect(mocks.identifyAccount).toHaveBeenCalledWith(telemetry, {
+				id: "account-1",
+				provider: "cline",
+				organizationId: "org-1",
+				organizationName: "Org",
+				memberId: "member-1",
+			});
+			expect(mocks.captureExtensionActivated).toHaveBeenCalledWith(telemetry);
+			expect(handle.telemetry).toBe(telemetry);
+			expect(handle.provider).toEqual({ kind: "otel" });
 
-		await handle.dispose();
-		await handle.dispose();
-		expect(mocks.disposeTelemetry).toHaveBeenCalledTimes(1);
-	});
+			await handle.dispose();
+			await handle.dispose();
+			expect(mocks.disposeTelemetry).toHaveBeenCalledTimes(1);
+		},
+		hubCoreImportTimeoutMs,
+	);
 
-	it("exposes no provider when Core returns an opted-out handle", async () => {
-		mocks.createConfiguredTelemetryHandle.mockReturnValue({
-			telemetry,
-			provider: undefined,
-			dispose: mocks.disposeTelemetry,
-		});
-		const { createHubTelemetry } = await import("./telemetry");
-		const handle = createHubTelemetry();
-		expect(handle.telemetry).toBe(telemetry);
-		expect(handle.provider).toBeUndefined();
-	});
+	it(
+		"exposes no provider when Core returns an opted-out handle",
+		async () => {
+			mocks.createConfiguredTelemetryHandle.mockReturnValue({
+				telemetry,
+				provider: undefined,
+				dispose: mocks.disposeTelemetry,
+			});
+			const { createHubTelemetry } = await import("./telemetry");
+			const handle = createHubTelemetry();
+			expect(handle.telemetry).toBe(telemetry);
+			expect(handle.provider).toBeUndefined();
+		},
+		hubCoreImportTimeoutMs,
+	);
 
-	it("skips identifyAccount when provider auth has no accountId", async () => {
-		mocks.getProviderSettings.mockReturnValue({ auth: {} } as never);
-		const { createHubTelemetry } = await import("./telemetry");
-		createHubTelemetry();
-		expect(mocks.identifyAccount).not.toHaveBeenCalled();
-		expect(mocks.captureExtensionActivated).toHaveBeenCalledWith(telemetry);
-	});
+	it(
+		"skips identifyAccount when provider auth has no accountId",
+		async () => {
+			mocks.getProviderSettings.mockReturnValue({ auth: {} } as never);
+			const { createHubTelemetry } = await import("./telemetry");
+			createHubTelemetry();
+			expect(mocks.identifyAccount).not.toHaveBeenCalled();
+			expect(mocks.captureExtensionActivated).toHaveBeenCalledWith(telemetry);
+		},
+		hubCoreImportTimeoutMs,
+	);
 });
 
 describe("buildHubClineCoreCreateOptions (SDK-6.1)", () => {
-	it("passes the telemetry handle into ClineCore.create options", async () => {
-		const { buildHubClineCoreCreateOptions } = await import("./hub");
-		const requestToolApproval = vi.fn();
-		const options = buildHubClineCoreCreateOptions({
-			hubUrl: "ws://127.0.0.1:9",
-			hubAuthToken: "token",
-			workspaceRoot: "/tmp/ws",
-			telemetry: telemetry as never,
-			requestToolApproval,
-		});
-		expect(options.telemetry).toBe(telemetry);
-		expect(options.clientName).toBe("cline-hub");
-		expect(options.backendMode).toBe("hub");
-		expect(options.capabilities?.requestToolApproval).toBe(
-			requestToolApproval,
-		);
-	});
+	it(
+		"passes the telemetry handle into ClineCore.create options",
+		async () => {
+			const { buildHubClineCoreCreateOptions } = await import("./hub");
+			const requestToolApproval = vi.fn();
+			const options = buildHubClineCoreCreateOptions({
+				hubUrl: "ws://127.0.0.1:9",
+				hubAuthToken: "token",
+				workspaceRoot: "/tmp/ws",
+				telemetry: telemetry as never,
+				requestToolApproval,
+			});
+			expect(options.telemetry).toBe(telemetry);
+			expect(options.clientName).toBe("cline-hub");
+			expect(options.backendMode).toBe("hub");
+			expect(options.capabilities?.requestToolApproval).toBe(
+				requestToolApproval,
+			);
+		},
+		hubCoreImportTimeoutMs,
+	);
 });
