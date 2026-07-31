@@ -84,6 +84,16 @@ export function setCompactionStrategyGlobally(compactionStrategy: GlobalCompacti
 	}
 }
 
+export type {
+	ProductSessionFeatures,
+	ProductSessionHostKind,
+	ResolveProductSessionFeaturesInput,
+} from "../../../../sdk/packages/core/src/session/product-session-defaults"
+export {
+	PRODUCT_DEFAULT_MAX_ITERATIONS,
+	resolveProductSessionFeatures,
+} from "../../../../sdk/packages/core/src/session/product-session-defaults"
+
 export function truncateCommandOutput(output: string): string {
 	return output
 }
