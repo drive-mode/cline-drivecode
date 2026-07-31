@@ -1,7 +1,7 @@
 # Remaining work · Task satisfaction + session moments
 
 **Status.** Living backlog (update as slices land)  
-**Branch context.** Observability W0–W3 + Slice 2/P2 landed; **Slice 3 + W4.1/W4.2 landed** (stall classifier, auto recovery fork, gated plan-improve). Residual gaps below.  
+**Branch context.** Observability W0–W3 + Slice 2/P2 + Slice 3/W4 + **§2.5 retention caps** landed. Residual gaps below (moments chrome, host skill compile, privacy UI).  
 **Related.** [task-satisfaction-observability](../initiatives/task-satisfaction-observability/) · [session-satisfaction-moments](../initiatives/session-satisfaction-moments/) · [PRD 10](../prd/prd-task-satisfaction-observability.md) · [ARD-0015](../ard/ARD-0015-task-session-observability.md) (Proposed)
 
 This document is the **implementation checklist** for everything still open after the planning wave and the W0 instrumentation commit. Prefer amending this file over inventing parallel backlogs.
@@ -47,9 +47,11 @@ flowchart TD
     SdlcBank["SDLC freeze → bankable tasks"]
     StallClass["Stall classifier + auto fork"]
     PlanImprove["Gated plan-improve propose/accept"]
+    Retention["Room/bank JSONL retention caps"]
   end
-  subgraph OpenObs["Open · observability"]
-    Retention["Retention caps + privacy facets"]
+  subgraph OpenObs["Open · observability residuals"]
+    PrivUI["debugRetention UI + raised caps wire"]
+    PrivRetentionFacet["privacy.retention durable facet"]
   end
   subgraph OpenMoments["Open · residual moments"]
     W1Gaps["W1.1 redirect / feed narration"]
@@ -66,6 +68,7 @@ flowchart TD
   RecruitStall --> StatusSessions
   StatusSessions --> ShippedDigest
   StatusSessions --> SdlcBank
+  Retention --> PrivUI
 ```
 
 Caption:
@@ -81,6 +84,7 @@ Caption:
 - Shipped digest (W3.2) landed — opt-in Markdown/JSON export (`shippedDigest.ts`, Status/Settings button, `cline doctor shipped-digest`).
 - SDLC bankable (W3.3) landed — `sdlcBankable.ts` + `drive_bank_accept_sdlc_freeze` + Plan-posture accept chip; **stage freeze cards still stubbed**.
 - **Slice 3 + W4.1/W4.2 landed:** pure `classifyStall` / `diagnoseAndPropose`; auto stall opens same gated `StuckRecoveryFork` (deduped with manual lastFailure); post-session `PlanImproveGate` (`kind: planning`) with accept→`.drive/plan-improve/` only (host `.driveagent` skill compile still out of band).
+- **§2.5 retention caps landed:** room `events.jsonl` default max **2048** records; bank `events.jsonl` default max **4096**; trim-oldest on append. Catalog has live `privacy.debugRetention` (default `false`); call-strip indicator + raised debug caps wiring still open. Durable `privacy.retention` facet still not in live catalog.
 - ARD-0015 remains **Proposed** (leadership accept still open).
 ---
 
@@ -92,6 +96,7 @@ Caption:
 | Leave `durationMs` when last human leaves; re-join mints new id | `DriveRoomStore.join/leave` |
 | Bank emits: opened, activated (incl. create+activate), bound, completed, failed, archived, plan_step (adds), plan_archived | `bankStore.ts` |
 | Hub bank log wire | `drive-bank-handlers` → `appendBankLogEvent` |
+| Room/bank JSONL retention caps (DRV-PRIVACY) | `logRetention.ts` — room 2048 / bank 4096; `privacy.debugRetention` catalog (UI wire residual) |
 | Hub commands: `drive_bank_complete_task`, `bind_now`, `activate_plan`, `record_failure` | `hub.ts` + transport + handlers |
 | Hub webview bridge: protocol frames + `drive-bank` forward + `bankSession` mutators + PlanEditor complete / Agent bind / tool failure | `apps/cline-hub` webview + server |
 | Felt agency (W1.1): interrupt chrome, plan-edit consequence, recovery vs collaborative add, mid-turn steer chip | `agencyChrome.ts`, DriveCallChrome, NowNext, PlanEditor, server send steer, Composer |
@@ -180,12 +185,12 @@ See [slice-3](../initiatives/task-satisfaction-observability/slice-3-diagnose-pr
 - Feed narration of recovery / plan-improve proposals still open (W1.3 residual).
 - Mid-call auto fork uses session counters + open `lastFailure`, not a full JSONL re-rollup each tick.
 
-### 2.5 Retention caps + privacy facets
+### 2.5 Retention caps + privacy facets — **partial (caps done)**
 
 | Work | Note |
 |---|---|
-| Implement room/bank history caps from DRV-PRIVACY | Required before relying on durable logs for Status/digest |
-| `privacy.debugRetention` facet (planned, not in live catalog) | Visible debug indicator |
+| ~~Implement room/bank history caps from DRV-PRIVACY~~ | **Done:** `logRetention.ts` — room default **2048**, bank default **4096**; trim-oldest on append (`JsonlRoomEventLog` / `appendBankLogEvent` / `MemoryRoomEventLog`). Configurable via `maxRecords`. Debug raised caps constants exported (`DEBUG_*`) for later wire. |
+| `privacy.debugRetention` facet | **Partial:** live catalog entry (`defaultValue: false`, session scope). **Still open:** call-strip visible indicator; wire facet → `DEBUG_*` caps; durable `privacy.retention` facet still planned-only. |
 
 ---
 
@@ -254,7 +259,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 | TASK-GRAPH indexing | Satisfaction DRVs not in phase gates yet | Add Phase 2+ optional gate note when W1 starts |
 | CLI Drive join/leave parity | CLI chrome often local-only | Required if CLI counts toward metrics ([DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md)) |
 | `call_end` still missing from hub command union | Done (W1.2) | `HubCommandName` + transport + webview + End chrome |
-| History retention caps | Open | Before Status/digest rely on logs |
+| History retention caps | **Partial** | Caps done (room 2048 / bank 4096). Residual: debugRetention UI + raised-cap wire; `privacy.retention` durable facet |
 
 ---
 
@@ -274,6 +279,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 11. ~~W3.2 Shipped digest~~ ✅
 12. ~~W3.3 SDLC bankable (accept writer; stage UI stub)~~ ✅
 13. ~~Slice 3 + W4 auto stall / plan-improve~~ ✅ (host skill compile + unified learn queue still open — see §2.4 residuals)
+14. ~~§2.5 room/bank retention caps~~ ✅ (`privacy.debugRetention` UI + raised-cap wire + `privacy.retention` still open — see §2.5)
 ```
 
 No calendar estimates — order is dependency-only.

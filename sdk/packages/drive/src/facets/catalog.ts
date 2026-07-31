@@ -1,5 +1,5 @@
 /**
- * Phase 0 facet catalog — two durable entries plus live subMode for seed/live_wins.
+ * Phase 0 facet catalog — durable defaults, live subMode, privacy.debugRetention.
  */
 
 import type {
@@ -42,7 +42,7 @@ export const DRIVE_FACET_CATALOG = {
 		defaultValue: DEFAULT_AGENT_APPEARANCE,
 	} satisfies FacetDefMeta<AgentAppearance>,
 
-	/**
+/**
 	 * Live room sub-mode. Seeded from drive.defaults.subMode at room create;
 	 * disk reload must never overwrite (live_wins).
 	 */
@@ -57,6 +57,24 @@ export const DRIVE_FACET_CATALOG = {
 		phase: 0,
 		defaultValue: "plan",
 	} satisfies FacetDefMeta<DriveSubMode>,
+
+	/**
+	 * Session-scoped debug retention (DRV-PRIVACY). When true, hosts may raise
+	 * local JSONL caps and keep extra debug blobs — must show a visible
+	 * indicator. Never durable; never phone-home.
+	 * UI chrome + raised-cap wiring are follow-on (see REMAINING §2.5).
+	 */
+	"privacy.debugRetention": {
+		id: "privacy.debugRetention",
+		title: "Debug retention",
+		owner: "hub",
+		scope: "session",
+		lane: "live",
+		privacy: "sensitive",
+		conflict: "live_wins",
+		phase: 0,
+		defaultValue: false,
+	} satisfies FacetDefMeta<boolean>,
 } as const;
 
 export type DriveFacetCatalog = typeof DRIVE_FACET_CATALOG;

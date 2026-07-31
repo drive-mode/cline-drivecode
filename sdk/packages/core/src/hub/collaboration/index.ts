@@ -1,6 +1,8 @@
 export {
 	appendBankLogEvent,
+	type AppendBankLogOptions,
 	readBankLogSince,
+	resetBankLogRetentionCacheForTests,
 } from "./bankEventLog";
 export {
 	createFsSessionRollupSource,
@@ -26,10 +28,21 @@ export {
 	JsonlRoomEventLog,
 	MemoryRoomEventLog,
 	type RoomEventLog,
+	type RoomEventLogOptions,
 	type RoomEventLogStore,
 	type RoomLogRecord,
 	rebindJsonlRoomEventLog,
 } from "./eventLog";
+export {
+	countNonEmptyLines,
+	DEBUG_BANK_EVENT_LOG_MAX_RECORDS,
+	DEBUG_ROOM_EVENT_LOG_MAX_RECORDS,
+	DEFAULT_BANK_EVENT_LOG_MAX_RECORDS,
+	DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS,
+	keepLastNonEmptyLines,
+	type LogRetentionOptions,
+	trimJsonlFileToMaxRecords,
+} from "./logRetention";
 export { type JoinCallInput, type JoinCallResult, joinCall } from "./join-call";
 export { createNodeBankFs } from "./nodeBankFs";
 export {

@@ -12,6 +12,7 @@ Drive listens (mic) and observes (work events). Users must be able to trust that
 - Event schemas structurally cannot carry raw audio (asserted by a DRV-EVENTS test).
 - Voice pipeline (when DRV-MIC and DRV-TTS land) processes audio in memory only. Transcripts feed the prompt pipeline and are then discarded unless debug mode is explicitly enabled.
 - Hub room state and event history live in memory or the local state directory only, never leave localhost in MVP phases.
+- Room / bank JSONL history is **capped** (defaults: 2048 room records / room, 4096 bank records / workspace); oldest trimmed on append. `privacy.debugRetention` (live, default off) may raise caps later with a visible indicator.
 - Debug mode is an explicit, logged opt-in with a visible indicator in the call strip.
 - Log output redacts secrets and omits sensitive config values.
 
@@ -37,11 +38,12 @@ Drive listens (mic) and observes (work events). Users must be able to trust that
   - Files likely: `sdk/packages/shared/src/drive/events.test.ts`
   - Verify: `bun -F @cline/shared test`
   - Done when: the assertion test exists and fails on violation.
-- [ ] Add retention tests to the room runtime. Event history capped, nothing written outside the state directory, nothing on the wire beyond localhost.
+- [x] Add retention tests to the room runtime. Event history capped, nothing written outside the state directory, nothing on the wire beyond localhost.
   - Owner package: `@cline/core`
-  - Files likely: `sdk/packages/core/src/hub/collaboration/room.test.ts`
+  - Files likely: `sdk/packages/core/src/hub/collaboration/logRetention.test.ts`, `eventLog.ts`, `bankEventLog.ts`
   - Verify: `bun -F @cline/core test:unit`
   - Done when: tests pin the retention cap and the localhost-only bind.
+  - Residual: call-strip indicator for `privacy.debugRetention`; durable `privacy.retention` facet.
 
 ## Risks
 

@@ -4,10 +4,11 @@ import { DRIVE_FACET_CATALOG, listFacetDefs } from "./catalog";
 import { createFacetStore } from "./store";
 
 describe("DRIVE_FACET_CATALOG", () => {
-	it("ships the Phase 0 durable pair plus live subMode", () => {
+	it("ships the Phase 0 durable pair plus live subMode and debugRetention", () => {
 		expect(Object.keys(DRIVE_FACET_CATALOG).sort()).toEqual([
 			"agent.appearance",
 			"drive.defaults.subMode",
+			"privacy.debugRetention",
 			"room.live.subMode",
 		]);
 		expect(DRIVE_FACET_CATALOG["drive.defaults.subMode"].lane).toBe(
@@ -16,11 +17,17 @@ describe("DRIVE_FACET_CATALOG", () => {
 		expect(DRIVE_FACET_CATALOG["room.live.subMode"].conflict).toBe(
 			"live_wins",
 		);
+		expect(DRIVE_FACET_CATALOG["privacy.debugRetention"]).toMatchObject({
+			lane: "live",
+			scope: "session",
+			defaultValue: false,
+			privacy: "sensitive",
+		});
 	});
 
 	it("lists defs by lane", () => {
 		expect(listFacetDefs({ lane: "durable" })).toHaveLength(2);
-		expect(listFacetDefs({ lane: "live" })).toHaveLength(1);
+		expect(listFacetDefs({ lane: "live" })).toHaveLength(2);
 	});
 });
 
@@ -33,6 +40,20 @@ describe("createFacetStore", () => {
 			token: "muted",
 		});
 		expect(store.get("room.live.subMode")).toBe("plan");
+		expect(store.get("privacy.debugRetention")).toBe(false);
+	});
+
+	it("setLive toggles privacy.debugRetention for the session", () => {
+		const store = createFacetStore();
+		store.setLive("privacy.debugRetention", true);
+		expect(store.get("privacy.debugRetention")).toBe(true);
+		store.reload({
+			schemaVersion: 1,
+			values: {},
+			maps: {},
+		});
+		// live_wins: disk reload must not clear the session debug flag
+		expect(store.get("privacy.debugRetention")).toBe(true);
 	});
 
 	it("reload is idempotent and preserves live_wins values", () => {

@@ -21,6 +21,12 @@ import {
 	resolveDriveRoomMetaPath,
 	resolveDriveRoomsDir,
 } from "@cline/shared";
+import {
+	countNonEmptyLines,
+	DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS,
+	type LogRetentionOptions,
+	trimJsonlFileToMaxRecords,
+} from "./logRetention";
 
 export type RoomLogRecord = {
 	readonly seq: number;
@@ -34,6 +40,8 @@ export type RoomEventLog = {
 	readSinceSync(roomId: string, afterSeq: number): RoomLogRecord[];
 	latestSeq(roomId: string): number;
 };
+
+export type RoomEventLogOptions = LogRetentionOptions;
 
 type MetaFile = {
 	schemaVersion: 1;
@@ -114,9 +122,20 @@ function migrateJsonlRoomEventLog(
 /**
  * File-backed room event log for a workspace config parent
  * (`<workspace>` or similar — used with resolveDriveConfigDir).
+ * Oldest records are trimmed when the JSONL exceeds `maxRecords`
+ * (DRV-PRIVACY retention cap).
  */
 export class JsonlRoomEventLog implements RoomEventLog {
-	constructor(readonly configParent: string) {}
+	private readonly maxRecords: number;
+	private readonly lineCounts = new Map<string, number>();
+
+	constructor(
+		readonly configParent: string,
+		options: RoomEventLogOptions = {},
+	) {
+		this.maxRecords =
+			options.maxRecords ?? DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS;
+	}
 
 	latestSeq(roomId: string): number {
 		const meta = readMeta(resolveDriveRoomMetaPath(this.configParent, roomId));
@@ -136,6 +155,20 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		writeMetaAtomic(metaPath, { schemaVersion: 1, nextSeq: minNextSeq });
 	}
 
+	private cachedLineCount(roomId: string, eventsPath: string): number {
+		const cached = this.lineCounts.get(roomId);
+		if (cached !== undefined) {
+			return cached;
+		}
+		if (!existsSync(eventsPath)) {
+			this.lineCounts.set(roomId, 0);
+			return 0;
+		}
+		const n = countNonEmptyLines(readFileSync(eventsPath, "utf8"));
+		this.lineCounts.set(roomId, n);
+		return n;
+	}
+
 	appendSync(roomId: string, event: DriveEvent): RoomLogRecord {
 		const metaPath = resolveDriveRoomMetaPath(this.configParent, roomId);
 		const eventsPath = resolveDriveRoomEventsPath(this.configParent, roomId);
@@ -143,8 +176,15 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		const meta = readMeta(metaPath);
 		const seq = meta.nextSeq;
 		const record: RoomLogRecord = { seq, event };
+		const before = this.cachedLineCount(roomId, eventsPath);
 		appendFileSync(eventsPath, `${JSON.stringify(record)}\n`, "utf8");
 		writeMetaAtomic(metaPath, { schemaVersion: 1, nextSeq: seq + 1 });
+		let count = before + 1;
+		this.lineCounts.set(roomId, count);
+		if (count > this.maxRecords) {
+			count = trimJsonlFileToMaxRecords(eventsPath, this.maxRecords);
+			this.lineCounts.set(roomId, count);
+		}
 		return record;
 	}
 
@@ -218,9 +258,15 @@ export function rebindJsonlRoomEventLog(
 	store.attachEventLog(next);
 }
 
-/** In-memory log for unit tests (no disk). */
+/** In-memory log for unit tests (no disk). Honors the same retention cap. */
 export class MemoryRoomEventLog implements RoomEventLog {
 	private readonly byRoom = new Map<string, RoomLogRecord[]>();
+	private readonly maxRecords: number;
+
+	constructor(options: RoomEventLogOptions = {}) {
+		this.maxRecords =
+			options.maxRecords ?? DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS;
+	}
 
 	latestSeq(roomId: string): number {
 		const records = this.byRoom.get(roomId) ?? [];
@@ -234,6 +280,9 @@ export class MemoryRoomEventLog implements RoomEventLog {
 		const seq = last ? last.seq + 1 : 1;
 		const record = { seq, event };
 		list.push(record);
+		if (list.length > this.maxRecords) {
+			list.splice(0, list.length - this.maxRecords);
+		}
 		this.byRoom.set(roomId, list);
 		return record;
 	}
