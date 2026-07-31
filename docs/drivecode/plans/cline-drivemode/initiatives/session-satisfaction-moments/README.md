@@ -1,9 +1,10 @@
 # session-satisfaction-moments · Initiative index
 
-**Status:** active  
+**Status:** active (requirements complete; implementation mostly open — see backlog)  
 **Foundation:** [task-satisfaction-observability](../task-satisfaction-observability/) (instrumentation → rollups → gated improve)  
 **PRD:** [PRD 10](../../prd/prd-task-satisfaction-observability.md)  
 **Visual plan:** [visual-plan.md](visual-plan.md) · [canvas](../../../../design/canvases/session-satisfaction-moments-canvas.html)  
+**Remaining work:** [delivery/REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md)  
 **Leadership:** [BRIEF-task-satisfaction](../../leadership/BRIEF-task-satisfaction.md)
 
 Product moments that turn task-centric session metrics into **lived satisfaction** along the call arc: stuck → agency → drain → leave/rejoin → end → return → prove.

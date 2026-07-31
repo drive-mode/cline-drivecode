@@ -3,7 +3,8 @@
 **Audience.** SE lead / PM  
 **Status.** Planning wave input (2026-07-30)  
 **Decisions pending.** [ARD-0015](../ard/ARD-0015-task-session-observability.md) (Proposed)  
-**Depth.** [PRD 10](../prd/prd-task-satisfaction-observability.md), [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md)
+**Depth.** [PRD 10](../prd/prd-task-satisfaction-observability.md), [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md)  
+**Remaining implementation:** [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md)
 
 ## Session Satisfaction & Closed-Loop Improvement
 

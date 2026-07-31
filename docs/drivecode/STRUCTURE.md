@@ -79,6 +79,7 @@ docs/drivecode/
 | Research, inventory, audit, “future of X” | `plans/cline-drivemode/research/` |
 | SE/PM brief, systems analysis, entry gates | `plans/cline-drivemode/leadership/` |
 | Task graph, agent runbook, active track handoff | `plans/cline-drivemode/delivery/` |
+| Living satisfaction backlog (W0–W4) | `plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md` |
 | Decision (DEC) | `plans/cline-drivemode/decisions/` |
 | Architecture decision (ARD) | `plans/cline-drivemode/ard/` |
 | Product requirements | `plans/cline-drivemode/prd/` |

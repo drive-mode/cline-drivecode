@@ -63,6 +63,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [examples/driveagent-pair-partner/](examples/driveagent-pair-partner/) | Example `.driveagent` home + BRIEF + sample graph |
 | [TASK-GRAPH.md](delivery/TASK-GRAPH.md) | Phases 0 through 5 with verifiable gates |
 | [AGENT-RUNBOOK.md](delivery/AGENT-RUNBOOK.md) | How agents pick tasks, spawn, verify, and report |
+| [REMAINING-task-satisfaction.md](delivery/REMAINING-task-satisfaction.md) | Living backlog: W0–W4 + moments after partial Slice 1–2 land |
 
 ## SDK layer
 

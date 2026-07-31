@@ -14,6 +14,9 @@ Local, privacy-safe session satisfaction metrics grounded in **tasks**, plus a g
 | File | What |
 |---|---|
 | [overview.md](overview.md) | Context, architecture diagram, slice list |
-| [slice-1-instrumentation.md](slice-1-instrumentation.md) | Call session + bank event spine |
-| [slice-2-local-session-rollup.md](slice-2-local-session-rollup.md) | Pure rollups + local debug view |
-| [slice-3-diagnose-propose-gate.md](slice-3-diagnose-propose-gate.md) | Stall → planning proposal → accept |
+| [slice-1-instrumentation.md](slice-1-instrumentation.md) | Call session + bank event spine (**kernel landed**) |
+| [slice-2-local-session-rollup.md](slice-2-local-session-rollup.md) | Pure rollups (**helper landed**; UI open) |
+| [slice-3-diagnose-propose-gate.md](slice-3-diagnose-propose-gate.md) | Stall → planning proposal → accept (**open**) |
+
+**Living backlog (all open work across observability + moments):** [delivery/REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md).
+

@@ -1,11 +1,21 @@
 # Session satisfaction moments · Overview
 
-**Status:** active (requirements / planning)  
+**Status:** active (requirements / planning; build order in [REMAINING](../../delivery/REMAINING-task-satisfaction.md))  
 **Depends on:** [task-satisfaction-observability](../task-satisfaction-observability/) slices 1–2 for honest signals; slice 3 for post-session improve (orthogonal to in-call recovery).
 
 ## Purpose
 
 Observability answers *what happened*. These components answer *what the user experiences* when satisfaction is won or lost.
+
+## Implementation status
+
+| Wave | Status |
+|---|---|
+| W0 honesty (obs slice 1–2 kernel) | **Partial** — emit + rollup helper landed; hub webview bridge + UI open |
+| W1–W4 product moments | **Not started** — reqs + DRVs written |
+| Slice 3 / auto stall | **Not started** |
+
+Track detail: [REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md).
 
 ## Session arc (product spine)
 

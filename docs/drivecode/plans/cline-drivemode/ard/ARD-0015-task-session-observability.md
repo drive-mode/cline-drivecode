@@ -56,3 +56,4 @@ Existing [prd-success-metrics](../prd/prd-success-metrics.md) covers phase gates
 - [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md)
 - [ARD-0004](ARD-0004-gated-learn-privacy.md), [ARD-0008](ARD-0008-task-bank.md)
 - [leadership/BRIEF-task-satisfaction.md](../leadership/BRIEF-task-satisfaction.md)
+- [delivery/REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md) — living implementation backlog after W0 kernel

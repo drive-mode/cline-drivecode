@@ -187,4 +187,4 @@ Caption:
 4. Clean-drain ritual home: narration vs Spotlight vs NowNext successor?
 5. Drive tab plan summary on list vs post-join only?
 
-Detailed ACs live in each `req-*.md`.
+Detailed ACs live in each `req-*.md`. **Full remaining implementation checklist:** [REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md).
