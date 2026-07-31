@@ -243,6 +243,15 @@
     background: color-mix(in srgb, var(--brand-purple) 12%, var(--card));
   }
   .node.dim { opacity: 0.35; }
+  .node .id {
+    display: block;
+    font-family: var(--grotesk);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    margin-bottom: 1px;
+  }
   .node .title {
     font-weight: 600;
     font-size: 12px;
@@ -302,6 +311,13 @@
     flex: 0 0 auto;
   }
   .plan .name { font-weight: 600; font-size: 12px; }
+  .plan .pid {
+    font-family: var(--grotesk);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    margin-right: 6px;
+  }
   .plan .sub { color: var(--text-3); font-size: 11px; margin-top: 2px; }
   .detail {
     grid-column: 1;
@@ -371,7 +387,7 @@
         <section class="viewport-chrome" aria-labelledby="map-heading">
           <div class="toolbar">
             <strong id="map-heading">Dependency map</strong>
-            <span id="summary">8 tasks · sample graph</span>
+            <span id="summary">9 tasks · progressive IDs T001–T009</span>
             <span style="flex:1"></span>
             <button type="button" id="orient-lr" class="active" title="Left-to-right layers">LR</button>
             <button type="button" id="orient-td" title="Top-down layers">TD</button>
@@ -396,15 +412,15 @@
           </button>
           <button type="button" class="plan" data-plan="partner" style="--swatch: var(--plan-a)">
             <span class="swatch"></span>
-            <span><div class="name">Partner MVP</div><div class="sub">4 tasks · active</div></span>
+            <span><div class="name"><span class="pid">P001</span>Partner MVP</div><div class="sub">4 tasks · active</div></span>
           </button>
           <button type="button" class="plan" data-plan="stage" style="--swatch: var(--plan-b)">
             <span class="swatch"></span>
-            <span><div class="name">Stage &amp; share</div><div class="sub">3 tasks · active</div></span>
+            <span><div class="name"><span class="pid">P002</span>Stage &amp; share</div><div class="sub">3 tasks · active</div></span>
           </button>
           <button type="button" class="plan" data-plan="voice" style="--swatch: var(--plan-c)">
             <span class="swatch"></span>
-            <span><div class="name">Voice pack</div><div class="sub">2 tasks · draft</div></span>
+            <span><div class="name"><span class="pid">P003</span>Voice pack</div><div class="sub">2 tasks · draft</div></span>
           </button>
         </aside>
         <aside class="detail" id="detail" aria-live="polite">
@@ -417,21 +433,21 @@
   <div class="live" id="live" aria-live="polite"></div>
 <script>
 const PLANS = {
-  partner: { title: "Partner MVP", color: "var(--plan-a)" },
-  stage: { title: "Stage & share", color: "var(--plan-b)" },
-  voice: { title: "Voice pack", color: "var(--plan-c)" },
+  partner: { id: "P001", title: "Partner MVP", color: "var(--plan-a)" },
+  stage: { id: "P002", title: "Stage & share", color: "var(--plan-b)" },
+  voice: { id: "P003", title: "Voice pack", color: "var(--plan-c)" },
 };
 
 const NODES = [
-  { id: "room", title: "Room MVP", status: "completed", plan: "partner", layer: 0 },
-  { id: "tab", title: "Drive tab", status: "completed", plan: "partner", layer: 1 },
-  { id: "roster", title: "Roster", status: "in_progress", plan: "partner", layer: 2 },
-  { id: "partner", title: "Partner end-to-end", status: "in_progress", plan: "partner", layer: 3 },
-  { id: "stage", title: "Call Stage", status: "completed", plan: "stage", layer: 4 },
-  { id: "share", title: "Bidirectional share", status: "completed", plan: "stage", layer: 5 },
-  { id: "demo", title: "Demo artifact share", status: "pending", plan: "stage", layer: 6 },
-  { id: "mic", title: "Mic + mute", status: "pending", plan: "voice", layer: 6 },
-  { id: "tts", title: "Partner voice out", status: "blocked", plan: "voice", layer: 7 },
+  { id: "room", code: "T001", title: "Room MVP", status: "completed", plan: "partner", layer: 0 },
+  { id: "tab", code: "T002", title: "Drive tab", status: "completed", plan: "partner", layer: 1 },
+  { id: "roster", code: "T003", title: "Roster", status: "in_progress", plan: "partner", layer: 2 },
+  { id: "partner", code: "T004", title: "Partner end-to-end", status: "in_progress", plan: "partner", layer: 3 },
+  { id: "stage", code: "T005", title: "Call Stage", status: "completed", plan: "stage", layer: 4 },
+  { id: "share", code: "T006", title: "Bidirectional share", status: "completed", plan: "stage", layer: 5 },
+  { id: "demo", code: "T007", title: "Demo artifact share", status: "pending", plan: "stage", layer: 6 },
+  { id: "mic", code: "T008", title: "Mic + mute", status: "pending", plan: "voice", layer: 6 },
+  { id: "tts", code: "T009", title: "Partner voice out", status: "blocked", plan: "voice", layer: 7 },
 ];
 
 const EDGES = [
@@ -447,7 +463,7 @@ const EDGES = [
 ];
 
 const NODE_W = 168;
-const NODE_H = 52;
+const NODE_H = 62;
 const PAD = 24;
 const LABEL_LOD_SCALE = 0.85;
 
@@ -644,8 +660,8 @@ function render() {
     btn.setAttribute("aria-pressed", selected === n.id ? "true" : "false");
     btn.dataset.id = n.id;
     const title = showLabels ? n.title : shortTitle(n.title);
-    btn.innerHTML = `<span class="title">${title}</span><span class="meta"><span class="${statusClass(n.status)}">${n.status.replace("_", " ")}</span> · ${PLANS[n.plan].title}</span>`;
-    btn.title = n.title;
+    btn.innerHTML = `<span class="id">${n.code}</span><span class="title">${title}</span><span class="meta"><span class="${statusClass(n.status)}">${n.status.replace("_", " ")}</span> · ${PLANS[n.plan].id}</span>`;
+    btn.title = `${n.code} · ${n.title}`;
     btn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       selectNode(n.id);
@@ -664,19 +680,26 @@ function selectNode(id) {
   const n = byId[id];
   const incoming = EDGES.filter((e) => e.to === id);
   const outgoing = EDGES.filter((e) => e.from === id);
-  const blockedBy = incoming.map((e) => byId[e.from].title).join(", ") || "Nothing";
-  const unblocks = outgoing.map((e) => byId[e.to].title).join(", ") || "Nothing";
+  const blockedBy = incoming.map((e) => {
+    const p = byId[e.from];
+    return `${p.code} ${p.title}`;
+  }).join(", ") || "Nothing";
+  const unblocks = outgoing.map((e) => {
+    const p = byId[e.to];
+    return `${p.code} ${p.title}`;
+  }).join(", ") || "Nothing";
   const artifacts = [...incoming, ...outgoing]
     .map((e) => e.artifact)
     .filter(Boolean);
+  const plan = PLANS[n.plan];
   detail.innerHTML = `
-    <h3>${n.title}</h3>
+    <h3><span style="font-family:var(--grotesk);color:var(--text-3);letter-spacing:0.06em;margin-right:8px">${n.code}</span>${n.title}</h3>
     <p>${n.status.replace("_", " ")}. Blocked by: ${blockedBy}. Unblocks: ${unblocks}.</p>
     <div class="chips">
-      <span class="chip plan-chip" style="--swatch:${PLANS[n.plan].color}">Plan · ${PLANS[n.plan].title}</span>
+      <span class="chip plan-chip" style="--swatch:${plan.color}">${plan.id} · ${plan.title}</span>
       ${artifacts.map((a) => `<span class="chip">Artifact · ${a}</span>`).join("")}
     </div>`;
-  live.textContent = `Selected ${n.title}. Prerequisites: ${blockedBy}. Dependents: ${unblocks}. Plan: ${PLANS[n.plan].title}.`;
+  live.textContent = `Selected ${n.code} ${n.title}. Prerequisites: ${blockedBy}. Dependents: ${unblocks}. Plan: ${plan.id} ${plan.title}.`;
   render();
 }
 

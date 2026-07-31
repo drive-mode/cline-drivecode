@@ -20,9 +20,10 @@ flowchart LR
 
 ## S1 · Projection annotations
 
-- Extend pure dependency projection with optional `planIds[]` per node and optional edge artifact labels keyed by `from → to`.
-- Keep team runtime untouched; annotations come from bank/demo adapters at the composition root.
-- Exit: `@cline/shared` tests; `bun run build:sdk`.
+- Extend pure dependency projection with optional `planIds[]` per node, optional edge artifact labels keyed by `from → to`, and **progressive display IDs** (`T###` / `P###`) for tasks and plans.
+- Keep team runtime untouched; annotations and IDs come from bank/demo adapters at the composition root (mint at create; view does not invent IDs from titles).
+- Document / enforce the ID format from [UX.md](UX.md#progressive-ids-tasks-and-plans) when wiring bank create paths (align with DRV-TASK-BANK store if that lands first).
+- Exit: `@cline/shared` tests for projection + ID fields; `bun run build:sdk`.
 
 ## S2 · Graph viewport + selection
 
@@ -44,9 +45,10 @@ Implements the [UX fit ladder](UX.md#fit--density-all-tasks-on-screen-at-start):
 
 ## S3 · Plans rail
 
-- Right rail lists plans with colors; filter highlights members.
-- Node plan accents wired to projection `planIds`.
-- Exit: rail empty state + filter tests; screenshot refresh.
+- Right rail lists plans with **`P###`**, colors, and titles; filter highlights members.
+- Node plan accents wired to projection `planIds`; nodes show **`T###`** (prefer ID over title under overview LOD).
+- Search / filter matches progressive ID prefixes.
+- Exit: rail empty state + filter + ID label tests; screenshot refresh.
 
 ## S4 · Artifacts + polish
 

@@ -22,6 +22,7 @@ The map should answer three questions in one composition: **order**, **payload**
 - **First paint and `Fit` always frame every task** inside the viewport (padding). Zoom may leave content off-screen afterward; Fit restores the full-graph frame. Layout follows the fit/density ladder in the initiative UX (viewport-fit gaps → LOD → adaptive LR/TD → plan hulls / stacks as escape).
 - Each task is a **node**; `dependsOn` relationships are **edges**. Edge labels show the artifact / result passed when known; unlabeled edges still draw when only the dependency exists.
 - Clicking (or activating) a node selects it, highlights incident edges, and opens a **task detail** panel (status, description, blockers, dependents, artifacts, plan membership).
+- Every task and plan exposes a **progressive display ID** (`T001`… / `P001`…) that is immutable, monotonic, and searchable; nodes and the Plans rail show the ID; bank-backed entities mint these ids at create time (see initiative UX).
 - Plans appear in a fixed **rail on the right** of the graph. Selecting a plan highlights its tasks in that plan’s color and dims non-members. Nodes carry a plan-color accent when they belong to a plan.
 - Keyboard and screen-reader paths from the current map are preserved or improved (focusable nodes, live region for selection, no bare-letter hotkeys that steal host shortcuts).
 - Empty / loading / integrity (cycle, missing ref) states remain explicit; the UI never invents edges or plan membership.

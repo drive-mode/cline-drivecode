@@ -8,6 +8,7 @@ Product experience for [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md). Grounded in
 2. **Trace the handoff** — know what artifact / result flows along an edge.
 3. **Group by plan** — spot which tasks belong to which plan without leaving the map.
 4. **Inspect one task** — open details without losing graph context.
+5. **Cite and query by ID** — refer to a task or plan with a short progressive code (`T014`, `P003`) that sorts in creation order.
 
 ## Current → target
 
@@ -67,9 +68,62 @@ Hero budget for this lens: graph + plans rail + optional one-line map summary (�
 ### Spatial model
 
 - **Layout:** layered DAG from `DependencyNode.layer`. Default orientation is left-to-right (prerequisites → dependents). Vertical order within a layer stays deterministic (title, then key) so screenshots and tests stay stable.
-- **Nodes:** compact chips (title + status glyph). Not large marketing cards. Status color follows existing Status Hub state language; **plan color** is a separate accent (left edge or ring).
+- **Nodes:** compact chips (**progressive ID** + title + status glyph). Not large marketing cards. Status color follows existing Status Hub state language; **plan color** is a separate accent (left edge or ring).
 - **Edges:** bezier or orthogonal polylines from prerequisite → dependent. Arrowheads point toward the dependent (work flows forward).
 - **Integrity:** cyclic / missing-ref nodes keep today’s warning banner; cycle edges use a distinct stroke (dashed destructive) so topology stays honest.
+
+### Progressive IDs (tasks and plans)
+
+Every task and plan shown on this lens carries a **stable, human-queryable display ID** that makes progression obvious and citations cheap (“blocked on `T014`”, “filter `P003`”).
+
+#### Locked format
+
+| Entity | Pattern | Examples | Allocation |
+|---|---|---|---|
+| Plan | `P` + zero-padded decimal sequence (≥3 digits) | `P001`, `P002`, `P015` | Next free plan sequence in the workspace bank |
+| Task | `T` + zero-padded decimal sequence (≥3 digits) | `T001`, `T002`, `T014` | Next free task sequence in the workspace bank |
+
+```mermaid
+flowchart LR
+  Alloc[Workspace seq counters]
+  PlanId["Plan P001…"]
+  TaskId["Task T001…"]
+  Alloc --> PlanId
+  Alloc --> TaskId
+  PlanId -->|"taskIds refs"| TaskId
+```
+
+Caption:
+
+- Prefix encodes kind (`P` / `T`) so a pasted ID is unambiguous in search and chat.
+- Numeric suffix is **monotonic** — later creates get higher numbers. That is the growth signal (`001` → `002`), not status and not dependency layer.
+- Padding starts at 3 digits. When the counter would exceed the current width, **widen for new IDs** (`T999` → `T1000`); never recycle or renumber.
+- IDs are **immutable** after mint (including archive). Titles may change; IDs do not.
+- Lexicographic sort of equal-width IDs matches creation order; mixed widths sort by parsing the numeric suffix.
+
+#### Why not `A001` → `B001` as the primary scheme
+
+Letter-series IDs (`A001`, `B001`) are useful as **optional wave/series labels** later, but they need a defined meaning for the letter (phase, quarter, plan family). Until that product meaning exists, prefer global `P`/`T` counters so one search box and one citation grammar work everywhere. A future series prefix can wrap the same counters (e.g. display `A·T014`) without changing the stored id.
+
+#### Relationship to other keys
+
+| Key | Role |
+|---|---|
+| Progressive ID (`T014`, `P003`) | Human display, search, citations, rail labels |
+| Graph node key (`teamId:taskId`) | Stable React/DOM identity for the DepMap projection |
+| Bank file / `DriveTask.id` / `DrivePlan.id` | Persistence identity — **should be the progressive ID** when bank-backed; demo adapters mint the same shapes |
+
+Do not invent progressive IDs in the view from titles. Mint at create time in the bank (or demo fixture); the map only displays what the projection provides.
+
+#### UX surfaces
+
+| Surface | Treatment |
+|---|---|
+| Task node | Eyebrow / mono label with `T###` above or beside the title; always visible at detail LOD; at overview LOD keep the ID even if the title truncates |
+| Plans rail | Each row leads with `P###` then title |
+| Task detail | ID in the heading (`T014 · Partner end-to-end`); plan chips show `P003 · …` |
+| Search (Status Hub / map filter) | Match progressive ID prefix case-insensitively (`t01`, `P00`) |
+| Copy | Optional click-to-copy on the ID chip |
 
 ### Fit & density (all tasks on screen at start)
 
@@ -160,7 +214,7 @@ Plans live **to the right of the graph** so membership is scannable without cove
 
 | Element | Behavior |
 |---|---|
-| Plan row | Color swatch + title + task count + status (draft / active / closed when known) |
+| Plan row | Color swatch + **`P###`** + title + task count + status (draft / active / closed when known) |
 | Click plan | Toggle plan filter: highlight members, dim others |
 | Multi-select | Optional: hold modifier or multi-toggle to union plans |
 | `All tasks` | Clear plan filter |
@@ -186,10 +240,10 @@ Tasks with no plan membership render without a plan accent and appear only under
 
 Detail dock content, in order:
 
-1. Title + status + ready/waiting/cycle flags  
-2. Plan chips (click jumps / filters rail)  
+1. **`T###` + title** + status + ready/waiting/cycle flags  
+2. Plan chips (`P### · title`; click jumps / filters rail)  
 3. Description / summary  
-4. **Blocked by** — node chips that select on activate  
+4. **Blocked by** — node chips (ID + title) that select on activate  
 5. **Unblocks** — same  
 6. **Incoming / outgoing artifacts** — labels from selected incident edges  
 7. Assignee / team attribution when present  
@@ -229,9 +283,11 @@ Carry forward nest README contracts:
 2. Multi-plan membership: primary accent only vs striped dual accent?
 3. First production artifact source: extend shared projection vs mission-log evidence only?
 4. Should plan filter also dim edges that leave the selected plan set?
+5. When bank already has freeform ids (`t-parse`, legacy demos), mint parallel progressive IDs or migrate in place on first open?
 
 ## Success signals (qualitative)
 
 - A new operator can point to the critical path and the blocking artifact without reading the full card list.
 - Plan membership is obvious from the rail + node accents within one glance.
+- Operators can cite `T###` / `P###` in chat and find the same entity via map search.
 - Keyboard-only review of the map remains possible after the canvas lands.
