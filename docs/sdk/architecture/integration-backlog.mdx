@@ -32,6 +32,8 @@ Items filed by post-task review and test-coverage agents. Address after the curr
 | BL-5.4 | CLI interactive TUI usage-budget abort | SDK-5.2 | One-shot `run-agent` honors `CLINE_MAX_SESSION_COST`; interactive path does not yet |
 | BL-5.5 | VS Code `maxIterations` setting | SDK-5.1 | Host applies product default today; expose override in settings UI when ready |
 | BL-5.6 | CLI `--max-iterations` / config override | SDK-5.1 | No CLI arg today; product default always applied |
+| BL-5.7 | ACP host-level `maxIterations` session-config assert | test | `AcpAgent.buildConfig` is private; core covers `host:"acp"` + `applyDefaultMaxIterations`. Export a thin builder (Phase 4 plugin pattern) if host-level assert is needed |
+| BL-5.8 | VS Code Phase 5 tests run via `test:vitest`, not `test:unit` | test | `cline-session-factory.test.ts` imports vitest; `run-bun-unit-tests.ts` only picks `bun:test` files — document in contributor notes or dual-run in CI if missing |
 
 ## Open (to be filled by later phases)
 

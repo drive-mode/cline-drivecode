@@ -80,9 +80,16 @@ describe("resolveProductSessionFeatures", () => {
 	});
 
 	it("omits maxIterations unless opted in or explicitly set", () => {
+		expect(PRODUCT_DEFAULT_MAX_ITERATIONS).toBe(50);
 		expect(resolveProductSessionFeatures().maxIterations).toBeUndefined();
 		expect(
 			resolveProductSessionFeatures({
+				applyDefaultMaxIterations: true,
+			}).maxIterations,
+		).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS);
+		expect(
+			resolveProductSessionFeatures({
+				host: "acp",
 				applyDefaultMaxIterations: true,
 			}).maxIterations,
 		).toBe(PRODUCT_DEFAULT_MAX_ITERATIONS);
@@ -100,3 +107,4 @@ describe("resolveProductSessionFeatures", () => {
 		).toBe(3);
 	});
 });
+
