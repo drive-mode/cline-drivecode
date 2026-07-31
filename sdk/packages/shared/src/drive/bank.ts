@@ -43,6 +43,8 @@ export const BankSnapshotSchema = z
 		nextTaskId: z.string().nullable(),
 		nowTitle: z.string().nullable(),
 		nextTitle: z.string().nullable(),
+		/** Now-task failure note when present — recovery chrome (DRV-FELT-AGENCY). */
+		nowLastFailure: z.string().nullable().optional(),
 	})
 	.strict();
 

@@ -39,6 +39,7 @@ import {
 	mutateBankEditPlanTasks,
 	mutateBankRecordFailure,
 } from "./drive/bankSession";
+import { hasNowLastFailure, steerAppliedBanner } from "./drive/agencyChrome";
 import { DriveHeaderControls } from "./drive/DriveCallChrome";
 import { DriveRoomChrome, DriveVoiceBar } from "./drive/DriveRoomChrome";
 import {
@@ -138,6 +139,13 @@ export default function Chat({
 	const [sessionId, setSessionId] = useState<string>();
 	const [hydratingSessionId, setHydratingSessionId] = useState<string>();
 	const [sending, setSending] = useState(false);
+	const [pendingSteers, setPendingSteers] = useState<
+		Array<{ id: string; prompt: string }>
+	>([]);
+	const sendingRef = useRef(false);
+	useEffect(() => {
+		sendingRef.current = sending;
+	}, [sending]);
 	const [providers, setProviders] = useState<ProviderOption[]>([]);
 	const [modelsByProvider, setModelsByProvider] = useState<
 		Record<string, WebviewProviderModel[]>
@@ -617,12 +625,32 @@ export default function Chat({
 						),
 					);
 					return;
+				case "pending_prompts":
+					setPendingSteers(
+						message.prompts
+							.filter((item) => item.delivery === "steer")
+							.map((item) => ({ id: item.id, prompt: item.prompt })),
+					);
+					return;
+				case "pending_prompt_submitted":
+					setPendingSteers((current) =>
+						current.filter((item) => item.id !== message.prompt.id),
+					);
+					if (message.prompt.delivery === "steer") {
+						setDrive((current) =>
+							applyBankSnapshot(current, current.bankSnapshot, {
+								agencyBanner: steerAppliedBanner(),
+							}),
+						);
+					}
+					return;
 				case "reset_done":
 					sessionIdRef.current = undefined;
 					hydratingSessionIdRef.current = undefined;
 					setSessionId(undefined);
 					setHydratingSessionId(undefined);
 					setSending(false);
+					setPendingSteers([]);
 					setPendingApprovals([]);
 					setTitleEditing(false);
 					setSessionTitleDraft("");
@@ -742,6 +770,50 @@ export default function Chat({
 			if (isHydrating) {
 				return;
 			}
+			const midTurn = sendingRef.current;
+			const buildConfig = () => {
+				const driveHint = drivePersonaSystemHint(drive);
+				const base = systemPrompt.trim();
+				return {
+					autoApproveTools,
+					enableSpawn,
+					enableTeams,
+					enableTools,
+					maxIterations: parseMaxIterations(maxIterations),
+					model: model || undefined,
+					mode: drive.active ? toNativeMode(drive.subMode) : mode,
+					provider: provider || undefined,
+					reasonLevel: effectiveReasonLevel,
+					systemPrompt:
+						driveHint && base
+							? `${driveHint}\n\n${base}`
+							: driveHint || base || undefined,
+				};
+			};
+
+			if (midTurn) {
+				setMessages((current) => [
+					...current,
+					createMessage(
+						"user",
+						buildUserMessageLabel(
+							input.prompt,
+							input.attachments,
+							input.attachmentCount,
+						),
+					),
+				]);
+				setStatus("Steer queued — will apply at the next tool boundary.");
+				postToHost({
+					type: "send",
+					prompt: input.prompt,
+					attachments: input.attachments,
+					delivery: "steer",
+					config: buildConfig(),
+				});
+				return;
+			}
+
 			const assistantMessage = createMessage("assistant", "");
 			activeAssistantIdRef.current = assistantMessage.id;
 			setMessages((current) => [
@@ -762,25 +834,7 @@ export default function Chat({
 				type: "send",
 				prompt: input.prompt,
 				attachments: input.attachments,
-				config: {
-					autoApproveTools,
-					enableSpawn,
-					enableTeams,
-					enableTools,
-					maxIterations: parseMaxIterations(maxIterations),
-					model: model || undefined,
-					mode: drive.active ? toNativeMode(drive.subMode) : mode,
-					provider: provider || undefined,
-					reasonLevel: effectiveReasonLevel,
-					systemPrompt: (() => {
-						const driveHint = drivePersonaSystemHint(drive);
-						const base = systemPrompt.trim();
-						if (driveHint && base) {
-							return `${driveHint}\n\n${base}`;
-						}
-						return driveHint || base || undefined;
-					})(),
-				},
+				config: buildConfig(),
 			});
 			if (driveJoinNote) {
 				setDriveJoinNote(null);
@@ -848,6 +902,44 @@ export default function Chat({
 				setDriveJoinNote(ack.text);
 			}
 
+			const midTurn = sendingRef.current;
+			const voiceConfig = {
+				autoApproveTools,
+				enableSpawn,
+				enableTeams,
+				enableTools,
+				maxIterations: parseMaxIterations(maxIterations),
+				model: model || undefined,
+				mode: drive.active ? toNativeMode(drive.subMode) : mode,
+				provider: provider || undefined,
+				reasonLevel: effectiveReasonLevel,
+				systemPrompt: (() => {
+					const driveHint = drivePersonaSystemHint(drive);
+					const base = systemPrompt.trim();
+					if (driveHint && base) {
+						return `${driveHint}\n\n${base}`;
+					}
+					return driveHint || base || undefined;
+				})(),
+			};
+
+			if (midTurn) {
+				setMessages((current) => [
+					...current,
+					createMessage("user", trimmed),
+				]);
+				setStatus("Steer queued — will apply at the next tool boundary.");
+				postToHost({
+					type: "send",
+					prompt: trimmed,
+					source: "voice",
+					delivery: "steer",
+					config: voiceConfig,
+				});
+				setVoiceCaption(clearVoiceCaptionAfterSend());
+				return;
+			}
+
 			const assistantMessage = createMessage("assistant", "");
 			activeAssistantIdRef.current = assistantMessage.id;
 			setMessages((current) => [
@@ -861,25 +953,7 @@ export default function Chat({
 				type: "send",
 				prompt: trimmed,
 				source: "voice",
-				config: {
-					autoApproveTools,
-					enableSpawn,
-					enableTeams,
-					enableTools,
-					maxIterations: parseMaxIterations(maxIterations),
-					model: model || undefined,
-					mode: drive.active ? toNativeMode(drive.subMode) : mode,
-					provider: provider || undefined,
-					reasonLevel: effectiveReasonLevel,
-					systemPrompt: (() => {
-						const driveHint = drivePersonaSystemHint(drive);
-						const base = systemPrompt.trim();
-						if (driveHint && base) {
-							return `${driveHint}\n\n${base}`;
-						}
-						return driveHint || base || undefined;
-					})(),
-				},
+				config: voiceConfig,
 			});
 			setVoiceCaption(clearVoiceCaptionAfterSend());
 		},
@@ -1150,6 +1224,7 @@ export default function Chat({
 					disabled={isHydrating}
 					providerId={provider}
 					session={driveSession}
+					turnInFlight={sending}
 				/>
 				<div
 					className={
@@ -1217,6 +1292,7 @@ export default function Chat({
 							onModeChange={setMode}
 							onMaxIterationsChange={setMaxIterations}
 							onModelChange={setModel}
+							pendingSteers={pendingSteers}
 							onModelSelectorOpenChange={setModelSelectorOpen}
 							onProviderChange={(nextProvider) => {
 								setProvider(nextProvider);
@@ -1311,6 +1387,7 @@ export default function Chat({
 									completed tasks archive under .drive/bank/archive/.
 								</p>
 								<PlanEditor
+									nowLastFailure={drive.bankSnapshot.nowLastFailure}
 									planId={drive.bankSnapshot.activePlanId}
 									planTitle="Current work"
 									tasks={planEditorTasks}
@@ -1320,6 +1397,9 @@ export default function Chat({
 											if (!planId) {
 												return;
 											}
+											const recovery = hasNowLastFailure(
+												drive.bankSnapshot,
+											);
 											const { snapshot, fromHub } =
 												await mutateBankCreateTask(
 													bankSessionRef.current,
@@ -1345,7 +1425,11 @@ export default function Chat({
 												await listPlanTasks(bankSessionRef.current, planId),
 											);
 											setDrive((current) =>
-												applyBankSnapshot(current, snapshot),
+												applyBankSnapshot(current, snapshot, {
+													mutation: "add",
+													addedTitle: task.title,
+													recovery,
+												}),
 											);
 										})();
 									}}
@@ -1377,7 +1461,9 @@ export default function Chat({
 												);
 											}
 											setDrive((current) =>
-												applyBankSnapshot(current, snapshot),
+												applyBankSnapshot(current, snapshot, {
+													mutation: "complete",
+												}),
 											);
 										})();
 									}}
@@ -1407,7 +1493,9 @@ export default function Chat({
 												await listPlanTasks(bankSessionRef.current, planId),
 											);
 											setDrive((current) =>
-												applyBankSnapshot(current, snapshot),
+												applyBankSnapshot(current, snapshot, {
+													mutation: "reorder",
+												}),
 											);
 										})();
 									}}

@@ -29,10 +29,12 @@ export function DriveRoomChrome({
 	session,
 	disabled,
 	providerId,
+	turnInFlight = false,
 }: {
 	session: UseDriveSessionResult;
 	disabled: boolean;
 	providerId: string;
+	turnInFlight?: boolean;
 }) {
 	const {
 		drive,
@@ -50,6 +52,7 @@ export function DriveRoomChrome({
 			<DriveCallStrip
 				disabled={disabled}
 				drive={drive}
+				turnInFlight={turnInFlight}
 				workerCount={chatForks.length}
 				workersOpen={workersPanelOpen}
 				{...stripHandlers}
@@ -130,6 +133,7 @@ export function DriveRoomChrome({
 			) : null}
 			{drive.active ? (
 				<NowNext
+					agencyBanner={drive.agencyBanner}
 					onSelectNext={() => {}}
 					onSelectNow={() => {}}
 					snapshot={drive.bankSnapshot}

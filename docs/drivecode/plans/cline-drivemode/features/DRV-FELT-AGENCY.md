@@ -27,18 +27,21 @@ North star includes “control over the plan,” but steer, interrupt, and plan 
 
 ## Agent tasks
 
-- [ ] Emit visible NowNext/Spotlight deltas on steer consume and raise-hand pause/redirect.
+- [x] Emit visible NowNext/Spotlight deltas on steer consume and raise-hand pause/redirect.
   - Owner package: `@cline/cline-hub` + `@cline/core`
   - Verify: hub fixture for steer → chip clear + cursor rewrite
   - Done when: consequence is named in chrome within one tool boundary.
-- [ ] Refresh NowNext from BankSnapshot on PlanEditor mutations without full reload.
+  - Landed (W1.1): mid-turn send → steer pending prompts; Composer steer chip; consume → “Steer applied” agency banner; raise-hand → “Finishing current step” / “Paused — waiting on you”. Redirect Now rewrite remains W-13 / interrupt redirect follow-on.
+- [x] Refresh NowNext from BankSnapshot on PlanEditor mutations without full reload.
   - Owner package: `@cline/cline-hub`
   - Verify: add/remove/reorder smoke
   - Done when: plan card and NowNext match disk after edit.
-- [ ] Distinct chrome for collaborative mid-plan add vs fix-up after `lastFailure`.
+  - Landed: `applyBankSnapshot` + one-shot consequence banner on cursor-changing edits (“You added …”, “Next is now X”); reorder-only with unchanged cursor stays quiet.
+- [x] Distinct chrome for collaborative mid-plan add vs fix-up after `lastFailure`.
   - Owner package: `@cline/cline-hub`
   - Verify: side-by-side fixture render
   - Done when: treatments differ; no churn jargon in copy.
+  - Landed: `BankSnapshot.nowLastFailure`; PlanEditor recovery hint + “Add fix-up”; NowNext recovery strip; never “churn”.
 
 ## Risks
 

@@ -10,6 +10,7 @@ export function deriveBankSnapshot(
 
 	const openTaskIds: string[] = [];
 	const openTitles: string[] = [];
+	const openFailures: Array<string | undefined> = [];
 	for (const taskId of plan.taskIds) {
 		const task = tasksById.get(taskId);
 		if (!task) {
@@ -18,11 +19,13 @@ export function deriveBankSnapshot(
 		if (task.status === "open" || task.status === "in_progress") {
 			openTaskIds.push(task.id);
 			openTitles.push(task.title);
+			openFailures.push(task.lastFailure);
 		}
 	}
 
 	const nowTaskId = openTaskIds[0] ?? null;
 	const nextTaskId = openTaskIds[1] ?? null;
+	const nowLastFailure = openFailures[0] ?? null;
 
 	return {
 		activePlanId: plan.id,
@@ -31,6 +34,7 @@ export function deriveBankSnapshot(
 		nextTaskId,
 		nowTitle: openTitles[0] ?? null,
 		nextTitle: openTitles[1] ?? null,
+		nowLastFailure: nowLastFailure ?? null,
 	};
 }
 
@@ -42,5 +46,6 @@ function emptySnapshot(): BankSnapshot {
 		nextTaskId: null,
 		nowTitle: null,
 		nextTitle: null,
+		nowLastFailure: null,
 	};
 }

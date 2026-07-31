@@ -246,6 +246,11 @@ export type WebviewInboundMessage =
 			attachments?: WebviewChatAttachments;
 			/** Voice/caption confirm path — mute-gated hub-side (DRV-MIC). */
 			source?: "voice" | "text";
+			/**
+			 * Mid-turn delivery into pending prompts (DRV-FELT-AGENCY / DRV-STEER-QUEUE).
+			 * When omitted and a turn is already in progress, the hub defaults to steer.
+			 */
+			delivery?: "queue" | "steer";
 	  }
 	| { type: "abort" }
 	| { type: "reset" }
@@ -506,6 +511,26 @@ export type WebviewOutboundMessage =
 			finishReason: string;
 			iterations: number;
 			usage?: WebviewUsage;
+	  }
+	| {
+			type: "pending_prompts";
+			sessionId: string;
+			prompts: Array<{
+				id: string;
+				prompt: string;
+				delivery: "queue" | "steer";
+				attachmentCount: number;
+			}>;
+	  }
+	| {
+			type: "pending_prompt_submitted";
+			sessionId: string;
+			prompt: {
+				id: string;
+				prompt: string;
+				delivery: "queue" | "steer";
+				attachmentCount: number;
+			};
 	  }
 	| {
 			type: "providers";

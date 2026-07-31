@@ -302,6 +302,7 @@ export async function sendMessage(
 	text: string,
 	config?: WebviewConfig,
 	attachments?: { userImages?: string[] },
+	options?: { delivery?: "queue" | "steer" },
 ): Promise<void> {
 	if (!ctx.cline) throw new Error("Hub is not connected.");
 	if (!peer.selectedSessionId) {
@@ -313,6 +314,7 @@ export async function sendMessage(
 		prompt: text,
 		mode: config?.mode === "plan" ? "plan" : "act",
 		userImages: attachments?.userImages,
+		delivery: options?.delivery,
 	});
 }
 

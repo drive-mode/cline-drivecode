@@ -323,6 +323,7 @@ export function Composer({
 	provider,
 	providers,
 	sending,
+	pendingSteers = [],
 	status,
 	systemPrompt,
 	reasonLevel,
@@ -358,6 +359,8 @@ export function Composer({
 	provider: string;
 	providers: ProviderOption[];
 	sending: boolean;
+	/** Steer pending prompts awaiting tool-boundary consume (DRV-FELT-AGENCY). */
+	pendingSteers?: Array<{ id: string; prompt: string }>;
 	status: string;
 	systemPrompt: string;
 	reasonLevel: WebviewReasonLevel;
@@ -377,6 +380,30 @@ export function Composer({
 
 	return (
 		<div className="border-t bg-background">
+			{pendingSteers.length > 0 ? (
+				<div
+					aria-live="polite"
+					className="flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/5 px-3 py-1.5"
+					data-slot="steer-chip"
+					role="status"
+				>
+					<span className="text-[10px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+						Steer
+					</span>
+					{pendingSteers.map((item) => (
+						<span
+							className="max-w-64 truncate rounded border border-amber-500/40 bg-background px-2 py-0.5 text-xs text-amber-950 dark:text-amber-50"
+							key={item.id}
+							title={item.prompt}
+						>
+							{item.prompt}
+						</span>
+					))}
+					<span className="text-[10px] text-muted-foreground">
+						Applies at the next tool boundary
+					</span>
+				</div>
+			) : null}
 			<PromptInput
 				accept="image/*,.txt,.md,.json,.ts,.tsx,.js,.jsx"
 				globalDrop

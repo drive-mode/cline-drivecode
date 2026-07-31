@@ -12,6 +12,10 @@ import type {
 	StageCard,
 	StagePin,
 } from "@cline/shared";
+import {
+	planEditConsequenceBanner,
+	type PlanMutationKind,
+} from "./agencyChrome";
 import { isDriveHumanId } from "./participantIds";
 
 export type DriveSubMode = "plan" | "agent" | "ask" | "debug";
@@ -82,6 +86,11 @@ export type DriveUiState = {
 	 * cleared (everyone) when focusing self. Profile does not touch this.
 	 */
 	addressFollowsFocusParticipantId: string | null;
+	/**
+	 * One-shot felt-agency consequence banner (DRV-FELT-AGENCY).
+	 * Cleared by the chrome after display or on the next explicit clear.
+	 */
+	agencyBanner: string | null;
 };
 
 /** Stable ids until hub roster provides real participant UUIDs. */
@@ -98,6 +107,7 @@ export const EMPTY_BANK_SNAPSHOT: BankSnapshot = {
 	nextTaskId: null,
 	nowTitle: null,
 	nextTitle: null,
+	nowLastFailure: null,
 };
 
 export const DEFAULT_DRIVE_UI: DriveUiState = {
@@ -122,6 +132,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	participants: [],
 	focusedParticipantId: null,
 	addressFollowsFocusParticipantId: null,
+	agencyBanner: null,
 };
 
 /** Map Drive sub-mode onto native Cline plan|act for send config. */
@@ -194,8 +205,29 @@ export function syncDrivePostureFromBank(state: DriveUiState): DriveUiState {
 export function applyBankSnapshot(
 	state: DriveUiState,
 	snapshot: BankSnapshot,
+	options?: {
+		mutation?: PlanMutationKind;
+		addedTitle?: string;
+		recovery?: boolean;
+		/** Explicit banner override (e.g. steer applied). Pass null to clear. */
+		agencyBanner?: string | null;
+	},
 ): DriveUiState {
-	return syncDrivePostureFromBank({ ...state, bankSnapshot: snapshot });
+	let agencyBanner = state.agencyBanner;
+	if (options?.agencyBanner !== undefined) {
+		agencyBanner = options.agencyBanner;
+	} else if (options?.mutation) {
+		agencyBanner = planEditConsequenceBanner(state.bankSnapshot, snapshot, {
+			mutation: options.mutation,
+			addedTitle: options.addedTitle,
+			recovery: options.recovery,
+		});
+	}
+	return syncDrivePostureFromBank({
+		...state,
+		bankSnapshot: snapshot,
+		agencyBanner,
+	});
 }
 
 /**

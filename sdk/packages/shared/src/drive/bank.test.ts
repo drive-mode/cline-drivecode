@@ -75,4 +75,17 @@ describe("BankSnapshotSchema", () => {
 		});
 		expect(snap.nowTaskId).toBe("t1");
 	});
+
+	it("accepts optional nowLastFailure", () => {
+		const snap = parseBankSnapshot({
+			activePlanId: "p1",
+			openTaskIds: ["t1"],
+			nowTaskId: "t1",
+			nextTaskId: null,
+			nowTitle: "One",
+			nextTitle: null,
+			nowLastFailure: "tests red",
+		});
+		expect(snap.nowLastFailure).toBe("tests red");
+	});
 });

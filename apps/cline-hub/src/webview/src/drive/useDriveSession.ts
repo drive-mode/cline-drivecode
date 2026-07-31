@@ -90,6 +90,8 @@ function readPersistedDriveUi(): DriveUiState {
 					state.driveUi.partnerNameInk ?? DEFAULT_DRIVE_UI.partnerNameInk,
 				callSessionId:
 					state.driveUi.callSessionId ?? DEFAULT_DRIVE_UI.callSessionId,
+				// One-shot banners should not survive reload.
+				agencyBanner: null,
 			};
 		}
 	} catch {
@@ -310,7 +312,7 @@ export type UseDriveSessionResult = {
 	setDriveJoinNote: Dispatch<SetStateAction<string | null>>;
 	voiceCaption: string;
 	setVoiceCaption: Dispatch<SetStateAction<string>>;
-	planEditorTasks: Array<{ id: string; title: string }>;
+	planEditorTasks: Array<{ id: string; title: string; lastFailure?: string }>;
 	setPlanEditorTasks: Dispatch<
 		SetStateAction<Array<{ id: string; title: string }>>
 	>;
@@ -381,7 +383,7 @@ export function useDriveSession(
 	const [auditSummaryOnly, setAuditSummaryOnly] = useState(false);
 	const bankSessionRef = useRef<DriveBankSession>(createDriveBankSession());
 	const [planEditorTasks, setPlanEditorTasks] = useState<
-		Array<{ id: string; title: string }>
+		Array<{ id: string; title: string; lastFailure?: string }>
 	>([]);
 	/** True between call_join and the first successful room_snapshot. */
 	const pendingJoinRef = useRef(false);

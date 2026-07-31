@@ -520,16 +520,21 @@ export async function mutateBankRecordFailure(
 export async function listPlanTasks(
 	session: DriveBankSession,
 	planId: string,
-): Promise<Array<{ id: string; title: string }>> {
+): Promise<Array<{ id: string; title: string; lastFailure?: string }>> {
 	const plan = await session.store.getPlan(planId);
 	if (!plan) {
 		return [];
 	}
-	const tasks: Array<{ id: string; title: string }> = [];
+	const tasks: Array<{ id: string; title: string; lastFailure?: string }> =
+		[];
 	for (const taskId of plan.taskIds) {
 		const task = await session.store.getTask(taskId);
 		if (task && task.status !== "done") {
-			tasks.push({ id: task.id, title: task.title });
+			tasks.push({
+				id: task.id,
+				title: task.title,
+				...(task.lastFailure ? { lastFailure: task.lastFailure } : {}),
+			});
 		}
 	}
 	return tasks;

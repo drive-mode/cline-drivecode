@@ -279,10 +279,35 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						await resetPeer(ctx, peer);
 					} else if (frame.type === "send") {
 						if (peer.sending) {
-							ctx.send(peer, {
-								type: "status",
-								text: "A turn is already in progress.",
-							});
+							// Mid-turn: enqueue as steer (DRV-FELT-AGENCY / DRV-STEER-QUEUE).
+							// Core pending-prompt path already exists; do not hard-reject.
+							const delivery =
+								frame.delivery === "queue" ? "queue" : "steer";
+							try {
+								await sendMessage(
+									ctx,
+									peer,
+									frame.prompt,
+									frame.config,
+									frame.attachments,
+									{ delivery },
+								);
+								ctx.send(peer, {
+									type: "status",
+									text:
+										delivery === "steer"
+											? "Steer queued — will apply at the next tool boundary."
+											: "Message queued.",
+								});
+							} catch (error) {
+								ctx.send(peer, {
+									type: "status",
+									text:
+										error instanceof Error
+											? error.message
+											: String(error),
+								});
+							}
 							return;
 						}
 						if (frame.source === "voice") {
@@ -299,6 +324,9 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 								frame.prompt,
 								frame.config,
 								frame.attachments,
+								frame.delivery
+									? { delivery: frame.delivery }
+									: undefined,
 							);
 						} finally {
 							peer.sending = false;

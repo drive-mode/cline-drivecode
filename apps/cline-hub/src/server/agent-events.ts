@@ -225,5 +225,27 @@ export function handleSessionEvent(
 			}
 		}
 		broadcastHubState(ctx);
+	} else if (event.type === "pending_prompts") {
+		ctx.sendToSelectedPeers(sessionId, {
+			type: "pending_prompts",
+			sessionId,
+			prompts: event.payload.prompts.map((prompt) => ({
+				id: prompt.id,
+				prompt: prompt.prompt,
+				delivery: prompt.delivery,
+				attachmentCount: prompt.attachmentCount,
+			})),
+		});
+	} else if (event.type === "pending_prompt_submitted") {
+		ctx.sendToSelectedPeers(sessionId, {
+			type: "pending_prompt_submitted",
+			sessionId,
+			prompt: {
+				id: event.payload.id,
+				prompt: event.payload.prompt,
+				delivery: event.payload.delivery,
+				attachmentCount: event.payload.attachmentCount,
+			},
+		});
 	}
 }

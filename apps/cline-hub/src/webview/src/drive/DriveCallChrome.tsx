@@ -16,6 +16,10 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+	interruptChromeCopy,
+	resolveInterruptPhase,
+} from "./agencyChrome";
 import { isDriveHumanId } from "./participantIds";
 import type { DriveSubMode, DriveUiState } from "./types";
 import type { DriveConnectionPhase } from "./useDriveSession";
@@ -122,6 +126,7 @@ export function DriveCallStrip({
 	disabled,
 	workerCount = 0,
 	workersOpen = false,
+	turnInFlight = false,
 	onMuteToggle,
 	onHandToggle,
 	onSubModeChange,
@@ -136,6 +141,8 @@ export function DriveCallStrip({
 	disabled?: boolean;
 	workerCount?: number;
 	workersOpen?: boolean;
+	/** True while an agent turn is running — raise-hand → finishing chrome. */
+	turnInFlight?: boolean;
 	onMuteToggle: () => void;
 	onHandToggle: () => void;
 	onSubModeChange: (mode: DriveSubMode) => void;
@@ -156,6 +163,11 @@ export function DriveCallStrip({
 	const nextSpotlightLabel = isDriveHumanId(drive.spotlightParticipantId)
 		? drive.partnerName
 		: "you";
+	const interruptPhase = resolveInterruptPhase({
+		handRaised: drive.handRaised,
+		turnInFlight,
+	});
+	const interruptCopy = interruptChromeCopy(interruptPhase);
 
 	return (
 		<div className="flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/5 px-4 py-2">
@@ -175,6 +187,16 @@ export function DriveCallStrip({
 				{drive.postureOverride ? ` · override` : " · bank"}
 				{drive.handRaised ? " · hand raised" : ""}
 			</span>
+			{interruptCopy ? (
+				<span
+					aria-live="polite"
+					className="rounded border border-amber-600/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-100"
+					data-slot="agency-interrupt"
+					role="status"
+				>
+					{interruptCopy}
+				</span>
+			) : null}
 			<div className="ml-auto flex flex-wrap items-center gap-1">
 				<fieldset
 					aria-label="Drive working mode"

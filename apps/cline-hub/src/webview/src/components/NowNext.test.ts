@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
+import { hasNowLastFailure } from "../drive/agencyChrome";
 import { shouldShowNowNext } from "./nowNextLogic";
 
 const empty: BankSnapshot = {
@@ -9,6 +10,7 @@ const empty: BankSnapshot = {
 	nextTaskId: null,
 	nowTitle: null,
 	nextTitle: null,
+	nowLastFailure: null,
 };
 
 const planned: BankSnapshot = {
@@ -27,5 +29,14 @@ describe("shouldShowNowNext", () => {
 
 	it("shows when now task exists", () => {
 		expect(shouldShowNowNext(planned)).toBe(true);
+	});
+});
+
+describe("NowNext recovery treatment", () => {
+	it("detects recovery when nowLastFailure is set", () => {
+		expect(hasNowLastFailure(planned)).toBe(false);
+		expect(
+			hasNowLastFailure({ ...planned, nowLastFailure: "tests red" }),
+		).toBe(true);
 	});
 });

@@ -349,6 +349,60 @@ describe("bank-derived posture", () => {
 		expect(canMutateWorkspace(state)).toBe(true);
 	});
 
+	it("sets plan-edit consequence banner when next changes", () => {
+		const prev = applyBankSnapshot(
+			{ ...DEFAULT_DRIVE_UI, active: true },
+			{
+				activePlanId: "p1",
+				openTaskIds: ["t1", "t2"],
+				nowTaskId: "t1",
+				nextTaskId: "t2",
+				nowTitle: "One",
+				nextTitle: "Two",
+			},
+		);
+		const next = applyBankSnapshot(
+			prev,
+			{
+				activePlanId: "p1",
+				openTaskIds: ["t1", "t3"],
+				nowTaskId: "t1",
+				nextTaskId: "t3",
+				nowTitle: "One",
+				nextTitle: "Clarify",
+			},
+			{ mutation: "add", addedTitle: "Clarify" },
+		);
+		expect(next.agencyBanner).toBe("You added Clarify");
+	});
+
+	it("skips banner when cursor unchanged on reorder", () => {
+		const prev = applyBankSnapshot(
+			{ ...DEFAULT_DRIVE_UI, active: true },
+			{
+				activePlanId: "p1",
+				openTaskIds: ["t1", "t2"],
+				nowTaskId: "t1",
+				nextTaskId: "t2",
+				nowTitle: "One",
+				nextTitle: "Two",
+			},
+		);
+		const next = applyBankSnapshot(
+			{ ...prev, agencyBanner: "stale" },
+			{
+				activePlanId: "p1",
+				openTaskIds: ["t1", "t2", "t3"],
+				nowTaskId: "t1",
+				nextTaskId: "t2",
+				nowTitle: "One",
+				nextTitle: "Two",
+			},
+			{ mutation: "reorder" },
+		);
+		expect(next.agencyBanner).toBeNull();
+	});
+
 	it("derives Plan when bank is empty", () => {
 		const state = syncDrivePostureFromBank({
 			...DEFAULT_DRIVE_UI,
