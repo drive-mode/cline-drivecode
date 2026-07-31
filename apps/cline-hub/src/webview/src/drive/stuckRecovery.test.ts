@@ -5,6 +5,7 @@ import {
 	planRecoveryAccept,
 	recoveryOfferKey,
 	recoveryProposalIsPrivate,
+	resolveRecoveryOfferTarget,
 	shouldOfferRecoveryFork,
 } from "./stuckRecovery";
 
@@ -71,6 +72,47 @@ describe("shouldOfferRecoveryFork", () => {
 				dismissedOfferKey: key,
 			}),
 		).toBe(true);
+	});
+
+	it("offers from auto stall without Now lastFailure (W4.1)", () => {
+		expect(
+			shouldOfferRecoveryFork({
+				driveActive: true,
+				nowTaskId: "t1",
+				nowLastFailure: null,
+				dismissedOfferKey: null,
+				autoStallOffer: {
+					taskId: "t1",
+					failureFingerprint: "stall:low_s2+high_p1",
+				},
+			}),
+		).toBe(true);
+	});
+
+	it("dedupes manual lastFailure and auto stall into one offerKey", () => {
+		const key = recoveryOfferKey("t1", "tests red");
+		const target = resolveRecoveryOfferTarget({
+			nowTaskId: "t1",
+			nowLastFailure: "tests red",
+			autoStallOffer: {
+				taskId: "t1",
+				failureFingerprint: "stall:sticky_p2",
+			},
+		});
+		expect(target?.source).toBe("manual");
+		expect(target?.offerKey).toBe(key);
+		expect(
+			shouldOfferRecoveryFork({
+				driveActive: true,
+				nowTaskId: "t1",
+				nowLastFailure: "tests red",
+				dismissedOfferKey: key,
+				autoStallOffer: {
+					taskId: "t1",
+					failureFingerprint: "stall:sticky_p2",
+				},
+			}),
+		).toBe(false);
 	});
 });
 
@@ -201,5 +243,22 @@ describe("planRecoveryAccept", () => {
 				planTaskIds: [],
 			}),
 		).toBeNull();
+	});
+
+	it("accepts auto-stall fingerprint when Now lacks lastFailure", () => {
+		const noFailure: BankSnapshot = {
+			...stuck,
+			nowLastFailure: null,
+		};
+		const plan = planRecoveryAccept({
+			option: "dismiss",
+			snapshot: noFailure,
+			planTaskIds: ["t1", "t2"],
+			stallFailureFingerprint: "stall:low_s2+high_p1",
+		});
+		expect(plan).toEqual({
+			action: "dismiss",
+			offerKey: recoveryOfferKey("t1", "stall:low_s2+high_p1"),
+		});
 	});
 });

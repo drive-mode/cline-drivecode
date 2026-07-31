@@ -17,6 +17,8 @@ export type StuckRecoveryForkProps = {
 	nowTitle?: string | null;
 	disabled?: boolean;
 	className?: string;
+	/** Manual lastFailure vs auto stall classifier (W4.1). */
+	source?: "manual" | "auto_stall";
 	onAccept: (option: RecoveryOptionKind) => void;
 	onDismiss: () => void;
 };
@@ -27,6 +29,7 @@ export function StuckRecoveryFork({
 	nowTitle,
 	disabled,
 	className,
+	source = "manual",
 	onAccept,
 	onDismiss,
 }: StuckRecoveryForkProps) {
@@ -37,11 +40,12 @@ export function StuckRecoveryFork({
 				"space-y-2 rounded-md border border-rose-500/40 bg-rose-500/5 p-3",
 				className,
 			)}
+			data-recovery-source={source}
 			data-slot="stuck-recovery-fork"
 			role="region"
 		>
 			<div className="text-xs font-medium text-rose-800 dark:text-rose-200">
-				Now is stuck
+				{source === "auto_stall" ? "Session stall" : "Now is stuck"}
 				{nowTitle?.trim() ? (
 					<span className="font-normal text-muted-foreground">
 						{" "}

@@ -165,6 +165,19 @@ export {
 	type SessionRollup,
 } from "./sessionRollup.js";
 export {
+	classifyStall,
+	DEFAULT_STALL_POLICY,
+	stallClassificationIsPrivate,
+	stallRollupSliceFromCounters,
+	STALL_FORBIDDEN_KEYS,
+	type ClassifyStallInput,
+	type StallClassification,
+	type StallOpenFailure,
+	type StallPolicy,
+	type StallReasonCode,
+	type StallRollupSlice,
+} from "./stallClassifier.js";
+export {
 	buildCleanDrainInvite,
 	CLEAN_DRAIN_FORBIDDEN_KEYS,
 	cleanDrainInviteIsPrivate,

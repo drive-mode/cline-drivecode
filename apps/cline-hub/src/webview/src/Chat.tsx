@@ -70,9 +70,15 @@ import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import {
 	planRecoveryAccept,
+	resolveRecoveryOfferTarget,
 	shouldOfferRecoveryFork,
 	type RecoveryOptionKind,
 } from "./drive/stuckRecovery";
+import {
+	classifyStall,
+	stallRollupSliceFromCounters,
+	type StallOpenFailure,
+} from "@cline/drive";
 import { StickyStagePane } from "./drive/StickyStagePane";
 import {
 	applyBankSnapshot,
@@ -293,11 +299,55 @@ export default function Chat({
 		planTitle: "Current work",
 	});
 
+	/** Mid-call stall slice (W4.1) — counters + open lastFailure; no utterance. */
+	const openStallFailures: StallOpenFailure[] = (() => {
+		const byId = new Map<string, StallOpenFailure>();
+		for (const task of planEditorTasks) {
+			byId.set(task.id, {
+				taskId: task.id,
+				...(task.lastFailure ? { lastFailure: task.lastFailure } : {}),
+			});
+		}
+		const nowId = drive.bankSnapshot.nowTaskId?.trim();
+		if (nowId && drive.bankSnapshot.nowLastFailure?.trim()) {
+			byId.set(nowId, {
+				taskId: nowId,
+				lastFailure: drive.bankSnapshot.nowLastFailure,
+			});
+		}
+		return [...byId.values()];
+	})();
+	const stallClassification = classifyStall({
+		rollup: stallRollupSliceFromCounters({
+			tasksCompleted: cleanDrainCountersRef.current.completedCount,
+			midPlanAddCount: cleanDrainCountersRef.current.midPlanAddCount,
+			openFailures: openStallFailures,
+		}),
+		openFailures: openStallFailures,
+		nowTaskId: drive.bankSnapshot.nowTaskId,
+	});
+	const autoStallOffer =
+		stallClassification.stalled &&
+		stallClassification.primaryTaskId &&
+		stallClassification.failureFingerprint
+			? {
+					taskId: stallClassification.primaryTaskId,
+					failureFingerprint: stallClassification.failureFingerprint,
+				}
+			: null;
+	const recoveryOfferTarget = resolveRecoveryOfferTarget({
+		nowTaskId: drive.bankSnapshot.nowTaskId,
+		nowLastFailure: drive.bankSnapshot.nowLastFailure,
+		autoStallOffer,
+	});
+	const recoveryOfferTargetRef = useRef(recoveryOfferTarget);
+	recoveryOfferTargetRef.current = recoveryOfferTarget;
 	const showStuckRecovery = shouldOfferRecoveryFork({
 		driveActive: drive.active && drive.stageLayout,
 		nowTaskId: drive.bankSnapshot.nowTaskId,
 		nowLastFailure: drive.bankSnapshot.nowLastFailure,
 		dismissedOfferKey: dismissedRecoveryOfferKey,
+		autoStallOffer,
 	});
 
 	const maybeOfferCleanDrain = useCallback(
@@ -440,10 +490,15 @@ export default function Chat({
 		(option: RecoveryOptionKind) => {
 			void (async () => {
 				const snapshot = driveRef.current.bankSnapshot;
+				const offer = recoveryOfferTargetRef.current;
 				const plan = planRecoveryAccept({
 					option,
 					snapshot,
 					planTaskIds: planEditorTasks.map((task) => task.id),
+					stallFailureFingerprint:
+						offer?.source === "auto_stall" ? offer.failureNote : null,
+					stallTaskId:
+						offer?.source === "auto_stall" ? offer.taskId : null,
 				});
 				if (!plan) {
 					return;
@@ -455,11 +510,13 @@ export default function Chat({
 						return;
 					case "recruit": {
 						setDismissedRecoveryOfferKey(plan.offerKey);
+						const offer = recoveryOfferTargetRef.current;
 						const need = buildRecruitNeed({
 							taskId: plan.taskId,
 							planId: snapshot.activePlanId,
 							title: snapshot.nowTitle,
-							failureNote: snapshot.nowLastFailure,
+							failureNote:
+								snapshot.nowLastFailure ?? offer?.failureNote ?? null,
 						});
 						const candidates: RecruitCandidate[] = [];
 						const seen = new Set<string>();
@@ -637,13 +694,19 @@ export default function Chat({
 
 	const dismissStuckRecovery = useCallback(() => {
 		const snapshot = driveRef.current.bankSnapshot;
+		const offer = recoveryOfferTargetRef.current;
 		const plan = planRecoveryAccept({
 			option: "dismiss",
 			snapshot,
 			planTaskIds: planEditorTasks.map((task) => task.id),
+			stallFailureFingerprint:
+				offer?.source === "auto_stall" ? offer.failureNote : null,
+			stallTaskId: offer?.source === "auto_stall" ? offer.taskId : null,
 		});
 		if (plan?.action === "dismiss") {
 			setDismissedRecoveryOfferKey(plan.offerKey);
+		} else if (offer) {
+			setDismissedRecoveryOfferKey(offer.offerKey);
 		}
 	}, [planEditorTasks]);
 
@@ -1773,17 +1836,17 @@ export default function Chat({
 							}
 						>
 							{showStuckRecovery &&
-							drive.bankSnapshot.nowTaskId &&
-							drive.bankSnapshot.nowLastFailure &&
+							recoveryOfferTarget &&
 							!recruitStall ? (
 								<StuckRecoveryFork
 									className="mb-3"
 									disabled={isHydrating}
-									failureNote={drive.bankSnapshot.nowLastFailure}
+									failureNote={recoveryOfferTarget.failureNote}
 									nowTitle={drive.bankSnapshot.nowTitle}
 									onAccept={acceptStuckRecovery}
 									onDismiss={dismissStuckRecovery}
-									taskId={drive.bankSnapshot.nowTaskId}
+									source={recoveryOfferTarget.source}
+									taskId={recoveryOfferTarget.taskId}
 								/>
 							) : null}
 							{recruitStall ? (
