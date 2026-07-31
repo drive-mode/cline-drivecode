@@ -65,5 +65,5 @@ The map should answer three questions in one composition: **order**, **payload**
 
 - Canvas-only graphs that strand keyboard users. Mitigation. Nodes remain focusable controls; viewport is an enhancement, not the only path.
 - Inventing artifact labels from titles. Mitigation. Edges stay unlabeled unless the projection has an explicit artifact/result field.
-- Confusing Status Dependency map with Drive Show / agent portfolio graphs. Mitigation. Keep `DepMap` naming; no Show backlog coupling ([diagram conventions](../../../../.claude/diagram-conventions.md)).
+- Confusing Status Dependency map with Drive Show / agent portfolio graphs. Mitigation. Keep `DepMap` naming; no Show backlog coupling ([diagram conventions](../../../../../.claude/diagram-conventions.md)).
 - Plan color overload on multi-plan tasks. Mitigation. Primary plan accent + rail multi-select; stripe/dual-accent only if membership is common (open question in UX.md).
