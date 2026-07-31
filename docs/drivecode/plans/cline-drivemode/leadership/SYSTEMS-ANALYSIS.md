@@ -2,11 +2,11 @@
 
 **Document type.** Professional systems analysis (product + architecture).
 **Audience.** SE leads, PMs, implementers, reviewers.
-**Status.** Living analysis aligned to the leadership planning wave.
-**Date.** 2026-07-25.
+**Status.** Living analysis — re-baselined against main post-#58 / #80.
+**Date.** 2026-07-30 (re-baseline). Prior scaffold-era draft: 2026-07-25.
 **Method.** Context → actors → functions → structure → data → interfaces → behavior → NFRs → failures → as-is/to-be → recommendations.
 
-Companion docs: [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [01-architecture.md](../foundation/01-architecture.md), [ops/hub-drive-ops.md](../ops/hub-drive-ops.md), [05-workflows.md](../foundation/05-workflows.md), [../drivecode-sdk/02-architecture.md](../../drivecode-sdk/foundation/02-architecture.md).
+Companion docs: [HANDOFF.md](../../../HANDOFF.md), [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md), [06-sdk-leverage.md](../../drivecode-sdk/delivery/06-sdk-leverage.md), [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [01-architecture.md](../foundation/01-architecture.md), [ops/hub-drive-ops.md](../ops/hub-drive-ops.md), [05-workflows.md](../foundation/05-workflows.md), [../drivecode-sdk/02-architecture.md](../../drivecode-sdk/foundation/02-architecture.md).
 
 ---
 
@@ -17,13 +17,13 @@ Companion docs: [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [01-architecture.md]
 | Dimension | Finding |
 |---|---|
 | Product maturity (docs) | High — vision, 45 workflows, facets, ARDs/DECs, gates |
-| Runtime maturity (code) | Low — Chat/CLI **local UI scaffold** only |
-| Critical path | Shared schemas → `@cline/drive` → hub room ops → Drive tab projection |
-| Highest product risk | Users mistaking scaffold Join call for hub-owned rooms |
+| Runtime maturity (code) | Medium–high — hub rooms, `@cline/drive` harness, Show director, Status Hub, task-satisfaction on main |
+| Critical path | Product gaps (GATES UI, recruit Add, pack library, reconnect) + satisfaction residuals |
+| Highest product risk | Stale plans claiming scaffold-only |
 | Architectural spine | **Harness proposes → Host commits → Apps project** |
-| Single writer | Hub `ws://127.0.0.1:25463` |
+| Single writer | Hub via discovery, not hardcoded `:25463` |
 
-**Recommendation.** Treat this analysis as the E2E product map. Do not deepen Chat-local `DriveUiState`. Execute Phase 0 entry checklist, then ship room authority before more chrome.
+**Recommendation.** Treat §13.0 as as-is. Prefer nest [HANDOFF.md](../../../HANDOFF.md) + [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md). Do not reopen #58. Phase 4 ≠ PR #82.
 
 ---
 
@@ -70,7 +70,7 @@ flowchart LR
   Human[Human developer]
   Webview[Hub webview Drive tab]
   CLI[CLI TUI]
-  Hub[Hub daemon :25463]
+  Hub[Hub daemon discovery]
   DrivePkg["@cline/drive harness"]
   Shared["@cline/shared schemas"]
   Agents[Cline agent runtime]
@@ -80,7 +80,7 @@ flowchart LR
   Human --> Webview
   Human --> CLI
   Webview -->|ops + subscribe| Hub
-  CLI -->|ops + subscribe| Hub
+  CLI -->|status + local Drive toggle| Hub
   Hub -->|commit / broadcast| Hub
   Hub -->|calls pure APIs| DrivePkg
   DrivePkg --> Shared
@@ -91,7 +91,7 @@ flowchart LR
   Forbidden -.->|do not connect| Hub
 ```
 
-**Context statement.** External actors interact only through approved surfaces (webview, CLI). All durable room truth and durable Drive config mutations pass through the hub. Pure Drive logic is importable by hub and browsers alike; it never opens sockets or files.
+**Context statement.** External actors interact only through approved surfaces (webview, CLI). All durable room truth and durable Drive config mutations pass through the hub. Pure Drive logic is importable by hub and browsers alike; it never opens sockets or files. CLI Drive today is status + local toggle only — it does **not** `call_join`.
 
 ---
 
@@ -182,9 +182,9 @@ This prevents a second reducer in the webview (the in-repo `syncTypes` failure m
 
 ```text
 Developer machine (localhost only)
-├── Hub process .............. ws://127.0.0.1:25463/hub
+├── Hub process .............. discovery (prefer free default; not hardcoded :25463)
 ├── Hub webview .............. UI client (subscribe + ops)
-├── CLI (optional) ........... second UI client, same hub
+├── CLI (optional) ........... status + local Drive toggle (no call_join yet)
 ├── Workspace FS
 │   ├── .cline/drive/*.json .. durable facets (hub-written)
 │   └── .driveagent/<slug>/ .. agent homes (+ .derived/)
@@ -193,7 +193,7 @@ Developer machine (localhost only)
 
 **Network policy.** MVP does not phone home Drive events. Privacy class forbids raw audio/transcripts on the wire beyond localhost hub traffic.
 
-**Dev port note.** Some hub discovery code may allow alternate ports via env; product identity remains `:25463`. Drive capability descriptors must declare the actual `writerEndpoint`.
+**Dev port note.** Hub discovery binds a free default unless `CLINE_HUB_PORT` is set explicitly; product identity is discovery, not a memorized port. Drive capability descriptors must declare the actual `writerEndpoint`.
 
 ---
 
@@ -258,25 +258,30 @@ See [ops/hub-drive-ops.md](../ops/hub-drive-ops.md). Families:
 - Config/home: get/put facets, profile patch, home get/put, compile
 - Gates/learn: resolve gate; propose/resolve learn
 
-### 9.3 Package APIs (planned)
+### 9.3 Landed APIs (post-#58 / #80)
 
-| API | Owner |
-|---|---|
-| `DriveEvent` parse/types | `@cline/shared` |
-| `transitionDriveMode`, `narrate`, `classifyInterrupt` | `@cline/drive` |
-| `reduceRoom`, `projectStage`, `resolveAddress`, `expandRosterPack` | `@cline/drive` |
-| `compileDriveagentHome`, `scoreRecruit` | `@cline/drive` |
-| `DriveHostPort` + `HostCapabilities` + conformance | `@cline/drive` |
-| `commitRoomOp`, broadcast, durable IO | `@cline/core` |
+| API | Owner | Status |
+|---|---|---|
+| `DriveEvent` parse/types | `@cline/shared` | Landed |
+| `transitionDriveMode`, `narrate`, `classifyInterrupt` | `@cline/drive` | Landed |
+| `reduceRoom`, `projectStage`, `resolveAddress`, `expandRosterPack` | `@cline/drive` | Landed |
+| `compileDriveagentHome`, `scoreRecruit` | `@cline/drive` | Landed (harness) |
+| `DriveHostPort` + `HostCapabilities` + conformance | `@cline/drive` | Landed |
+| `commitRoomOp`, broadcast, durable IO | `@cline/core` | Landed |
+| Hub discovery / room subscribe | `@cline/core` hub | Landed |
+| Show director / backlog | hub + `@cline/drive` | Landed |
+| Status Hub / task-satisfaction emit path | hub + shared | Partial — see REMAINING |
 
-### 9.4 Underspecified for E2E (must freeze in Phase 0)
+### 9.4 Open product / UX freeze list
 
-1. Exact hub command/reply envelope and error codes
-2. Human participant identity across webview + CLI
-3. Hook rewrite allowlist ↔ persona injection migration from Chat `systemPrompt` side channel
-4. Compile mapping: home YAML → host `ConfiguredAgent`-shaped view
-5. Gate class ↔ concrete Cline tool name table
-6. Guidance artifact event schemas
+Still open for product freeze (not “missing package APIs”):
+
+1. **GATES UI** — feed-card approve/deny over existing approval plumbing (`DRV-GATES`)
+2. **Recruit Add** — seat from recruit pick (query exists; Add UX incomplete)
+3. **Reconnect** — snapshot + live recovery UX (W-31)
+4. **Human participant id** across webview + CLI
+5. **CLI parity** — `call_join` / full room ops (today: status + local Drive toggle only)
+6. **Voice STT** — mic → confirm heard text (Phase 3)
 
 ---
 
@@ -366,15 +371,58 @@ See [ops/hub-drive-ops.md](../ops/hub-drive-ops.md). Families:
 | Durable overwrites live | Mid-call surprise | Lane tests | Seed-only rule |
 | Approval fatigue | Users bypass | Metrics M13/M14 | Tight taxonomy; thresholds |
 | Guidance lecture blocks join | Churn | Product review | On-demand + escape hatch |
+| Stale “scaffold-only” plans | Misprioritized work | Doc review vs §13.0 | Prefer HANDOFF + REMAINING |
 
 ---
 
 ## 13. As-is vs to-be
 
-> **Living-diagram note (2026-07-30).** §13.1 below was the pre-landing inventory.
+> **Living-diagram note (2026-07-30).** §13.0 is the current as-is. §13.1 below was the pre-landing inventory.
 > Treat dashed rows as **designed-vs-actual closed**. Current truth: nest
 > [HANDOFF.md](../../../HANDOFF.md), [architecture.md](../../../reference/architecture.md),
-> [ops/hub-drive-ops.md](../ops/hub-drive-ops.md). Cline skills: `diagram-first`, `diagram-show`.
+> [ops/hub-drive-ops.md](../ops/hub-drive-ops.md), [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+> Cline skills: `diagram-first`, `diagram-show`.
+
+### 13.0 Current as-is (2026-07-30 re-baseline)
+
+| Plane | Reality |
+|---|---|
+| Room | **Shipped** — hub rooms, `call_*` / `drive.*`, `RoomSnapshot` + `reduceRoom` |
+| Show | **Shipped** — Show director, backlog, sticky stage |
+| Status | **Shipped** — Status Hub; task-satisfaction emit path on main (residuals in REMAINING) |
+| Bank | **Shipped** — task bank / session bank surfaces on main |
+| Config | **Shipped** — facets, durable `.cline/drive`, hub IO |
+| Recruit | **Partial** — compile/score landed; Add UX / pack library open |
+| Voice | **Partial** — policy hooks; STT product open |
+| CLI | **Partial** — status + local Drive toggle; no `call_join` |
+| Gates | **Partial** — taxonomy landed; feed-card UI open |
+| Discord chrome | **Missing** — not a shipping surface |
+| WebRTC / pixel stage | **Missing** — out of MVP |
+
+```mermaid
+flowchart TB
+  subgraph shipped["Shipped on main"]
+    Room[Room]
+    Show[Show]
+    Status[Status]
+    Bank[Bank]
+    Config[Config]
+  end
+  subgraph partial["Partial"]
+    Recruit[Recruit]
+    Voice[Voice]
+    CLI[CLI]
+    Gates[Gates]
+  end
+  subgraph missing["Missing"]
+    Discord[Discord chrome]
+    WebRTC[WebRTC]
+  end
+  shipped --> partial
+  partial --> missing
+```
+
+**Phase note.** Phase 4 (CLI parity + isolation / teamOpt) is **not** PR #82. Do not conflate the two.
 
 ### 13.1 As-is (code) — historical snapshot (2026-07-25)
 
@@ -397,19 +445,20 @@ flowchart LR
 
 ### 13.2 To-be (MVP product)
 
-| Capability | Phase gate | Note |
+| Capability | Phase gate | Reality (2026-07-30) |
 |---|---|---|
-| Schemas, kernel, privacy, facets, home compile fixture | Phase 0 | Largely on main |
-| Hub rooms, Drive tab, sheet, gates MVP, discovery/teach | Phase 1 | Rooms + Drive tab on main; gates UI still open |
-| Stage, address, packs, recruit, SDLC stage cards | Phase 2 | Stage + show director on main; packs/recruit open |
-| Voice | Phase 3 | Open |
-| CLI parity, isolation + teamOpt | Phase 4 | Open |
+| Schemas, kernel, privacy, facets, home compile fixture | Phase 0 | **Done** on main |
+| Hub rooms, Drive tab, sheet, gates MVP, discovery/teach | Phase 1 | Rooms + Drive tab on main; **GATES UI** still open |
+| Stage, address, packs, recruit, SDLC stage cards | Phase 2 | Stage + show director on main; **packs / recruit Add** open |
+| Voice | Phase 3 | Open (STT) |
+| CLI parity, isolation + teamOpt | Phase 4 | Open — **≠ PR #82** |
 | Multi-user media design review | Phase 5 | Open |
 
 ### 13.3 Migration of authority
 
 ```text
 Chat-local DriveUiState  ──done──►  Hub RoomSnapshot + reduceRoom
+@cline/drive harness (#58) ──done──►  Propose APIs on main (host commits via hub)
 systemPrompt persona side channel ──►  Hooks rewrite allowlist + Drive active
 ConfiguredAgent-only mental model ──►  .driveagent compile → single runtime
 Show reactive-only stage  ──done──►  ShowBacklog + DirectorScript + StickyStagePane
@@ -450,36 +499,36 @@ Full workflow coverage: [MATRIX-workflow-coverage.md](MATRIX-workflow-coverage.m
 
 ## 16. Recommendations (SE lead)
 
-### 16.1 Immediate (before more UI chrome)
+### 16.1 Immediate (product gaps + residuals)
 
-1. Clear [CHECKLIST-phase0-entry.md](CHECKLIST-phase0-entry.md) (`accept all` or explicit changes).
-2. Freeze interface list in §9.4 inside schema/ops ADRs as code lands.
-3. Scaffold `@cline/shared` drive types + `@cline/drive` + compile fixture test.
-4. Add import lint: apps must not reimplement `reduceRoom`.
+1. Work from [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md) and nest [HANDOFF.md](../../../HANDOFF.md) — not scaffold-era critical-path lists.
+2. Ship **GATES UI** (feed cards over existing approval plumbing).
+3. Finish **recruit Add** + pack library seating UX.
+4. Harden **reconnect** (snapshot + live; W-31 empty states).
 
-### 16.2 Phase 1 product bar
+### 16.2 Near-term product bar
 
-Ship **hub-owned rooms + Drive tab shell** that makes scaffold Join obsolete. Include reconnect empty states and W-40/W-45 guidance without blocking join.
+Close the open freeze list in §9.4 enough that Drive tab feels authoritative end-to-end. Keep CLI as status/toggle until true room parity is scheduled (Phase 4).
 
 ### 16.3 Explicit non-work
 
+- Do **not** reopen #58 (`@cline/drive` harness landed).
+- Do **not** confuse PR #82 with Phase 4 (CLI parity + isolation / teamOpt).
 - Do not invest in richer Chat Drive chrome that diverges from hub snapshots.
 - Do not start WebRTC.
 - Do not enable `teamOpt` without isolation.
 - Do not open a separate `drivecode-sdk` repo.
+- Do not treat stale “scaffold-only” plans as current truth — use §13.0.
 
-### 16.4 E2E slice order (dependency-honest)
+### 16.4 E2E slice order (dependency-honest, post-landing)
 
 ```text
-Schemas & privacy asserts
-    → Kernel policies + reducers + host port stub
-        → Hub room ops + snapshot/reconnect
-            → Drive tab projects hub truth
-                → Sheet + home load + gates feed
-                    → Stage/address/steer/interrupt
-                        → Packs/recruit/SDLC cards
-                            → Voice
-                                → CLI parity + isolation/teamOpt
+§13.0 as-is (rooms / show / status / bank / config)
+    → GATES UI + reconnect UX
+        → Recruit Add + pack library
+            → Satisfaction residuals (REMAINING)
+                → Voice STT
+                    → CLI parity + isolation/teamOpt  (Phase 4 ≠ #82)
 ```
 
 ---
@@ -488,9 +537,11 @@ Schemas & privacy asserts
 
 | ID | Question | Default if silent |
 |---|---|---|
-| Q1 | Accept ARD-0001–0004 + DEC bundle? | Recommended → treat as Accepted for schema drafts; flip board on reply |
-| Q2 | Human participant id scheme across clients? | Stable per hub connection + workspace; document in ROOM-MVP |
-| Q3 | When do TextChannels appear in chrome? | Hidden until a PRD exists (domain may reserve the array) |
+| Q1 | Accept ARD-0001–0004 + DEC bundle? | **Closed — Accepted** |
+| Q2 | Accept ARD-0015 (task-session observability)? | **Proposed** — leadership accept still open; see [ARD-0015](../ard/ARD-0015-task-session-observability.md) |
+| Q3 | Human participant id scheme across clients? | Stable per hub connection + workspace; document in ROOM-MVP |
+| Q4 | When do TextChannels appear in chrome? | Hidden until a PRD exists (domain may reserve the array) |
+| Q5 | Who owns GATES feed-card UI delivery? | [DRV-GATES](../features/DRV-GATES.md) — taxonomy landed; UI / hub projection still open |
 
 ---
 
@@ -500,5 +551,6 @@ Schemas & privacy asserts
 |---|---|
 | 2026-07-25 | Initial E2E systems analysis from leadership wave + plan/code inventory |
 | 2026-07-30 | §13 living-diagram refresh; point at HANDOFF / architecture / hub-drive-ops / Cline diagram skills |
+| 2026-07-30 | Re-baseline post-#58 / #80: §1 maturity Medium–high; §13.0 current as-is; §9.3 landed APIs; §16/§17 updated |
 
-When implementation lands, update §13 as-is column and tick §9.4 items as frozen. Do not fork a second analysis doc—amend this one.
+When implementation lands, update §13.0 as-is and tick §9.4 items as frozen. Do not fork a second analysis doc—amend this one.

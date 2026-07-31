@@ -1,12 +1,14 @@
 # Handoff · cline-drivemode + Driveagent portfolio
 
-**Reader.** Next agent or human picking up Drivecode / Driveagent work.
-**Repo.** `hhalperin/cline-drive` (local: `profiles/hhalperin/active/cline-drivecode`).
+> **Historical (2026-07-25).** Do not use as cold-start. Prefer nest [HANDOFF.md](../../../HANDOFF.md) and [SYSTEMS-ANALYSIS.md](../leadership/SYSTEMS-ANALYSIS.md) §13.0. Kernel, hub rooms, harness, Show director, and satisfaction spine have since landed on `main`.
+
+**Reader.** Archive for the early planning wave.
+**Repo.** `hhalperin/cline-drivecode` (local: `profiles/hhalperin/active/cline-drivecode`).
 **Date.** 2026-07-25.
 
 ## Problem
 
-Drivecode needs to feel like joining a call with recruitable agents who have real portfolios (config + knowledge graph), not just a Chat toggle and a nameless pair partner. Planning and early UI landed across this tree; implementation of the kernel/homes/recruit path has not.
+Drivecode needs to feel like joining a call with recruitable agents who have real portfolios (config + knowledge graph), not just a Chat toggle and a nameless pair partner. At the time of this handoff, planning and early UI had landed; the kernel/homes/recruit path had not (that gap is closed on current `main` — see nest HANDOFF).
 
 ## Requirements
 

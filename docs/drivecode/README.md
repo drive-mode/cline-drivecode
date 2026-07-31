@@ -362,6 +362,12 @@ Stated plainly so nobody plans around it:
   links into Spotlight / Status Hub). The channels-and-rooms wireframe
   ([drive-tab-discord-slack.html](design/wireframes/drive-tab-discord-slack.html))
   is still a prototype, not a hub route.
-- **Recruit ranking and RosterPack runtime.** Planned, not built.
+- **Recruit product Add + RosterPack library UI.** Kernel `scoreNeed` / pack expand and
+  hub `call_add_roster_pack` / remove exist; stall→seat UI exists. There is no general
+  Add→Recruit flow or pack library / `/pack` surface yet.
+- **Spatial Dependency map.** Status Hub ships a **card-grid** Dependency map lens.
+  Interactive pan/zoom graph + Plans rail remains [DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md).
 - **Multi-human rooms.** The room primitive carries `participants[]` so it does
   not need a rewrite later, but no multi-human media plane exists.
+- **CLI Drive call parity.** TUI Drive is a local toggle; it does not call `call_join`
+  yet ([DRV-CLI-PARITY](plans/cline-drivemode/features/DRV-CLI-PARITY.md)).

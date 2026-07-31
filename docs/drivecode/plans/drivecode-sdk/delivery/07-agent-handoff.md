@@ -1,11 +1,13 @@
 # Agent handoff — Drive harness leverage (post #55–#57)
 
-**Audience:** a cold agent continuing this work.  
-**Date:** 2026-07-30  
-**Active draft PR:** [#58](https://github.com/hhalperin/cline-drivecode/pull/58) — branch `cursor/drive-harness-remaining-1929`  
-**Base:** `main` (includes merged #55, #56, #57)
+> **Historical.** PR [#58](https://github.com/hhalperin/cline-drivecode/pull/58) is **merged**. Harness leverage is Done on `main` — see [06-sdk-leverage.md](06-sdk-leverage.md). Cold-start: nest [HANDOFF.md](../../../HANDOFF.md).
 
-Repo-level brief: [../../HANDOFF.md](../../cline-drivemode/delivery/HANDOFF.md). Leverage checklist: [06-sdk-leverage.md](06-sdk-leverage.md).
+**Audience:** archive for the harness leverage track.
+**Date:** 2026-07-30
+**PR:** [#58](https://github.com/hhalperin/cline-drivecode/pull/58) — **merged** (branch `cursor/drive-harness-remaining-1929`)
+**Base:** `main` (includes merged #55, #56, #57, #58)
+
+Repo-level brief: [../../../HANDOFF.md](../../../HANDOFF.md). Leverage checklist: [06-sdk-leverage.md](06-sdk-leverage.md).
 
 ---
 
@@ -48,7 +50,7 @@ Merged in order: **#55 → #57 → #56**.
 | `@cline/sdk` | Alias for `@cline/core` — agent loop, sessions, tools, hub client |
 | `@cline/drive` | Drive harness (**drivecode-sdk** role) — rooms, stage, director policies, host port |
 
-Composition root: **`createDriveHarness({ host })` + `createClineDriveHost`**.  
+Composition root: **`createDriveHarness({ host })` + `createClineDriveHost`**.
 Rule of three: **harness proposes → host commits → apps project** (`reduceRoom` / `projectStage` / `projectRoster`).
 
 ---
@@ -87,8 +89,8 @@ drive-handlers → driveHarnessBinding → clineDriveHost → driveDirectorOps �
 
 ### Safe order
 
-1. **Extract show runtime** into a neutral module, e.g.  
-   `sdk/packages/core/src/hub/driveShowRuntime.ts`  
+1. **Extract show runtime** into a neutral module, e.g.
+   `sdk/packages/core/src/hub/driveShowRuntime.ts`
    Move (or re-export from one place):
    - `materializeShowItem`
    - `runShowDirectorTick`
@@ -152,7 +154,7 @@ Do not invent a second pack registry in the hub.
 
 ### Show backlog / director (product)
 
-Plans: `docs/drivecode/plans/cline-drivemode/initiatives/show-backlog-director/`.  
+Plans: `docs/drivecode/plans/cline-drivemode/initiatives/show-backlog-director/`.
 Slices **1–7 + S** implemented on main (present, enqueue/tick, scripts, Do↔Show, planner, producers, router, spotlight converge, human pin / return spotlight, route suggest chip).
 
 ### Harness MVP
@@ -203,21 +205,21 @@ CLI from source: `bun run cli` (auto-spawns hub). Live agent turns need a funded
 
 ## 10. Suggested first actions for the new agent
 
-1. `git fetch origin && git checkout cursor/drive-harness-remaining-1929 && git pull`
-2. Read [06-sdk-leverage.md](06-sdk-leverage.md) + this file
-3. Skim `driveDirectorOps.ts` and `handleShowEnqueue` / `handleShowTick` in `drive-handlers.ts`
-4. Extract `driveShowRuntime.ts`, fix the cycle, thin show handlers
-5. Commit / push / update draft PR #58 (body may be human-locked — push commits anyway)
-6. Only then start Phase-2 helpers
+> **Superseded.** PR #58 is merged. Do **not** check out `cursor/drive-harness-remaining-1929` or update draft PR #58. Prefer nest [HANDOFF.md](../../../HANDOFF.md) and [REMAINING-task-satisfaction.md](../../cline-drivemode/delivery/REMAINING-task-satisfaction.md).
+
+Historical sequence (for archive only):
+
+1. ~~`git fetch` / checkout harness branch~~ — merged
+2. Read [06-sdk-leverage.md](06-sdk-leverage.md) — leverage track **Done**
+3. ~~Extract `driveShowRuntime.ts`, thin show handlers~~ — Done
+4. ~~Phase-2 helpers~~ — Done
 
 ---
 
 ## 11. PR hygiene
 
-- Draft PR: https://github.com/hhalperin/cline-drivecode/pull/58  
-- Prefer **draft until slice 2 is green**; mark ready when show thinning is done even if Phase-2 is still open (or keep draft and note remaining in Additional Notes).
-- If PR body update is rejected as non-agent-managed, leave the body and keep commits descriptive.
-- CI labels: path filters usually enough; `ci/sdk` + `ci/docs` already intended for this track.
+- PR [#58](https://github.com/hhalperin/cline-drivecode/pull/58) — **merged**
+- Prefer nest HANDOFF for new work; do not reopen this draft track.
 
 ---
 
