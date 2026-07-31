@@ -224,6 +224,16 @@ function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 					config.thinkingBudgetTokens ?? config.thinking_budget_tokens,
 				);
 	const sessionFeatures = resolveProductSessionFeatures({ host: "desktop" });
+	const enableSpawnAgent =
+		config.enableSpawn ??
+		config.enableSpawnAgent ??
+		config.enable_spawn ??
+		sessionFeatures.enableSpawnAgent;
+	const enableAgentTeams =
+		config.enableTeams ??
+		config.enableAgentTeams ??
+		config.enable_teams ??
+		sessionFeatures.enableAgentTeams;
 	return {
 		sessionId: config.sessionId ?? config.session_id,
 		providerId: config.provider ?? config.providerId ?? "",
@@ -238,20 +248,14 @@ function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 		systemPrompt: config.systemPrompt ?? config.system_prompt ?? "",
 		maxIterations: config.maxIterations ?? config.max_iterations,
 		enableTools: config.enableTools ?? config.enable_tools ?? true,
-		enableSpawnAgent:
-			config.enableSpawn ??
-			config.enableSpawnAgent ??
-			config.enable_spawn ??
-			sessionFeatures.enableSpawnAgent,
-		enableAgentTeams:
-			config.enableTeams ??
-			config.enableAgentTeams ??
-			config.enable_teams ??
-			sessionFeatures.enableAgentTeams,
+		enableSpawnAgent,
+		enableAgentTeams,
 		...(thinking !== undefined ? { thinking } : {}),
 		...(reasoningEffort ? { reasoningEffort } : {}),
 		...(thinkingBudgetTokens !== undefined ? { thinkingBudgetTokens } : {}),
-		teamName: config.teamName ?? config.team_name,
+		teamName: enableAgentTeams
+			? (config.teamName ?? config.team_name)
+			: undefined,
 		missionLogIntervalSteps:
 			config.missionStepInterval ?? config.missionLogIntervalSteps,
 		missionLogIntervalMs:

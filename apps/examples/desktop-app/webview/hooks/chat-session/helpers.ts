@@ -124,8 +124,9 @@ export function normalizeRuntimeConfig(
 		cwd: normalizedCwd || normalizedWorkspaceRoot,
 		thinking,
 		reasoningEffort: thinking === false ? undefined : config.reasoningEffort,
-		enableSpawn: false,
-		enableTeams: false,
+		// Leave spawn/teams undefined so the sidecar applies D1 product defaults
+		// via resolveProductSessionFeatures({ host: "desktop" }). Explicit
+		// booleans from the caller still pass through via ...config.
 	};
 }
 
