@@ -80,6 +80,15 @@
 //      zero .cued remnants, accent on, no clock) and the accent does
 //      not outlive its beat; with the voice toggle OFF the same cues
 //      fire on the synthetic words x 350ms clock.
+//  23) set pieces re-keyed to the v4 narration: under voiced autoplay
+//      each of the four set-piece beats (a3-arch, a3-walk, a3-bug,
+//      a2-you-show) stamps the SayClock duration on its --*-total
+//      clock var (sayBind, +-50ms) and its phases land on the
+//      sentences — element state sampled at two clip fractions
+//      (fold dot mid-path before the hot edge lights; first ghost
+//      before the skip hint, then the remember highlight; AFTER
+//      dimmed then the new message in; cursor at A then B with the
+//      pin caption following).
 //
 // Run from this directory. The empty package.json seed is load-bearing:
 // without it `bun add` walks up and attaches the dep to docs/package.json.
@@ -1220,6 +1229,141 @@ async function main() {
     }
     await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
     if (scVoiceWasOn) await page.click("#btn-voice"); // restore the toggle
+
+    // 23) Set pieces re-keyed to the v4 narration: under voiced autoplay
+    // each set-piece beat binds its clock var to the SayClock (sayBind)
+    // and its phases land on the sentences. Runs in the page: wait for
+    // beat entry, give clip metadata 400ms to refine the clock, then
+    // sample element state at two fractions of the clip (scheduled off
+    // the clock's own startedAt, so the entry-poll jitter cancels).
+    function pieceRunner(arg) {
+      return new Promise(function (res) {
+        const D = window.__DRIVE_DEMO__;
+        function op(sel) {
+          const el = document.querySelector(sel);
+          return el ? parseFloat(getComputedStyle(el).opacity) : -1;
+        }
+        function snap(id) {
+          if (id === "a3-arch") {
+            const dot = document.querySelector("#spotlight .anim-diagram .fd-fold");
+            return {
+              dist: dot ? parseFloat(getComputedStyle(dot).offsetDistance) : -1,
+              dotOp: dot ? parseFloat(getComputedStyle(dot).opacity) : -1,
+              label: op("#spotlight .anim-diagram .elabel"),
+            };
+          }
+          if (id === "a3-walk") {
+            const s3 = document.querySelector("#spotlight .vsc-debug .ws-cl.dbg-s3");
+            return {
+              ghost1: op("#spotlight .vsc-debug .dbg-s1 .dbg-ghost"),
+              ret: op("#spotlight .vsc-debug .dbg-ret"),
+              s3bg: s3 ? getComputedStyle(s3).backgroundColor : "missing",
+            };
+          }
+          if (id === "a3-bug") {
+            return {
+              before: op("#spotlight .stage-anim .anim-panel.before"),
+              after: op("#spotlight .stage-anim .anim-panel.after"),
+              neu: op("#spotlight .stage-anim .after .anim-msg.new"),
+            };
+          }
+          const t = getComputedStyle(document.getElementById("demo-cursor")).transform;
+          const m = t === "none" ? { e: -9999, f: -9999 } : new DOMMatrixReadOnly(t);
+          function c(sel) {
+            const r = document.querySelector(sel).getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+          }
+          return {
+            x: m.e, y: m.f, a: c("#pin-jump-a"), b: c("#pin-jump-b"),
+            capA: op("#pin-jump-a .pj-cap"), capB: op("#pin-jump-b .pj-cap"),
+          };
+        }
+        const iv = setInterval(function () {
+          if (D.getIndex() !== arg.idx) return;
+          clearInterval(iv);
+          setTimeout(function () {
+            const c = D.sayClock();
+            if (!c || c.beatId !== arg.id) { res({ entered: true, noClock: true }); return; }
+            const el = document.querySelector(arg.piece);
+            const out = {
+              entered: true,
+              durationMs: c.durationMs,
+              bound: el ? getComputedStyle(el).getPropertyValue(arg.cssVar).trim() : "",
+            };
+            const gone = performance.now() - c.startedAt;
+            setTimeout(function () { out.early = snap(arg.id); },
+              Math.max(0, c.durationMs * arg.f1 - gone));
+            setTimeout(function () { out.late = snap(arg.id); res(out); },
+              Math.max(0, c.durationMs * arg.f2 - gone));
+          }, 400);
+        }, 40);
+        setTimeout(function () { clearInterval(iv); res({ entered: false }); }, 90000);
+      });
+    }
+    async function pieceCheck(arg) {
+      const idx = beats.findIndex(function (b) { return b.id === arg.id; });
+      check(idx > 0, "setpiece: beat " + arg.id + " not found");
+      if (idx <= 0) return null;
+      arg.idx = idx;
+      await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, idx - 1);
+      const runP = page.evaluate(pieceRunner, arg);
+      await page.click("#btn-play");
+      const r = await runP;
+      await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
+      check(r.entered && !r.noClock,
+        "setpiece " + arg.id + ": no live SayClock under voiced autoplay - " + JSON.stringify(r));
+      if (!r.entered || r.noClock) return null;
+      const boundMs = /ms$/.test(r.bound) ? parseFloat(r.bound)
+        : /s$/.test(r.bound) ? parseFloat(r.bound) * 1000 : NaN;
+      check(Math.abs(boundMs - r.durationMs) <= 50,
+        "setpiece " + arg.id + ": bound " + arg.cssVar + " " + JSON.stringify(r.bound) +
+        " != SayClock " + Math.round(r.durationMs) + "ms (+-50)");
+      return r;
+    }
+    const spArch = await pieceCheck({
+      id: "a3-arch", piece: "#spotlight .anim-diagram", cssVar: "--phase-total", f1: 0.30, f2: 0.85 });
+    if (spArch) {
+      check(spArch.early.dotOp > 0.5 && spArch.early.dist > 5 && spArch.early.dist < 95,
+        "setpiece a3-arch @30%: fold dot should be mid-path - " + JSON.stringify(spArch.early));
+      check(spArch.early.label <= 0.6,
+        "setpiece a3-arch @30%: hot edge already lit - " + JSON.stringify(spArch.early));
+      check(spArch.late.label >= 0.9,
+        "setpiece a3-arch @85%: hot edge not active - " + JSON.stringify(spArch.late));
+    }
+    const spWalk = await pieceCheck({
+      id: "a3-walk", piece: "#spotlight .vsc-debug", cssVar: "--dbg-total", f1: 0.30, f2: 0.85 });
+    if (spWalk) {
+      check(spWalk.early.ghost1 > 0.5,
+        "setpiece a3-walk @30%: first inline value not visible - " + JSON.stringify(spWalk.early));
+      check(spWalk.early.ret < 0.1,
+        "setpiece a3-walk @30%: skip hint already shown - " + JSON.stringify(spWalk.early));
+      check(spWalk.late.s3bg !== "missing" && spWalk.late.s3bg !== "rgba(0, 0, 0, 0)",
+        "setpiece a3-walk @85%: remember/assignment highlight not active - " + JSON.stringify(spWalk.late));
+    }
+    const spBug = await pieceCheck({
+      id: "a3-bug", piece: "#spotlight .stage-anim", cssVar: "--bug-total", f1: 0.30, f2: 0.85 });
+    if (spBug) {
+      check(spBug.early.after <= spBug.early.before - 0.3,
+        "setpiece a3-bug @30%: AFTER panel should be dimmed below BEFORE - " + JSON.stringify(spBug.early));
+      check(spBug.early.neu < 0.1,
+        "setpiece a3-bug @30%: new message already visible - " + JSON.stringify(spBug.early));
+      check(spBug.late.neu > 0.5,
+        "setpiece a3-bug @85%: new message not entered - " + JSON.stringify(spBug.late));
+    }
+    const spShow = await pieceCheck({
+      id: "a2-you-show", piece: "#spotlight .pin-jump", cssVar: "--pj-total", f1: 0.35, f2: 0.80 });
+    if (spShow) {
+      check(dist(spShow.early, spShow.early.a) < 60,
+        "setpiece a2-you-show @35%: cursor not on spot A (" +
+        Math.round(dist(spShow.early, spShow.early.a)) + "px)");
+      check(spShow.early.capA > 0.9 && spShow.early.capB < 0.1,
+        "setpiece a2-you-show @35%: pin caption should sit at A - " + JSON.stringify(spShow.early));
+      check(dist(spShow.late, spShow.late.b) < 60,
+        "setpiece a2-you-show @80%: cursor not on spot B (" +
+        Math.round(dist(spShow.late, spShow.late.b)) + "px)");
+      check(spShow.late.capB > 0.9 && spShow.late.capA < 0.1,
+        "setpiece a2-you-show @80%: pin caption should sit at B - " + JSON.stringify(spShow.late));
+    }
 
     check(pageErrors.length === 0, "pageerrors: " + pageErrors.join(" | "));
 

@@ -639,6 +639,10 @@
     0%, 100% { outline-color: color-mix(in srgb, var(--live) 30%, transparent); }
     50% { outline-color: var(--live); }
   }
+  /* bindSayDuration restart: added + removed in one task (a reflow in
+     between), so every animation under the bound node re-enters at 0%
+     the instant its narration clock starts. Never painted. */
+  .say-rebind, .say-rebind * { animation: none !important; }
   .msg.you { align-self: flex-end; border-color: var(--line-strong); }
   .msg.agent, .msg.system { align-self: flex-start; }
   .msg .who {
@@ -1279,23 +1283,33 @@
     border: 0.8px solid var(--hair);
     background: var(--panel);
   }
+  /* Set-piece clocks. Each --*-total defaults here to its clip's nominal
+     length (ambient value for static entry / explore mode); at the beat
+     that narrates the piece, sayBind stamps the live SayClock duration on
+     .screen-body — OUTSIDE the swapped body HTML, so a held overlay's
+     outerHTML persistence is never broken — and the var inherits down. */
+  #spotlight { --pj-total: 4s; --phase-total: 11.28s; --bug-total: 11.74s; --dbg-total: 7.75s; }
   /* The jump: the same caption bar disappears at one spot and appears at
-     the other — abrupt on purpose, that IS the bug being shown. */
-  .pin-jump .pj-a .pj-cap { animation: pj-cap-a 4s linear infinite; }
-  .pin-jump .pj-b .pj-cap { animation: pj-cap-b 4s linear infinite; }
-  .pin-jump .pj-a { animation: pj-ghost-a 4s linear infinite; }
-  .pin-jump .pj-b { animation: pj-ghost-b 4s linear infinite; }
-  @keyframes pj-cap-a { 0%, 44% { opacity: 1; } 46%, 94% { opacity: 0; } 96%, 100% { opacity: 1; } }
-  @keyframes pj-cap-b { 0%, 44% { opacity: 0; } 46%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+     the other — abrupt on purpose, that IS the bug being shown. Keyed to
+     the you-03 line (3.38s, bound via --pj-total): cap at A through
+     "it jumps from here" (0–55%), ONE jump as it gives way to "to here"
+     (~55%), cap at B to the end; the ambient 4s loop resumes after the
+     clip (the sayBind `once` reset). */
+  .pin-jump .pj-a .pj-cap { animation: pj-cap-a var(--pj-total) linear infinite; }
+  .pin-jump .pj-b .pj-cap { animation: pj-cap-b var(--pj-total) linear infinite; }
+  .pin-jump .pj-a { animation: pj-ghost-a var(--pj-total) linear infinite; }
+  .pin-jump .pj-b { animation: pj-ghost-b var(--pj-total) linear infinite; }
+  @keyframes pj-cap-a { 0%, 55% { opacity: 1; } 57%, 96% { opacity: 0; } 98%, 100% { opacity: 1; } }
+  @keyframes pj-cap-b { 0%, 55% { opacity: 0; } 57%, 96% { opacity: 1; } 98%, 100% { opacity: 0; } }
   @keyframes pj-ghost-a {
-    0%, 44% { border-color: transparent; }
-    46%, 94% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-    96%, 100% { border-color: transparent; }
+    0%, 55% { border-color: transparent; }
+    57%, 96% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    98%, 100% { border-color: transparent; }
   }
   @keyframes pj-ghost-b {
-    0%, 44% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-    46%, 94% { border-color: transparent; }
-    96%, 100% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    0%, 55% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    57%, 96% { border-color: transparent; }
+    98%, 100% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
   }
   .pin-jump .pj-arrow {
     display: none;
@@ -1377,8 +1391,14 @@
   /* ---- Phased diagram animation (opt-in: .anim-diagram) ----
      Reusable pattern: ONE shared clock. Every rule below runs for
      var(--phase-total) on an infinite loop, and keyframe percentages
-     carve that loop into narration-sized phases — here 3s fold + 3s
-     fan-out + 3.5s rebuild-edge = 9.5s, tracking the a3-arch clip.
+     carve that loop into narration-sized phases keyed to the v4-05 clip
+     (11.28s, bound at a3-arch via sayBind): a settled intro under
+     "quick map of how this thing renders" (0–20%, nothing departs),
+     fold on "state folds in from the left" (~20–43%), fan-out on
+     "render pushes it into these four regions" (~43–70%), and the
+     rebuild-edge flicker on "the flash lives right here" (~72–100%).
+     First cycle = the spoken cycle; the loop then continues as ambient
+     motion through the a3-edit/command/test sticky hold (no rebind).
      Traveling dots are <circle class="flow-dot"> elements drawn at the
      SVG origin and driven along offset-path traces of the diagram's own
      polyline coordinates; because they live inside the SVG's viewBox
@@ -1387,7 +1407,6 @@
      a .flow-dots layer with its own offset paths, and phase captions
      keyed to the same clock. Reduced motion: dots hide, captions light
      equally, the diagram holds still (media block below). */
-  .anim-diagram { --phase-total: 9.5s; }
   .anim-diagram .flow-dot { fill: var(--live); opacity: 0; }
   @supports (offset-path: path("M0 0 L4 4")) {
     .anim-diagram .fd-fold {
@@ -1400,41 +1419,44 @@
     .anim-diagram .fd-f3 { offset-path: path("M336 150 L516 152 L556 152 L556 174 L580 174"); }
     .anim-diagram .fd-f4 { offset-path: path("M336 150 L516 156 L548 156 L548 232 L580 232"); }
   }
-  /* Phase 1 (0–26%): state folds from BEATS into render(). */
+  /* Phase 1 (~20–43%): state folds from BEATS into render(). The dot
+     stays parked through the intro line — it must not leave before
+     "state folds in". */
   @keyframes fd-fold {
-    0% { offset-distance: 0%; opacity: 0; }
-    3% { opacity: 1; }
-    23% { opacity: 1; }
-    26% { offset-distance: 100%; opacity: 0; }
+    0%, 20% { offset-distance: 0%; opacity: 0; }
+    22% { opacity: 1; }
+    41% { opacity: 1; }
+    43% { offset-distance: 100%; opacity: 0; }
     100% { offset-distance: 100%; opacity: 0; }
   }
-  /* Phase 2 (33–57%): four dots fan out through the wipe to the regions. */
+  /* Phase 2 (~43–70%): four dots fan out through the wipe to the regions. */
   @keyframes fd-fan {
-    0%, 33% { offset-distance: 0%; opacity: 0; }
-    36% { opacity: 1; }
-    54% { opacity: 1; }
-    57% { offset-distance: 100%; opacity: 0; }
+    0%, 43% { offset-distance: 0%; opacity: 0; }
+    45% { opacity: 1; }
+    68% { opacity: 1; }
+    70% { offset-distance: 100%; opacity: 0; }
     100% { offset-distance: 100%; opacity: 0; }
   }
   .anim-diagram .fn-fold rect { animation: fn-glow-fold var(--phase-total) linear infinite; }
   @keyframes fn-glow-fold {
-    0%, 8% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 14%, var(--panel)); }
-    14%, 100% { stroke: var(--line); fill: var(--panel); }
+    0%, 18% { stroke: var(--line); fill: var(--panel); }
+    21%, 27% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 14%, var(--panel)); }
+    33%, 100% { stroke: var(--line); fill: var(--panel); }
   }
   .anim-diagram .fn-render rect { animation: fn-glow-render var(--phase-total) linear infinite; }
   @keyframes fn-glow-render {
-    0%, 22% { stroke: var(--line); fill: var(--panel); }
-    26%, 34% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 14%, var(--panel)); }
-    40%, 100% { stroke: var(--line); fill: var(--panel); }
+    0%, 41% { stroke: var(--line); fill: var(--panel); }
+    44%, 50% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 14%, var(--panel)); }
+    56%, 100% { stroke: var(--line); fill: var(--panel); }
   }
   .anim-diagram .fn-r1 rect,
   .anim-diagram .fn-r2 rect,
   .anim-diagram .fn-r3 rect,
   .anim-diagram .fn-r4 rect { animation: fn-region-pulse var(--phase-total) linear infinite; }
   @keyframes fn-region-pulse {
-    0%, 55% { stroke: var(--line); fill: var(--panel); }
-    58.5% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 16%, var(--panel)); }
-    64%, 100% { stroke: var(--line); fill: var(--panel); }
+    0%, 68% { stroke: var(--line); fill: var(--panel); }
+    71% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 16%, var(--panel)); }
+    76%, 100% { stroke: var(--line); fill: var(--panel); }
   }
   /* Fan-out stagger: each region's dot and arrival pulse share a delay.
      (Placed AFTER the animation shorthands above — a shorthand resets
@@ -1442,24 +1464,24 @@
   .anim-diagram .fd-f2, .anim-diagram .fn-r2 rect { animation-delay: .1s; }
   .anim-diagram .fd-f3, .anim-diagram .fn-r3 rect { animation-delay: .2s; }
   .anim-diagram .fd-f4, .anim-diagram .fn-r4 rect { animation-delay: .3s; }
-  /* Phase 3 (65–100%): the rebuild edge — two danger pulses, then the
+  /* Phase 3 (~72–100%): the rebuild edge — two danger pulses, then the
      tell-tale flicker, the same flash language as the a3-bug animation. */
   .anim-diagram .n.hot rect { animation: fn-hot-edge var(--phase-total) linear infinite; }
   @keyframes fn-hot-edge {
-    0%, 65% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
-    69% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 24%, var(--panel)); }
-    74% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
-    78% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 24%, var(--panel)); }
-    83% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
-    85% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 30%, var(--panel)); }
-    86.5% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
-    88% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 30%, var(--panel)); }
-    90%, 100% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    0%, 72% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    76% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 24%, var(--panel)); }
+    81% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    85% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 24%, var(--panel)); }
+    89% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    91% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 30%, var(--panel)); }
+    92.5% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    94% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 30%, var(--panel)); }
+    96%, 100% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
   }
   .anim-diagram .elabel { animation: fn-elabel var(--phase-total) linear infinite; }
   @keyframes fn-elabel {
-    0%, 63% { opacity: .45; }
-    66%, 97% { opacity: 1; }
+    0%, 70% { opacity: .45; }
+    73%, 98% { opacity: 1; }
     100% { opacity: .45; }
   }
   /* Phase captions (svg text in the diagram's empty bottom-left band),
@@ -1478,17 +1500,18 @@
   .anim-diagram .anim-phase.ph2 { animation-name: flow-cap-2; }
   .anim-diagram .anim-phase.ph3 { animation-name: flow-cap-3; }
   @keyframes flow-cap-1 {
-    0%, 29% { fill: var(--live-t); opacity: 1; }
-    33%, 100% { fill: var(--dim); opacity: .6; }
+    0%, 18% { fill: var(--dim); opacity: .6; }
+    21%, 41% { fill: var(--live-t); opacity: 1; }
+    45%, 100% { fill: var(--dim); opacity: .6; }
   }
   @keyframes flow-cap-2 {
-    0%, 29% { fill: var(--dim); opacity: .6; }
-    33%, 60% { fill: var(--live-t); opacity: 1; }
-    64%, 100% { fill: var(--dim); opacity: .6; }
+    0%, 41% { fill: var(--dim); opacity: .6; }
+    45%, 68% { fill: var(--live-t); opacity: 1; }
+    72%, 100% { fill: var(--dim); opacity: .6; }
   }
   @keyframes flow-cap-3 {
-    0%, 60% { fill: var(--dim); opacity: .6; }
-    64%, 100% { fill: var(--live-t); opacity: 1; }
+    0%, 68% { fill: var(--dim); opacity: .6; }
+    72%, 100% { fill: var(--live-t); opacity: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
     /* Static explanation: no dots, no pulses; the three phase captions
@@ -1541,12 +1564,17 @@
     padding: 4px 8px;
   }
   /* Explanatory bug animation (walkthrough.animation · the a3-bug beat):
-     two mini feeds on one 4s clock. BEFORE re-mounts all three message
-     blocks on the beat tick and flickers a white flash — the literal bug.
-     AFTER holds perfectly still on a fingerprint match (the sig chip
-     glows green), and on the second tick only a NEW fourth block animates
-     in. Pure CSS keyframes; the AFTER panel runs .35s behind so the flash
-     reads first. Reduced motion degrades to a static comparison. */
+     two mini feeds on ONE narration cycle — every rule runs once for
+     var(--bug-total) (the v4-03 clip, 11.74s, bound at a3-bug) and
+     holds its end state (fill forwards; a restart of the flash right as
+     the beat hands off would read like the bug came back). The windows
+     land on the sentences: 0–48% "watch — every beat, the whole page
+     rebuilds" (BEFORE active, three rebuild reps, AFTER dimmed);
+     ~48–58% "now the fixed path" (focus crossfade); ~58–78%
+     "fingerprint matches, nothing moves" (sig chip glows on a still
+     AFTER); ~78–95% "only the new message animates" (the fourth block
+     enters once); 95–100% hold. Reduced motion degrades to the same
+     static comparison as before. */
   .stage-anim { display: flex; gap: 12px; width: 100%; max-width: 620px; }
   .stage-anim .anim-panel {
     flex: 1;
@@ -1561,6 +1589,12 @@
   }
   .stage-anim .anim-panel.before { border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
   .stage-anim .anim-panel.after { border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+  /* Focus crossfade at "now the fixed path" (~48–58%): the narration's
+     attention moves from the broken panel to the fixed one. */
+  .stage-anim .anim-panel.before { animation: bug-before-focus var(--bug-total) linear 1 forwards; }
+  .stage-anim .anim-panel.after { animation: bug-after-focus var(--bug-total) linear 1 forwards; }
+  @keyframes bug-before-focus { 0%, 48% { opacity: 1; } 58%, 100% { opacity: .45; } }
+  @keyframes bug-after-focus { 0%, 48% { opacity: .45; } 58%, 100% { opacity: 1; } }
   .stage-anim .anim-head { display: flex; align-items: center; gap: 7px; min-height: 18px; }
   .stage-anim .anim-name {
     font: 600 9px/1.3 var(--eyebrow);
@@ -1580,23 +1614,29 @@
     opacity: .55;
     flex: none;
   }
-  .stage-anim .before .anim-tick { animation: anim-tick-one 4s linear infinite; }
-  .stage-anim .after .anim-tick { animation: anim-tick-two 4s linear infinite; animation-delay: .35s; }
-  @keyframes anim-tick-one {
-    0%, 2% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
-    5% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
-    12%, 100% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+  .stage-anim .before .anim-tick { animation: bug-tick-before var(--bug-total) linear 1 forwards; }
+  .stage-anim .after .anim-tick { animation: bug-tick-after var(--bug-total) linear 1 forwards; }
+  /* BEFORE ticks pace the three rebuild reps inside the 0–48% window;
+     AFTER ticks mark the skipped repaint (~58%) and the new message (~79%). */
+  @keyframes bug-tick-before {
+    0%, 1% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    3% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    8%, 16% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    18% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    23%, 31% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    33% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    38%, 100% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
   }
-  @keyframes anim-tick-two {
-    0%, 2% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
-    5% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
-    12%, 52% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
-    55% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
-    62%, 100% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+  @keyframes bug-tick-after {
+    0%, 55% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    58% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    63%, 76% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    79% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    84%, 100% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
   }
   /* Fingerprint chip: sits in the feed's top band (the head stays a
-     single line on both panels); rests dim, glows green on the skipped
-     tick. */
+     single line on both panels); rests dim, glows green through
+     "fingerprint matches, nothing moves" (~58–78%). */
   .stage-anim .anim-sig {
     position: absolute;
     top: 5px;
@@ -1608,18 +1648,17 @@
     border-radius: 999px;
     padding: 3px 6px;
     white-space: nowrap;
-    animation: anim-sig 4s var(--ease) infinite;
-    animation-delay: .35s;
+    animation: bug-sig var(--bug-total) var(--ease) 1 forwards;
   }
-  @keyframes anim-sig {
-    0%, 4% { color: var(--dim); border-color: var(--line); background: transparent; box-shadow: 0 0 0 0 transparent; }
-    10%, 26% {
+  @keyframes bug-sig {
+    0%, 56% { color: var(--dim); border-color: var(--line); background: transparent; box-shadow: 0 0 0 0 transparent; }
+    60%, 76% {
       color: var(--ok-soft);
       border-color: color-mix(in srgb, var(--ok) 55%, transparent);
       background: color-mix(in srgb, var(--ok) 12%, transparent);
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 14%, transparent);
     }
-    40%, 100% { color: var(--dim); border-color: var(--line); background: transparent; box-shadow: 0 0 0 0 transparent; }
+    82%, 100% { color: var(--dim); border-color: var(--line); background: transparent; box-shadow: 0 0 0 0 transparent; }
   }
   .stage-anim .anim-feed {
     position: relative;
@@ -1657,14 +1696,20 @@
   .stage-anim .anim-msg .bars .w70 { width: 70%; }
   .stage-anim .anim-msg .bars .w45 { width: 45%; }
   /* BEFORE: every block blinks out and re-enters together — one shared
-     keyframe, zero stagger. That simultaneity IS the bug. */
-  .stage-anim .before .anim-msg { animation: anim-remount 4s var(--ease) infinite; }
-  @keyframes anim-remount {
-    0%, 4% { opacity: 1; transform: translateY(0); }
-    7%, 13% { opacity: 0; transform: translateY(7px); }
-    24%, 100% { opacity: 1; transform: translateY(0); }
+     keyframe, zero stagger, replayed three times inside the narration's
+     0–48% window. That simultaneity IS the bug. */
+  .stage-anim .before .anim-msg { animation: bug-remount var(--bug-total) var(--ease) 1 forwards; }
+  @keyframes bug-remount {
+    0%, 2% { opacity: 1; transform: translateY(0); }
+    4%, 8% { opacity: 0; transform: translateY(7px); }
+    13%, 17% { opacity: 1; transform: translateY(0); }
+    19%, 23% { opacity: 0; transform: translateY(7px); }
+    28%, 32% { opacity: 1; transform: translateY(0); }
+    34%, 38% { opacity: 0; transform: translateY(7px); }
+    43%, 100% { opacity: 1; transform: translateY(0); }
   }
-  /* The literal flash: a white sheet flickering over the feed. */
+  /* The literal flash: a white sheet flickering over the feed, once per
+     rebuild rep. */
   .stage-anim .anim-flash {
     position: absolute;
     inset: 0;
@@ -1672,27 +1717,34 @@
     background: #fff;
     opacity: 0;
     pointer-events: none;
-    animation: anim-flash 4s linear infinite;
+    animation: bug-flash var(--bug-total) linear 1 forwards;
   }
-  @keyframes anim-flash {
-    0%, 4% { opacity: 0; }
-    6% { opacity: .5; }
-    8% { opacity: .1; }
-    10% { opacity: .34; }
-    14%, 100% { opacity: 0; }
+  @keyframes bug-flash {
+    0%, 1% { opacity: 0; }
+    3% { opacity: .5; }
+    5% { opacity: .1; }
+    7% { opacity: .34; }
+    10%, 15% { opacity: 0; }
+    18% { opacity: .5; }
+    20% { opacity: .1; }
+    22% { opacity: .34; }
+    25%, 30% { opacity: 0; }
+    33% { opacity: .5; }
+    35% { opacity: .1; }
+    37% { opacity: .34; }
+    40%, 100% { opacity: 0; }
   }
-  /* AFTER: the fourth block is the only thing that ever moves. */
+  /* AFTER: the fourth block is the only thing that ever moves — it
+     enters ONCE on "only the new message animates" and stays. */
   .stage-anim .after .anim-msg.new {
     opacity: 0;
     border-color: color-mix(in srgb, var(--ok) 45%, transparent);
-    animation: anim-new 4s var(--ease) infinite;
-    animation-delay: .35s;
+    animation: bug-new var(--bug-total) var(--ease) 1 forwards;
   }
   .stage-anim .after .anim-msg.new .av { background: color-mix(in srgb, var(--ok) 55%, transparent); }
-  @keyframes anim-new {
-    0%, 52% { opacity: 0; transform: translateY(8px); }
-    64%, 94% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(8px); }
+  @keyframes bug-new {
+    0%, 76% { opacity: 0; transform: translateY(8px); }
+    84%, 100% { opacity: 1; transform: translateY(0); }
   }
   /* Ghost outline of the previous mount — reduced-motion only. */
   .stage-anim .anim-ghost {
@@ -1711,6 +1763,8 @@
     /* Static comparison: BEFORE freezes mid-re-entry over ghosted
        duplicates of the settled blocks; AFTER shows the still feed with
        the chip lit and the new block landed. No loops anywhere. */
+    .stage-anim .anim-panel.before,
+    .stage-anim .anim-panel.after,
     .stage-anim .anim-tick,
     .stage-anim .anim-sig,
     .stage-anim .anim-flash,
@@ -2075,14 +2129,16 @@
   .vsc-status .cline { color: var(--drive-t); }
   /* ---- Debug session (walkthrough.code presents as a paused debugger) ----
      Same one-clock pattern as .anim-diagram: every rule below loops on
-     var(--dbg-total), and keyframe percentages carve the step sequence —
-     step onto the compute (s1), land on the compare (s2, inline values in),
-     the guarded block stepped over (ret hint), then release and loop —
-     tracking the ~10s a3-walk clip. Dark-Modern debug literals: #e51400
-     breakpoint, yellow-tinted current line + gutter arrow, dim italic
-     inline values, #cc6633 status bar. Reduced motion settles on the
-     compare line. */
-  .vsc-debug { --dbg-total: 10s; }
+     var(--dbg-total) (the v4-09 clip, 7.75s, bound at a3-walk), and
+     keyframe percentages land the step sequence on the sentences:
+     paused at the breakpoint through "let me walk you through it"
+     (0–22%), step onto the compute (s1 + first inline value, ~28–45%),
+     onto the compare (s2 + second value, ~45–68%), the skipped-block
+     hint on "skip the rebuild" (~68–82%), then the assignment (s3) on
+     "remember the new one" (~82–100%). Dark-Modern debug literals:
+     #e51400 breakpoint, yellow-tinted current line + gutter arrow, dim
+     italic inline values, #cc6633 status bar. Reduced motion settles on
+     the compare line. */
   /* The debugger is about the code: rows tighten to VS Code's real
      leading and the panel toggles away (the Ctrl+J look), so the whole
      guard — through the skipped feed rebuild — stays in view even
@@ -2107,7 +2163,8 @@
     background: #e51400;
   }
   .vsc-debug .ws-cl.dbg-s1 .ln::after,
-  .vsc-debug .ws-cl.dbg-s2 .ln::after {
+  .vsc-debug .ws-cl.dbg-s2 .ln::after,
+  .vsc-debug .ws-cl.dbg-s3 .ln::after {
     content: "";
     position: absolute;
     left: 3px;
@@ -2122,25 +2179,43 @@
   .vsc-debug .ws-cl.dbg-s1 .ln::after { animation: dbg-mark-s1 var(--dbg-total) linear infinite; }
   .vsc-debug .ws-cl.dbg-s2 { animation: dbg-line-s2 var(--dbg-total) linear infinite; }
   .vsc-debug .ws-cl.dbg-s2 .ln::after { animation: dbg-mark-s2 var(--dbg-total) linear infinite; }
+  .vsc-debug .ws-cl.dbg-s3 { animation: dbg-line-s3 var(--dbg-total) linear infinite; }
+  .vsc-debug .ws-cl.dbg-s3 .ln::after { animation: dbg-mark-s3 var(--dbg-total) linear infinite; }
   @keyframes dbg-line-s1 {
-    0%, 2% { background: transparent; }
-    4%, 19% { background: rgba(255, 255, 0, 0.06); }
-    22%, 100% { background: transparent; }
+    0%, 25% { background: transparent; }
+    28%, 43% { background: rgba(255, 255, 0, 0.06); }
+    46%, 100% { background: transparent; }
   }
   @keyframes dbg-mark-s1 {
-    0%, 2% { opacity: 0; }
-    4%, 19% { opacity: 1; }
-    22%, 100% { opacity: 0; }
+    0%, 25% { opacity: 0; }
+    28%, 43% { opacity: 1; }
+    46%, 100% { opacity: 0; }
   }
+  /* s2 wears the arrow twice: paused AT the breakpoint through the
+     opening line (4–20%), then again as the step lands on the compare. */
   @keyframes dbg-line-s2 {
-    0%, 22% { background: transparent; }
-    24%, 93% { background: rgba(255, 255, 0, 0.07); }
-    96%, 100% { background: transparent; }
+    0%, 2% { background: transparent; }
+    4%, 20% { background: rgba(255, 255, 0, 0.07); }
+    23%, 43% { background: transparent; }
+    45%, 80% { background: rgba(255, 255, 0, 0.07); }
+    83%, 100% { background: transparent; }
   }
   @keyframes dbg-mark-s2 {
-    0%, 22% { opacity: 0; }
-    24%, 93% { opacity: 1; }
-    96%, 100% { opacity: 0; }
+    0%, 2% { opacity: 0; }
+    4%, 20% { opacity: 1; }
+    23%, 43% { opacity: 0; }
+    45%, 80% { opacity: 1; }
+    83%, 100% { opacity: 0; }
+  }
+  @keyframes dbg-line-s3 {
+    0%, 80% { background: transparent; }
+    83%, 97% { background: rgba(255, 255, 0, 0.07); }
+    100% { background: transparent; }
+  }
+  @keyframes dbg-mark-s3 {
+    0%, 80% { opacity: 0; }
+    83%, 97% { opacity: 1; }
+    100% { opacity: 0; }
   }
   /* Inline values: VS Code's dimmed italic ghost decorations. */
   .vsc-debug .dbg-ghost {
@@ -2154,18 +2229,18 @@
   .vsc-debug .dbg-s2 .dbg-ghost { animation: dbg-ghost-s2 var(--dbg-total) linear infinite; }
   .vsc-debug .dbg-s2 .dbg-ret { margin-left: 8px; animation: dbg-ghost-ret var(--dbg-total) linear infinite; }
   @keyframes dbg-ghost-s1 {
-    0%, 8% { opacity: 0; }
-    11%, 95% { opacity: 1; }
+    0%, 26% { opacity: 0; }
+    28.5%, 95% { opacity: 1; }
     99%, 100% { opacity: 0; }
   }
   @keyframes dbg-ghost-s2 {
-    0%, 30% { opacity: 0; }
-    33%, 95% { opacity: 1; }
+    0%, 45% { opacity: 0; }
+    48%, 95% { opacity: 1; }
     99%, 100% { opacity: 0; }
   }
   @keyframes dbg-ghost-ret {
-    0%, 55% { opacity: 0; }
-    58%, 95% { opacity: 1; }
+    0%, 66% { opacity: 0; }
+    69%, 95% { opacity: 1; }
     99%, 100% { opacity: 0; }
   }
   /* Floating debug toolbar: centered under the tab bar, straddling the
@@ -2305,8 +2380,10 @@
        inline values shown, no stepping. */
     .vsc-debug .ws-cl.dbg-s1,
     .vsc-debug .ws-cl.dbg-s2,
+    .vsc-debug .ws-cl.dbg-s3,
     .vsc-debug .ws-cl.dbg-s1 .ln::after,
     .vsc-debug .ws-cl.dbg-s2 .ln::after,
+    .vsc-debug .ws-cl.dbg-s3 .ln::after,
     .vsc-debug .dbg-ghost { animation: none !important; }
     .vsc-debug .ws-cl.dbg-s2 { background: rgba(255, 255, 0, 0.07); }
     .vsc-debug .ws-cl.dbg-s2 .ln::after { opacity: 1; }
@@ -4352,19 +4429,20 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L6910–L6913",
+      range: "L7095–L7098",
       // debug presents the walkthrough as a paused debug session: bp is
-      // the breakpoint line, step orders the CSS step-through, ghost/ret
-      // are inline-value decorations (both strings match — the skip path,
-      // so the debugger steps OVER the guarded block). The quoted lines
-      // and their gutter numbers are this file's REAL guard — verify.js
-      // asserts both stay true.
+      // the breakpoint line, step orders the CSS step-through (s3 is the
+      // "remember the new one" assignment), ghost/ret are inline-value
+      // decorations (both strings match — the skip path, so the debugger
+      // steps OVER the guarded block). The quoted lines and their gutter
+      // numbers are this file's REAL guard — verify.js asserts both stay
+      // true.
       debug: true,
       lines: [
-        { n: 6910, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 6911, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 6912, t: "      R.feedSig = feedSig;", hl: true },
-        { n: 6913, t: '      feed.innerHTML = "";' },
+        { n: 7095, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 7096, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 7097, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
+        { n: 7098, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4410,7 +4488,10 @@
    *  A beat's `cursorAfter` spec carries `when: 'after'`: it performs on
    *  beat ENTRY against the beat's OWN render (the pin choreography), and
    *  verify.js resolves it against that DOM too.
-   * @typedef {{ target?: string, action: 'click'|'move'|'none'|'hover', path?: string[], dwellMs?: number[], when?: 'after', offset?: {dx?:number,dy?:number} }} CursorSpec */
+   *  `dwellFrac[i]` (optional) holds waypoint i until that fraction of
+   *  the active SayClock — the hover paces itself to the spoken line —
+   *  with dwellMs[i] as the fallback when no clock is live.
+   * @typedef {{ target?: string, action: 'click'|'move'|'none'|'hover', path?: string[], dwellMs?: number[], dwellFrac?: number[], when?: 'after', offset?: {dx?:number,dy?:number} }} CursorSpec */
   /** Beat extras: `sync` keys visuals (and notification chimes) to
    *  FRACTIONS of the beat's narration clock — SyncCue schedules each
    *  entry at `at × durationMs` of the line goTo just started, so the
@@ -4419,7 +4500,12 @@
    *  adds `cls` to `target`, 'chime' fires the notification tone
    *  ('complete' = task done, 'attention' = needs you). Static/scrub
    *  entry applies the end state instead (reveals shown, classes on,
-   *  chimes silent). `speech`
+   *  chimes silent). `sayBind` binds a SET-PIECE clock: on beat entry
+   *  each entry stamps the SayClock's durationMs on `target`'s `cssVar`
+   *  (via bindSayDuration) and restarts the piece, so its first cycle IS
+   *  the spoken cycle; `once: true` returns the piece to its ambient
+   *  stylesheet clock after that cycle. No clock (static/scrub entry) →
+   *  no stamp: the piece runs its ambient default. `speech`
    *  marks a line the human SAYS on the call — it feeds the derived CC
    *  transcript alongside narration transitions (nothing is stored);
    *  `after: true` files it after the beat's narration line (matching the
@@ -4433,7 +4519,8 @@
    *  never folds into state.
    * @typedef {{ mode: 'type'|'stt', text: string, clip?: string }} InputSpec
    * @typedef {{ at: number, cue: 'reveal'|'class'|'chime', target?: string, cls?: string, kind?: 'complete'|'attention' }} SyncCueSpec
-   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,cursorAfter?:CursorSpec,sync?:SyncCueSpec[],speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
+   * @typedef {{ target: string, cssVar: string, once?: boolean, piece?: string }} SayBindSpec
+   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,cursorAfter?:CursorSpec,sync?:SyncCueSpec[],sayBind?:SayBindSpec[],speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
   const BEATS = [
     {
       id: "a0-hub",
@@ -4560,10 +4647,13 @@
       // NEW in v4: Cline asked you to show it, so you take the screen. The
       // sharer flips to You — a human pin holds the Spotlight while your
       // recorded line plays. The pin body is your screenshot of the
-      // pre-fix demo (mock "jump"): its caption bar loops spot A → spot B,
-      // and the cursorAfter pass hovers A then B in time with the line —
-      // "from here" lands at A, "…to here" at B. The dwell covers the
-      // pass; the ~3s clip gates the advance either way.
+      // pre-fix demo (mock "jump"): sayBind ties its caption-jump loop to
+      // the you-03 clip (cap at A through "it jumps from here", ONE jump
+      // at ~55%, cap at B for "to here"; the ambient 4s loop resumes
+      // after — `once`), and the cursorAfter pass hovers A then B on the
+      // same clock (dwellFrac: leave A at 50%, hold B to the end) so the
+      // cursor transit and the caption jump read as one gesture. The
+      // dwellMs pair is the no-clock fallback; the clip gates the advance.
       id: "a2-you-show",
       act: 2,
       title: "You take the Spotlight",
@@ -4572,7 +4662,8 @@
       maturity: "shipped",
       dwellMs: 4200,
       cursor: { target: "#strip-share", action: "click" },
-      cursorAfter: { action: "hover", when: "after", path: ["#pin-jump-a", "#pin-jump-b"], dwellMs: [1100, 1300] },
+      cursorAfter: { action: "hover", when: "after", path: ["#pin-jump-a", "#pin-jump-b"], dwellMs: [1100, 1300], dwellFrac: [0.5, 1] },
+      sayBind: [{ target: "#spotlight .screen-body", cssVar: "--pj-total", once: true, piece: "#spotlight .pin-jump" }],
       speech: { who: "You", text: "Here's what I mean — it jumps from here to here." },
       patch: {
         narration: "",
@@ -4623,9 +4714,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '6913:      feed.innerHTML = "";', cls: "dim" },
-              { t: '6952:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '6988:      spot.innerHTML = "";', cls: "dim" },
+              { t: '7098:      feed.innerHTML = "";', cls: "dim" },
+              { t: '7137:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '7173:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -4697,6 +4788,11 @@
       hubOp: "drive.show.present",
       maturity: "planned",
       dwellMs: 2400,
+      // One narration cycle on the bound clock: BEFORE flashes through
+      // "watch — every beat…", the focus crossfades on "now the fixed
+      // path", the sig chip glows on "fingerprint matches", and the new
+      // message enters once at the end, then holds.
+      sayBind: [{ target: "#spotlight .screen-body", cssVar: "--bug-total" }],
       patch: {
         showHowInset: false,
         narration: "Watch — every beat, the whole page rebuilds and everything animates back in. Now the fixed path... fingerprint matches, nothing moves. Only the new message animates.",
@@ -4747,6 +4843,11 @@
       maturity: "shipped",
       dwellMs: 2200,
       cursor: { target: "#spotlight .screen", action: "move" },
+      // The diagram's phase clock binds ONLY here — the sticky hold
+      // carries the same node through a3-edit/command/test, whose own
+      // narration must not rebind or restart it (the loop just continues
+      // as ambient motion under the held overlay).
+      sayBind: [{ target: "#spotlight .screen-body", cssVar: "--phase-total" }],
       patch: {
         narration: "Quick map of how this thing renders. State folds in from the left, render pushes it into these four regions... and the flash lives right here, at this rebuild edge.",
         artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH],
@@ -4824,7 +4925,7 @@
           work: {
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 865 checks", cls: "ok" },
+              { t: "OK: 47 beats, 890 checks", cls: "ok" },
             ],
             activity: "battery green",
           },
@@ -4913,6 +5014,9 @@
       maturity: "shipped",
       dwellMs: 2000,
       cursor: { target: "#spotlight .screen", action: "move" },
+      // The step-through paces to the v4-09 line: paused, compute,
+      // compare, "skip the rebuild" hint, "remember" assignment.
+      sayBind: [{ target: "#spotlight .screen-body", cssVar: "--dbg-total" }],
       patch: {
         posture: null,
         participants: [
@@ -4985,7 +5089,7 @@
             caret: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 865 checks", cls: "ok" },
+              { t: "OK: 47 beats, 890 checks", cls: "ok" },
             ],
             spin: false,
             activity: "explaining the fix",
@@ -5034,7 +5138,7 @@
             typing: "// assert: same node before and after a beat",
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 865 checks", cls: "ok" },
+              { t: "OK: 47 beats, 890 checks", cls: "ok" },
             ],
             spin: false,
             activity: "adding regression checks",
@@ -5116,7 +5220,7 @@
             typing: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 865 checks", cls: "ok" },
+              { t: "OK: 47 beats, 890 checks", cls: "ok" },
             ],
             spin: false,
             activity: "pinning the caption slot",
@@ -5682,12 +5786,24 @@
     }
 
     /** Multi-waypoint hover: glide to each `path` selector in turn and
-     *  dwell `dwellMs[i]` there wearing the .demo-hovered ring — no press.
-     *  Unresolvable / off-viewport waypoints skip silently (the engine
-     *  convention); a cancel or any newer cursor leg stops the chain. */
+     *  dwell there wearing the .demo-hovered ring — no press. With a live
+     *  SayClock and a `dwellFrac[i]`, the dwell holds the waypoint until
+     *  that fraction of the spoken line (computed at arrival, so a
+     *  refined clip duration is honored); otherwise `dwellMs[i]` paces
+     *  it. Unresolvable / off-viewport waypoints skip silently (the
+     *  engine convention); a cancel or any newer cursor leg stops the
+     *  chain. */
     function hover(spec) {
       const myHover = hoverGen;
       const dwells = spec.dwellMs || [];
+      const fracs = spec.dwellFrac || [];
+      function dwellFor(i) {
+        const c = SyncCue.clock();
+        if (fracs[i] != null && c) {
+          return Math.max(250, fracs[i] * c.durationMs - (performance.now() - c.startedAt));
+        }
+        return dwells[i] || 900;
+      }
       let chain = Promise.resolve(true);
       (spec.path || []).forEach(function (sel, i) {
         chain = chain.then(function (ok) {
@@ -5701,7 +5817,7 @@
               setTimeout(function () {
                 hit.el.classList.remove("demo-hovered");
                 res(true);
-              }, dwells[i] || 900);
+              }, dwellFor(i));
             });
           });
         });
@@ -6234,11 +6350,17 @@
     let fired = null;   // per-cue fired flags, parallel to cueBeat.sync
     let current = null; // beat whose cue effects are live on the DOM
     let timers = [];
+    let onceTimers = []; // sayBind `once` resets — outlive arm()'s re-arms
     const log = []; // { beatId, cue, at, t } in fire order, for e2e
 
     function clearTimers() {
       timers.forEach(clearTimeout);
       timers = [];
+    }
+
+    function clearOnceTimers() {
+      onceTimers.forEach(clearTimeout);
+      onceTimers = [];
     }
 
     // Forced-restart idiom on the node's own entrance animation; the
@@ -6298,11 +6420,49 @@
         });
     }
 
+    /** Set-piece clock binding (beat.sayBind): the initial bind goes
+     *  through bindSayDuration (stamp + restart, so the piece's first
+     *  cycle IS the spoken cycle); a duration refinement re-stamps the
+     *  var WITHOUT a restart — both clocks started together, so the
+     *  rescale keeps them aligned in place. */
+    function applyBinds(beat, initial) {
+      (beat.sayBind || []).forEach(function (b) {
+        const n = document.querySelector(b.target);
+        if (!n || !clock) return;
+        if (initial) bindSayDuration(n, b.cssVar);
+        else n.style.setProperty(b.cssVar, Math.round(clock.durationMs) + "ms");
+      });
+    }
+
+    /** `once` binds: when the bound first cycle ends, drop the stamp so
+     *  the piece returns to its ambient stylesheet clock, restarting
+     *  only the PIECE's own animations (b.piece — the stamp target may
+     *  host unrelated ones, e.g. the overlay entrance). Re-checks the
+     *  live durationMs on fire so refinements are honored. */
+    function armOnceResets(beat) {
+      const mine = clock;
+      (beat.sayBind || []).forEach(function (b) {
+        if (!b.once) return;
+        (function tick() {
+          const left = mine.durationMs - (performance.now() - mine.startedAt);
+          onceTimers.push(setTimeout(function () {
+            if (mine !== clock || mine.gen !== advanceGen) return;
+            if (mine.durationMs - (performance.now() - mine.startedAt) > 60) { tick(); return; }
+            const n = document.querySelector(b.target);
+            if (!n) return;
+            n.style.removeProperty(b.cssVar);
+            const piece = b.piece ? document.querySelector(b.piece) : n;
+            if (piece) restartPieceAnims(piece);
+          }, Math.max(60, left)));
+        })();
+      });
+    }
+
     /** Voiced/muted autoplay entry: establish the SayClock from the
      *  utterance goTo just started and arm the cues. The .cued veil
      *  lands in the same task as the render, so nothing paints
      *  unveiled first. No narration → no clock: sync visuals settle
-     *  straight to end state. */
+     *  straight to end state (set pieces keep their ambient clocks). */
     function schedule(beat) {
       const act = Voice.active();
       if (!act) {
@@ -6316,7 +6476,10 @@
         if (mine !== clock || mine.gen !== advanceGen) return;
         clock.durationMs = total;
         arm();
+        applyBinds(beat, false);
       });
+      applyBinds(beat, true);
+      armOnceResets(beat);
       if (!beat.sync || !beat.sync.length) return;
       cueBeat = beat;
       fired = beat.sync.map(function () { return false; });
@@ -6332,6 +6495,7 @@
      *  applied, chimes silent. Static entry, scrubs, and pause. */
     function applyEndState(beat) {
       clearTimers();
+      clearOnceTimers();
       clock = null;
       cueBeat = null;
       current = beat;
@@ -6347,9 +6511,13 @@
 
     /** Leaving a beat: lift any remaining veils but DROP its transient
      *  classes — an accent must not outlive its narration on regions
-     *  the differential render will not rebuild. */
+     *  the differential render will not rebuild. sayBind stamps are NOT
+     *  dropped: a held set piece keeps looping on its bound clock as
+     *  ambient motion (defaults match the clips, so nothing lingers
+     *  visibly once the piece unmounts). */
     function leave() {
       clearTimers();
+      clearOnceTimers();
       const beat = current;
       clock = null;
       cueBeat = null;
@@ -6360,6 +6528,14 @@
         if (!n) return;
         if (c.cue === "reveal") n.classList.remove("cued");
         else if (c.cue === "class") n.classList.remove(c.cls);
+      });
+      // `once` stamps are transient by definition — if the beat left
+      // before the cycle-end reset fired, drop them here (no restart:
+      // the piece is unmounting with its beat).
+      (beat.sayBind || []).forEach(function (b) {
+        if (!b.once) return;
+        const n = document.querySelector(b.target);
+        if (n) n.style.removeProperty(b.cssVar);
       });
     }
 
@@ -6395,17 +6571,26 @@
     };
   })();
 
+  /** Forced-restart for a whole set piece: one-clock pieces animate on
+   *  DESCENDANTS of the bound node, so the restart rides a transient
+   *  class (.say-rebind kills every animation in the subtree, the
+   *  reflow commits it, removal starts them all at 0%). Add + remove in
+   *  one task — never painted. */
+  function restartPieceAnims(el) {
+    el.classList.add("say-rebind");
+    void el.offsetWidth;
+    el.classList.remove("say-rebind");
+  }
+
   /** Set-piece duration binding: stamp the active SayClock's duration
-   *  on a mounted node's CSS clock variable and restart its animation,
-   *  so a one-clock set piece spans exactly its narration (U2 applies
-   *  this to the set-piece beats). Returns whether a clock was live. */
+   *  on a mounted node's CSS clock variable and restart the animations
+   *  under it, so a one-clock set piece spans exactly its narration
+   *  (the sayBind beats route here). Returns whether a clock was live. */
   function bindSayDuration(el, cssVar) {
     const c = SyncCue.clock();
     if (!el || !c) return false;
     el.style.setProperty(cssVar, Math.round(c.durationMs) + "ms");
-    el.style.animation = "none";
-    void el.offsetWidth;
-    el.style.animation = "";
+    restartPieceAnims(el);
     return true;
   }
 
@@ -7503,11 +7688,14 @@
     "</g>" +
     "</svg>";
 
-  /** The a3-bug explainer: one 4s clock, two mini feeds. BEFORE re-mounts
-   *  everything on the tick (white flash, simultaneous re-entry); AFTER
-   *  skips on the fingerprint match and animates only the new block. All
-   *  motion is CSS keyframes on .stage-anim (reduced motion → static
-   *  comparison with ghosted duplicates). */
+  /** The a3-bug explainer: two mini feeds on ONE narration cycle
+   *  (--bug-total, bound to the v4-03 clip at a3-bug). BEFORE re-mounts
+   *  everything three times through the opening sentence (white flash,
+   *  simultaneous re-entry); the focus then crossfades to AFTER, whose
+   *  sig chip glows on "fingerprint matches" and whose new block enters
+   *  once at the end — then the piece holds its end state. All motion is
+   *  CSS keyframes on .stage-anim (reduced motion → static comparison
+   *  with ghosted duplicates). */
   const FLASH_ANIM_HTML =
     '<div class="stage-anim" role="img" aria-label="Before the fix, every beat re-mounts all messages and the panel flashes white. After the fix, a fingerprint match skips the repaint and only the new message animates in.">' +
       '<div class="anim-panel before">' +
@@ -7915,7 +8103,9 @@
   /** a2-you-show pin body (pin.mock === "jump"): your screenshot of THIS
    *  demo, pre-fix, at small scale — hub rail sliver, stage, feed strip.
    *  The caption bar sits at spot A (below the stage) and jumps to spot B
-   *  (top of the page) on a 4s CSS loop; the vacated spot keeps a dashed
+   *  (top of the page) on the --pj-total CSS loop — first cycle bound to
+   *  the you-03 clip (one jump at ~55%, as "from here" gives way to
+   *  "to here"), 4s ambient after; the vacated spot keeps a dashed
    *  ghost. The spot ids are the beat's cursorAfter hover waypoints.
    *  Reduced motion: static, both spots shown, "jumps A → B" annotation. */
   const PIN_JUMP_HTML =
