@@ -16,7 +16,7 @@ Stay on a call with your agents. See what they are doing. Steer.
 </p>
 
 <p align="center">
-  <img src="docs/drivecode/assets/demos/drive-product-demo.gif" width="820" alt="Drive product demo: you report a flashing bug on a call; Cline reproduces it on its shared VS Code screen, animates the render pipeline, steps the fix in a debugger, and lands it smooth">
+  <img src="docs/drivecode/assets/demos/drive-product-demo.gif" width="820" alt="Drive product demo: you dictate a flashing-bug report on a call, take the Spotlight to point at the jump, and Cline animates the diagnosis on its shared VS Code screen, steps the fix in a debugger, and lands it smooth">
 </p>
 
 <p align="center">
