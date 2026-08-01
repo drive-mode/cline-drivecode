@@ -1,5 +1,13 @@
 /** Webview bridge for hub `drive_agent_home_get` (DRV-DRIVEAGENT-HOME). */
 
+import {
+	type HostMessage,
+	isOptionalString,
+	isOptionalStringArray,
+	isRecord,
+	isStringArray,
+	subscribeToHostMessages,
+} from "../lib/host-message-gateway";
 import { postToHost } from "../vscode";
 
 const HOME_TIMEOUT_MS = 3_000;
@@ -27,17 +35,79 @@ export type DriveagentHomeProjection = {
 	};
 };
 
-type HomeReplyMessage = {
-	type?: string;
+type HomeReplyMessage = HostMessage & {
+	type: "drive_agent_home" | "drive_agent_home_error";
 	requestId?: string;
-	home?: {
-		slug: string;
-		agent: DriveagentHomeProjection["agent"];
-		permissions: DriveagentHomeProjection["permissions"];
-	};
-	compiled?: DriveagentHomeProjection["compiled"];
+	home?: unknown;
+	compiled?: unknown;
 	text?: string;
 };
+
+const HOME_REPLY_TYPES = [
+	"drive_agent_home",
+	"drive_agent_home_error",
+] as const;
+
+function isHomeReplyMessage(message: HostMessage): message is HomeReplyMessage {
+	return (
+		(message.type === "drive_agent_home" ||
+			message.type === "drive_agent_home_error") &&
+		isOptionalString(message.requestId) &&
+		isOptionalString(message.text)
+	);
+}
+
+function isHomeAgent(
+	value: unknown,
+): value is DriveagentHomeProjection["agent"] {
+	return (
+		isRecord(value) &&
+		typeof value.name === "string" &&
+		typeof value.description === "string" &&
+		isOptionalStringArray(value.tools) &&
+		isOptionalStringArray(value.skills) &&
+		(value.editable === undefined || typeof value.editable === "boolean")
+	);
+}
+
+function isHomePermissions(
+	value: unknown,
+): value is DriveagentHomeProjection["permissions"] {
+	return (
+		isRecord(value) &&
+		(value.presetIntent === "readonly" ||
+			value.presetIntent === "standard" ||
+			value.presetIntent === "full") &&
+		isStringArray(value.approvalHooks) &&
+		isOptionalString(value.notes)
+	);
+}
+
+function isHomeSection(value: unknown): value is {
+	slug: string;
+	agent: DriveagentHomeProjection["agent"];
+	permissions: DriveagentHomeProjection["permissions"];
+} {
+	return (
+		isRecord(value) &&
+		typeof value.slug === "string" &&
+		isHomeAgent(value.agent) &&
+		isHomePermissions(value.permissions)
+	);
+}
+
+function isCompiledSection(
+	value: unknown,
+): value is DriveagentHomeProjection["compiled"] {
+	return (
+		isRecord(value) &&
+		typeof value.name === "string" &&
+		typeof value.slug === "string" &&
+		typeof value.description === "string" &&
+		isOptionalStringArray(value.tools) &&
+		isOptionalStringArray(value.skills)
+	);
+}
 
 /**
  * Request hub `drive_agent_home_get` and resolve with a prompt-stripped home.
@@ -62,44 +132,42 @@ export function requestDriveagentHome(
 
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => {
-			window.removeEventListener("message", onMessage);
+			unsubscribe();
 			reject(new Error("drive_agent_home_get timed out"));
 		}, timeoutMs);
 
-		function onMessage(event: MessageEvent) {
-			const message = event.data as HomeReplyMessage;
-			if (
-				message.type !== "drive_agent_home" &&
-				message.type !== "drive_agent_home_error"
-			) {
-				return;
-			}
-			if (message.requestId !== requestId) {
-				return;
-			}
-			clearTimeout(timer);
-			window.removeEventListener("message", onMessage);
-			if (message.type === "drive_agent_home_error") {
-				reject(
-					new Error(
-						message.text?.trim() || "drive_agent_home_get failed",
-					),
-				);
-				return;
-			}
-			if (!message.home || !message.compiled) {
-				reject(new Error("drive_agent_home missing home/compiled"));
-				return;
-			}
-			resolve({
-				slug: message.home.slug,
-				agent: message.home.agent,
-				permissions: message.home.permissions,
-				compiled: message.compiled,
-			});
-		}
-
-		window.addEventListener("message", onMessage);
+		const unsubscribe = subscribeToHostMessages({
+			types: HOME_REPLY_TYPES,
+			guard: isHomeReplyMessage,
+			onMessage: (message) => {
+				if (message.requestId !== requestId) {
+					return;
+				}
+				clearTimeout(timer);
+				unsubscribe();
+				if (message.type === "drive_agent_home_error") {
+					reject(
+						new Error(message.text?.trim() || "drive_agent_home_get failed"),
+					);
+					return;
+				}
+				if (
+					!isHomeSection(message.home) ||
+					!isCompiledSection(message.compiled)
+				) {
+					reject(
+						new Error("drive_agent_home missing or malformed home/compiled"),
+					);
+					return;
+				}
+				resolve({
+					slug: message.home.slug,
+					agent: message.home.agent,
+					permissions: message.home.permissions,
+					compiled: message.compiled,
+				});
+			},
+		});
 		postToHost({
 			type: "drive_agent_home_get",
 			requestId,

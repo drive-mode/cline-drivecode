@@ -4,6 +4,11 @@
 
 import type { PlanImproveDecision } from "@cline/drive";
 import type { PlanningProposal } from "@cline/shared";
+import {
+	type HostMessage,
+	isOptionalString,
+	subscribeToHostMessages,
+} from "../lib/host-message-gateway";
 import { postToHost } from "../vscode";
 
 const TIMEOUT_MS = 5_000;
@@ -14,6 +19,37 @@ export type PlanImproveResolveResult = {
 	relativePath?: string;
 	offerKey: string;
 };
+
+type PlanImproveReply = HostMessage & {
+	type: "drive_plan_improve_resolved" | "drive_plan_improve_error";
+	requestId?: string;
+	decision?: PlanImproveDecision;
+	wrote?: boolean;
+	relativePath?: string;
+	offerKey?: string;
+	text?: string;
+};
+
+const PLAN_IMPROVE_REPLY_TYPES = [
+	"drive_plan_improve_resolved",
+	"drive_plan_improve_error",
+] as const;
+
+function isPlanImproveReply(message: HostMessage): message is PlanImproveReply {
+	return (
+		(message.type === "drive_plan_improve_resolved" ||
+			message.type === "drive_plan_improve_error") &&
+		isOptionalString(message.requestId) &&
+		(message.decision === undefined ||
+			message.decision === "accept" ||
+			message.decision === "reject" ||
+			message.decision === "mute") &&
+		(message.wrote === undefined || typeof message.wrote === "boolean") &&
+		isOptionalString(message.relativePath) &&
+		isOptionalString(message.offerKey) &&
+		isOptionalString(message.text)
+	);
+}
 
 export function requestPlanImproveResolve(
 	workspaceRoot: string,
@@ -30,53 +66,40 @@ export function requestPlanImproveResolve(
 
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => {
-			window.removeEventListener("message", onMessage);
+			unsubscribe();
 			reject(new Error("drive_plan_improve_resolve timed out"));
 		}, timeoutMs);
 
-		function onMessage(event: MessageEvent) {
-			const message = event.data as {
-				type?: string;
-				requestId?: string;
-				decision?: PlanImproveDecision;
-				wrote?: boolean;
-				relativePath?: string;
-				offerKey?: string;
-				text?: string;
-			};
-			if (
-				message.type !== "drive_plan_improve_resolved" &&
-				message.type !== "drive_plan_improve_error"
-			) {
-				return;
-			}
-			if (message.requestId !== requestId) {
-				return;
-			}
-			clearTimeout(timer);
-			window.removeEventListener("message", onMessage);
-			if (message.type === "drive_plan_improve_error") {
-				reject(
-					new Error(
-						message.text?.trim() || "drive_plan_improve_resolve failed",
-					),
-				);
-				return;
-			}
-			resolve({
-				decision: message.decision ?? decision,
-				wrote: Boolean(message.wrote),
-				...(typeof message.relativePath === "string"
-					? { relativePath: message.relativePath }
-					: {}),
-				offerKey:
-					typeof message.offerKey === "string"
-						? message.offerKey
-						: proposal.offerKey,
-			});
-		}
-
-		window.addEventListener("message", onMessage);
+		const unsubscribe = subscribeToHostMessages({
+			types: PLAN_IMPROVE_REPLY_TYPES,
+			guard: isPlanImproveReply,
+			onMessage: (message) => {
+				if (message.requestId !== requestId) {
+					return;
+				}
+				clearTimeout(timer);
+				unsubscribe();
+				if (message.type === "drive_plan_improve_error") {
+					reject(
+						new Error(
+							message.text?.trim() || "drive_plan_improve_resolve failed",
+						),
+					);
+					return;
+				}
+				resolve({
+					decision: message.decision ?? decision,
+					wrote: Boolean(message.wrote),
+					...(typeof message.relativePath === "string"
+						? { relativePath: message.relativePath }
+						: {}),
+					offerKey:
+						typeof message.offerKey === "string"
+							? message.offerKey
+							: proposal.offerKey,
+				});
+			},
+		});
 		postToHost({
 			type: "drive_plan_improve_resolve",
 			workspaceRoot: root,

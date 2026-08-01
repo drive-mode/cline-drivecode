@@ -1,13 +1,20 @@
 import {
-	type BankStore,
-	type SdlcFreezeAcceptPlan,
-	type SdlcFreezeProposal,
 	acceptSdlcFreeze,
+	type BankStore,
 	buildSdlcFreezeAcceptPlan,
 	createBankStore,
 	createMemoryBankFs,
+	type SdlcFreezeAcceptPlan,
+	type SdlcFreezeProposal,
 } from "@cline/drive";
 import type { BankSnapshot } from "@cline/shared";
+import {
+	type HostMessage,
+	isOptionalString,
+	isRecord,
+	isStringArray,
+	subscribeToHostMessages,
+} from "../lib/host-message-gateway";
 import { postToHost } from "../vscode";
 
 const WORKSPACE = "/hub-drive-bank";
@@ -35,9 +42,10 @@ export type BankOpSessionContext = {
 	callSessionId?: string | null;
 };
 
-export function bankCorrelationFields(
-	ctx?: BankOpSessionContext,
-): { roomId?: string; callSessionId?: string } {
+export function bankCorrelationFields(ctx?: BankOpSessionContext): {
+	roomId?: string;
+	callSessionId?: string;
+} {
 	const roomId = ctx?.roomId?.trim();
 	const callSessionId = ctx?.callSessionId?.trim();
 	return {
@@ -161,6 +169,44 @@ export type HubBankOpPayload = {
 	agentId?: string;
 };
 
+type HubBankReply = HostMessage & {
+	type: "drive_bank_snapshot" | "drive_bank_error";
+	requestId?: string;
+	snapshot?: unknown;
+	text?: string;
+};
+
+const HUB_BANK_REPLY_TYPES = [
+	"drive_bank_snapshot",
+	"drive_bank_error",
+] as const;
+
+function isHubBankReply(message: HostMessage): message is HubBankReply {
+	return (
+		(message.type === "drive_bank_snapshot" ||
+			message.type === "drive_bank_error") &&
+		isOptionalString(message.requestId) &&
+		isOptionalString(message.text)
+	);
+}
+
+function isBankSnapshotValue(value: unknown): value is BankSnapshot {
+	if (!isRecord(value)) {
+		return false;
+	}
+	const stringOrNull = (candidate: unknown) =>
+		candidate === null || typeof candidate === "string";
+	return (
+		stringOrNull(value.activePlanId) &&
+		isStringArray(value.openTaskIds) &&
+		stringOrNull(value.nowTaskId) &&
+		stringOrNull(value.nextTaskId) &&
+		stringOrNull(value.nowTitle) &&
+		stringOrNull(value.nextTitle) &&
+		(value.nowLastFailure === undefined || stringOrNull(value.nowLastFailure))
+	);
+}
+
 /**
  * Request a hub `drive_bank_*` op and resolve with the snapshot reply.
  * Rejects on error reply or timeout (~3s).
@@ -176,40 +222,32 @@ export function requestHubBankOp(
 
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => {
-			window.removeEventListener("message", onMessage);
+			unsubscribe();
 			reject(new Error(`${type} timed out`));
 		}, timeoutMs);
 
-		function onMessage(event: MessageEvent) {
-			const message = event.data as {
-				type?: string;
-				requestId?: string;
-				snapshot?: BankSnapshot;
-				text?: string;
-			};
-			if (
-				message.type !== "drive_bank_snapshot" &&
-				message.type !== "drive_bank_error"
-			) {
-				return;
-			}
-			if (message.requestId !== requestId) {
-				return;
-			}
-			clearTimeout(timer);
-			window.removeEventListener("message", onMessage);
-			if (message.type === "drive_bank_error") {
-				reject(new Error(message.text?.trim() || `${type} failed`));
-				return;
-			}
-			if (!message.snapshot) {
-				reject(new Error("drive_bank_snapshot missing snapshot"));
-				return;
-			}
-			resolve(message.snapshot);
-		}
-
-		window.addEventListener("message", onMessage);
+		const unsubscribe = subscribeToHostMessages({
+			types: HUB_BANK_REPLY_TYPES,
+			guard: isHubBankReply,
+			onMessage: (message) => {
+				if (message.requestId !== requestId) {
+					return;
+				}
+				clearTimeout(timer);
+				unsubscribe();
+				if (message.type === "drive_bank_error") {
+					reject(new Error(message.text?.trim() || `${type} failed`));
+					return;
+				}
+				if (!isBankSnapshotValue(message.snapshot)) {
+					reject(
+						new Error("drive_bank_snapshot missing or malformed snapshot"),
+					);
+					return;
+				}
+				resolve(message.snapshot);
+			},
+		});
 		switch (type) {
 			case "drive_bank_get":
 				postToHost({
@@ -469,17 +507,13 @@ export async function mutateBankCompleteTask(
 			requestHubBankOp("drive_bank_complete_task", {
 				workspaceRoot: workspaceRoot!.trim(),
 				taskId: input.taskId,
-				...(input.agentId?.trim()
-					? { agentId: input.agentId.trim() }
-					: {}),
+				...(input.agentId?.trim() ? { agentId: input.agentId.trim() } : {}),
 				...bankCorrelationFields(correlation),
 			}),
 		async () => {
 			await session.store.completeTask(
 				input.taskId,
-				input.agentId?.trim()
-					? { agentId: input.agentId.trim() }
-					: undefined,
+				input.agentId?.trim() ? { agentId: input.agentId.trim() } : undefined,
 			);
 		},
 	);
@@ -563,8 +597,7 @@ export async function mutateBankAcceptSdlcFreeze(
 	proposal: SdlcFreezeProposal,
 	correlation?: BankOpSessionContext,
 ): Promise<BankMutationResult> {
-	const acceptPlan: SdlcFreezeAcceptPlan =
-		buildSdlcFreezeAcceptPlan(proposal);
+	const acceptPlan: SdlcFreezeAcceptPlan = buildSdlcFreezeAcceptPlan(proposal);
 	return hubMutationOrLocal(
 		session,
 		workspaceRoot,
@@ -590,8 +623,7 @@ export async function listPlanTasks(
 	if (!plan) {
 		return [];
 	}
-	const tasks: Array<{ id: string; title: string; lastFailure?: string }> =
-		[];
+	const tasks: Array<{ id: string; title: string; lastFailure?: string }> = [];
 	for (const taskId of plan.taskIds) {
 		const task = await session.store.getTask(taskId);
 		if (task && task.status !== "done") {

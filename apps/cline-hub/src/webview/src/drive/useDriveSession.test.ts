@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	hasPendingDriveJoinRequest,
 	isDriveRoomSnapshotForTarget,
+	isDriveSessionHostMessage,
 	resolveDriveCallError,
 	resolveDriveTargetRoomId,
 	shouldReattachDriveSession,
@@ -220,5 +221,95 @@ describe("Drive room targeting", () => {
 				expectedRoomId: "expected-room",
 			}),
 		).toBe("expected-room");
+	});
+});
+
+describe("Drive session host message guard", () => {
+	const validSnapshot = {
+		schemaVersion: 1,
+		roomId: "pairing-room",
+		createdAt: "2026-07-31T00:00:00.000Z",
+		driveActive: true,
+		subMode: "pairing",
+		participants: [
+			{ id: "human-1", kind: "human", displayName: "Harrison" },
+			{ id: "agent-1", kind: "agent", displayName: "Partner" },
+		],
+		stage: { sharer: null, pin: null, cards: [] },
+		muteByParticipantId: {},
+		raisedHandByParticipantId: {},
+	};
+
+	it("accepts a room_snapshot with a structurally valid snapshot", () => {
+		expect(
+			isDriveSessionHostMessage({
+				type: "room_snapshot",
+				roomId: "pairing-room",
+				snapshot: validSnapshot,
+				seq: 3,
+			}),
+		).toBe(true);
+	});
+
+	it("rejects a room_snapshot whose snapshot is malformed", () => {
+		expect(
+			isDriveSessionHostMessage({
+				type: "room_snapshot",
+				roomId: "pairing-room",
+				snapshot: { ...validSnapshot, participants: "not-an-array" },
+			}),
+		).toBe(false);
+		expect(
+			isDriveSessionHostMessage({
+				type: "room_snapshot",
+				snapshot: { ...validSnapshot, muteByParticipantId: undefined },
+			}),
+		).toBe(false);
+	});
+
+	it("rejects a drive_event narration without string text", () => {
+		expect(
+			isDriveSessionHostMessage({
+				type: "drive_event",
+				roomId: "pairing-room",
+				snapshot: validSnapshot,
+				event: { type: "conversation.narration" },
+			}),
+		).toBe(false);
+	});
+
+	it("requires a string showItemId on drive_show_presented", () => {
+		expect(
+			isDriveSessionHostMessage({
+				type: "drive_show_presented",
+				showItemId: "show-1",
+				title: "Demo",
+			}),
+		).toBe(true);
+		expect(
+			isDriveSessionHostMessage({
+				type: "drive_show_presented",
+				showItemId: { nested: "object" },
+			}),
+		).toBe(false);
+	});
+
+	it("rejects drive_room_changed with a malformed show backlog", () => {
+		expect(
+			isDriveSessionHostMessage({
+				type: "drive_room_changed",
+				room: {
+					spotlightParticipantId: null,
+					director: {
+						activeShowId: "show-1",
+						showBacklog: [{ id: "show-1", title: 42, caption: "c" }],
+					},
+				},
+			}),
+		).toBe(false);
+	});
+
+	it("rejects unknown message types", () => {
+		expect(isDriveSessionHostMessage({ type: "totally_unknown" })).toBe(false);
 	});
 });

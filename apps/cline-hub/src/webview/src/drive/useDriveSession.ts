@@ -13,6 +13,12 @@ import {
 	useRef,
 	useState,
 } from "react";
+import {
+	type HostMessage,
+	isOptionalString,
+	isRecord,
+	subscribeToHostMessages,
+} from "../lib/host-message-gateway";
 import { getVsCodeApi, postToHost } from "../vscode";
 import {
 	createDriveBankSession,
@@ -242,6 +248,244 @@ export function isDriveRoomSnapshotForTarget({
 		snapshotRoomId === expectedRoomId &&
 		(outerRoomId === undefined || outerRoomId === expectedRoomId)
 	);
+}
+
+type DriveSessionHostMessage = HostMessage & {
+	type:
+		| "drive_show_presented"
+		| "drive_script_beat"
+		| "call_error"
+		| "drive_fork_audit"
+		| "room_snapshot"
+		| "drive_event"
+		| "drive_room_changed";
+	text?: string;
+	code?: string;
+	command?: string;
+	seq?: number;
+	showItemId?: string | null;
+	title?: string;
+	caption?: string;
+	uri?: string;
+	say?: string;
+	ownerParticipantId?: string;
+	roomId?: string;
+	callSessionId?: string;
+	whileAwayNote?: string;
+	handoffNarration?: string;
+	snapshot?: RoomSnapshot;
+	event?: DriveEvent;
+	auditHandle?: string;
+	messages?: unknown[];
+	summaryOnly?: boolean;
+	room?: {
+		spotlightParticipantId?: string | null;
+		participantAudio?: Array<{
+			participantId: string;
+			muted: boolean;
+			deafened: boolean;
+		}>;
+		director?: {
+			activeShowId?: string | null;
+			showBacklog?: Array<{
+				id: string;
+				title: string;
+				caption: string;
+				uri?: string;
+				ownerParticipantId: string;
+			}>;
+		};
+		chatForks?: ChatForkRecord[];
+	};
+};
+
+const DRIVE_SESSION_MESSAGE_TYPES = [
+	"drive_show_presented",
+	"drive_script_beat",
+	"call_error",
+	"drive_fork_audit",
+	"room_snapshot",
+	"drive_event",
+	"drive_room_changed",
+] as const;
+
+/**
+ * Structural check for hub RoomSnapshot payloads covering the fields this
+ * hook and applyRoomSnapshot consume — the same shallow-trust idiom as the
+ * hub server's asRoomSnapshot. Deeper drive state flows through the shared
+ * reducer, which re-validates events via parseDriveEvent.
+ */
+function isRoomSnapshotPayload(value: unknown): value is RoomSnapshot {
+	if (
+		!isRecord(value) ||
+		typeof value.roomId !== "string" ||
+		typeof value.driveActive !== "boolean" ||
+		typeof value.subMode !== "string" ||
+		!isRecord(value.muteByParticipantId) ||
+		!isRecord(value.raisedHandByParticipantId)
+	) {
+		return false;
+	}
+	if (
+		!Array.isArray(value.participants) ||
+		!value.participants.every(
+			(participant) =>
+				isRecord(participant) &&
+				typeof participant.id === "string" &&
+				typeof participant.kind === "string" &&
+				isOptionalString(participant.displayName),
+		)
+	) {
+		return false;
+	}
+	const stage = value.stage;
+	if (!isRecord(stage) || !Array.isArray(stage.cards)) {
+		return false;
+	}
+	if (
+		stage.sharer !== null &&
+		stage.sharer !== undefined &&
+		(!isRecord(stage.sharer) ||
+			typeof stage.sharer.kind !== "string" ||
+			typeof stage.sharer.participantId !== "string")
+	) {
+		return false;
+	}
+	if (stage.pin !== null && stage.pin !== undefined && !isRecord(stage.pin)) {
+		return false;
+	}
+	return true;
+}
+
+function isDriveEventPayload(value: unknown): value is DriveEvent {
+	// Shallow: foldIncomingDriveEvent re-validates via parseDriveEvent and
+	// falls back to the hub snapshot when the event is malformed.
+	return (
+		isRecord(value) &&
+		typeof value.type === "string" &&
+		(value.type !== "conversation.narration" || typeof value.text === "string")
+	);
+}
+
+function isDriveRoomChangedRoom(
+	value: unknown,
+): value is NonNullable<DriveSessionHostMessage["room"]> {
+	if (!isRecord(value)) {
+		return false;
+	}
+	if (
+		value.spotlightParticipantId !== undefined &&
+		value.spotlightParticipantId !== null &&
+		typeof value.spotlightParticipantId !== "string"
+	) {
+		return false;
+	}
+	if (value.participantAudio !== undefined) {
+		if (
+			!Array.isArray(value.participantAudio) ||
+			!value.participantAudio.every(
+				(flags) =>
+					isRecord(flags) &&
+					typeof flags.participantId === "string" &&
+					typeof flags.muted === "boolean" &&
+					typeof flags.deafened === "boolean",
+			)
+		) {
+			return false;
+		}
+	}
+	if (value.director !== undefined) {
+		if (!isRecord(value.director)) {
+			return false;
+		}
+		const activeShowId = value.director.activeShowId;
+		if (
+			activeShowId !== undefined &&
+			activeShowId !== null &&
+			typeof activeShowId !== "string"
+		) {
+			return false;
+		}
+		const backlog = value.director.showBacklog;
+		if (
+			backlog !== undefined &&
+			(!Array.isArray(backlog) ||
+				!backlog.every(
+					(item) =>
+						isRecord(item) &&
+						typeof item.id === "string" &&
+						typeof item.title === "string" &&
+						typeof item.caption === "string" &&
+						isOptionalString(item.uri) &&
+						typeof item.ownerParticipantId === "string",
+				))
+		) {
+			return false;
+		}
+	}
+	if (value.chatForks !== undefined) {
+		// Fork records are display-only here; deep fields render as React text.
+		if (
+			!Array.isArray(value.chatForks) ||
+			!value.chatForks.every(
+				(fork) => isRecord(fork) && typeof fork.id === "string",
+			)
+		) {
+			return false;
+		}
+	}
+	return true;
+}
+
+export function isDriveSessionHostMessage(
+	message: HostMessage,
+): message is DriveSessionHostMessage {
+	switch (message.type) {
+		case "drive_show_presented":
+			return (
+				typeof message.showItemId === "string" &&
+				isOptionalString(message.title) &&
+				isOptionalString(message.caption) &&
+				isOptionalString(message.uri) &&
+				isOptionalString(message.ownerParticipantId)
+			);
+		case "drive_script_beat":
+			return (
+				isOptionalString(message.say) &&
+				(message.showItemId === undefined ||
+					message.showItemId === null ||
+					typeof message.showItemId === "string")
+			);
+		case "call_error":
+			return (
+				isOptionalString(message.text) &&
+				isOptionalString(message.code) &&
+				isOptionalString(message.command)
+			);
+		case "drive_fork_audit":
+			return (
+				isOptionalString(message.auditHandle) &&
+				(message.messages === undefined || Array.isArray(message.messages)) &&
+				(message.summaryOnly === undefined ||
+					typeof message.summaryOnly === "boolean")
+			);
+		case "room_snapshot":
+		case "drive_event":
+			return (
+				isOptionalString(message.roomId) &&
+				(message.seq === undefined || typeof message.seq === "number") &&
+				isOptionalString(message.callSessionId) &&
+				isOptionalString(message.whileAwayNote) &&
+				isOptionalString(message.handoffNarration) &&
+				(message.snapshot === undefined ||
+					isRoomSnapshotPayload(message.snapshot)) &&
+				(message.event === undefined || isDriveEventPayload(message.event))
+			);
+		case "drive_room_changed":
+			return message.room === undefined || isDriveRoomChangedRoom(message.room);
+		default:
+			return false;
+	}
 }
 
 export function resolveDriveTargetRoomId({
@@ -682,8 +926,7 @@ export function useDriveSession(
 				workspaceRootRef.current,
 				{
 					roomId: correlation?.roomId ?? current.roomId,
-					callSessionId:
-						correlation?.callSessionId ?? current.callSessionId,
+					callSessionId: correlation?.callSessionId ?? current.callSessionId,
 				},
 			);
 			const tasks = snapshot.activePlanId
@@ -715,48 +958,7 @@ export function useDriveSession(
 	);
 
 	useEffect(() => {
-		const onMessage = (event: MessageEvent) => {
-			const message = event.data as {
-				type?: string;
-				text?: string;
-				code?: string;
-				command?: string;
-				seq?: number;
-				showItemId?: string;
-				title?: string;
-				caption?: string;
-				uri?: string;
-				say?: string;
-				ownerParticipantId?: string;
-				roomId?: string;
-				callSessionId?: string;
-				whileAwayNote?: string;
-				handoffNarration?: string;
-				snapshot?: RoomSnapshot;
-				event?: DriveEvent;
-				auditHandle?: string;
-				messages?: unknown[];
-				summaryOnly?: boolean;
-				room?: {
-					spotlightParticipantId?: string | null;
-					participantAudio?: Array<{
-						participantId: string;
-						muted: boolean;
-						deafened: boolean;
-					}>;
-					director?: {
-						activeShowId?: string | null;
-						showBacklog?: Array<{
-							id: string;
-							title: string;
-							caption: string;
-							uri?: string;
-							ownerParticipantId: string;
-						}>;
-					};
-					chatForks?: ChatForkRecord[];
-				};
-			};
+		const onMessage = (message: DriveSessionHostMessage) => {
 			if (message.type === "drive_show_presented" && message.showItemId) {
 				setPresentedShow({
 					showItemId: message.showItemId,
@@ -1026,8 +1228,11 @@ export function useDriveSession(
 				}));
 			}
 		};
-		window.addEventListener("message", onMessage);
-		return () => window.removeEventListener("message", onMessage);
+		return subscribeToHostMessages({
+			types: DRIVE_SESSION_MESSAGE_TYPES,
+			guard: isDriveSessionHostMessage,
+			onMessage,
+		});
 	}, [refreshDriveRoom, resetDriveConnection, seedBankAfterJoin]);
 
 	useEffect(() => {

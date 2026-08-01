@@ -1,3 +1,8 @@
+import {
+	type HostMessage,
+	isOptionalString,
+	subscribeToHostMessages,
+} from "../lib/host-message-gateway";
 import { postToHost } from "../vscode";
 
 const TIMEOUT_MS = 3_000;
@@ -6,6 +11,32 @@ export type SessionRollupDump = {
 	rollups: unknown[];
 	dump: string;
 };
+
+type SessionRollupsReply = HostMessage & {
+	type: "drive_session_rollups" | "drive_session_rollups_error";
+	requestId?: string;
+	rollups?: unknown[];
+	dump?: string;
+	text?: string;
+};
+
+const SESSION_ROLLUPS_REPLY_TYPES = [
+	"drive_session_rollups",
+	"drive_session_rollups_error",
+] as const;
+
+function isSessionRollupsReply(
+	message: HostMessage,
+): message is SessionRollupsReply {
+	return (
+		(message.type === "drive_session_rollups" ||
+			message.type === "drive_session_rollups_error") &&
+		isOptionalString(message.requestId) &&
+		(message.rollups === undefined || Array.isArray(message.rollups)) &&
+		isOptionalString(message.dump) &&
+		isOptionalString(message.text)
+	);
+}
 
 /**
  * Request local SessionRollup dump from hub (Drive Settings debug).
@@ -23,51 +54,36 @@ export function requestSessionRollupsDump(
 
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => {
-			window.removeEventListener("message", onMessage);
+			unsubscribe();
 			reject(new Error("drive_session_rollups timed out"));
 		}, timeoutMs);
 
-		function onMessage(event: MessageEvent) {
-			const message = event.data as {
-				type?: string;
-				requestId?: string;
-				rollups?: unknown[];
-				dump?: string;
-				text?: string;
-			};
-			if (
-				message.type !== "drive_session_rollups" &&
-				message.type !== "drive_session_rollups_error"
-			) {
-				return;
-			}
-			if (message.requestId !== requestId) {
-				return;
-			}
-			clearTimeout(timer);
-			window.removeEventListener("message", onMessage);
-			if (message.type === "drive_session_rollups_error") {
-				reject(
-					new Error(
-						message.text?.trim() || "drive_session_rollups failed",
-					),
-				);
-				return;
-			}
-			resolve({
-				rollups: Array.isArray(message.rollups) ? message.rollups : [],
-				dump: typeof message.dump === "string" ? message.dump : "",
-			});
-		}
-
-		window.addEventListener("message", onMessage);
+		const unsubscribe = subscribeToHostMessages({
+			types: SESSION_ROLLUPS_REPLY_TYPES,
+			guard: isSessionRollupsReply,
+			onMessage: (message) => {
+				if (message.requestId !== requestId) {
+					return;
+				}
+				clearTimeout(timer);
+				unsubscribe();
+				if (message.type === "drive_session_rollups_error") {
+					reject(
+						new Error(message.text?.trim() || "drive_session_rollups failed"),
+					);
+					return;
+				}
+				resolve({
+					rollups: Array.isArray(message.rollups) ? message.rollups : [],
+					dump: typeof message.dump === "string" ? message.dump : "",
+				});
+			},
+		});
 		postToHost({
 			type: "drive_session_rollups",
 			requestId,
 			workspaceRoot: root,
-			...(typeof options?.limit === "number"
-				? { limit: options.limit }
-				: {}),
+			...(typeof options?.limit === "number" ? { limit: options.limit } : {}),
 			...(options?.callSessionId?.trim()
 				? { callSessionId: options.callSessionId.trim() }
 				: {}),

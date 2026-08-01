@@ -10,6 +10,7 @@ import {
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { splitSchemaPathTokens } from "./schema-path";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -97,20 +98,23 @@ export const SchemaDisplayPath = ({
 }: SchemaDisplayPathProps) => {
 	const { path } = useContext(SchemaDisplayContext);
 
-	// Highlight path parameters
-	const highlightedPath = path.replaceAll(
-		/\{([^}]+)\}/g,
-		'<span class="text-blue-600 dark:text-blue-400">{$1}</span>',
-	);
-
 	return (
-		<span
-			className={cn("font-mono text-sm", className)}
-			// oxlint-disable-next-line eslint-plugin-react(no-danger)
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized highlighted syntax
-			dangerouslySetInnerHTML={{ __html: children ?? highlightedPath }}
-			{...props}
-		/>
+		<span className={cn("font-mono text-sm", className)} {...props}>
+			{children ??
+				splitSchemaPathTokens(path).map((token, index) =>
+					token.param ? (
+						<span
+							className="text-blue-600 dark:text-blue-400"
+							// biome-ignore lint/suspicious/noArrayIndexKey: tokens are static per path
+							key={`${token.text}-${index}`}
+						>
+							{token.text}
+						</span>
+					) : (
+						token.text
+					),
+				)}
+		</span>
 	);
 };
 
