@@ -57,6 +57,15 @@
 //  20) reduced motion: the takeover mock degrades to the static
 //      composition — no jump loop, both caption bars visible, the
 //      "jumps A -> B" annotation shown.
+//  21) interactive VS Code: the shared editor is operable — every tab /
+//      explorer row / panel tab is a labelled <button>; the explorer
+//      opens verify.js and the editor shows an excerpt VERBATIM from
+//      this file (sampled against disk); FILE_BODIES stays honest
+//      (canvas excerpt verbatim, PR_BODY.md matches the a10 write-up,
+//      package.json parses); the beat's tab restores the scripted
+//      editor; panel tabs swap bodies with TERMINAL keeping the beat's
+//      terminal; one beat of navigation clears the whole view override;
+//      and the a3-walk debug session survives an interaction round-trip.
 //      The battery's LAST check compares every `bun verify.js`
 //      success line the demo shows against this run's real beat/check
 //      counts.
@@ -866,6 +875,157 @@ async function main() {
     await page.emulateMediaFeatures([]);
     await page.reload({ waitUntil: "load" });
     await page.waitForFunction("!!window.__DRIVE_DEMO__", { timeout: 15000 });
+
+    // 21) Interactive VS Code: the shared editor is a real surface. At a
+    // workspace beat the explorer opens verify.js (this file, verbatim),
+    // panel tabs swap bodies, the beat's tab restores the scripted
+    // editor, and beat navigation clears the override — script wins.
+    const ivIdx = beats.findIndex(function (b) { return b.id === "a5-riley"; });
+    check(ivIdx > 0, "interactive: beat a5-riley not found");
+    await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, ivIdx);
+    await new Promise(function (res) { setTimeout(res, 300); });
+    // Every interactive element of the window is a labelled <button>.
+    const ivButtons = await page.evaluate(function () {
+      const els = document.querySelectorAll(
+        "#spotlight .vsc-tab, #spotlight .vsc-row, #spotlight .vsc-panel-head [data-panel]");
+      return Array.prototype.map.call(els, function (el) {
+        return { tag: el.tagName, label: el.getAttribute("aria-label") || "" };
+      });
+    });
+    check(ivButtons.length >= 9,
+      "interactive: expected >= 9 operable controls at a5-riley, saw " + ivButtons.length);
+    ivButtons.forEach(function (b) {
+      check(b.tag === "BUTTON" && b.label.length > 0,
+        "interactive: <" + b.tag.toLowerCase() + "> control is not a labelled button");
+    });
+    // FILE_BODIES truth: user-openable file contents are honest.
+    const bodies = await page.evaluate(function () {
+      const out = {};
+      const B = window.__DRIVE_DEMO__.vsc.bodies;
+      Object.keys(B).forEach(function (k) {
+        out[k] = B[k].code.map(function (l) { return l.t; });
+      });
+      return out;
+    });
+    const verifyLines = verifySrc.split(/\r?\n/);
+    check((bodies["verify.js"] || []).length >= 20,
+      "interactive: verify.js excerpt should be a real stretch (~25 lines), got " +
+      (bodies["verify.js"] || []).length);
+    (bodies["verify.js"] || []).forEach(function (t) {
+      if (!t) return; // blank separator carries no claim
+      check(verifyLines.indexOf(t) >= 0,
+        "interactive: verify.js excerpt line is not verbatim in verify.js: " + JSON.stringify(t));
+    });
+    (bodies["drive-product-demo.html"] || []).forEach(function (t) {
+      if (!t) return;
+      check(src.indexOf(t) >= 0,
+        "interactive: canvas excerpt line is not verbatim in the canvas: " + JSON.stringify(t));
+    });
+    const ivPr = await page.evaluate(function () {
+      const byId = {};
+      window.__DRIVE_DEMO__.beats.forEach(function (b) { byId[b.id] = b; });
+      return byId["a10-explore"].patch.stage.work.code.map(function (l) { return l.t; });
+    });
+    check(JSON.stringify(bodies["PR_BODY.md"]) === JSON.stringify(ivPr),
+      "interactive: PR_BODY.md body must match the a10-explore write-up - got " +
+      JSON.stringify(bodies["PR_BODY.md"]));
+    let ivPkgOk = true;
+    try { JSON.parse((bodies["package.json"] || []).join("\n")); } catch (e) { ivPkgOk = false; }
+    check(ivPkgOk, "interactive: package.json body must parse as JSON");
+    // Explorer click opens verify.js: excerpt in the editor, breadcrumb
+    // and status bar follow, and the on-screen line matches disk.
+    await page.click('#spotlight .vsc-row[data-open="verify.js"]');
+    const ivOpen = await page.evaluate(function () {
+      function txt(sel) {
+        const el = document.querySelector(sel);
+        return el ? el.textContent : "";
+      }
+      return {
+        tab: txt("#spotlight .vsc-tab.on"),
+        first: txt("#spotlight .vsc-code .ws-cl .tx"),
+        crumbs: txt("#spotlight .vsc-crumbs"),
+        status: txt("#spotlight .vsc-status"),
+      };
+    });
+    check(ivOpen.tab.indexOf("verify.js") >= 0,
+      "interactive: verify.js tab not active after the explorer click - " + JSON.stringify(ivOpen.tab));
+    check(ivOpen.first === (bodies["verify.js"] || [""])[0],
+      "interactive: editor does not open on the excerpt's first line - " + JSON.stringify(ivOpen.first));
+    check(verifyLines[0] === ivOpen.first,
+      "interactive: sampled editor line must match verify.js on disk (line 1) - " + JSON.stringify(ivOpen.first));
+    check(ivOpen.crumbs.indexOf("verify.js") >= 0,
+      "interactive: breadcrumb did not follow the opened file - " + JSON.stringify(ivOpen.crumbs));
+    check(ivOpen.status.indexOf("JavaScript") >= 0,
+      "interactive: status bar language did not follow the opened file - " + JSON.stringify(ivOpen.status));
+    // Panel tabs swap bodies; TERMINAL keeps the beat's terminal.
+    function panelText() {
+      return document.querySelector("#spotlight .vsc-term").textContent;
+    }
+    await page.click('#spotlight .vsc-panel-head [data-panel="problems"]');
+    let ivPanel = await page.evaluate(panelText);
+    check(ivPanel.indexOf("0 problems") >= 0,
+      "interactive: PROBLEMS body missing its empty state - " + JSON.stringify(ivPanel));
+    await page.click('#spotlight .vsc-panel-head [data-panel="output"]');
+    ivPanel = await page.evaluate(panelText);
+    check(ivPanel.indexOf("repaint skipped") >= 0,
+      "interactive: OUTPUT body missing the render log - " + JSON.stringify(ivPanel));
+    await page.click('#spotlight .vsc-panel-head [data-panel="terminal"]');
+    ivPanel = await page.evaluate(panelText);
+    check(ivPanel.indexOf("bun verify.js") >= 0,
+      "interactive: TERMINAL did not keep the beat's terminal - " + JSON.stringify(ivPanel));
+    // The beat's own tab restores the scripted editor…
+    await page.click('#spotlight .vsc-tab[data-file="drive-product-demo.html"]');
+    const ivBack = await page.evaluate(function (i) {
+      const el = document.querySelector("#spotlight .vsc-code .ws-cl .tx");
+      return {
+        first: el ? el.textContent : "",
+        beatFirst: window.__DRIVE_DEMO__.beats[i].patch.stage.work.code[0].t,
+      };
+    }, ivIdx);
+    check(ivBack.first === ivBack.beatFirst,
+      "interactive: beat tab did not restore the scripted editor - " + JSON.stringify(ivBack.first));
+    // …and one beat of navigation clears the override wholesale: the next
+    // beat's scripted file (Riley's verify.js editor) is active, not the
+    // user-opened excerpt.
+    await page.click('#spotlight .vsc-row[data-open="verify.js"]'); // leave an override behind
+    await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i + 1); }, ivIdx);
+    const ivNext = await page.evaluate(function (i) {
+      const el = document.querySelector("#spotlight .vsc-code .ws-cl .tx");
+      return {
+        first: el ? el.textContent : "",
+        beatFirst: window.__DRIVE_DEMO__.beats[i + 1].patch.stage.work.code[0].t,
+        view: window.__DRIVE_DEMO__.vsc.getView(),
+      };
+    }, ivIdx);
+    check(ivNext.first === ivNext.beatFirst,
+      "interactive: beat advance must restore the scripted editor - " + JSON.stringify(ivNext.first));
+    check(ivNext.view.file === null && ivNext.view.tabs.length === 0 && ivNext.view.panel === null,
+      "interactive: view override must clear on beat navigation - " + JSON.stringify(ivNext.view));
+    // The a3-walk debug session survives an interaction round-trip.
+    const ivWalkIdx = beats.findIndex(function (b) { return b.id === "a3-walk"; });
+    await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, ivWalkIdx);
+    await new Promise(function (res) { setTimeout(res, 300); });
+    function dbgState() {
+      const first = document.querySelector("#spotlight .vsc-code .ws-cl .tx");
+      return {
+        dbg: !!document.querySelector("#spotlight .vsc-debug"),
+        bp: !!document.querySelector("#spotlight .ws-cl.dbg-bp"),
+        ghost: !!document.querySelector("#spotlight .dbg-ghost"),
+        first: first ? first.textContent : "",
+      };
+    }
+    let ivDbg = await page.evaluate(dbgState);
+    check(ivDbg.dbg && ivDbg.bp && ivDbg.ghost,
+      "interactive: a3-walk debug session not rendered before the round-trip");
+    await page.click('#spotlight .vsc-row[data-open="verify.js"]');
+    ivDbg = await page.evaluate(dbgState);
+    check(!ivDbg.dbg && ivDbg.first === (bodies["verify.js"] || [""])[0],
+      "interactive: opening verify.js mid-walk should show the plain excerpt - " + JSON.stringify(ivDbg));
+    await page.click('#spotlight .vsc-tab[data-file="drive-product-demo.html"]');
+    ivDbg = await page.evaluate(dbgState);
+    check(ivDbg.dbg && ivDbg.bp && ivDbg.ghost,
+      "interactive: returning to the walk file must restore the debug session intact");
+    await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); });
 
     check(pageErrors.length === 0, "pageerrors: " + pageErrors.join(" | "));
 

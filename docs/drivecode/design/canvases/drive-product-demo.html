@@ -1823,17 +1823,34 @@
     white-space: nowrap;
     overflow: hidden;
   }
+  /* Tabs, tree rows, and panel tabs are real <button>s: strip the UA
+     chrome at zero specificity so the .vsc-* classes style them, then
+     VS Code's own hover / focus idiom on top. */
+  :where(.vsc button) {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .vsc button:focus-visible { outline: 1px solid #0078d4; outline-offset: -1px; }
   .vsc-row {
     display: flex;
     align-items: center;
     gap: 5px;
     height: 22px;
+    width: 100%;
     padding: 0 8px;
     font: 400 11px/1 var(--ui);
     color: #cccccc;
     white-space: nowrap;
     overflow: hidden;
   }
+  .vsc-row:hover { background: rgba(255, 255, 255, 0.06); }
   .vsc-row .vsc-chev { font-size: 8px; color: #cccccc; flex: none; }
   .vsc-row.nest { position: relative; padding-left: 25px; }
   .vsc-row.nest::before {
@@ -1890,6 +1907,7 @@
     height: 1px;
     background: #0078d4;
   }
+  .vsc-tab:not(.on):hover { color: #cccccc; background: rgba(255, 255, 255, 0.04); }
   .vsc-tab .x { font-size: 11px; line-height: 1; color: #9d9d9d; }
   .vsc-tab .dirty { width: 7px; height: 7px; border-radius: 50%; background: #d4d4d4; display: block; }
   .vsc-activity {
@@ -1986,6 +2004,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* shortest layouts collapse to the head, never onto the status bar */
     background: #181818;
     border-top: 1px solid rgba(255, 255, 255, 0.07);
   }
@@ -1999,8 +2018,9 @@
     text-transform: uppercase;
     color: #8b8b8b;
   }
-  .vsc-panel-head span { padding-bottom: 5px; }
-  .vsc-panel-head span.on { color: #e7e7e7; border-bottom: 1px solid #e7e7e7; }
+  .vsc-panel-head button { padding-bottom: 5px; letter-spacing: inherit; text-transform: inherit; }
+  .vsc-panel-head button:hover { color: #e7e7e7; }
+  .vsc-panel-head button.on { color: #e7e7e7; border-bottom: 1px solid #e7e7e7; }
   .vsc-term {
     flex: 1;
     min-height: 0;
@@ -4317,7 +4337,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L6584–L6587",
+      range: "L6607–L6610",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through, ghost/ret
       // are inline-value decorations (both strings match — the skip path,
@@ -4326,10 +4346,10 @@
       // asserts both stay true.
       debug: true,
       lines: [
-        { n: 6584, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 6585, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 6586, t: "      R.feedSig = feedSig;", hl: true },
-        { n: 6587, t: '      feed.innerHTML = "";' },
+        { n: 6607, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 6608, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 6609, t: "      R.feedSig = feedSig;", hl: true },
+        { n: 6610, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4580,9 +4600,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '6587:      feed.innerHTML = "";', cls: "dim" },
-              { t: '6626:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '6662:      spot.innerHTML = "";', cls: "dim" },
+              { t: '6610:      feed.innerHTML = "";', cls: "dim" },
+              { t: '6649:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '6685:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -4926,7 +4946,7 @@
             caret: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 765 checks", cls: "ok" },
+              { t: "OK: 47 beats, 824 checks", cls: "ok" },
             ],
             spin: false,
             activity: "explaining the fix",
@@ -4975,7 +4995,7 @@
             typing: "// assert: same node before and after a beat",
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 765 checks", cls: "ok" },
+              { t: "OK: 47 beats, 824 checks", cls: "ok" },
             ],
             spin: false,
             activity: "adding regression checks",
@@ -5057,7 +5077,7 @@
             typing: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 765 checks", cls: "ok" },
+              { t: "OK: 47 beats, 824 checks", cls: "ok" },
             ],
             spin: false,
             activity: "pinning the caption slot",
@@ -6418,6 +6438,9 @@
     // returns to the placeholder as its message appears in the feed, and
     // manual nav / scrubs can never strand a half-typed line.
     InputFX.reset();
+    // Beat navigation clears the VS Code view override — the scripted
+    // render always wins when the script moves.
+    vscViewReset();
     index = Math.max(0, Math.min(BEATS.length - 1, i));
     const state = seek(BEATS, index);
     const narr = state.narration || "";
@@ -6717,7 +6740,7 @@
 
       // The shared screen: human pin > presented artifact > live workspace.
       // Narration is excluded — it lives in the fixed caption slot below.
-      const screenSig = JSON.stringify({ sharer: state.stage.sharer, show: state.stage.show, pin: state.stage.pin, work: state.stage.work });
+      const screenSig = JSON.stringify({ sharer: state.stage.sharer, show: state.stage.show, pin: state.stage.pin, work: state.stage.work, view: vscView });
       if (screenSig !== R.screenSig) {
         R.screenSig = screenSig;
         R.el.screen.classList.toggle("human", human);
@@ -7282,6 +7305,80 @@
   ];
   const VSC_FICO = { ts: "TS", md: "M↓", json: "{}", html: "<>", js: "JS" };
 
+  /** User view override, layered OVER the beat-driven workspace: active
+   *  file, user-opened tabs, active panel, explorer collapse. The base
+   *  `work` state is never touched; any beat navigation (goTo) resets
+   *  this, so the scripted render always wins when the script moves.
+   *  Folded into screenSig — the differential render repaints on change. */
+  let vscView = { file: null, tabs: [], panel: null, collapsed: false };
+  function vscViewReset() {
+    vscView = { file: null, tabs: [], panel: null, collapsed: false };
+  }
+
+  /** Editor bodies for user-opened files. TRUTH RULE: everything here is
+   *  honest — the verify.js and canvas excerpts are VERBATIM from the
+   *  real files in this directory (verify.js asserts both), PR_BODY.md
+   *  is the story's written-up PR body (asserted against a10-explore),
+   *  package.json is the minimal manifest of the story's repo. A beat's
+   *  own active file keeps its beat-driven content instead. */
+  const FILE_BODIES = {
+    "verify.js": { code: [
+      { t: "// Regression smoke for drive-product-demo.html, run against the real canvas" },
+      { t: "// in headless Chrome. Checks:" },
+      { t: "const failures = [];" },
+      { t: "let checks = 0;" },
+      { t: "function check(ok, msg) {" },
+      { t: "  checks++;" },
+      { t: "  if (!ok) failures.push(msg);" },
+      { t: "}" },
+      { t: "" },
+      { t: "    // 1) Every beat, both themes: renders with zero page scroll." },
+      { t: '    for (const theme of ["light", "dark"]) {' },
+      { t: "      await page.evaluate(function (t) {" },
+      { t: '        document.documentElement.classList.toggle("dark", t === "dark");' },
+      { t: "      }, theme);" },
+      { t: "      for (let i = 0; i < beatCount; i++) {" },
+      { t: "        const r = await page.evaluate(function (i) {" },
+      { t: "          window.__DRIVE_DEMO__.goTo(i);" },
+      { t: "          const d = document.documentElement;" },
+      { t: "          return { sh: d.scrollHeight, sw: d.scrollWidth, ih: innerHeight, iw: innerWidth };" },
+      { t: "        }, i);" },
+      { t: '        check(r.sh <= r.ih, theme + " beat " + i + " (" + beats[i].id + "): vertical overflow " + r.sh + " > " + r.ih);' },
+      { t: '        check(r.sw <= r.iw, theme + " beat " + i + " (" + beats[i].id + "): horizontal overflow " + r.sw + " > " + r.iw);' },
+      { t: "      }" },
+      { t: "    }" },
+    ] },
+    "drive-product-demo.html": { code: [
+      { t: "    // Feed — rebuilt only when its state slice changes; the entrance" },
+      { t: "    // animation plays only for messages that are genuinely new." },
+      { t: '    const feed = document.getElementById("feed");' },
+      { t: "    const feedSig = JSON.stringify(feedSlice);" },
+      { t: "    if (feedSig !== R.feedSig) {" },
+      { t: "      R.feedSig = feedSig;" },
+      { t: '      feed.innerHTML = "";' },
+    ] },
+    "PR_BODY.md": { code: [
+      { t: "## demo-polish · smooth render" },
+      { t: "" },
+      { t: "– regions repaint only when their fingerprint changes" },
+      { t: "– Riley added regression checks in verify.js" },
+      { t: "– captions live in one fixed slot" },
+    ] },
+    "package.json": { code: [
+      { t: "{" },
+      { t: '  "name": "cline-drivecode",' },
+      { t: '  "private": true,' },
+      { t: '  "scripts": {' },
+      { t: '    "verify": "bun verify.js"' },
+      { t: "  }" },
+      { t: "}" },
+    ] },
+    "drivemode-explainer.html": { code: [
+      { t: "<!-- drivemode-explainer.html -->" },
+      { t: "<!-- Not part of this story — see drive-product-demo.html. -->" },
+    ] },
+  };
+
   function vscLang(file) {
     if (/\.md$/.test(file || "")) return "md";
     if (/\.html$/.test(file || "")) return "html";
@@ -7316,10 +7413,28 @@
   /** The shared screen as the agent's VS Code window. `walk` (a walkthrough
    *  body) takes over the editor: its file, absolute line numbers, and hl
    *  rows render in place — no separate widget. Everything else derives
-   *  from the live Workspace. */
+   *  from the live Workspace, with vscView (user tab / explorer / panel
+   *  clicks) layered on top without touching either. */
   function buildVSCode(work, walk, cls) {
     work = work || {};
-    const file = walk ? walk.file : (work.file || "");
+    const beatFile = walk ? walk.file : (work.file || "");
+    // View override: a user-opened file (from the tab strip or explorer)
+    // layers over the beat's editor; the walk / work state stays intact
+    // underneath, so returning to the beat's tab restores it exactly.
+    const beatTabs = !walk && work.tabs && work.tabs.length ? work.tabs : [beatFile];
+    const userTabs = vscView.tabs.filter(function (t) { return beatTabs.indexOf(t) === -1; });
+    const allTabs = beatTabs.concat(userTabs);
+    const override = vscView.file && vscView.file !== beatFile &&
+      allTabs.indexOf(vscView.file) >= 0 ? vscView.file : null;
+    const file = override || beatFile;
+    if (override) {
+      walk = null; // the walk owns only its own file's editor
+      work = Object.assign({}, work, {
+        code: (FILE_BODIES[override] || { code: [] }).code,
+        caret: null,
+        typing: null,
+      });
+    }
     const lang = vscLang(file);
     const langLabel = lang === "md" ? "Markdown"
       : lang === "html" ? "HTML"
@@ -7365,23 +7480,34 @@
     }
     if (symbol) crumbs += ' <span class="sep">›</span> ' + escapeHtml(symbol);
 
-    // Tab strip: active tab from the file; dirty dot while typing.
-    const tabs = (!walk && work.tabs && work.tabs.length ? work.tabs : [file]).map(function (t) {
+    // Tab strip: real buttons — clicking switches the editor. Active tab
+    // from the effective file; dirty dot while the beat's file types.
+    const tabs = allTabs.map(function (t) {
       const on = t === file;
       const close = on && !walk && work.typing
         ? '<span class="dirty" aria-hidden="true"></span>'
         : '<span class="x" aria-hidden="true">×</span>';
-      return '<span class="vsc-tab' + (on ? " on" : "") + '"><span class="vsc-fico ' + vscLang(t) + '">' +
-        VSC_FICO[vscLang(t)] + "</span>" + escapeHtml(t) + close + "</span>";
+      return '<button type="button" class="vsc-tab' + (on ? " on" : "") +
+        '" data-file="' + escapeHtml(t) + '" aria-label="Switch editor to ' + escapeHtml(t) +
+        '"><span class="vsc-fico ' + vscLang(t) + '">' +
+        VSC_FICO[vscLang(t)] + "</span>" + escapeHtml(t) + close + "</button>";
     }).join("");
 
-    // Explorer: static tree, active row follows the open file.
+    // Explorer: static tree of real buttons — a file row opens its file,
+    // the folder row toggles collapse. Active row follows the open file.
     const tree = VSC_TREE.map(function (r) {
       if (r.dir) {
-        return '<div class="vsc-row dir"><span class="vsc-chev" aria-hidden="true">▾</span>' + escapeHtml(r.name) + "</div>";
+        return '<button type="button" class="vsc-row dir" data-dir="' + escapeHtml(r.name) +
+          '" aria-expanded="' + String(!vscView.collapsed) +
+          '" aria-label="' + (vscView.collapsed ? "Expand" : "Collapse") + " folder " + escapeHtml(r.name) +
+          '"><span class="vsc-chev" aria-hidden="true">' + (vscView.collapsed ? "▸" : "▾") + "</span>" +
+          escapeHtml(r.name) + "</button>";
       }
-      return '<div class="vsc-row' + (r.nest ? " nest" : "") + (r.name === file ? " on" : "") +
-        '"><span class="vsc-fico ' + r.ico + '">' + VSC_FICO[r.ico] + "</span>" + escapeHtml(r.name) + "</div>";
+      if (r.nest && vscView.collapsed) return "";
+      return '<button type="button" class="vsc-row' + (r.nest ? " nest" : "") + (r.name === file ? " on" : "") +
+        '" data-open="' + escapeHtml(r.name) + '" aria-label="Open ' + escapeHtml(r.name) +
+        ' from the explorer"><span class="vsc-fico ' + r.ico + '">' + VSC_FICO[r.ico] + "</span>" +
+        escapeHtml(r.name) + "</button>";
     }).join("");
 
     // Activity bar: Explorer active; SCM badges when the work smells of
@@ -7403,6 +7529,22 @@
       if (work.spin && i === arr.length - 1) text += '<span class="ws-spin" aria-hidden="true"></span>';
       return '<div class="ws-tl' + (l.cls ? " " + l.cls : "") + '" style="--i:' + i + '">' + text + "</div>";
     }).join("");
+
+    // Panel tabs are real buttons: TERMINAL keeps the beat's terminal,
+    // PROBLEMS is the honest empty state, OUTPUT a quiet render log.
+    const panel = vscView.panel || "terminal";
+    const panelHead = [["problems", "Problems"], ["output", "Output"], ["terminal", "Terminal"]]
+      .map(function (p) {
+        return '<button type="button"' + (p[0] === panel ? ' class="on"' : "") +
+          ' data-panel="' + p[0] + '" aria-label="Show ' + p[1] + ' panel">' + p[1] + "</button>";
+      }).join("");
+    const panelBody = panel === "problems"
+      ? '<div class="ws-tl ok" style="--i:0">✓ 0 problems</div>'
+      : panel === "output"
+        ? '<div class="ws-tl dim" style="--i:0">[drive] spotlight signature unchanged — repaint skipped</div>' +
+          '<div class="ws-tl dim" style="--i:1">[drive] feed +1 message — region repainted</div>' +
+          '<div class="ws-tl dim" style="--i:2">[drive] caption slot reused — text swapped in place</div>'
+        : term;
 
     // Status bar: cursor position from the caret, else the first hl line
     // (absolute for a walkthrough), else the type-in line.
@@ -7444,8 +7586,8 @@
             '<div class="vsc-body">' + (dbg ? VSC_DBGBAR : "") + '<div class="vsc-code">' + lines + "</div>" +
               '<div class="vsc-map" aria-hidden="true">' + map + "</div></div>" +
             '<div class="vsc-panel">' +
-              '<div class="vsc-panel-head"><span>Problems</span><span>Output</span><span class="on">Terminal</span></div>' +
-              '<div class="vsc-term">' + term + "</div>" +
+              '<div class="vsc-panel-head">' + panelHead + "</div>" +
+              '<div class="vsc-term">' + panelBody + "</div>" +
             "</div>" +
           "</div>" +
         "</div>" +
@@ -8114,6 +8256,35 @@
     if (card) previewArtifact(card.getAttribute("data-art-id"), card);
   });
 
+  // The shared VS Code window is operable: tabs, explorer rows, and panel
+  // tabs set the view override and repaint. Unlike the previews above the
+  // override IS state (vscView, folded into screenSig) — but goTo resets
+  // it, so any beat navigation re-asserts the scripted editor.
+  document.getElementById("spotlight").addEventListener("click", function (e) {
+    const btn = e.target.closest
+      ? e.target.closest(".vsc [data-file], .vsc [data-open], .vsc [data-dir], .vsc [data-panel]")
+      : null;
+    if (!btn) return;
+    let refocus = null;
+    for (const a of ["data-panel", "data-dir", "data-file", "data-open"]) {
+      if (btn.hasAttribute(a)) { refocus = '.vsc [' + a + '="' + btn.getAttribute(a) + '"]'; break; }
+    }
+    if (btn.hasAttribute("data-panel")) {
+      vscView.panel = btn.getAttribute("data-panel");
+    } else if (btn.hasAttribute("data-dir")) {
+      vscView.collapsed = !vscView.collapsed;
+    } else {
+      const f = btn.getAttribute("data-file") || btn.getAttribute("data-open");
+      vscView.file = f;
+      if (vscView.tabs.indexOf(f) === -1) vscView.tabs.push(f);
+    }
+    render(seek(BEATS, index), BEATS[index]);
+    // The repaint replaced the window — keep focus on the activated
+    // control so Enter/Space keyboard runs stay anchored.
+    const again = refocus && this.querySelector(refocus);
+    if (again) again.focus({ preventScroll: true });
+  });
+
   // Room cards: Start/Stop flip the card's status dot + meta in place;
   // Open on demo-polish returns you to the live call.
   document.getElementById("sess-grid").addEventListener("click", function (e) {
@@ -8259,6 +8430,13 @@
         saveCcPref();
         R.ccSig = null; // next render re-derives against the new pref
       },
+    },
+    // VS Code view override (extend-only): the user-interaction layer over
+    // the beat-driven workspace, for e2e assertions — plus the honest
+    // FILE_BODIES registry so the battery can hold it to the real files.
+    vsc: {
+      getView: function () { return JSON.parse(JSON.stringify(vscView)); },
+      bodies: FILE_BODIES,
     },
     rail: {
       getConfig: function () { return JSON.parse(JSON.stringify(railConfig)); },
