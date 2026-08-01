@@ -9,7 +9,7 @@
 //      real beat ids and every referenced clip (plus inline beat input.clip)
 //      exists in ../../assets/demos/voice/;
 //   4. self-referential truth: the a3-walk debug session quotes the
-//      canvas's REAL guard at its REAL line numbers, the a2-address rg
+//      canvas's REAL guard at its REAL line numbers, the a2-narration rg
 //      terminal matches a live re-run of the same search, and the editor
 //      excerpts shown for the canvas / for this script exist verbatim;
 //   5. node identity: a beat that leaves the feed slice unchanged keeps
@@ -65,7 +65,7 @@ const puppeteer = require("puppeteer-core");
 const HERE = __dirname.replace(/\\/g, "/");
 const CANVAS = HERE + "/drive-product-demo.html";
 const VOICE_DIR = path.resolve(HERE, "../../assets/demos/voice").replace(/\\/g, "/");
-const EXPECTED_BEATS = 46; // update when beats are intentionally added/removed
+const EXPECTED_BEATS = 47; // update when beats are intentionally added/removed
 
 const CHROME = process.env.CHROME_PATH ||
   (process.platform === "win32"
@@ -181,7 +181,7 @@ function sourceClaims() {
       range: walkBody.range,
       lines: walkBody.lines.map(function (l) { return { n: l.n, t: l.t }; }),
     },
-    rg: work("a2-address").term.map(function (l) { return l.t; }),
+    rg: work("a2-narration").term.map(function (l) { return l.t; }),
     guardEcho: work("a5-riley").code.map(function (l) { return l.t; }),
     verifyEcho: work("a5-sharer").code.map(function (l) { return l.t; })
       .concat([work("a5-sharer").typing]),
@@ -326,7 +326,7 @@ async function main() {
       .map(function (t, i) { return rgPat.test(t) ? i + 1 + ":" + t : null; })
       .filter(Boolean);
     check(JSON.stringify(rgActual) === JSON.stringify(claims.rg.slice(1)),
-      "a2-address rg terminal drifted: screen shows " + JSON.stringify(claims.rg.slice(1)) +
+      "a2-narration rg terminal drifted: screen shows " + JSON.stringify(claims.rg.slice(1)) +
       ", live search finds " + JSON.stringify(rgActual));
     claims.guardEcho.forEach(function (t) {
       check(src.indexOf(t) >= 0,

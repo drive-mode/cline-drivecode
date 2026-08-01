@@ -4135,8 +4135,8 @@
   // reference — staged in act 3 alongside the render map, presented only
   // when a card click asks for it (no scripted beat presents it).
   const ART_ARCH = { id: "art-arch", kindLabel: "diagram.architecture", title: "cline-drive · system architecture", presenter: "Cline", act: 3, sticky: "hold" };
-  const ART_WALK = { id: "art-walk", kindLabel: "walkthrough.code", title: "drive-product-demo.html · the guard", presenter: "Cline", act: 3, sticky: "hold" };
-  const ART_CAPTURE = { id: "art-capture", kindLabel: "capture.screenshot", title: "demo-polish · smooth playback", presenter: "Cline", act: 3, sticky: "replace", maturity: "planned" };
+  const ART_WALK = { id: "art-walk", kindLabel: "walkthrough.code", title: "drive-product-demo.html · the guard", presenter: "Cline", act: 4, sticky: "hold" };
+  const ART_CAPTURE = { id: "art-capture", kindLabel: "capture.screenshot", title: "demo-polish · smooth playback", presenter: "Cline", act: 4, sticky: "replace", maturity: "planned" };
   const ART_HANDOFF = { id: "art-handoff", kindLabel: "doc.plan", title: "Tier-0 handoff · demo-polish", presenter: "Hub", act: 7, sticky: "replace" };
 
   /** Show objects (ShowArtifact) — shared between the presenting beats and
@@ -4187,7 +4187,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L6371–L6374",
+      range: "L6409–L6412",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through, ghost/ret
       // are inline-value decorations (both strings match — the skip path,
@@ -4196,10 +4196,10 @@
       // asserts both stay true.
       debug: true,
       lines: [
-        { n: 6371, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 6372, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 6373, t: "      R.feedSig = feedSig;", hl: true },
-        { n: 6374, t: '      feed.innerHTML = "";' },
+        { n: 6409, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 6410, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 6411, t: "      R.feedSig = feedSig;", hl: true },
+        { n: 6412, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4261,7 +4261,7 @@
       id: "a0-hub",
       act: 0,
       title: "Empty Chat / hub rail",
-      caption: "The product at rest: an empty chat and the hub rail. Cline is already at work on a bug you reported.",
+      caption: "The product at rest: an empty chat and the hub rail. Cline is already at work in a live room.",
       maturity: "shipped",
       dwellMs: 1400,
       patch: { surface: "chat", driveOn: false, inCall: false },
@@ -4289,7 +4289,6 @@
         surface: "drive-in-call",
         driveOn: true,
         inCall: true,
-        narration: "Hey — good timing. I'm looking at that flashing you reported. Give me a second and I'll show you what's going on.",
         participants: [{ ...YOU, wstatus: "idle", task: "on the call" }],
         stage: {
           sharer: "Cline",
@@ -4330,11 +4329,9 @@
       dwellMs: 1400,
       cursor: { target: "#members", action: "move" },
       patch: {
-        // Talk track is silent here — clear the inherited a1-join line.
-        narration: "",
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...CLINE, wstatus: "working", task: "finding the flash" },
+          { ...CLINE, wstatus: "working", task: "polishing the demo" },
         ],
         mode: "Agent",
         feedMessages: [
@@ -4354,20 +4351,6 @@
       cursor: { target: "#member-cline", action: "click" },
       patch: {
         addressSet: ["one"],
-        stage: {
-          work: {
-            // Real rg over THIS file: the anchored pattern's full match set
-            // is exactly these three region-clearing lines — line numbers
-            // and text are literal (verify.js re-runs the search).
-            term: [
-              { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '6374:      feed.innerHTML = "";', cls: "dim" },
-              { t: '6413:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '6449:      spot.innerHTML = "";', cls: "dim" },
-            ],
-            activity: "locating the flash",
-          },
-        },
       },
     },
     {
@@ -4378,18 +4361,48 @@
       maturity: "shipped",
       dwellMs: 1600,
       // Real dictation: the cursor clicks the mic, Harrison's recorded line
-      // (you-01) plays while the words transcribe into the input in chunks,
-      // then the cursor presses Send — only then does the message land.
+      // (you-01, the v4 re-cut) plays while the words transcribe into the
+      // input in chunks, then the cursor presses Send — only then does the
+      // message land. Cline's reply (v4-01) answers on beat entry: the
+      // narration lands with the patch and the beat holds for the clip.
       cursor: { target: "#composer-mic", action: "click" },
-      input: { mode: "stt", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?", clip: "you-01-fix-the-flashing.mp3" },
-      speech: { who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+      input: { mode: "stt", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?", clip: "you-01-fix-the-flashing.mp3" },
+      speech: { who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?" },
       patch: {
+        narration: "Yep, I see it. Actually — grab the screen and show me exactly where it jumps.",
         feedMessages: [
           { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
           { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
           { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?" },
         ],
+      },
+    },
+    {
+      // NEW in v4: Cline asked you to show it, so you take the screen. The
+      // sharer flips to You — a human pin holds the Spotlight (amber "You
+      // is presenting" treatment) while your recorded line plays. The pin
+      // body is a placeholder for now: V2 layers the hover choreography on
+      // this beat, so keep the id stable and the structure clean.
+      id: "a2-you-show",
+      act: 2,
+      title: "You take the Spotlight",
+      caption: "You grab the screen — a human pin holds the Spotlight while you point at the jump.",
+      hubOp: "call_set_stage",
+      maturity: "shipped",
+      dwellMs: 1800,
+      cursor: { target: "#strip-share", action: "click" },
+      speech: { who: "You", text: "Here's what I mean — it jumps from here to here." },
+      patch: {
+        narration: "",
+        stage: {
+          sharer: "You",
+          sharerId: "you",
+          pin: {
+            label: "screen share · drive-product-demo.html (before the fix)",
+            ref: "The demo page, pre-fix: every update repaints the whole page and the caption bar replays its entrance — it jumps from here to here.",
+          },
+        },
       },
     },
     {
@@ -4402,7 +4415,7 @@
       dwellMs: 1600,
       cursor: { target: "#spotlight", action: "move" },
       patch: {
-        narration: "Okay, found it. Every beat, we rebuild the whole page — so everything replays its entrance animation. That's the flash. Let me put it on the screen.",
+        narration: "Perfect, that's all I need. Okay — found it. Every beat, we rebuild the entire page, so everything replays its entrance animation. That's your flash. Let me put it up.",
         nowLabel: "measuring re-mounts per beat",
         nextLabel: "fingerprint regions, skip repaints",
         participants: [
@@ -4410,6 +4423,11 @@
           { ...CLINE, wstatus: "working", task: "measuring re-mounts" },
         ],
         stage: {
+          // The pin moment is over — the sharer flips back to Cline, whose
+          // screen now carries the evidence for "found it".
+          sharer: "Cline",
+          sharerId: "cline",
+          pin: null,
           work: {
             code: [
               { t: "function render(state, beat) {" },
@@ -4418,19 +4436,24 @@
               { t: '  roster.innerHTML = "";' },
               { t: "}" },
             ],
+            // Real rg over THIS file: the anchored pattern's full match set
+            // is exactly these three region-clearing lines — line numbers
+            // and text are literal (verify.js re-runs the search).
             term: [
-              { t: "$ bun verify.js" },
-              { t: "counting re-mounts per beat — running", cls: "dim" },
+              { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
+              { t: '6412:      feed.innerHTML = "";', cls: "dim" },
+              { t: '6451:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '6487:      spot.innerHTML = "";', cls: "dim" },
             ],
-            spin: true,
-            activity: "measuring re-mounts per beat",
+            spin: false,
+            activity: "locating the flash",
           },
         },
         feedMessages: [
           { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
           { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
           { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?" },
           { id: "m4", from: "agent", who: "Cline", text: "Okay, found it — every beat rebuilds the whole page. Watch the Spotlight." },
         ],
       },
@@ -4494,7 +4517,7 @@
       dwellMs: 2400,
       patch: {
         showHowInset: false,
-        narration: "Watch this — every beat, the whole page rebuilds, and everything animates back in. That's the flash. Now the fixed path: fingerprint matches, nothing moves — only the new message animates.",
+        narration: "Watch — every beat, the whole page rebuilds and everything animates back in. Now the fixed path... fingerprint matches, nothing moves. Only the new message animates.",
         artifacts: [ART_ANIM],
         stage: {
           show: SHOW_ANIM,
@@ -4519,7 +4542,7 @@
       cursor: { target: "#spotlight", action: "move" },
       patch: {
         showHowInset: false,
-        narration: "Here's the plan. Fingerprint what each region shows, skip the repaint when nothing changed, and only animate what's actually new.",
+        narration: "So here's the plan. Fingerprint what each region shows, skip the repaint when nothing changed, and only animate what's actually new.",
         artifacts: [ART_ANIM, ART_PLAN],
         stage: {
           show: SHOW_PLAN,
@@ -4543,7 +4566,7 @@
       dwellMs: 2200,
       cursor: { target: "#spotlight .screen", action: "move" },
       patch: {
-        narration: "Quick map of how the demo renders. State folds in from the left, and render pushes it into these four regions. The flash lives right here — at this rebuild edge.",
+        narration: "Quick map of how this thing renders. State folds in from the left, render pushes it into these four regions... and the flash lives right here, at this rebuild edge.",
         artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH],
         stage: {
           show: SHOW_RENDER,
@@ -4568,7 +4591,7 @@
       cursor: { target: "#spotlight .screen", action: "move" },
       patch: {
         showHowInset: false,
-        narration: "I'll keep the map up while I make the change. Adding the fingerprint check now — if the region's state didn't change, we don't touch it.",
+        narration: "I'll keep the map up while I work. Adding the fingerprint check now — if a region didn't change, we don't touch it.",
         stage: {
           sharer: "Cline",
           sharerId: "cline",
@@ -4611,58 +4634,10 @@
       },
     },
     {
-      id: "a3-walk",
-      act: 3,
-      title: "Code walkthrough · review the fix",
-      caption: "walkthrough.code — the guard replayed as a debug session: breakpoint, step, the rebuild skipped.",
-      hubOp: "render_code_walkthrough",
-      maturity: "shipped",
-      dwellMs: 2000,
-      cursor: { target: "#spotlight .screen", action: "move" },
-      patch: {
-        narration: "Let me walk you through it. This guard is the whole fix — compare the fingerprint, skip the rebuild, remember the new one.",
-        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK],
-        stage: {
-          show: SHOW_WALK,
-          backlog: [
-            { id: "s0", label: "walkthrough.animation", status: "shown" },
-            { id: "s1", label: "doc.plan", status: "shown" },
-            { id: "s2", label: "diagram.data_flow", status: "shown" },
-            { id: "s3", label: "walkthrough.code", status: "showing" },
-            { id: "s4", label: "capture.screenshot", status: "ready" },
-          ],
-        },
-      },
-    },
-    {
-      id: "a3-demo",
-      act: 3,
-      title: "Demo card · behavior, proven",
-      caption: "capture.screenshot demo card — metadata in events, bytes out-of-band. Feed UI planned.",
-      hubOp: "drive_demo_frame",
-      maturity: "planned",
-      dwellMs: 1800,
-      cursor: { target: "#spotlight .screen", action: "move" },
-      patch: {
-        narration: "And here it is live — beats advancing, zero flashes. Smooth.",
-        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK, ART_CAPTURE],
-        stage: {
-          show: SHOW_CAPTURE,
-          backlog: [
-            { id: "s0", label: "walkthrough.animation", status: "shown" },
-            { id: "s1", label: "doc.plan", status: "shown" },
-            { id: "s2", label: "diagram.data_flow", status: "shown" },
-            { id: "s3", label: "walkthrough.code", status: "shown" },
-            { id: "s4", label: "capture.screenshot", status: "showing" },
-          ],
-        },
-      },
-    },
-    {
       id: "a4-steer",
       act: 4,
       title: "Reopen the feed to steer",
-      caption: "Reopening the feed to type a steer — chat comes back without stopping the turn.",
+      caption: "Reopening the feed to steer — chat comes back without stopping the turn.",
       maturity: "shipped",
       dwellMs: 1400,
       cursor: { target: "#feed-toggle", action: "click" },
@@ -4676,22 +4651,22 @@
       id: "a4-steer-send",
       act: 4,
       title: "Steer mid-turn chip",
-      caption: "Feed back for a typed steer. Builds on the pending-prompt / turn queue — no side channel.",
+      caption: "Feed back for a spoken steer — dictation lands in the same turn queue as text. No side channel.",
       hubOp: "steer queue",
       maturity: "shipped",
       dwellMs: 1400,
-      // Deliberately TYPED, not spoken: Cline has the floor, so you steer
-      // in text without interrupting. The cursor clicks the input, the
-      // steer types out character by character, then Send.
-      cursor: { target: "#composer-input", action: "click" },
-      input: { mode: "type", text: "Also — the captions keep shifting around. Give them one consistent place." },
+      // Dictated in v4: the cursor clicks the mic, Harrison's recorded
+      // steer (you-02) plays while its words transcribe into the input in
+      // chunks, then Send — the steer queues without stopping Cline's turn.
+      cursor: { target: "#composer-mic", action: "click" },
+      input: { mode: "stt", text: "Also — the captions keep shifting around. Give them one consistent place.", clip: "you-02-captions-one-place.mp3" },
       speech: { who: "You", text: "Also — the captions keep shifting around. Give them one consistent place." },
       patch: {
         feedMessages: [
           { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
           { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
           { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?" },
           { id: "m4", from: "agent", who: "Cline", text: "Okay, found it — every beat rebuilds the whole page. Watch the Spotlight." },
           { id: "m5", from: "you", who: "You", text: "Also — the captions keep shifting around. Give them one consistent place.", chips: ["steer queued"] },
         ],
@@ -4725,7 +4700,63 @@
       patch: {
         muted: false,
         posture: "paused_after_tool",
-        narration: "Got it — one home for the captions. Let me finish this check, then you drive.",
+        narration: "Good catch — one home for the captions. Let me wrap this check, then you drive.",
+      },
+    },
+    {
+      // v4 moved the walkthrough after the steer: the check is wrapped,
+      // the floor is yours, and Cline reviews the fix with you. The id
+      // keeps its historical act-3 name; the act field carries the order.
+      id: "a3-walk",
+      act: 4,
+      title: "Code walkthrough · review the fix",
+      caption: "walkthrough.code — the guard replayed as a debug session: breakpoint, step, the rebuild skipped.",
+      hubOp: "render_code_walkthrough",
+      maturity: "shipped",
+      dwellMs: 2000,
+      cursor: { target: "#spotlight .screen", action: "move" },
+      patch: {
+        posture: null,
+        participants: [
+          { ...YOU, handRaised: false, wstatus: "idle", task: "on the call" },
+          { ...CLINE, wstatus: "working", task: "explaining the fix" },
+        ],
+        narration: "Let me walk you through it. This guard is the whole fix — compare the fingerprint, skip the rebuild, remember the new one.",
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK],
+        stage: {
+          show: SHOW_WALK,
+          backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "shown" },
+            { id: "s1", label: "doc.plan", status: "shown" },
+            { id: "s2", label: "diagram.data_flow", status: "shown" },
+            { id: "s3", label: "walkthrough.code", status: "showing" },
+            { id: "s4", label: "capture.screenshot", status: "ready" },
+          ],
+        },
+      },
+    },
+    {
+      id: "a3-demo",
+      act: 4,
+      title: "Demo card · behavior, proven",
+      caption: "capture.screenshot demo card — metadata in events, bytes out-of-band. Feed UI planned.",
+      hubOp: "drive_demo_frame",
+      maturity: "planned",
+      dwellMs: 1800,
+      cursor: { target: "#spotlight .screen", action: "move" },
+      patch: {
+        narration: "And here it is live — beats advancing, zero flashes. Smooth.",
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK, ART_CAPTURE],
+        stage: {
+          show: SHOW_CAPTURE,
+          backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "shown" },
+            { id: "s1", label: "doc.plan", status: "shown" },
+            { id: "s2", label: "diagram.data_flow", status: "shown" },
+            { id: "s3", label: "walkthrough.code", status: "shown" },
+            { id: "s4", label: "capture.screenshot", status: "showing" },
+          ],
+        },
       },
     },
     {
@@ -4756,7 +4787,7 @@
             caret: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 46 beats, 728 checks", cls: "ok" },
+              { t: "OK: 47 beats, 748 checks", cls: "ok" },
             ],
             spin: false,
             activity: "explaining the fix",
@@ -4771,7 +4802,7 @@
           { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
           { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
           { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?" },
           { id: "m4", from: "agent", who: "Cline", text: "Okay, found it — every beat rebuilds the whole page. Watch the Spotlight." },
           { id: "m5", from: "you", who: "You", text: "Also — the captions keep shifting around. Give them one consistent place.", chips: ["steer queued"] },
           { id: "m6", from: "system", who: "Room", text: "Riley joined the call." },
@@ -4805,7 +4836,7 @@
             typing: "// assert: same node before and after a beat",
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 46 beats, 728 checks", cls: "ok" },
+              { t: "OK: 47 beats, 748 checks", cls: "ok" },
             ],
             spin: false,
             activity: "adding regression checks",
@@ -4839,7 +4870,8 @@
       maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: "#strip-share", action: "click" },
-      speech: { who: "You", text: "Here's what I mean — it jumps from here to here." },
+      // Caption-only in v4: the spoken "show me" moment moved up to
+      // a2-you-show; this pin stays as the structured-share product moment.
       patch: {
         stage: {
           sharer: "You",
@@ -4864,7 +4896,7 @@
         statusLens: "board",
         pipVisible: true,
         showHowInset: false,
-        narration: "I'll keep working while you look around. Pinning the caption slot into place now.",
+        narration: "I'll keep going while you look around. Pinning the caption slot into place now.",
         // You navigated away — the pin moment is over. Spotlight returns to
         // Cline, so this beat's dialogue line (his clip) attributes to him
         // in the derived CC transcript (attribution follows stage.sharer).
@@ -4886,7 +4918,7 @@
             typing: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 46 beats, 728 checks", cls: "ok" },
+              { t: "OK: 47 beats, 748 checks", cls: "ok" },
             ],
             spin: false,
             activity: "pinning the caption slot",
@@ -5071,7 +5103,7 @@
         sinceYouLeft: "Riley published 1 edit card. Battery still green. Now: write up the change.",
         nowLabel: "write up the change, then commit",
         nextLabel: "open PR",
-        narration: "Quick catch-up: Riley's regression checks landed, and the battery stayed green the whole time.",
+        narration: "Quick catch-up — Riley's regression checks landed, and the battery stayed green the whole time.",
       },
     },
     {
@@ -5135,7 +5167,7 @@
       dwellMs: 2200,
       chime: "attention",
       patch: {
-        narration: "One thing before I open the pull request — I need your sign-off. The approval card is on your screen.",
+        narration: "One thing before I open the pull request — I need your sign-off. The card's on your screen.",
         showGatesCard: true,
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
@@ -5155,10 +5187,10 @@
       cursor: { target: ".gates-card .approve", action: "click" },
       chime: "complete",
       // Harrison's recorded sign-off (you-04) plays first, then Cline's
-      // v3-15 — sequenced by CLIP_SEQS; the beat holds for both clips.
+      // v4-16 — sequenced by CLIP_SEQS; the beat holds for both clips.
       speech: { who: "You", text: "Looks good — approved. Go ahead." },
       patch: {
-        narration: "Thanks. PR ninety-one is up, with the before and after attached.",
+        narration: "Thanks. PR ninety-one's up, before-and-after attached.",
         showGatesCard: false,
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
@@ -5247,7 +5279,7 @@
       caption: "Demo complete — this is a live surface now. Every rail item, lens, toggle, and card works. Press Play to run it again.",
       maturity: "shipped",
       dwellMs: 2400,
-      // Cline's v3-16 first, THEN Harrison's recorded handback (you-05) —
+      // Cline's v4-17 first, THEN Harrison's recorded handback (you-05) —
       // `after` keeps the derived transcript in that spoken order.
       speech: { who: "You", text: "Nice. I'll take it from here.", after: true },
       patch: {
@@ -5509,21 +5541,21 @@
    *  clips resolve two levels up. */
   const CLIP_BASE = "../../assets/demos/voice/";
   const CLIPS = {
-    "a1-join": "v3-01-cline-looking-at-flashing.mp3",
-    "a2-narration": "v3-02-cline-found-it.mp3",
-    "a3-bug": "v3-17-cline-watch-the-flash.mp3",
-    "a3-plan": "v3-03-cline-the-plan.mp3",
-    "a3-arch": "v3-04-cline-render-map.mp3",
-    "a3-edit": "v3-05-cline-fingerprint-check.mp3",
-    "a3-test": "v3-06-cline-green-no-remounts.mp3",
-    "a3-walk": "v3-07-cline-walkthrough-guard.mp3",
-    "a3-demo": "v3-08-cline-smooth-live.mp3",
-    "a4-pause": "v3-09-cline-you-drive.mp3",
-    "a5-sharer": "v3-10-riley-regression-checks.mp3",
-    "a6-status": "v3-11-cline-keep-working.mp3",
-    "a8-rejoin": "v3-12-cline-welcome-back.mp3",
-    "a8-since": "v3-13-cline-catch-up.mp3",
-    "a9-gates": "v3-14-cline-signoff.mp3",
+    "a2-message": "v4-01-cline-see-it-show-me.mp3",
+    "a2-narration": "v4-02-cline-found-it.mp3",
+    "a3-bug": "v4-03-cline-watch-the-flash.mp3",
+    "a3-plan": "v4-04-cline-the-plan.mp3",
+    "a3-arch": "v4-05-cline-render-map.mp3",
+    "a3-edit": "v4-06-cline-fingerprint-check.mp3",
+    "a3-test": "v4-07-cline-green.mp3",
+    "a4-pause": "v4-08-cline-captions-ack.mp3",
+    "a3-walk": "v4-09-cline-walkthrough.mp3",
+    "a3-demo": "v4-10-cline-smooth-live.mp3",
+    "a5-sharer": "v4-11-riley-regression-checks.mp3",
+    "a6-status": "v4-12-cline-keep-working.mp3",
+    "a8-rejoin": "v4-13-cline-welcome-back.mp3",
+    "a8-since": "v4-14-cline-catch-up.mp3",
+    "a9-gates": "v4-15-cline-signoff.mp3",
   };
 
   /** Sequenced dialogue — beats where two voices speak in order. Each
@@ -5532,14 +5564,14 @@
    *  holds until the LAST clip ends — one completion promise spans the
    *  sequence, and Voice.log records the segments in play order. */
   const CLIP_SEQS = {
-    // Your recorded sign-off first, then Cline's "PR ninety-one is up".
+    // Your recorded sign-off first, then Cline's "PR ninety-one's up".
     "a9-approved": [
       { file: "you-04-approved.mp3", text: "Looks good — approved. Go ahead.", speaker: "you" },
-      { file: "v3-15-cline-pr-ninety-one.mp3" },
+      { file: "v4-16-cline-pr-ninety-one.mp3" },
     ],
     // Cline hands back first; your recorded "I'll take it from here" answers.
     "a10-explore": [
-      { file: "v3-16-cline-take-the-wheel.mp3" },
+      { file: "v4-17-cline-take-the-wheel.mp3" },
       { file: "you-05-take-it-from-here.mp3", text: "Nice. I'll take it from here.", speaker: "you" },
     ],
   };
@@ -5549,7 +5581,7 @@
    *  `input` field carry their clip on beat.input.clip instead (the STT
    *  flow plays it as the transcription source). */
   const SPEECH_CLIPS = {
-    "a5-you-pin": { file: "you-03-jumps-here-to-here.mp3", speaker: "you" },
+    "a2-you-show": { file: "you-03-jumps-here-to-here.mp3", speaker: "you" },
   };
 
   /** Dialogue player. Plays the pre-rendered clip(s) for the beat — one
@@ -5630,10 +5662,14 @@
 
     // Warm the opening clips on the Play gesture (the same moment the
     // chime AudioContext unlocks) plus every input beat's human clip —
-    // their durations pace the STT chunk reveal. The rest load lazily.
+    // their durations pace the STT chunk reveal — and the entry speech
+    // clips (a2-you-show plays early). The rest load lazily.
     function preload() {
-      ["a1-join", "a2-narration", "a3-bug", "a3-plan"].forEach(function (k) {
+      ["a2-message", "a2-narration", "a3-bug", "a3-plan"].forEach(function (k) {
         if (CLIPS[k]) clipEl(CLIPS[k]);
+      });
+      Object.keys(SPEECH_CLIPS).forEach(function (k) {
+        clipEl(SPEECH_CLIPS[k].file);
       });
       BEATS.forEach(function (b) {
         if (b.input && b.input.clip) clipEl(b.input.clip);
@@ -6098,7 +6134,9 @@
   // with nothing spoken pace exactly on dwell, as before. advanceGen
   // bumps on every navigation/pause so a gated advance that outlives its
   // beat dies quietly (cancel resolves the promise; the gen check aborts).
-  const VOICE_PAD_MS = 250;
+  // 400ms breathing pad after each clip (the v4 clips also carry a ~200ms
+  // baked-in tail — together they keep lines from feeling cut off).
+  const VOICE_PAD_MS = 400;
   let advanceGen = 0;
 
   function audioGate() {
