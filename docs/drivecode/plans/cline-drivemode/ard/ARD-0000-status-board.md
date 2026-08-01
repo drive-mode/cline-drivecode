@@ -37,6 +37,7 @@
 | [ARD-0013](ARD-0013-state-partition.md) | Three-lane state partition | **Accepted** | Durable log + single live store; remote/org/audit are adapters |
 | [ARD-0014](ARD-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle (invisible auditable workers) | **Accepted** | Hub `drive.fork.*` + PromotePacket; reject CLI/checkpoint fork as worker substrate |
 | [ARD-0015](ARD-0015-task-session-observability.md) | Local task-session observability; tasks as satisfaction unit | **Proposed** | PRD 10; no phone-home; gated improve; deterministic cursor. **Impl note (2026-07-31):** Slice 2–3 + W4.1/W4.2 landed on branch (`classifyStall`, `PlanningProposal`, `PlanImproveGate`, auto stall → recovery fork). Status stays **Proposed** until leadership accept — do not flip to Accepted here. |
+| [ARD-0016](ARD-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Proposed** | Routes A/B/C (upstream / fork product / hybrid). Owner: Harrison — explicit route choice required; not covered by any blanket accept. |
 
 ## Leadership decisions (this wave)
 
@@ -71,6 +72,7 @@ SDK amendments (reducer/projection in `@cline/drive`; host port + conformance ki
 | Catch-up orientation copy owner | DRV-LEAVE-END | One factual “since you left” line from stage reducer |
 | One-shot fork vs specialist | Later; not Phase 0 | Out of Phase 0; track under W-33 |
 | Session satisfaction metrics accept | [ARD-0015](ARD-0015-task-session-observability.md), [PRD 10](../prd/prd-task-satisfaction-observability.md) | Local rollups + gated plan improve; leadership dual-proxy defaults in [BRIEF-task-satisfaction](../leadership/BRIEF-task-satisfaction.md) |
+| Distribution route (upstream vs fork vs hybrid) | [ARD-0016](ARD-0016-distribution-and-positioning.md) | Owner: Harrison. Route choice re-orders spotlight S1–S9 and drive-audio slice priorities |
 
 ## Explicitly not open anymore (closed by this wave’s defaults)
 

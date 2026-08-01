@@ -61,7 +61,8 @@ docs/drivecode/
 │   ├── logos/
 │   ├── hub/
 │   ├── tui/
-│   └── demos/
+│   ├── demos/
+│   └── fonts/                # self-hosted WOFF2 for canvases
 │
 └── meta/
     ├── glossary.md
@@ -94,6 +95,7 @@ docs/drivecode/
 | HTML IA prototype / DEMO | `design/wireframes/` |
 | Overview / share canvases | `design/canvases/` |
 | Product screenshot | `assets/{hub,tui,demos,logos}/` |
+| Self-hosted webfont (WOFF2) | `assets/fonts/` |
 | Term definition | `meta/glossary.md` |
 | PR review narrative | `meta/reviews/` |
 

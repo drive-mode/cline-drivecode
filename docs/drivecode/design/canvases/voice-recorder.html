@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drive demo · voice recorder</title>
+<style>
+  :root {
+    --bg: #F8FAFB; --panel: #FFFFFF; --line: rgba(21,21,22,0.12); --hair: rgba(21,21,22,0.08);
+    --text: #151516; --muted: rgba(21,21,22,0.78); --dim: rgba(21,21,22,0.55);
+    --drive: #9F58FA; --drive-t: #6D2FC4; --live: #F59E0B; --danger: #F53969; --ok: #16A34A;
+    --r: 9px; --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.5 "Schibsted Grotesk", system-ui, sans-serif;
+    max-width: 760px; margin: 0 auto; padding: 32px 20px 60px;
+  }
+  h1 { font: 700 22px/1.2 "DM Sans", system-ui, sans-serif; margin-bottom: 6px; }
+  .lead { color: var(--muted); margin-bottom: 8px; }
+  .tips { color: var(--dim); font-size: 12.5px; margin-bottom: 24px; }
+  .card {
+    border: 0.8px solid var(--line); border-radius: 13px; background: var(--panel);
+    padding: 14px 16px; margin-bottom: 12px;
+  }
+  .who { font: 600 10px/1 "Space Grotesk", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--drive-t); margin-bottom: 6px; }
+  .line { font-size: 15px; margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button {
+    font: 600 12px/1 inherit; color: var(--text); cursor: pointer;
+    border: 0.8px solid var(--line); border-radius: var(--r); background: var(--bg);
+    padding: 8px 14px; transition: border-color .15s var(--ease);
+  }
+  button:hover { border-color: rgba(21,21,22,0.3); }
+  button.rec { color: #fff; background: var(--danger); border-color: var(--danger); }
+  button.rec.on { animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .6; } }
+  button:disabled { opacity: .4; cursor: default; }
+  .status { font-size: 12px; color: var(--dim); min-width: 90px; }
+  .status.ok { color: var(--ok); }
+  audio { height: 30px; }
+  .done-note { margin-top: 20px; padding: 14px 16px; border: 0.8px dashed var(--line); border-radius: var(--r); color: var(--muted); font-size: 13px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: rgba(21,21,22,0.05); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Voice recorder · Drive demo "You" lines</h1>
+<p class="lead">Record each line, play it back, re-record until happy, then Download. Say it naturally — the demo's on-screen text will be synced to whatever you actually say.</p>
+<p class="tips">Tips: quiet room, ~15cm from the mic, start speaking half a second after pressing Record. Chrome/Edge required (uses MediaRecorder). Files download as <code>.webm</code>; they'll be transcoded for the demo.</p>
+<div id="cards"></div>
+<div class="done-note">When done: the files land in your Downloads folder as <code>you-01…you-05.webm</code>. Drop them into <code>docs/drivecode/assets/demos/voice/raw/</code> (or just tell Claude where they are) and they'll be levelled, transcoded, and wired into the demo as your voice.</div>
+<script>
+(function () {
+  "use strict";
+  const LINES = [
+    ["you-01-fix-the-flashing", "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?"],
+    ["you-02-captions-one-place", "Also — the captions keep shifting around. Give them one consistent place."],
+    ["you-03-jumps-here-to-here", "Here's what I mean — it jumps from here to here."],
+    ["you-04-approved", "Looks good — approved. Go ahead."],
+    ["you-05-take-it-from-here", "Nice. I'll take it from here."],
+  ];
+  let stream = null;
+  async function mic() {
+    if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    return stream;
+  }
+  const root = document.getElementById("cards");
+  LINES.forEach(function (pair, idx) {
+    const slug = pair[0], text = pair[1];
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      '<div class="who">You · line ' + (idx + 1) + "</div>" +
+      '<div class="line">“' + text + '”</div>' +
+      '<div class="row">' +
+      '<button type="button" class="rec">Record</button>' +
+      '<button type="button" class="stop" disabled>Stop</button>' +
+      '<audio controls style="display:none"></audio>' +
+      '<button type="button" class="dl" disabled>Download</button>' +
+      '<span class="status">not recorded</span>' +
+      "</div>";
+    root.appendChild(card);
+    const btnRec = card.querySelector(".rec"), btnStop = card.querySelector(".stop"),
+          btnDl = card.querySelector(".dl"), player = card.querySelector("audio"),
+          status = card.querySelector(".status");
+    let recorder = null, chunks = [], blobUrl = null;
+    btnRec.addEventListener("click", async function () {
+      try {
+        const s = await mic();
+        chunks = [];
+        recorder = new MediaRecorder(s, { mimeType: "audio/webm;codecs=opus" });
+        recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+        recorder.onstop = function () {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          blobUrl = URL.createObjectURL(blob);
+          player.src = blobUrl;
+          player.style.display = "";
+          btnDl.disabled = false;
+          status.textContent = "recorded ✓";
+          status.className = "status ok";
+        };
+        recorder.start();
+        btnRec.classList.add("on"); btnRec.textContent = "Recording…";
+        btnStop.disabled = false; btnRec.disabled = true;
+        status.textContent = "listening…"; status.className = "status";
+      } catch (e) {
+        status.textContent = "mic blocked: " + e.name;
+      }
+    });
+    btnStop.addEventListener("click", function () {
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      btnRec.classList.remove("on"); btnRec.textContent = "Re-record";
+      btnRec.disabled = false; btnStop.disabled = true;
+    });
+    btnDl.addEventListener("click", function () {
+      const a = document.createElement("a");
+      a.href = blobUrl; a.download = slug + ".webm"; a.click();
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -97,7 +97,17 @@ canvas arc: plan → architecture (sticky **hold** across work beats) →
 edit/command/test → walkthrough → human pin. Demo flags stay at composition
 roots only; the fixture never becomes a production gate.
 
-**Order**: S1 → S2, then S3/S4/S5 in parallel, then S6 → S7 → S8.
+### S9 — `walkthrough.animation` renderer
+The demo's biggest emotional peak — the before/after bug animation — has a
+shipped schema member (`walkthrough.animation`,
+`sdk/packages/shared/src/drive/director.ts:9`) and present ops, but no slice
+anywhere builds its renderer. Render `walkthrough.animation` artifacts inside
+the frame, reusing the demo's before/after composition as the reference, and
+enqueue + present one on a live room via the existing dev controls (same
+proof shape as S7). This is the first slice that makes a demo peak
+reproducible live.
+
+**Order**: S1 → S2, then S3/S4/S5 in parallel, then S6 → S7 → S8 → S9.
 
 ## Addendum (2026-07-31, post-demo learnings)
 
@@ -115,10 +125,35 @@ should absorb these decisions:
 - **New surfaces demoed** (all `planned`): customizable rail (resize / reorder /
   add-remove), Rooms (durable sessions via ARD-0013), Agents & teams
   ("call a team once"), Tasks (first-class dependency map), Artifacts gallery,
-  member-status sidebar in the drawer, CC transcript. Each needs its own
-  initiative slice before product work; they are NOT in S1–S8.
+  member-status sidebar in the drawer, CC transcript. None are in S1–S9. The
+  CC transcript already has its slice —
+  [drive-audio slice 5](../drive-audio/overview.md) — the rest each need their
+  own initiative slice before product work.
+- **Member-status sidebar needs a presence-schema extension.** The demoed
+  sidebar uses `blocked` / `needs-you` / `paused` plus a per-participant task
+  line; shipped `ParticipantStatusSchema`
+  (`sdk/packages/shared/src/drive/room.ts:26–31`) is
+  `idle | working | speaking | away` with no task field. The future sidebar
+  slice must state this schema extension explicitly — it is not a
+  render-what-exists surface.
+- **Next hero asset.** Once S2 (ScreenFrame) and drive-audio slices 1–2
+  (speaking presence + narrator) land, capture an **unscripted** live-room run
+  — real hub, real latency, real voice presence — as the successor to the
+  scripted GIF. The scripted canvas stays the design reference; the live
+  capture becomes the proof.
 - **Voice**: Kokoro-82M decision + clips live in the drive-audio plan and
   `docs/drivecode/assets/demos/voice/`.
+- **Director transition grammar** (demo-motion wave, PR #94): the canvas
+  proved a transition language that should become three declarative fields on
+  a DirectorScript cue rather than ad-hoc client animation — `foreshadow`
+  (the director emits "next up: <artifact-id>" one cue ahead so any surface
+  can pre-highlight its queue entry), a `provenance` anchor on `present`
+  (the artifact enters from the queue element that promised it; the motion is
+  derived from backlog geometry, not scripted), and `handoff` on stage-clear
+  (crossfade when one artifact replaces another, a brief dim-release when the
+  screen returns to plain workspace). Implementation lesson for S2/S3:
+  derived presentation state (up-next, grow origin) must be part of the
+  render signature/state diff, or differential renderers silently skip it.
 
 ## Constraints (unchanged, load-bearing)
 

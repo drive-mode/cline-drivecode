@@ -3,10 +3,32 @@
 <head>
 <meta charset="UTF-8" />
 <title>Drivecode overview canvas</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Schibsted+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'self' file:" />
 <style>
+  /* Self-hosted fonts: variable-weight latin woff2 committed under
+     ../../assets/fonts/ — no request ever leaves the page. */
+  @font-face {
+    font-family: "Schibsted Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/schibsted-grotesk-latin-wght.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "DM Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/dm-sans-latin-wght.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/space-grotesk-latin-wght.woff2") format("woff2");
+  }
+
   :root {
     --brand-purple: #9F58FA;
     --brand-purple-text: #B98AFF;

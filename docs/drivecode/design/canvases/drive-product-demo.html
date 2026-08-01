@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- Network silence, enforced: the demo is fully self-contained (inline
+     style/script, self-hosted fonts, relative voice mp3s, data: favicon).
+     file: keeps the same policy working when opened from disk. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'self' file:; img-src data:; media-src 'self' file:" />
 <title>Drive · product demo</title>
 <script>
   // Apply a stored theme before first paint. Light is the default.
@@ -12,10 +16,31 @@
     }
   } catch (e) { /* storage unavailable — stay light */ }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Schibsted+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
+  /* Self-hosted fonts: variable-weight latin woff2 committed under
+     ../../assets/fonts/ — no request ever leaves the page. */
+  @font-face {
+    font-family: "Schibsted Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/schibsted-grotesk-latin-wght.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "DM Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/dm-sans-latin-wght.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/space-grotesk-latin-wght.woff2") format("woff2");
+  }
+
   /* Light is the default, mirroring the shipped hub (:root in
      apps/cline-hub/src/webview/src/index.css); html.dark mirrors its .dark
      surface ladder. Text accents shift per theme the way the product does
@@ -35,7 +60,8 @@
     --hover-fill: rgba(21, 21, 22, 0.04);
     --text: #151516;
     --muted: rgba(21, 21, 22, 0.78);
-    --dim: rgba(21, 21, 22, 0.55);
+    /* 0.62 clears WCAG AA (4.5:1) on --bg and --panel; 0.55 measured ~4.0. */
+    --dim: rgba(21, 21, 22, 0.62);
     --neutral-t: rgba(21, 21, 22, 0.82);
     --drive: #9F58FA;
     --drive-t: #6D2FC4;
@@ -78,7 +104,8 @@
     --hover-fill: rgba(255, 255, 255, 0.05);
     --text: #FFFFFF;
     --muted: #9CA3AF;
-    --dim: #6B7280;
+    /* #7D8590 clears WCAG AA (4.5:1) on --bg and --panel; #6B7280 measured ~4.0. */
+    --dim: #7D8590;
     --neutral-t: #D1D5DB;
     --drive-t: #B98AFF;
     --drive-b: #9663F1;
@@ -302,10 +329,12 @@
     border-color: color-mix(in srgb, var(--ok) 40%, transparent);
     background: color-mix(in srgb, var(--ok) 10%, transparent);
   }
+  /* Maturity is a neutral fact, not a live affordance — amber stays
+     reserved for voice/live/present. PLANNED wears a slate outline. */
   .badge.planned {
-    color: var(--live-t);
-    border-color: color-mix(in srgb, var(--live) 45%, transparent);
-    background: color-mix(in srgb, var(--live) 12%, transparent);
+    color: var(--dim);
+    border-color: var(--line-strong);
+    background: transparent;
   }
 
   /* ---- Shell ---- */
@@ -381,7 +410,7 @@
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--live);
+    background: var(--dim);
     opacity: .7;
     flex: none;
   }
@@ -732,18 +761,44 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
-  /* presence.speaking, demoed: while a narration utterance is live the
-     sharer's member row wears an amber speaking ring (amber = live). */
+  /* presence.speaking, demoed: while a clip is live the SPEAKER's member
+     row wears a ring + a 3-bar EQ next to the name. Agents ring live-amber;
+     human rows ring hub-blue (--speak/--speak-t pick the family). */
   .member-row.speaking {
-    border-color: color-mix(in srgb, var(--live) 55%, transparent);
+    --speak: var(--live);
+    --speak-t: var(--live-t);
+    border-color: color-mix(in srgb, var(--speak) 55%, transparent);
+  }
+  .member-row.human.speaking {
+    --speak: var(--hub);
+    --speak-t: var(--hub-t);
   }
   .member-row.speaking .member-av {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--live) 70%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--speak) 70%, transparent);
     animation: speak-ring 1.15s var(--ease) infinite;
   }
   @keyframes speak-ring {
-    50% { box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--live) 30%, transparent); }
+    50% { box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--speak, var(--live)) 30%, transparent); }
   }
+  .member-eq {
+    display: none;
+    align-items: flex-end;
+    gap: 2px;
+    height: 10px;
+    flex: none;
+    margin-left: 2px;
+  }
+  .member-row.speaking .member-eq { display: flex; }
+  .member-eq i {
+    width: 2.5px;
+    height: 4px;
+    border-radius: 1px;
+    background: var(--speak-t, var(--live-t));
+    animation: eq-bar .8s ease-in-out infinite;
+  }
+  .member-eq i:nth-child(2) { animation-delay: .14s; }
+  .member-eq i:nth-child(3) { animation-delay: .28s; }
+  @keyframes eq-bar { 50% { height: 10px; } }
   .feed-main {
     flex: 1;
     min-width: 0;
@@ -752,7 +807,9 @@
     min-height: 0;
   }
 
-  /* Composer — the room's message bar. The input is a mock; Send is real. */
+  /* Composer — the room's message bar. Input, mic, and Send are all real
+     buttons: the scripted cursor types into the input (or dictates through
+     the mic) before every send, so each click has visible causality. */
   .composer {
     display: flex;
     align-items: center;
@@ -775,18 +832,92 @@
   .composer-input {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
     padding: 7px 11px;
     border-radius: 999px;
     border: 0.8px solid var(--line);
     background: var(--well);
     color: var(--dim);
     font-size: 12.5px;
+    text-align: left;
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+  }
+  .composer-input .composer-text {
+    flex: 1;
+    min-width: 0;
+    color: var(--dim);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: left;
   }
-  .composer .mic-glyph { color: var(--dim); flex: none; display: grid; place-items: center; }
-  .composer .mic-glyph svg { width: 14px; height: 14px; display: block; }
+  /* Focus ring while the scripted cursor is typing; caret blinks at the end. */
+  .composer.focused .composer-input {
+    border-color: color-mix(in srgb, var(--hub) 60%, transparent);
+    background: var(--panel);
+    box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--hub) 16%, transparent);
+  }
+  /* While composing, the text shows its TAIL (scrolled to the end by the
+     choreography) so late chunks visibly land in the narrow pill. */
+  .composer.armed .composer-input .composer-text {
+    color: var(--text);
+    text-overflow: clip;
+  }
+  .composer-input .composer-caret {
+    display: none;
+    width: 1.5px;
+    height: 13px;
+    flex: none;
+    background: var(--text);
+    animation: caret-blink 1.06s steps(2, start) infinite;
+  }
+  .composer.focused .composer-input .composer-caret { display: block; }
+  @keyframes caret-blink { 50% { opacity: 0; } }
+  /* Live-dictation waveform — 4 bars in the input area while the mic is hot. */
+  .composer-input .composer-wave {
+    display: none;
+    align-items: center;
+    gap: 2.5px;
+    height: 14px;
+    flex: none;
+  }
+  .composer.listening .composer-input .composer-wave { display: flex; }
+  .composer-input .composer-wave i {
+    width: 2.5px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--live-t);
+    animation: wave-bar 1s ease-in-out infinite;
+  }
+  .composer-input .composer-wave i:nth-child(2) { animation-delay: .18s; }
+  .composer-input .composer-wave i:nth-child(3) { animation-delay: .36s; }
+  .composer-input .composer-wave i:nth-child(4) { animation-delay: .54s; }
+  @keyframes wave-bar { 50% { height: 13px; } }
+  .composer-mic {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 50%;
+    border: 0.8px solid transparent;
+    color: var(--dim);
+  }
+  .composer-mic svg { width: 14px; height: 14px; display: block; }
+  .composer-mic:hover { color: var(--text); }
+  /* Mic hot: live-amber tint + a soft pulse while speech is transcribing. */
+  .composer-mic.live {
+    color: var(--live-t);
+    border-color: color-mix(in srgb, var(--live) 55%, transparent);
+    background: color-mix(in srgb, var(--live) 14%, transparent);
+    animation: mic-pulse 1.3s var(--ease) infinite;
+  }
+  @keyframes mic-pulse {
+    50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 22%, transparent); }
+  }
   #composer-send {
     width: 26px;
     height: 26px;
@@ -930,6 +1061,10 @@
     color: var(--live-t);
   }
   .presenter-bar .pb-spacer { flex: 1; }
+  /* What-is-presented changes fade in place — part of the director's
+     between-task cue (captions have their own fixed slot below). */
+  .presenter-bar.swap { animation: bar-swap .35s var(--ease); }
+  @keyframes bar-swap { from { opacity: 0; } }
   .live-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--spot);
@@ -982,6 +1117,28 @@
     text-overflow: ellipsis;
   }
   .screen .caption-slot.swap { animation: caption-swap .3s var(--ease); }
+  /* Below 1600px the longest narration overflows a single line, so the
+     slot reserves exactly two lines FULL-TIME (fixed height — captions
+     never shift layout) and wraps; the clamp only trims pathological
+     overflow. Height = 2 lines × 1.2 + 16px padding + 0.8px border. */
+  @media (max-width: 1600px) {
+    .screen .caption-slot {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      height: calc(2 * 1.2em + 16.8px);
+      text-overflow: clip;
+    }
+  }
+  /* Phone widths: the slot is ~340px wide, so the longest narration needs
+     four lines. Same fixed-reserve contract, taller. */
+  @media (max-width: 600px) {
+    .screen .caption-slot {
+      -webkit-line-clamp: 4;
+      height: calc(4 * 1.2em + 16.8px);
+    }
+  }
   @keyframes caption-swap { from { color: transparent; } }
   .screen-idle {
     display: flex;
@@ -1075,6 +1232,137 @@
   .stage-diagram .e { stroke: var(--dim); stroke-width: 1.2; fill: none; }
   .stage-diagram .ah { fill: var(--dim); }
   .stage-diagram .elabel { fill: var(--danger-t); font-family: var(--mono); font-size: 9px; font-weight: 600; }
+  /* ---- Phased diagram animation (opt-in: .anim-diagram) ----
+     Reusable pattern: ONE shared clock. Every rule below runs for
+     var(--phase-total) on an infinite loop, and keyframe percentages
+     carve that loop into narration-sized phases — here 3s fold + 3s
+     fan-out + 3.5s rebuild-edge = 9.5s, tracking the a3-arch clip.
+     Traveling dots are <circle class="flow-dot"> elements drawn at the
+     SVG origin and driven along offset-path traces of the diagram's own
+     polyline coordinates; because they live inside the SVG's viewBox
+     they ride the edges at any rendered width. A future diagram adopts
+     the pattern by adding .anim-diagram to its .stage-diagram wrapper,
+     a .flow-dots layer with its own offset paths, and phase captions
+     keyed to the same clock. Reduced motion: dots hide, captions light
+     equally, the diagram holds still (media block below). */
+  .anim-diagram { --phase-total: 9.5s; }
+  .anim-diagram .flow-dot { fill: var(--live); opacity: 0; }
+  @supports (offset-path: path("M0 0 L4 4")) {
+    .anim-diagram .fd-fold {
+      offset-path: path("M168 150 L240 150");
+      animation: fd-fold var(--phase-total) linear infinite;
+    }
+    .anim-diagram .fd-fan { animation: fd-fan var(--phase-total) linear infinite; }
+    .anim-diagram .fd-f1 { offset-path: path("M336 150 L516 144 L548 144 L548 58 L580 58"); }
+    .anim-diagram .fd-f2 { offset-path: path("M336 150 L516 148 L556 148 L556 116 L580 116"); }
+    .anim-diagram .fd-f3 { offset-path: path("M336 150 L516 152 L556 152 L556 174 L580 174"); }
+    .anim-diagram .fd-f4 { offset-path: path("M336 150 L516 156 L548 156 L548 232 L580 232"); }
+  }
+  /* Phase 1 (0–26%): state folds from BEATS into render(). */
+  @keyframes fd-fold {
+    0% { offset-distance: 0%; opacity: 0; }
+    3% { opacity: 1; }
+    23% { opacity: 1; }
+    26% { offset-distance: 100%; opacity: 0; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+  /* Phase 2 (33–57%): four dots fan out through the wipe to the regions. */
+  @keyframes fd-fan {
+    0%, 33% { offset-distance: 0%; opacity: 0; }
+    36% { opacity: 1; }
+    54% { opacity: 1; }
+    57% { offset-distance: 100%; opacity: 0; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+  .anim-diagram .fn-fold rect { animation: fn-glow-fold var(--phase-total) linear infinite; }
+  @keyframes fn-glow-fold {
+    0%, 8% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 14%, var(--panel)); }
+    14%, 100% { stroke: var(--line); fill: var(--panel); }
+  }
+  .anim-diagram .fn-render rect { animation: fn-glow-render var(--phase-total) linear infinite; }
+  @keyframes fn-glow-render {
+    0%, 22% { stroke: var(--line); fill: var(--panel); }
+    26%, 34% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 14%, var(--panel)); }
+    40%, 100% { stroke: var(--line); fill: var(--panel); }
+  }
+  .anim-diagram .fn-r1 rect,
+  .anim-diagram .fn-r2 rect,
+  .anim-diagram .fn-r3 rect,
+  .anim-diagram .fn-r4 rect { animation: fn-region-pulse var(--phase-total) linear infinite; }
+  @keyframes fn-region-pulse {
+    0%, 55% { stroke: var(--line); fill: var(--panel); }
+    58.5% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 16%, var(--panel)); }
+    64%, 100% { stroke: var(--line); fill: var(--panel); }
+  }
+  /* Fan-out stagger: each region's dot and arrival pulse share a delay.
+     (Placed AFTER the animation shorthands above — a shorthand resets
+     animation-delay, so these must win by source order.) */
+  .anim-diagram .fd-f2, .anim-diagram .fn-r2 rect { animation-delay: .1s; }
+  .anim-diagram .fd-f3, .anim-diagram .fn-r3 rect { animation-delay: .2s; }
+  .anim-diagram .fd-f4, .anim-diagram .fn-r4 rect { animation-delay: .3s; }
+  /* Phase 3 (65–100%): the rebuild edge — two danger pulses, then the
+     tell-tale flicker, the same flash language as the a3-bug animation. */
+  .anim-diagram .n.hot rect { animation: fn-hot-edge var(--phase-total) linear infinite; }
+  @keyframes fn-hot-edge {
+    0%, 65% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    69% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 24%, var(--panel)); }
+    74% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    78% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 24%, var(--panel)); }
+    83% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    85% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 30%, var(--panel)); }
+    86.5% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+    88% { stroke: var(--danger); fill: color-mix(in srgb, var(--danger) 30%, var(--panel)); }
+    90%, 100% { stroke: var(--live); fill: color-mix(in srgb, var(--live) 10%, var(--panel)); }
+  }
+  .anim-diagram .elabel { animation: fn-elabel var(--phase-total) linear infinite; }
+  @keyframes fn-elabel {
+    0%, 63% { opacity: .45; }
+    66%, 97% { opacity: 1; }
+    100% { opacity: .45; }
+  }
+  /* Phase captions (svg text in the diagram's empty bottom-left band),
+     lit amber in turn on the clock. */
+  .anim-diagram .anim-phase {
+    fill: var(--dim);
+    opacity: .6;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    animation-duration: var(--phase-total);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .anim-diagram .anim-phase.ph1 { animation-name: flow-cap-1; }
+  .anim-diagram .anim-phase.ph2 { animation-name: flow-cap-2; }
+  .anim-diagram .anim-phase.ph3 { animation-name: flow-cap-3; }
+  @keyframes flow-cap-1 {
+    0%, 29% { fill: var(--live-t); opacity: 1; }
+    33%, 100% { fill: var(--dim); opacity: .6; }
+  }
+  @keyframes flow-cap-2 {
+    0%, 29% { fill: var(--dim); opacity: .6; }
+    33%, 60% { fill: var(--live-t); opacity: 1; }
+    64%, 100% { fill: var(--dim); opacity: .6; }
+  }
+  @keyframes flow-cap-3 {
+    0%, 60% { fill: var(--dim); opacity: .6; }
+    64%, 100% { fill: var(--live-t); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /* Static explanation: no dots, no pulses; the three phase captions
+       read equally lit and the diagram compares at rest. */
+    .anim-diagram .flow-dot { display: none; }
+    .anim-diagram .fn-fold rect,
+    .anim-diagram .fn-render rect,
+    .anim-diagram .fn-r1 rect,
+    .anim-diagram .fn-r2 rect,
+    .anim-diagram .fn-r3 rect,
+    .anim-diagram .fn-r4 rect,
+    .anim-diagram .n.hot rect,
+    .anim-diagram .elabel,
+    .anim-diagram .anim-phase { animation: none !important; }
+    .anim-diagram .anim-phase { fill: var(--live-t); opacity: 1; }
+  }
   .stage-capture .browser {
     border: 0.8px solid var(--line);
     border-radius: var(--r);
@@ -1109,6 +1397,192 @@
     background: color-mix(in srgb, var(--ok) 10%, transparent);
     border-radius: 999px;
     padding: 4px 8px;
+  }
+  /* Explanatory bug animation (walkthrough.animation · the a3-bug beat):
+     two mini feeds on one 4s clock. BEFORE re-mounts all three message
+     blocks on the beat tick and flickers a white flash — the literal bug.
+     AFTER holds perfectly still on a fingerprint match (the sig chip
+     glows green), and on the second tick only a NEW fourth block animates
+     in. Pure CSS keyframes; the AFTER panel runs .35s behind so the flash
+     reads first. Reduced motion degrades to a static comparison. */
+  .stage-anim { display: flex; gap: 12px; width: 100%; max-width: 620px; }
+  .stage-anim .anim-panel {
+    flex: 1;
+    min-width: 0;
+    border: 0.8px solid var(--line);
+    border-radius: var(--r);
+    background: var(--panel);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .stage-anim .anim-panel.before { border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+  .stage-anim .anim-panel.after { border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+  .stage-anim .anim-head { display: flex; align-items: center; gap: 7px; min-height: 18px; }
+  .stage-anim .anim-name {
+    font: 600 9px/1.3 var(--eyebrow);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    flex: 1;
+    min-width: 0;
+  }
+  .stage-anim .before .anim-name { color: var(--danger-t); }
+  .stage-anim .after .anim-name { color: var(--ok-soft); }
+  /* The beat tick — the demo clock, amber like the live chrome. */
+  .stage-anim .anim-tick {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--live);
+    opacity: .55;
+    flex: none;
+  }
+  .stage-anim .before .anim-tick { animation: anim-tick-one 4s linear infinite; }
+  .stage-anim .after .anim-tick { animation: anim-tick-two 4s linear infinite; animation-delay: .35s; }
+  @keyframes anim-tick-one {
+    0%, 2% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    5% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    12%, 100% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+  }
+  @keyframes anim-tick-two {
+    0%, 2% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    5% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    12%, 52% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+    55% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 30%, transparent); }
+    62%, 100% { transform: scale(1); opacity: .55; box-shadow: 0 0 0 0 transparent; }
+  }
+  /* Fingerprint chip: sits in the feed's top band (the head stays a
+     single line on both panels); rests dim, glows green on the skipped
+     tick. */
+  .stage-anim .anim-sig {
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    z-index: 2;
+    font: 600 9px/1 var(--mono);
+    color: var(--dim);
+    border: 0.8px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 6px;
+    white-space: nowrap;
+    animation: anim-sig 4s var(--ease) infinite;
+    animation-delay: .35s;
+  }
+  @keyframes anim-sig {
+    0%, 4% { color: var(--dim); border-color: var(--line); background: transparent; box-shadow: 0 0 0 0 transparent; }
+    10%, 26% {
+      color: var(--ok-soft);
+      border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+      background: color-mix(in srgb, var(--ok) 12%, transparent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 14%, transparent);
+    }
+    40%, 100% { color: var(--dim); border-color: var(--line); background: transparent; box-shadow: 0 0 0 0 transparent; }
+  }
+  .stage-anim .anim-feed {
+    position: relative;
+    border: 0.8px solid var(--hair);
+    border-radius: 7px;
+    background: var(--well);
+    /* Top band hosts the AFTER panel's sig chip; both panels share it so
+       the message blocks stay row-aligned across the comparison. */
+    padding: 26px 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 136px;
+    overflow: hidden;
+  }
+  .stage-anim .anim-slot { position: relative; }
+  .stage-anim .anim-msg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border: 0.8px solid var(--hair);
+    border-radius: 6px;
+    background: var(--panel);
+  }
+  .stage-anim .anim-msg .av {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--drive) 55%, transparent);
+    flex: none;
+  }
+  .stage-anim .anim-msg .bars { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .stage-anim .anim-msg .bars i { display: block; height: 4px; border-radius: 2px; background: var(--line); }
+  .stage-anim .anim-msg .bars .w70 { width: 70%; }
+  .stage-anim .anim-msg .bars .w45 { width: 45%; }
+  /* BEFORE: every block blinks out and re-enters together — one shared
+     keyframe, zero stagger. That simultaneity IS the bug. */
+  .stage-anim .before .anim-msg { animation: anim-remount 4s var(--ease) infinite; }
+  @keyframes anim-remount {
+    0%, 4% { opacity: 1; transform: translateY(0); }
+    7%, 13% { opacity: 0; transform: translateY(7px); }
+    24%, 100% { opacity: 1; transform: translateY(0); }
+  }
+  /* The literal flash: a white sheet flickering over the feed. */
+  .stage-anim .anim-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    animation: anim-flash 4s linear infinite;
+  }
+  @keyframes anim-flash {
+    0%, 4% { opacity: 0; }
+    6% { opacity: .5; }
+    8% { opacity: .1; }
+    10% { opacity: .34; }
+    14%, 100% { opacity: 0; }
+  }
+  /* AFTER: the fourth block is the only thing that ever moves. */
+  .stage-anim .after .anim-msg.new {
+    opacity: 0;
+    border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+    animation: anim-new 4s var(--ease) infinite;
+    animation-delay: .35s;
+  }
+  .stage-anim .after .anim-msg.new .av { background: color-mix(in srgb, var(--ok) 55%, transparent); }
+  @keyframes anim-new {
+    0%, 52% { opacity: 0; transform: translateY(8px); }
+    64%, 94% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(8px); }
+  }
+  /* Ghost outline of the previous mount — reduced-motion only. */
+  .stage-anim .anim-ghost {
+    display: none;
+    position: absolute;
+    inset: 0;
+    border: 1px dashed color-mix(in srgb, var(--danger) 45%, transparent);
+    border-radius: 6px;
+    opacity: .6;
+    pointer-events: none;
+  }
+  .stage-anim .anim-cap { font: 500 10px/1.35 var(--mono); color: var(--dim); }
+  .stage-anim .before .anim-cap { color: var(--danger-t); }
+  @media (max-width: 700px) { .stage-anim { flex-direction: column; } }
+  @media (prefers-reduced-motion: reduce) {
+    /* Static comparison: BEFORE freezes mid-re-entry over ghosted
+       duplicates of the settled blocks; AFTER shows the still feed with
+       the chip lit and the new block landed. No loops anywhere. */
+    .stage-anim .anim-tick,
+    .stage-anim .anim-sig,
+    .stage-anim .anim-flash,
+    .stage-anim .before .anim-msg,
+    .stage-anim .after .anim-msg.new { animation: none !important; }
+    .stage-anim .anim-flash { opacity: 0; }
+    .stage-anim .before .anim-msg { opacity: .55; transform: translateY(5px); }
+    .stage-anim .anim-ghost { display: block; }
+    .stage-anim .after .anim-msg.new { opacity: 1; transform: none; }
+    .stage-anim .anim-sig {
+      color: var(--ok-soft);
+      border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+      background: color-mix(in srgb, var(--ok) 12%, transparent);
+    }
   }
 
   /* The sharer's screen is a faithful VS Code window (Cline is a VS Code
@@ -1249,6 +1723,8 @@
   .vsc-fico.ts { color: #519aba; }
   .vsc-fico.md { color: #6e7681; }
   .vsc-fico.json { color: #cbcb41; }
+  .vsc-fico.html { color: #e37933; }
+  .vsc-fico.js { color: #cbcb41; }
   .vsc-ed {
     flex: 1;
     min-width: 0;
@@ -1435,6 +1911,134 @@
   }
   .vsc-status .sp { flex: 1; }
   .vsc-status .cline { color: var(--drive-t); }
+  /* ---- Debug session (walkthrough.code presents as a paused debugger) ----
+     Same one-clock pattern as .anim-diagram: every rule below loops on
+     var(--dbg-total), and keyframe percentages carve the step sequence —
+     step onto the compute (s1), land on the compare (s2, inline values in),
+     the guarded block stepped over (ret hint), then release and loop —
+     tracking the ~10s a3-walk clip. Dark-Modern debug literals: #e51400
+     breakpoint, yellow-tinted current line + gutter arrow, dim italic
+     inline values, #cc6633 status bar. Reduced motion settles on the
+     compare line. */
+  .vsc-debug { --dbg-total: 10s; }
+  /* The debugger is about the code: rows tighten to VS Code's real
+     leading and the panel toggles away (the Ctrl+J look), so the whole
+     guard — through the skipped feed rebuild — stays in view even
+     in the guided layout's shortest editor. */
+  .vsc-debug .vsc-panel { display: none; }
+  .vsc-debug .vsc-code { padding: 5px 0; }
+  /* Wider gutter: room for the breakpoint dot left of the line numbers.
+     The debug step highlight replaces the amber walk hl (never stacked). */
+  .vsc-debug .ws-cl { grid-template-columns: 44px 1fr; font: 400 11px/1.5 var(--mono); }
+  .vsc-debug .ws-cl.hl { background: none; color: #d4d4d4; }
+  .vsc-debug .ws-cl.hl .ln { color: #6e7681; }
+  .vsc-debug .ws-cl .ln { position: relative; }
+  .vsc-debug .ws-cl.dbg-bp .ln::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    margin-top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e51400;
+  }
+  .vsc-debug .ws-cl.dbg-s1 .ln::after,
+  .vsc-debug .ws-cl.dbg-s2 .ln::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    margin-top: -4px;
+    border-left: 7px solid #ffcc00;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    opacity: 0;
+  }
+  .vsc-debug .ws-cl.dbg-s1 { animation: dbg-line-s1 var(--dbg-total) linear infinite; }
+  .vsc-debug .ws-cl.dbg-s1 .ln::after { animation: dbg-mark-s1 var(--dbg-total) linear infinite; }
+  .vsc-debug .ws-cl.dbg-s2 { animation: dbg-line-s2 var(--dbg-total) linear infinite; }
+  .vsc-debug .ws-cl.dbg-s2 .ln::after { animation: dbg-mark-s2 var(--dbg-total) linear infinite; }
+  @keyframes dbg-line-s1 {
+    0%, 2% { background: transparent; }
+    4%, 19% { background: rgba(255, 255, 0, 0.06); }
+    22%, 100% { background: transparent; }
+  }
+  @keyframes dbg-mark-s1 {
+    0%, 2% { opacity: 0; }
+    4%, 19% { opacity: 1; }
+    22%, 100% { opacity: 0; }
+  }
+  @keyframes dbg-line-s2 {
+    0%, 22% { background: transparent; }
+    24%, 93% { background: rgba(255, 255, 0, 0.07); }
+    96%, 100% { background: transparent; }
+  }
+  @keyframes dbg-mark-s2 {
+    0%, 22% { opacity: 0; }
+    24%, 93% { opacity: 1; }
+    96%, 100% { opacity: 0; }
+  }
+  /* Inline values: VS Code's dimmed italic ghost decorations. */
+  .vsc-debug .dbg-ghost {
+    margin-left: 14px;
+    font-style: italic;
+    font-size: 10px;
+    color: #8a8f98;
+    opacity: 0;
+  }
+  .vsc-debug .dbg-s1 .dbg-ghost { animation: dbg-ghost-s1 var(--dbg-total) linear infinite; }
+  .vsc-debug .dbg-s2 .dbg-ghost { animation: dbg-ghost-s2 var(--dbg-total) linear infinite; }
+  .vsc-debug .dbg-s2 .dbg-ret { margin-left: 8px; animation: dbg-ghost-ret var(--dbg-total) linear infinite; }
+  @keyframes dbg-ghost-s1 {
+    0%, 8% { opacity: 0; }
+    11%, 95% { opacity: 1; }
+    99%, 100% { opacity: 0; }
+  }
+  @keyframes dbg-ghost-s2 {
+    0%, 30% { opacity: 0; }
+    33%, 95% { opacity: 1; }
+    99%, 100% { opacity: 0; }
+  }
+  @keyframes dbg-ghost-ret {
+    0%, 55% { opacity: 0; }
+    58%, 95% { opacity: 1; }
+    99%, 100% { opacity: 0; }
+  }
+  /* Floating debug toolbar: centered under the tab bar, straddling the
+     breadcrumbs row so it never covers code or inline values. */
+  .vsc-debug .vsc-ed { position: relative; }
+  .vsc-dbgbar {
+    position: absolute;
+    top: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 6px;
+    background: #252526;
+    border: 0.8px solid rgba(255, 255, 255, 0.09);
+    border-radius: 4px;
+  }
+  .vsc-dbgbar .dbg-btn {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    color: #75beff;
+  }
+  .vsc-dbgbar .dbg-btn.restart { color: #89d185; }
+  .vsc-dbgbar .dbg-btn.stop { color: #f48771; }
+  /* Debugging status bar: VS Code's orange, every item legible on it. */
+  .vsc-debug .vsc-status {
+    background: #cc6633;
+    border-top-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.92);
+  }
+  .vsc-debug .vsc-status .cline { color: #ffffff; }
   /* Presented artifacts float over the dimmed VS Code window. */
   .stage-overlay {
     position: absolute;
@@ -1453,10 +2057,64 @@
     padding: 16px 18px;
     width: 100%;
     max-width: 640px;
-    max-height: 88%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
     overflow: auto;
-    animation: rise .28s var(--ease);
+    animation: ov-grow .34s cubic-bezier(0.22, 0.9, 0.3, 1);
   }
+  /* Contain-fit: when the deck (or a short viewport) squeezes the screen
+     body, the card column shrinks instead of cropping. An SVG artifact
+     stretches to the shrunken row (cross-axis stretch gives it the real
+     height) and preserveAspectRatio scales the drawing to fit — the
+     offset-path dots live in viewBox units, so they ride the rescale. */
+  .stage-overlay .ov-card > * { min-height: 0; }
+  .stage-overlay .stage-diagram { display: flex; }
+  .stage-overlay .stage-diagram svg { align-self: stretch; }
+  /* The capture mock compresses the same way: its wireframe rows give up
+     height (never the bar, url, or toast) instead of clipping. Over the
+     workspace the overlay also pads tighter — the dimmed window is a
+     backdrop there, not a margin-critical surface. */
+  .screen-body.ws-host .stage-overlay { padding: 10px; }
+  .stage-overlay .stage-capture { display: flex; flex-direction: column; }
+  .stage-overlay .stage-capture .browser {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .stage-overlay .stage-capture .bar { flex: none; }
+  .stage-overlay .stage-capture .shot { min-height: 0; }
+  .stage-overlay .stage-capture .wire { flex: 0 1 auto; min-height: 2px; }
+  .stage-overlay .stage-capture .toast { flex: none; }
+  /* Director transitions. A presented artifact grows out of its backlog
+     chip (--grow-x is the chip's measured x-bias; the rail sits below,
+     hence the upward entrance); a replaced artifact settles away above
+     the incoming one; a return to the bare workspace releases the dim
+     in place. The global reduced-motion rule collapses all of these. */
+  @keyframes ov-grow {
+    from { opacity: 0; transform: translate(var(--grow-x, 0px), var(--grow-y, 26px)) scale(.92); }
+  }
+  .stage-overlay.pin .ov-card { animation: rise .28s var(--ease); }
+  .stage-overlay.ov-leave {
+    pointer-events: none;
+    z-index: 3;
+    animation: ov-leave .3s var(--ease) forwards;
+  }
+  .stage-overlay.ov-leave .ov-card { animation: none; }
+  @keyframes ov-leave {
+    to { opacity: 0; transform: translateY(8px) scale(.975); }
+  }
+  .vsc-fade { animation: body-swap .22s var(--ease); }
+  .screen-body.release::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.16);
+    animation: dim-release .4s var(--ease) forwards;
+  }
+  @keyframes dim-release { to { opacity: 0; } }
   .stage-overlay.diagram .ov-card { max-width: 700px; }
   .stage-overlay .stage-plan { margin: 0 auto; }
   .stage-overlay .ov-card .screen-pin {
@@ -1481,10 +2139,26 @@
     /* Degrade to static: no blink/spin loops, typed line fully revealed,
        terminal lines visible without stagger. */
     .ws-caret, .ws-spin { animation: none !important; }
+    /* Debug session settles: breakpoint + paused on the compare line,
+       inline values shown, no stepping. */
+    .vsc-debug .ws-cl.dbg-s1,
+    .vsc-debug .ws-cl.dbg-s2,
+    .vsc-debug .ws-cl.dbg-s1 .ln::after,
+    .vsc-debug .ws-cl.dbg-s2 .ln::after,
+    .vsc-debug .dbg-ghost { animation: none !important; }
+    .vsc-debug .ws-cl.dbg-s2 { background: rgba(255, 255, 0, 0.07); }
+    .vsc-debug .ws-cl.dbg-s2 .ln::after { opacity: 1; }
+    .vsc-debug .dbg-ghost { opacity: 1; }
     .ws-cl .type { animation: none !important; width: 100%; border-right-color: transparent; }
     .ws-tl { animation: none !important; opacity: 1; }
     .member-row.needs-you .member-dot { animation: none !important; }
     .live-dot.speaking, .member-row.speaking .member-av { animation: none !important; }
+    /* Input choreography degrades to static: no caret blink, waveform and
+       EQ bars hold still, no mic pulse — the gating logic still applies. */
+    .composer-input .composer-caret,
+    .composer-input .composer-wave i,
+    .composer-mic.live,
+    .member-eq i { animation: none !important; }
   }
 
   /* Show backlog rail: the director's queue, made visible */
@@ -1510,6 +2184,27 @@
     color: var(--dim);
   }
   .show-chip.ready { color: var(--muted); border-color: var(--line-strong); }
+  /* Up next: the director tips its hand one beat early — a soft glint
+     crosses the chip about to be presented. Reduced motion keeps the
+     static amber outline and drops the sweep. */
+  .show-chip.up-next {
+    position: relative;
+    overflow: hidden;
+    color: var(--muted);
+    border-color: color-mix(in srgb, var(--live) 45%, var(--line));
+  }
+  .show-chip.up-next::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 32%, color-mix(in srgb, var(--live) 26%, transparent) 50%, transparent 68%);
+    transform: translateX(-100%);
+    animation: chip-glint 1.5s var(--ease) .25s 2;
+  }
+  @keyframes chip-glint { to { transform: translateX(100%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .show-chip.up-next::after { content: none; }
+  }
   .show-chip.showing {
     color: var(--live-t);
     border-color: color-mix(in srgb, var(--live) 55%, transparent);
@@ -2183,19 +2878,31 @@
     border-color: color-mix(in srgb, var(--danger) 45%, transparent);
     color: var(--danger-t);
   }
+  /* The packet is a fitted panel over the dimmed room — the room reads
+     as a true backdrop around it, not as ghosts inside its bounds. */
   .handoff {
     position: absolute;
-    inset: 18px;
+    inset: 0;
     z-index: 22;
     display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(10, 10, 11, 0.35);
+  }
+  .handoff.on { display: flex; }
+  .handoff-panel {
+    width: fit-content;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: auto;
     padding: 18px;
     border-radius: var(--r-lg);
     border: 0.8px solid color-mix(in srgb, var(--hub) 40%, transparent);
     background: color-mix(in srgb, var(--panel) 92%, transparent);
     backdrop-filter: blur(8px);
-    overflow: auto;
   }
-  .handoff.on { display: block; animation: rise .28s var(--ease); }
+  .handoff.on .handoff-panel { animation: rise .28s var(--ease); }
   .handoff h3 {
     font: 700 16px/1.2 var(--display);
     margin-bottom: 4px;
@@ -2358,6 +3065,26 @@
   @media (min-height: 700px) {
     .caption .text { white-space: normal; }
   }
+  /* Below 1600px the strip reserves two caption lines full-time (fixed
+     height, no layout shift) and wraps; ≥1600px keeps the single line. */
+  @media (max-width: 1600px) {
+    .caption .text {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-height: 1.35;
+      height: calc(2 * 1.35em);
+    }
+  }
+  /* Phone widths: ~295px of text column — the longest captions need up
+     to four lines. Same fixed-reserve contract, taller. */
+  @media (max-width: 600px) {
+    .caption .text {
+      -webkit-line-clamp: 4;
+      height: calc(4 * 1.35em);
+    }
+  }
 
   /* Compact laptop heights */
   @media (max-height: 700px) {
@@ -2376,7 +3103,8 @@
     .board-tile .n { font-size: 19px; }
     .overlay-card { inset: auto 14px 14px auto; }
     .gates-card { left: 14px; bottom: 14px; }
-    .handoff { inset: 12px; padding: 14px; }
+    .handoff { padding: 12px; }
+    .handoff-panel { padding: 14px; }
     .pip { width: 220px; padding: 10px; }
     .pip .narr { min-height: 2.2em; }
   }
@@ -2385,16 +3113,16 @@
      Width- (and aspect-) driven; ≥1280×640 behavior is untouched. Placed
      last so equal-specificity overrides win the cascade. */
 
-  /* Ultrawide: the stage grows but content stays readable — cap the shared
-     screen's inner blocks and the full-page surfaces, left-aligned. */
+  /* Ultrawide: the app column caps and centers; inside it the shared
+     screen's VS Code window fills its body edge-to-edge — a monitor, not
+     a floating thumbnail. Non-window content keeps a readable measure,
+     and artifact cards scale up modestly without ballooning. */
   @media (min-width: 1800px) {
-    .screen-body > * { max-width: 920px; }
-    .screen-body.ws-host { justify-content: center; }
-    /* The capped VS Code window centers and reads as a floating window. */
-    .screen-body.ws-host .vsc {
-      max-width: 980px;
-      border: 0.8px solid rgba(255, 255, 255, 0.12);
-    }
+    .main-body { width: 100%; max-width: 1440px; margin: 0 auto; }
+    .screen-body > :not(.vsc) { max-width: 920px; }
+    .stage-overlay .ov-card,
+    .stage-overlay.diagram .ov-card { max-width: 860px; }
+    .stage-diagram svg { max-width: 820px; }
     .rooms, .rooms-page, .arts, .lens-body { max-width: 1280px; }
   }
 
@@ -2535,7 +3263,8 @@
     .player .brand { font-size: 0; gap: 0; }
     .player .brand span { display: none; }
     #vol-slider { width: 48px; }
-    .caption .text { white-space: nowrap; }
+    /* The two-line reserved caption (≤1600px rule) stays in force here —
+       nowrap would re-truncate the longest narrations on phones. */
     .caption-links { display: none; }
     /* The call strip scrolls (hidden scrollbar) rather than overflowing;
        the informational partner label yields to the controls. */
@@ -2610,6 +3339,118 @@
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: none; }
   }
+
+  /* ---- Intro overlay: first-load orientation card ----
+     Sits UNDER the player bar (z 38 < .player's 40), so the transport —
+     #btn-play included — stays visible and directly clickable. Dismissed
+     by its Play, its ×, Esc, Space, or any beat navigation; dismissing
+     without playing leaves the demo in explore mode. */
+  .intro-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 38;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 58px 16px 48px;
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    backdrop-filter: blur(2.5px);
+  }
+  .intro-scrim.gone {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .25s var(--ease), visibility 0s .25s;
+  }
+  .intro-card {
+    position: relative;
+    width: min(432px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    background: var(--overlay);
+    border: 0.8px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--overlay-shadow);
+    padding: 22px 22px 18px;
+    animation: rise .45s var(--ease);
+  }
+  .intro-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r);
+    color: var(--dim);
+  }
+  .intro-close:hover { color: var(--text); background: var(--hover-fill); }
+  .intro-close svg { width: 13px; height: 13px; display: block; }
+  .intro-eyebrow {
+    font: 600 10px/1 var(--eyebrow);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--drive-t);
+    margin-bottom: 10px;
+  }
+  .intro-title {
+    font: 700 19px/1.25 var(--display);
+    letter-spacing: -0.015em;
+    margin-bottom: 8px;
+  }
+  .intro-line { color: var(--muted); margin-bottom: 16px; }
+  .intro-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 13px/1 var(--ui);
+    color: #1B1D24;
+    background: var(--live);
+    border: 0.8px solid color-mix(in srgb, var(--live-t) 45%, transparent);
+    border-radius: var(--r);
+    padding: 9px 16px;
+    margin-bottom: 14px;
+    transition: filter .15s;
+  }
+  .intro-play:hover { filter: brightness(1.06); }
+  .intro-play svg { width: 11px; height: 11px; display: block; }
+  .intro-meta {
+    color: var(--dim);
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .intro-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    color: var(--dim);
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+  .intro-keys kbd {
+    font: 500 10.5px/1 var(--mono);
+    color: var(--muted);
+    border: 0.8px solid var(--line);
+    border-bottom-width: 1.6px;
+    border-radius: 5px;
+    padding: 2.5px 5px;
+    margin-right: 3px;
+  }
+  .intro-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    color: var(--dim);
+    font-size: 11.5px;
+    border-top: 0.8px solid var(--hair);
+    padding-top: 12px;
+  }
+  @media (max-width: 600px) {
+    .intro-card { padding: 18px 16px 14px; }
+    .intro-title { font-size: 17px; }
+  }
 </style>
 </head>
 <body>
@@ -2647,7 +3488,7 @@
   <div class="beat-meta">
     <div class="beat-title" id="beat-title">—</div>
     <span class="hub-op empty" id="hub-op">—</span>
-    <span class="badge shipped" id="maturity">shipped</span>
+    <span class="badge shipped" id="maturity" title="SHIPPED = exists in the product today · PLANNED = design intent" aria-label="Maturity: shipped — exists in the product today">shipped</span>
   </div>
   <div class="player-controls">
     <button type="button" id="btn-theme" title="Toggle theme" aria-label="Switch to dark theme">
@@ -2675,7 +3516,7 @@
          hidden / width persist to localStorage "drive-demo-rail". -->
     <div class="rail-items" id="rail-items"></div>
     <div class="rail-foot">
-      <span class="rail-foot-label">Room <span class="mono">router-fix</span></span>
+      <span class="rail-foot-label">Room <span class="mono">demo-polish</span></span>
       <button type="button" class="panel-toggle" id="rail-edit" title="Customize rail" aria-label="Customize rail" aria-pressed="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
       </button>
@@ -2714,11 +3555,15 @@
               <div class="feed-main">
                 <div class="feed" id="feed"></div>
                 <div class="composer" id="composer">
-                  <span class="address-chip hide" id="composer-address">@Adam · one</span>
-                  <div class="composer-input" aria-hidden="true">Message the room…</div>
-                  <span class="mic-glyph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
-                  </span>
+                  <span class="address-chip hide" id="composer-address">@Cline · one</span>
+                  <button type="button" id="composer-input" class="composer-input" title="Message the room" aria-label="Message the room">
+                    <span class="composer-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                    <span class="composer-text" data-placeholder="Message the room…">Message the room…</span>
+                    <span class="composer-caret" aria-hidden="true"></span>
+                  </button>
+                  <button type="button" id="composer-mic" class="composer-mic" title="Voice input" aria-label="Voice input">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+                  </button>
                   <button type="button" id="composer-send" title="Send" aria-label="Send message">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                   </button>
@@ -2746,8 +3591,8 @@
           <div class="room-card">
             <span class="live" aria-hidden="true"></span>
             <div>
-              <div class="name">router-fix</div>
-              <div class="meta">Adam · ready to join</div>
+              <div class="name">demo-polish</div>
+              <div class="meta">Cline · ready to join</div>
             </div>
             <button type="button" class="join">Join</button>
           </div>
@@ -2778,17 +3623,17 @@
               <h3>Changelog</h3>
               <p>What happened, chronologically.</p>
               <div class="log-list">
-                <div class="log-item"><span class="t">17:02</span><span>Riley published edit on <code>retry.ts</code></span></div>
-                <div class="log-item"><span class="t">17:01</span><span>Adam test card green — retry once</span></div>
-                <div class="log-item"><span class="t">16:58</span><span>You joined router-fix</span></div>
+                <div class="log-item"><span class="t">17:02</span><span>Riley published edit on <code>verify.js</code></span></div>
+                <div class="log-item"><span class="t">17:01</span><span>Cline battery green — zero re-mounts</span></div>
+                <div class="log-item"><span class="t">16:58</span><span>You joined demo-polish</span></div>
               </div>
             </div>
             <div class="lens-panel" id="lens-sessions">
               <h3>Sessions</h3>
               <p>Did Drive sessions get work done?</p>
               <div class="sess-list">
-                <div class="sess-item"><span class="t">live</span><span>router-fix · Adam + Riley · 3 stage cards</span></div>
-                <div class="sess-item"><span class="t">earlier</span><span>bootstrap-flag · closed with handoff</span></div>
+                <div class="sess-item"><span class="t">live</span><span>demo-polish · Cline + Riley · 3 stage cards</span></div>
+                <div class="sess-item"><span class="t">earlier</span><span>vscode-screen · closed with handoff</span></div>
               </div>
             </div>
             <div class="lens-panel" id="lens-depmap">
@@ -2797,19 +3642,19 @@
               <div class="dep-map">
                 <div class="graph-box">
                   <div class="graph-nodes">
-                    <span class="g-node hot">guard pending</span>
+                    <span class="g-node hot">fix captions</span>
                     <span class="g-edge">→</span>
-                    <span class="g-node">unit tests</span>
+                    <span class="g-node">battery</span>
                     <span class="g-edge">→</span>
-                    <span class="g-node">explain race</span>
+                    <span class="g-node">write-up</span>
                     <span class="g-edge">→</span>
-                    <span class="g-node">commit</span>
+                    <span class="g-node">open PR</span>
                   </div>
                 </div>
                 <div class="plans-rail">
                   <h4>Plans</h4>
-                  <div class="plan-node on">Now · running router unit tests</div>
-                  <div class="plan-node">Next · explain the race, then commit</div>
+                  <div class="plan-node on">Now · pinning the caption slot</div>
+                  <div class="plan-node">Next · run the battery, then write up</div>
                   <div class="plan-node">Later · open PR</div>
                 </div>
               </div>
@@ -2844,10 +3689,10 @@
           <div class="agents-grid">
             <div class="agent-card">
               <div class="agent-id">
-                <span class="agent-av" aria-hidden="true">A</span>
+                <span class="agent-av" aria-hidden="true">C</span>
                 <div>
-                  <div class="agent-name">Adam</div>
-                  <div class="agent-role">pair partner · router-fix</div>
+                  <div class="agent-name">Cline</div>
+                  <div class="agent-role">pair partner · demo-polish</div>
                 </div>
               </div>
               <div class="agent-teams"><span class="team-chip">Core</span></div>
@@ -2857,7 +3702,7 @@
                 <span class="agent-av" aria-hidden="true">R</span>
                 <div>
                   <div class="agent-name">Riley</div>
-                  <div class="agent-role">docs &amp; review</div>
+                  <div class="agent-role">regression checks &amp; review</div>
                 </div>
               </div>
               <div class="agent-teams"><span class="team-chip">Core</span><span class="team-chip">Docs</span></div>
@@ -2888,9 +3733,9 @@
             <div class="team-card">
               <div class="team-head">
                 <span class="team-name">Core</span>
-                <span class="team-members" aria-hidden="true"><span class="agent-av">A</span><span class="agent-av">R</span></span>
+                <span class="team-members" aria-hidden="true"><span class="agent-av">C</span><span class="agent-av">R</span></span>
               </div>
-              <div class="team-desc">Adam + Riley · ships the fix</div>
+              <div class="team-desc">Cline + Riley · ships the polish</div>
               <button type="button" class="call-team" title="Seats the whole team in one call">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Call team
@@ -2901,7 +3746,7 @@
                 <span class="team-name">Docs</span>
                 <span class="team-members" aria-hidden="true"><span class="agent-av">R</span><span class="agent-av">S</span></span>
               </div>
-              <div class="team-desc">Riley + Sam · keeps the docs honest</div>
+              <div class="team-desc">Riley + Sam · keeps the battery green</div>
               <button type="button" class="call-team" title="Seats the whole team in one call">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Call team
@@ -2920,29 +3765,29 @@
           <div class="dep-map">
             <div class="graph-box">
               <div class="graph-nodes">
-                <span class="g-node done">guard pending flag ✓</span>
+                <span class="g-node done">fingerprint regions ✓</span>
                 <span class="g-edge">→</span>
-                <span class="g-node done">unit tests ✓</span>
+                <span class="g-node done">gate animations ✓</span>
                 <span class="g-edge">→</span>
-                <span class="g-node hot">explain race</span>
+                <span class="g-node hot">fix captions</span>
                 <span class="g-edge">→</span>
-                <span class="g-node">commit</span>
+                <span class="g-node">battery</span>
                 <span class="g-edge">→</span>
                 <span class="g-node">open PR</span>
                 <span class="g-edge">→</span>
-                <span class="g-node blocked">changelog entry<span class="g-sub">waits on PR</span></span>
+                <span class="g-node blocked">README GIF<span class="g-sub">waits on PR</span></span>
               </div>
               <div class="graph-nodes">
-                <span class="g-node done">retry.ts docs ✓<span class="g-sub">Riley</span></span>
+                <span class="g-node done">regression checks ✓<span class="g-sub">Riley</span></span>
                 <span class="g-edge join">↗ joins before open PR</span>
               </div>
               <div class="tasks-legend">amber = in progress · green = done · dashed = blocked</div>
             </div>
             <div class="plans-rail">
               <h4>Plans</h4>
-              <div class="plan-node on">Now · explain the race, then commit</div>
+              <div class="plan-node on">Now · fix captions, then battery</div>
               <div class="plan-node">Next · open PR</div>
-              <div class="plan-node">Later · changelog</div>
+              <div class="plan-node">Later · README GIF</div>
             </div>
           </div>
         </div>
@@ -2953,7 +3798,7 @@
         <div class="rooms-page">
           <h2>Inbox <span class="badge planned">planned</span></h2>
           <p class="lead">Approvals and needs-you items land here.</p>
-          <div class="inbox-row"><span>pr_create</span><span class="ok">approved</span><span class="t">act 9</span></div>
+          <div class="inbox-row"><span>pr_create</span><span class="ok">approved · PR #91</span><span class="t">act 9</span></div>
         </div>
       </div>
 
@@ -2967,28 +3812,30 @@
       </div>
 
       <div class="handoff" id="handoff">
+        <div class="handoff-panel">
         <h3>End · handoff packet</h3>
         <div class="tier">Tier-0 · typed events only · no LLM invention</div>
         <div class="handoff-grid">
           <div class="handoff-col">
             <h4>Done</h4>
             <ul>
-              <li>Guard scheduleRetry pending flag</li>
-              <li>Unit tests green</li>
+              <li>Regions fingerprinted; animations gated</li>
+              <li>Caption slot fixed</li>
             </ul>
           </div>
           <div class="handoff-col">
             <h4>Open</h4>
             <ul>
-              <li>Explain race in PR body</li>
+              <li>README GIF re-record</li>
             </ul>
           </div>
           <div class="handoff-col">
             <h4>Resume next</h4>
             <ul>
-              <li>Commit + open PR</li>
+              <li>Merge PR #91</li>
             </ul>
           </div>
+        </div>
         </div>
       </div>
 
@@ -3006,7 +3853,7 @@
 
       <div class="pip" id="pip">
         <div class="pip-head">
-          <span class="name" id="pip-name">Adam</span>
+          <span class="name" id="pip-name">Cline</span>
           <span class="badge planned">planned</span>
         </div>
         <div class="narr" id="pip-narr"></div>
@@ -3050,7 +3897,7 @@
       <button type="button" class="strip-btn leave" id="strip-leave" title="Leave call" aria-label="Leave call">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
       </button>
-      <span class="partner-label" id="partner-label">with <b>Adam</b></span>
+      <span class="partner-label" id="partner-label">with <b>Cline</b></span>
     </div>
   </div>
 </div>
@@ -3066,6 +3913,34 @@
 </div>
 
 <div class="rail-scrim" id="rail-scrim" aria-hidden="true"></div>
+
+<!-- First-load orientation card. Never covers the player bar (z 38 < 40);
+     wired in the script block: Play shares #btn-play's start path, and
+     Esc / Space / any beat navigation dismisses into explore mode. -->
+<div class="intro-scrim" id="intro-overlay" role="dialog" aria-label="About this demo">
+  <div class="intro-card">
+    <button type="button" class="intro-close" id="intro-close" title="Close (Esc)" aria-label="Close intro">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <div class="intro-eyebrow">Drive · product demo</div>
+    <h1 class="intro-title">Watch a real bug get fixed, live on a call</h1>
+    <p class="intro-line">A scripted reenactment of a real session: the page you're watching is the page being fixed.</p>
+    <button type="button" class="intro-play" id="intro-play">
+      <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M4 2l8 5-8 5z"/></svg>
+      Play the demo
+    </button>
+    <div class="intro-meta">≈3 minutes · sound on — narration starts at half volume</div>
+    <div class="intro-keys">
+      <span><kbd>Space</kbd> play / pause</span>
+      <span><kbd>←</kbd><kbd>→</kbd> step beats</span>
+      <span><kbd>Esc</kbd> explore on your own</span>
+    </div>
+    <div class="intro-legend">
+      <span class="badge shipped">shipped</span> exists in the product today
+      <span class="badge planned">planned</span> design intent
+    </div>
+  </div>
+</div>
 
 <div class="demo-cursor-layer" id="demo-cursor-layer" aria-hidden="true">
   <div id="demo-cursor">
@@ -3089,7 +3964,7 @@
   /** @typedef {{ id: string, kind: 'edit'|'command'|'test', title: string, summary: string, diff?: Array<{t:'add'|'del',s:string}> }} StageCard */
   /** Director layer: the presented show artifact (StickyStagePane analogue) and
    *  the Show backlog the director is staging from.
-   * @typedef {{ kind: 'plan'|'diagram'|'walk'|'capture', kindLabel: string, sticky: 'replace'|'hold', maturity?: string, title: string, body: object }} ShowArtifact
+   * @typedef {{ kind: 'plan'|'diagram'|'walk'|'capture'|'anim', kindLabel: string, sticky: 'replace'|'hold', maturity?: string, title: string, body: object }} ShowArtifact
    * @typedef {{ id: string, label: string, status: 'planned'|'ready'|'showing'|'shown' }} ShowBacklogItem */
   /** Session artifact: a row on the Artifacts surface. Grown by RESTATING
    *  the full array in each beat's patch (deepMerge replaces arrays wholesale).
@@ -3160,9 +4035,9 @@
     // Room sessions (Rooms surface). Stop ≠ lose: a stopped room keeps its
     // config + history (ARD-0013 durable log) and can be started again.
     rooms: [
-      { id: "router-fix", name: "router-fix", status: "live", meta: "Adam + Riley · started 16:58" },
-      { id: "bootstrap-flag", name: "bootstrap-flag", status: "paused", meta: "config + history kept" },
-      { id: "payments-audit", name: "payments-audit", status: "ended", meta: "handoff saved" },
+      { id: "demo-polish", name: "demo-polish", status: "live", meta: "Cline + Riley · started 16:58" },
+      { id: "voice-clips", name: "voice-clips", status: "paused", meta: "config + history kept" },
+      { id: "vscode-screen", name: "vscode-screen", status: "ended", meta: "handoff saved" },
     ],
     surface: "chat",
     statusLens: "board",
@@ -3212,88 +4087,119 @@
   }
 
   const YOU = { id: "you", name: "You", role: "human", handRaised: false };
-  const ADAM = { id: "adam", name: "Adam", role: "agent", handRaised: false };
+  const CLINE = { id: "cline", name: "Cline", role: "agent", handRaised: false };
   const RILEY = { id: "riley", name: "Riley", role: "agent", handRaised: false };
 
   const CARD_EDIT = {
     id: "card_edit",
     kind: "edit",
-    title: "router.ts",
-    summary: "Guard scheduleRetry when req.pending is already set.",
+    title: "drive-product-demo.html",
+    summary: "Repaint a region only when its fingerprint changes.",
     diff: [
-      { t: "del", s: "if (req.timer) scheduleRetry(req);" },
-      { t: "add", s: "if (req.timer && !req.pending) scheduleRetry(req);" },
+      { t: "del", s: 'feed.innerHTML = "";' },
+      { t: "add", s: "if (feedSig !== R.feedSig) {" },
     ],
   };
   const CARD_CMD = {
     id: "card_cmd",
     kind: "command",
-    title: "unit tests",
-    summary: "bun -F @cline/core test:unit",
+    title: "battery",
+    summary: "bun verify.js",
   };
   const CARD_TEST = {
     id: "card_test",
     kind: "test",
-    title: "retry once",
-    summary: "Router retries exactly once per timeout — green.",
+    title: "node identity",
+    summary: "Same node before and after a beat — green.",
   };
   const CARD_RILEY = {
     id: "card_riley",
     kind: "edit",
-    title: "retry.ts",
-    summary: "Clarify timeout window in scheduleRetry docs.",
+    title: "verify.js",
+    summary: "Regression checks so the flash can't sneak back in.",
     diff: [
-      { t: "add", s: "// scheduleRetry fires at most once per timeout window" },
+      { t: "add", s: "// assert: same node before and after a beat" },
     ],
   };
 
   /** Session artifacts (Artifacts surface). Titles/sticky/maturity mirror the
    *  show object of the beat that presented each one. @type {SessionArtifact[]} */
-  const ART_PLAN = { id: "art-plan", kindLabel: "doc.plan", title: "Fix plan · router-fix", presenter: "Adam", act: 3, sticky: "replace" };
-  const ART_ARCH = { id: "art-arch", kindLabel: "diagram.architecture", title: "cline-drive · system architecture", presenter: "Adam", act: 3, sticky: "hold" };
-  const ART_WALK = { id: "art-walk", kindLabel: "walkthrough.code", title: "router.ts · the guard", presenter: "Adam", act: 3, sticky: "hold" };
-  const ART_CAPTURE = { id: "art-capture", kindLabel: "capture.screenshot", title: "router-lab · retry proof", presenter: "Adam", act: 3, sticky: "replace", maturity: "planned" };
-  const ART_HANDOFF = { id: "art-handoff", kindLabel: "doc.handoff", title: "Tier-0 handoff · router-fix", presenter: "Hub", act: 7, sticky: "replace" };
+  // Presented FIRST (a3-bug): the explanatory animation of the bug itself.
+  // walkthrough.animation is a real ShowArtifactKind member
+  // (sdk/packages/shared drive director schema) that the product has not
+  // built yet — beat and artifact both carry the planned badge.
+  const ART_ANIM = { id: "art-anim", kindLabel: "walkthrough.animation", title: "the flash · before and after", presenter: "Cline", act: 3, sticky: "replace", maturity: "planned" };
+  const ART_PLAN = { id: "art-plan", kindLabel: "doc.plan", title: "Fix plan · demo-polish", presenter: "Cline", act: 3, sticky: "replace" };
+  const ART_RENDER = { id: "art-render", kindLabel: "diagram.data_flow", title: "demo render pipeline · where the flash lived", presenter: "Cline", act: 3, sticky: "hold" };
+  // The hub architecture stays in the session library as an explorable
+  // reference — staged in act 3 alongside the render map, presented only
+  // when a card click asks for it (no scripted beat presents it).
+  const ART_ARCH = { id: "art-arch", kindLabel: "diagram.architecture", title: "cline-drive · system architecture", presenter: "Cline", act: 3, sticky: "hold" };
+  const ART_WALK = { id: "art-walk", kindLabel: "walkthrough.code", title: "drive-product-demo.html · the guard", presenter: "Cline", act: 3, sticky: "hold" };
+  const ART_CAPTURE = { id: "art-capture", kindLabel: "capture.screenshot", title: "demo-polish · smooth playback", presenter: "Cline", act: 3, sticky: "replace", maturity: "planned" };
+  const ART_HANDOFF = { id: "art-handoff", kindLabel: "doc.plan", title: "Tier-0 handoff · demo-polish", presenter: "Hub", act: 7, sticky: "replace" };
 
   /** Show objects (ShowArtifact) — shared between the presenting beats and
    *  the explore-mode ART_SHOWS map, so a clicked artifact card presents the
    *  exact object the director staged. State is never mutated, so sharing
    *  the reference is safe. */
+  // The bug, explained with motion: buildScreenBody renders FLASH_ANIM_HTML
+  // (a self-contained CSS-animated before/after) for kind "anim".
+  const SHOW_ANIM = {
+    kind: "anim",
+    kindLabel: "walkthrough.animation",
+    sticky: "replace",
+    maturity: "planned",
+    title: "the flash · before and after",
+    body: {},
+  };
   const SHOW_PLAN = {
     kind: "plan",
     kindLabel: "doc.plan",
     sticky: "replace",
-    title: "Fix plan · router-fix",
+    title: "Fix plan · demo-polish",
     body: {
       steps: [
-        { label: "Reproduce the race", state: "done" },
-        { label: "Guard the pending flag in scheduleRetry", state: "now" },
-        { label: "Tests, walkthrough, demo", state: "next" },
+        { label: "Reproduce: measure re-mounts per beat", state: "done" },
+        { label: "Fingerprint regions; skip unchanged repaints", state: "now" },
+        { label: "Gate animations; battery + walkthrough", state: "next" },
       ],
     },
+  };
+  const SHOW_RENDER = {
+    kind: "diagram",
+    kindLabel: "diagram.data_flow",
+    sticky: "hold",
+    title: "demo render pipeline · where the flash lived",
+    body: { svg: "render" },
   };
   const SHOW_ARCH = {
     kind: "diagram",
     kindLabel: "diagram.architecture",
     sticky: "hold",
     title: "cline-drive · system architecture",
-    body: {},
+    body: { svg: "arch" },
   };
   const SHOW_WALK = {
     kind: "walk",
     kindLabel: "walkthrough.code",
     sticky: "hold",
-    title: "router.ts · the guard",
+    title: "drive-product-demo.html · the guard",
     body: {
-      file: "router.ts",
-      range: "L41–L46",
+      file: "drive-product-demo.html",
+      range: "L6371–L6374",
+      // debug presents the walkthrough as a paused debug session: bp is
+      // the breakpoint line, step orders the CSS step-through, ghost/ret
+      // are inline-value decorations (both strings match — the skip path,
+      // so the debugger steps OVER the guarded block). The quoted lines
+      // and their gutter numbers are this file's REAL guard — verify.js
+      // asserts both stay true.
+      debug: true,
       lines: [
-        { n: 41, t: "function onTimeout(req) {" },
-        { n: 42, t: "  if (!req.active) return;" },
-        { n: 43, t: "  if (req.pending) return; // guard: retry queued", hl: true },
-        { n: 44, t: "  req.pending = true;", hl: true },
-        { n: 45, t: "  scheduleRetry(req);" },
-        { n: 46, t: "}" },
+        { n: 6371, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 6372, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 6373, t: "      R.feedSig = feedSig;", hl: true },
+        { n: 6374, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -3302,28 +4208,30 @@
     kindLabel: "capture.screenshot",
     sticky: "replace",
     maturity: "planned",
-    title: "router-lab · retry proof",
-    body: { url: "localhost:3000/router-lab", toast: "1 retry → 200 OK" },
+    title: "demo-polish · smooth playback",
+    body: { url: "drive-product-demo.html", toast: "beats advancing · zero re-mounts" },
   };
   // The handoff packet as a stage show (plan renderer: done / open / next
   // mirror the Tier-0 columns). Explore-only — no beat presents it.
   const SHOW_HANDOFF = {
     kind: "plan",
-    kindLabel: "doc.handoff",
+    kindLabel: "doc.plan",
     sticky: "replace",
-    title: "Tier-0 handoff · router-fix",
+    title: "Tier-0 handoff · demo-polish",
     body: {
       steps: [
-        { label: "Done · guard scheduleRetry pending flag, tests green", state: "done" },
-        { label: "Open · explain race in PR body", state: "now" },
-        { label: "Resume next · commit + open PR", state: "next" },
+        { label: "Done · regions fingerprinted, caption slot fixed", state: "done" },
+        { label: "Open · README GIF re-record", state: "now" },
+        { label: "Resume next · merge PR #91", state: "next" },
       ],
     },
   };
 
   /** Explore mode: artifact id → the ShowArtifact a card click presents. */
   const ART_SHOWS = {
+    "art-anim": SHOW_ANIM,
     "art-plan": SHOW_PLAN,
+    "art-render": SHOW_RENDER,
     "art-arch": SHOW_ARCH,
     "art-walk": SHOW_WALK,
     "art-capture": SHOW_CAPTURE,
@@ -3336,16 +4244,24 @@
   /** Beat extras: `chime` fires a notification tone on beat entry during
    *  autoplay ('complete' = task done, 'attention' = needs you). `speech`
    *  marks a line the human SAYS on the call — it feeds the derived CC
-   *  transcript alongside narration transitions (nothing is stored).
-   *  `modeCycle` is render-only chrome: the mode pill cycles these labels
-   *  while the beat is on screen — it never folds into state.
-   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,chime?:'complete'|'attention',speech?:{who:string,text:string},modeCycle?:string[],patch:object}>} */
+   *  transcript alongside narration transitions (nothing is stored);
+   *  `after: true` files it after the beat's narration line (matching the
+   *  clip order when the human answers the agent). `input` choreographs a
+   *  REAL composer entry during autoplay: the cursor's first click is the
+   *  beat's cursor spec (input or mic), the text then types ('type') or
+   *  transcribes from the human clip ('stt'), and only after the sequence
+   *  completes does the cursor press Send and the patch land — so the send
+   *  click always has visible causality. `modeCycle` is render-only chrome:
+   *  the mode pill cycles these labels while the beat is on screen — it
+   *  never folds into state.
+   * @typedef {{ mode: 'type'|'stt', text: string, clip?: string }} InputSpec
+   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,chime?:'complete'|'attention',speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
   const BEATS = [
     {
       id: "a0-hub",
       act: 0,
       title: "Empty Chat / hub rail",
-      caption: "Instant join. No lobby. Chat Join is a shortcut into the active room.",
+      caption: "The product at rest: an empty chat and the hub rail. Cline is already at work on a bug you reported.",
       maturity: "shipped",
       dwellMs: 1400,
       patch: { surface: "chat", driveOn: false, inCall: false },
@@ -3354,7 +4270,7 @@
       id: "a0-drive-tab",
       act: 0,
       title: "Open Drive tab (rooms list)",
-      caption: "Drive tab lists call rooms. Opening a room is the product home path.",
+      caption: "The Drive tab lists live rooms — one call per piece of work. Yours is demo-polish.",
       maturity: "shipped",
       dwellMs: 1200,
       cursor: { target: "#rail-drive", action: "click" },
@@ -3364,7 +4280,7 @@
       id: "a1-join",
       act: 1,
       title: "Join call / Drive on",
-      caption: "call_join createOrAttach. Hub is the single writer of room state.",
+      caption: "You join the call — Cline is already there, working on its shared screen.",
       hubOp: "call_join",
       maturity: "shipped",
       dwellMs: 1600,
@@ -3373,42 +4289,42 @@
         surface: "drive-in-call",
         driveOn: true,
         inCall: true,
-        narration: "Hey — good timing. I'm on that double-retry bug in the router. Give me a second and I'll show you what I found.",
+        narration: "Hey — good timing. I'm looking at that flashing you reported. Give me a second and I'll show you what's going on.",
         participants: [{ ...YOU, wstatus: "idle", task: "on the call" }],
         stage: {
-          sharer: "Adam",
-          sharerId: "adam",
+          sharer: "Cline",
+          sharerId: "cline",
           cards: [],
           pin: null,
-          // Adam's live workspace — the screen is never just an avatar.
+          // Cline's live workspace — the screen is never just an avatar.
           work: {
-            file: "router.ts",
+            file: "drive-product-demo.html",
             code: [
-              { t: "function onTimeout(req) {" },
-              { t: "  if (!req.active) return;" },
-              { t: "  if (req.timer) scheduleRetry(req);" },
-              { t: "  req.attempts += 1;" },
+              { t: "function render(state, beat) {" },
+              { t: '  feed.innerHTML = "";' },
+              { t: "  state.feedMessages.forEach(addMsg);" },
+              { t: '  roster.innerHTML = "";' },
               { t: "}" },
             ],
-            caret: 2,
+            caret: 1,
             term: [
-              { t: "$ bun -F @cline/core test:unit", cls: "dim" },
+              { t: "$ bun verify.js", cls: "dim" },
               { t: "queued · waiting for workspace", cls: "dim" },
             ],
             spin: false,
-            activity: "opening workspace · router-fix",
+            activity: "opening workspace · demo-polish",
           },
         },
         feedMessages: [
-          { id: "m0", from: "system", who: "Hub", text: "Joined router-fix via call_join createOrAttach." },
+          { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
         ],
       },
     },
     {
       id: "a1-roster",
       act: 1,
-      title: "You + Adam seated; strip; mode Agent",
-      caption: "Participants project from RoomSnapshot. Call strip mounts while Drive is on.",
+      title: "You + Cline seated; strip; mode Agent",
+      caption: "You and Cline share the room. The strip at the bottom is the call: mic, hand, share, captions.",
       hubOp: "call_get_room",
       maturity: "shipped",
       dwellMs: 1400,
@@ -3418,34 +4334,38 @@
         narration: "",
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "finding the race" },
+          { ...CLINE, wstatus: "working", task: "finding the flash" },
         ],
         mode: "Agent",
         feedMessages: [
-          { id: "m0", from: "system", who: "Hub", text: "Joined router-fix via call_join createOrAttach." },
-          { id: "m1", from: "system", who: "Room", text: "Adam seated. Mode · Agent." },
+          { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
+          { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
         ],
       },
     },
     {
       id: "a2-address",
       act: 2,
-      title: "Address chip → Adam",
-      caption: "Address is a first-class send parameter: one, many, everyone, or a pack.",
+      title: "Address chip → Cline",
+      caption: "Click a name to pick who you're talking to — here, just Cline.",
       hubOp: "addressSet",
       maturity: "shipped",
       dwellMs: 1200,
-      cursor: { target: "#member-adam", action: "click" },
+      cursor: { target: "#member-cline", action: "click" },
       patch: {
         addressSet: ["one"],
         stage: {
           work: {
+            // Real rg over THIS file: the anchored pattern's full match set
+            // is exactly these three region-clearing lines — line numbers
+            // and text are literal (verify.js re-runs the search).
             term: [
-              { t: '$ rg "scheduleRetry" src/' },
-              { t: "src/router.ts:43:  if (req.timer) scheduleRetry(req);", cls: "dim" },
-              { t: "src/retry.ts:12: export function scheduleRetry(req) {", cls: "dim" },
+              { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
+              { t: '6374:      feed.innerHTML = "";', cls: "dim" },
+              { t: '6413:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '6449:      spot.innerHTML = "";', cls: "dim" },
             ],
-            activity: "locating the race",
+            activity: "locating the flash",
           },
         },
       },
@@ -3454,60 +4374,64 @@
       id: "a2-message",
       act: 2,
       title: "User message in feed",
-      caption: "Feed stays the default work surface while Drive is on.",
+      caption: "You say the bug out loud — voice input transcribes it straight into the chat.",
       maturity: "shipped",
       dwellMs: 1600,
-      cursor: { target: "#composer-send", action: "click" },
-      speech: { who: "You", text: "Find the race in scheduleRetry and show me the fix in Spotlight." },
+      // Real dictation: the cursor clicks the mic, Harrison's recorded line
+      // (you-01) plays while the words transcribe into the input in chunks,
+      // then the cursor presses Send — only then does the message land.
+      cursor: { target: "#composer-mic", action: "click" },
+      input: { mode: "stt", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?", clip: "you-01-fix-the-flashing.mp3" },
+      speech: { who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
       patch: {
         feedMessages: [
-          { id: "m0", from: "system", who: "Hub", text: "Joined router-fix via call_join createOrAttach." },
-          { id: "m1", from: "system", who: "Room", text: "Adam seated. Mode · Agent." },
-          { id: "m2", from: "you", who: "You", text: "Addressing Adam…", chips: ["@Adam", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Find the race in scheduleRetry and show me the fix in Spotlight." },
+          { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
+          { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
+          { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
         ],
       },
     },
     {
       id: "a2-narration",
       act: 2,
-      title: "Adam narrates; Now/Next set",
-      caption: "Partner narrates decisions, not keystrokes. Now/Next orients the plan cursor.",
+      title: "Cline narrates; Now/Next set",
+      caption: "Cline talks through what it found — decisions, not keystrokes — and lines up what's next.",
       hubOp: "narration",
       maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#spotlight", action: "move" },
       patch: {
-        narration: "Okay, found it. If two timeouts overlap, schedule-retry fires twice. Let me put it on the screen.",
-        nowLabel: "running router unit tests",
-        nextLabel: "explain the race, then commit",
+        narration: "Okay, found it. Every beat, we rebuild the whole page — so everything replays its entrance animation. That's the flash. Let me put it on the screen.",
+        nowLabel: "measuring re-mounts per beat",
+        nextLabel: "fingerprint regions, skip repaints",
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "running unit tests" },
+          { ...CLINE, wstatus: "working", task: "measuring re-mounts" },
         ],
         stage: {
           work: {
             code: [
-              { t: "function onTimeout(req) {" },
-              { t: "  if (!req.active) return;" },
-              { t: "  if (req.timer) scheduleRetry(req);", hl: true },
-              { t: "  req.attempts += 1;" },
+              { t: "function render(state, beat) {" },
+              { t: '  feed.innerHTML = "";', hl: true },
+              { t: "  state.feedMessages.forEach(addMsg);" },
+              { t: '  roster.innerHTML = "";' },
               { t: "}" },
             ],
             term: [
-              { t: "$ bun -F @cline/core test:unit" },
-              { t: "router retry · once per timeout — running", cls: "dim" },
+              { t: "$ bun verify.js" },
+              { t: "counting re-mounts per beat — running", cls: "dim" },
             ],
             spin: true,
-            activity: "running router unit tests",
+            activity: "measuring re-mounts per beat",
           },
         },
         feedMessages: [
-          { id: "m0", from: "system", who: "Hub", text: "Joined router-fix via call_join createOrAttach." },
-          { id: "m1", from: "system", who: "Room", text: "Adam seated. Mode · Agent." },
-          { id: "m2", from: "you", who: "You", text: "Addressing Adam…", chips: ["@Adam", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Find the race in scheduleRetry and show me the fix in Spotlight." },
-          { id: "m4", from: "agent", who: "Adam", text: "Okay, found it — scheduleRetry can fire twice. Watch the Spotlight." },
+          { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
+          { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
+          { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m4", from: "agent", who: "Cline", text: "Okay, found it — every beat rebuilds the whole page. Watch the Spotlight." },
         ],
       },
     },
@@ -3515,7 +4439,7 @@
       id: "a2-cc",
       act: 2,
       title: "Live captions · CC panel",
-      caption: "Live captions: everything said on the call, ephemeral by design — nothing persists.",
+      caption: "Live captions of everything said on the call. Nothing is recorded — close them and they're gone.",
       hubOp: "captions",
       maturity: "planned",
       dwellMs: 1600,
@@ -3536,11 +4460,53 @@
       id: "a3-focus",
       act: 3,
       title: "Fold the feed · stage is the screen",
-      caption: "Voice-first: tuck the chat away. The shared screen takes the whole room.",
+      caption: "Voice-first: tuck the chat away. The shared screen takes the whole room — and the director's queue appears, staged.",
       maturity: "shipped",
       dwellMs: 1400,
       cursor: { target: "#feed-toggle", action: "click" },
-      patch: { feedCollapsed: true },
+      patch: {
+        feedCollapsed: true,
+        // The Show backlog appears fully staged before anything presents —
+        // the walkthrough.animation chip starts its planned → showing →
+        // shown arc here.
+        stage: {
+          backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "planned" },
+            { id: "s1", label: "doc.plan", status: "planned" },
+            { id: "s2", label: "diagram.data_flow", status: "planned" },
+            { id: "s3", label: "walkthrough.code", status: "planned" },
+            { id: "s4", label: "capture.screenshot", status: "planned" },
+          ],
+        },
+      },
+    },
+    {
+      // The director's opening move: EXPLAIN the bug with motion before any
+      // plan or code. walkthrough.animation is a real ShowArtifactKind the
+      // product hasn't built yet — the beat and its artifact wear the
+      // planned badge. No cursor: the director presents, nobody clicks.
+      id: "a3-bug",
+      act: 3,
+      title: "The bug, animated · before and after",
+      caption: "walkthrough.animation — the director explains with motion: every-beat rebuild vs fingerprint skip, side by side.",
+      hubOp: "drive.show.present",
+      maturity: "planned",
+      dwellMs: 2400,
+      patch: {
+        showHowInset: false,
+        narration: "Watch this — every beat, the whole page rebuilds, and everything animates back in. That's the flash. Now the fixed path: fingerprint matches, nothing moves — only the new message animates.",
+        artifacts: [ART_ANIM],
+        stage: {
+          show: SHOW_ANIM,
+          backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "showing" },
+            { id: "s1", label: "doc.plan", status: "ready" },
+            { id: "s2", label: "diagram.data_flow", status: "planned" },
+            { id: "s3", label: "walkthrough.code", status: "planned" },
+            { id: "s4", label: "capture.screenshot", status: "planned" },
+          ],
+        },
+      },
     },
     {
       id: "a3-plan",
@@ -3553,13 +4519,14 @@
       cursor: { target: "#spotlight", action: "move" },
       patch: {
         showHowInset: false,
-        narration: "Here's my plan of attack. I've already reproduced it — next I guard the pending flag, and then the tests prove it.",
-        artifacts: [ART_PLAN],
+        narration: "Here's the plan. Fingerprint what each region shows, skip the repaint when nothing changed, and only animate what's actually new.",
+        artifacts: [ART_ANIM, ART_PLAN],
         stage: {
           show: SHOW_PLAN,
           backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "shown" },
             { id: "s1", label: "doc.plan", status: "showing" },
-            { id: "s2", label: "diagram.architecture", status: "ready" },
+            { id: "s2", label: "diagram.data_flow", status: "ready" },
             { id: "s3", label: "walkthrough.code", status: "planned" },
             { id: "s4", label: "capture.screenshot", status: "planned" },
           ],
@@ -3569,20 +4536,21 @@
     {
       id: "a3-arch",
       act: 3,
-      title: "Drive architecture · sticky hold",
-      caption: "render_mermaid → SVG. The real cline-drive architecture holds the screen while narration advances.",
+      title: "Render pipeline · sticky hold",
+      caption: "render_mermaid → SVG. The demo's own render pipeline holds the screen while narration advances.",
       hubOp: "render_mermaid",
       maturity: "shipped",
       dwellMs: 2200,
       cursor: { target: "#spotlight .screen", action: "move" },
       patch: {
-        narration: "Quick map before I touch anything. Requests come through the router, and both timeout paths can reach schedule-retry. That amber box is where our race lives.",
-        artifacts: [ART_PLAN, ART_ARCH],
+        narration: "Quick map of how the demo renders. State folds in from the left, and render pushes it into these four regions. The flash lives right here — at this rebuild edge.",
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH],
         stage: {
-          show: SHOW_ARCH,
+          show: SHOW_RENDER,
           backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "shown" },
             { id: "s1", label: "doc.plan", status: "shown" },
-            { id: "s2", label: "diagram.architecture", status: "showing" },
+            { id: "s2", label: "diagram.data_flow", status: "showing" },
             { id: "s3", label: "walkthrough.code", status: "ready" },
             { id: "s4", label: "capture.screenshot", status: "planned" },
           ],
@@ -3600,10 +4568,10 @@
       cursor: { target: "#spotlight .screen", action: "move" },
       patch: {
         showHowInset: false,
-        narration: "I'll keep the map up while I make the change. Adding the guard now — if a retry is already pending, we just bail out.",
+        narration: "I'll keep the map up while I make the change. Adding the fingerprint check now — if the region's state didn't change, we don't touch it.",
         stage: {
-          sharer: "Adam",
-          sharerId: "adam",
+          sharer: "Cline",
+          sharerId: "cline",
           pin: null,
           cards: [CARD_EDIT],
         },
@@ -3636,7 +4604,7 @@
       cursor: { target: "#spotlight .card.command", action: "move" },
       chime: "complete",
       patch: {
-        narration: "There we go — green. One retry per timeout, exactly once.",
+        narration: "There we go — green. Same message node before and after the beat. Nothing re-mounts.",
         stage: {
           cards: [CARD_EDIT, CARD_CMD, CARD_TEST],
         },
@@ -3646,19 +4614,20 @@
       id: "a3-walk",
       act: 3,
       title: "Code walkthrough · review the fix",
-      caption: "walkthrough.code — rubber-duck slides over file + range, lines highlighted.",
+      caption: "walkthrough.code — the guard replayed as a debug session: breakpoint, step, the rebuild skipped.",
       hubOp: "render_code_walkthrough",
       maturity: "shipped",
       dwellMs: 2000,
       cursor: { target: "#spotlight .screen", action: "move" },
       patch: {
-        narration: "Let me walk you through it. Line forty-three is the whole fix — if pending is set, we return before ever scheduling.",
-        artifacts: [ART_PLAN, ART_ARCH, ART_WALK],
+        narration: "Let me walk you through it. This guard is the whole fix — compare the fingerprint, skip the rebuild, remember the new one.",
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK],
         stage: {
           show: SHOW_WALK,
           backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "shown" },
             { id: "s1", label: "doc.plan", status: "shown" },
-            { id: "s2", label: "diagram.architecture", status: "shown" },
+            { id: "s2", label: "diagram.data_flow", status: "shown" },
             { id: "s3", label: "walkthrough.code", status: "showing" },
             { id: "s4", label: "capture.screenshot", status: "ready" },
           ],
@@ -3675,13 +4644,14 @@
       dwellMs: 1800,
       cursor: { target: "#spotlight .screen", action: "move" },
       patch: {
-        narration: "And here it is live. The request times out, one retry, clean two hundred.",
-        artifacts: [ART_PLAN, ART_ARCH, ART_WALK, ART_CAPTURE],
+        narration: "And here it is live — beats advancing, zero flashes. Smooth.",
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK, ART_CAPTURE],
         stage: {
           show: SHOW_CAPTURE,
           backlog: [
+            { id: "s0", label: "walkthrough.animation", status: "shown" },
             { id: "s1", label: "doc.plan", status: "shown" },
-            { id: "s2", label: "diagram.architecture", status: "shown" },
+            { id: "s2", label: "diagram.data_flow", status: "shown" },
             { id: "s3", label: "walkthrough.code", status: "shown" },
             { id: "s4", label: "capture.screenshot", status: "showing" },
           ],
@@ -3710,16 +4680,20 @@
       hubOp: "steer queue",
       maturity: "shipped",
       dwellMs: 1400,
-      cursor: { target: "#composer-send", action: "click" },
-      speech: { who: "You", text: "Steer: keep the guard in router.ts only — retry.ts stays docs-only." },
+      // Deliberately TYPED, not spoken: Cline has the floor, so you steer
+      // in text without interrupting. The cursor clicks the input, the
+      // steer types out character by character, then Send.
+      cursor: { target: "#composer-input", action: "click" },
+      input: { mode: "type", text: "Also — the captions keep shifting around. Give them one consistent place." },
+      speech: { who: "You", text: "Also — the captions keep shifting around. Give them one consistent place." },
       patch: {
         feedMessages: [
-          { id: "m0", from: "system", who: "Hub", text: "Joined router-fix via call_join createOrAttach." },
-          { id: "m1", from: "system", who: "Room", text: "Adam seated. Mode · Agent." },
-          { id: "m2", from: "you", who: "You", text: "Addressing Adam…", chips: ["@Adam", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Find the race in scheduleRetry and show me the fix in Spotlight." },
-          { id: "m4", from: "agent", who: "Adam", text: "Okay, found it — scheduleRetry can fire twice. Watch the Spotlight." },
-          { id: "m5", from: "you", who: "You", text: "Steer: keep the guard in router.ts only — retry.ts stays docs-only.", chips: ["steer queued"] },
+          { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
+          { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
+          { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m4", from: "agent", who: "Cline", text: "Okay, found it — every beat rebuilds the whole page. Watch the Spotlight." },
+          { id: "m5", from: "you", who: "You", text: "Also — the captions keep shifting around. Give them one consistent place.", chips: ["steer queued"] },
         ],
       },
     },
@@ -3735,7 +4709,7 @@
       patch: {
         participants: [
           { ...YOU, handRaised: true, wstatus: "working", task: "steering" },
-          { ...ADAM, wstatus: "paused", task: "paused after tool — your turn" },
+          { ...CLINE, wstatus: "paused", task: "paused after tool — your turn" },
         ],
       },
     },
@@ -3751,7 +4725,7 @@
       patch: {
         muted: false,
         posture: "paused_after_tool",
-        narration: "Got it — the guard stays in the router. Let me finish this tool call, then you drive.",
+        narration: "Got it — one home for the captions. Let me finish this check, then you drive.",
       },
     },
     {
@@ -3769,39 +4743,37 @@
         stage: {
           show: null,
           backlog: [],
-          // Adam still holds the (now show-less) screen — the fixed
-          // router.ts with tests green; the sharer flips next beat.
+          // Cline still holds the (now show-less) screen — the fixed
+          // guard with the battery green; the sharer flips next beat.
           work: {
-            file: "router.ts",
+            file: "drive-product-demo.html",
             code: [
-              { t: "function onTimeout(req) {" },
-              { t: "  if (!req.active) return;" },
-              { t: "  if (req.pending) return; // guard: retry queued", hl: true },
-              { t: "  req.pending = true;" },
-              { t: "  scheduleRetry(req);" },
-              { t: "}" },
+              { t: "    const feedSig = JSON.stringify(feedSlice);" },
+              { t: "    if (feedSig !== R.feedSig) {", hl: true },
+              { t: "      R.feedSig = feedSig;" },
+              { t: '      feed.innerHTML = "";' },
             ],
             caret: null,
             term: [
-              { t: "$ bun -F @cline/core test:unit" },
-              { t: "router retry · once per timeout — pass", cls: "ok" },
+              { t: "$ bun verify.js" },
+              { t: "OK: 46 beats, 728 checks", cls: "ok" },
             ],
             spin: false,
-            activity: "explaining the race",
+            activity: "explaining the fix",
           },
         },
         participants: [
           { ...YOU, handRaised: false, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "explaining the race" },
-          { ...RILEY, wstatus: "working", task: "tightening retry docs" },
+          { ...CLINE, wstatus: "working", task: "explaining the fix" },
+          { ...RILEY, wstatus: "working", task: "adding regression checks" },
         ],
         feedMessages: [
-          { id: "m0", from: "system", who: "Hub", text: "Joined router-fix via call_join createOrAttach." },
-          { id: "m1", from: "system", who: "Room", text: "Adam seated. Mode · Agent." },
-          { id: "m2", from: "you", who: "You", text: "Addressing Adam…", chips: ["@Adam", "one"] },
-          { id: "m3", from: "you", who: "You", text: "Find the race in scheduleRetry and show me the fix in Spotlight." },
-          { id: "m4", from: "agent", who: "Adam", text: "Okay, found it — scheduleRetry can fire twice. Watch the Spotlight." },
-          { id: "m5", from: "you", who: "You", text: "Steer: keep the guard in router.ts only — retry.ts stays docs-only.", chips: ["steer queued"] },
+          { id: "m0", from: "system", who: "Hub", text: "Joined demo-polish via call_join createOrAttach." },
+          { id: "m1", from: "system", who: "Room", text: "Cline seated. Mode · Agent." },
+          { id: "m2", from: "you", who: "You", text: "Addressing Cline…", chips: ["@Cline", "one"] },
+          { id: "m3", from: "you", who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. It feels jarring. Can you make it one smooth experience?" },
+          { id: "m4", from: "agent", who: "Cline", text: "Okay, found it — every beat rebuilds the whole page. Watch the Spotlight." },
+          { id: "m5", from: "you", who: "You", text: "Also — the captions keep shifting around. Give them one consistent place.", chips: ["steer queued"] },
           { id: "m6", from: "system", who: "Room", text: "Riley joined the call." },
         ],
       },
@@ -3821,25 +4793,25 @@
           sharerId: "riley",
           // Riley's workspace takes over the screen as the sharer flips.
           work: {
-            file: "retry.ts",
+            file: "verify.js",
             code: [
-              { t: "export function scheduleRetry(req) {" },
-              { t: "  if (req.pending) return;" },
-              { t: "  req.pending = true;" },
-              { t: "  queue.push(req, req.timeoutMs);" },
-              { t: "}" },
+              { t: "    D.goTo(i - 1);" },
+              { t: '    const before = document.querySelector("#feed .msg");' },
+              { t: "    if (!before) continue;" },
+              { t: "    D.goTo(i);" },
+              { t: '    const same = before === document.querySelector("#feed .msg");' },
             ],
             caret: null,
-            typing: "// scheduleRetry fires at most once per timeout window",
+            typing: "// assert: same node before and after a beat",
             term: [
-              { t: "$ bun run lint retry.ts" },
-              { t: "clean · 0 warnings", cls: "ok" },
+              { t: "$ bun verify.js" },
+              { t: "OK: 46 beats, 728 checks", cls: "ok" },
             ],
             spin: false,
-            activity: "tightening retry docs",
+            activity: "adding regression checks",
           },
         },
-        narration: "Riley here — grabbing the screen for a minute. The retry docs still promise the old behavior, so I'm fixing that.",
+        narration: "Riley here — grabbing the screen for a minute. I'm adding regression checks so the flash can't sneak back in.",
       },
     },
     {
@@ -3867,14 +4839,14 @@
       maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: "#strip-share", action: "click" },
-      speech: { who: "You", text: "Here's what I mean — pinning my selection." },
+      speech: { who: "You", text: "Here's what I mean — it jumps from here to here." },
       patch: {
         stage: {
           sharer: "You",
           sharerId: "you",
           pin: {
-            label: "selection · router.ts",
-            ref: "Keep the guard in router.ts only — retry.ts stays docs-only. Add a regression test for the double-retry path.",
+            label: "selection · caption slot",
+            ref: "The caption renders in a different spot each beat — top of the stage, then under the deck. It jumps from here to here. One fixed home, please.",
           },
         },
       },
@@ -3892,32 +4864,32 @@
         statusLens: "board",
         pipVisible: true,
         showHowInset: false,
-        narration: "I'll keep working while you look around. Running the full suite in the background now.",
+        narration: "I'll keep working while you look around. Pinning the caption slot into place now.",
         // You navigated away — the pin moment is over. Spotlight returns to
-        // Adam, so this beat's dialogue line (his clip) attributes to him
+        // Cline, so this beat's dialogue line (his clip) attributes to him
         // in the derived CC transcript (attribution follows stage.sharer).
         stage: {
-          sharer: "Adam",
-          sharerId: "adam",
+          sharer: "Cline",
+          sharerId: "cline",
           pin: null,
           work: {
-            file: "router.ts",
+            file: "drive-product-demo.html",
             code: [
-              { t: "function onTimeout(req) {" },
-              { t: "  if (!req.active) return;" },
-              { t: "  if (req.pending) return; // guard: retry queued", hl: true },
-              { t: "  req.pending = true;" },
-              { t: "  scheduleRetry(req);" },
+              { t: "// fixed caption slot — one home, text swaps in place" },
+              { t: 'const narr = state.narration || "";' },
+              { t: "if (narr !== R.capText) {" },
+              { t: "  R.capText = narr;" },
+              { t: "  cap.textContent = narr;", hl: true },
               { t: "}" },
             ],
             caret: null,
             typing: null,
             term: [
-              { t: "$ bun -F @cline/core test:unit" },
-              { t: "router retry · once per timeout — pass", cls: "ok" },
+              { t: "$ bun verify.js" },
+              { t: "OK: 46 beats, 728 checks", cls: "ok" },
             ],
             spin: false,
-            activity: "explaining the race",
+            activity: "pinning the caption slot",
           },
         },
       },
@@ -3966,7 +4938,7 @@
       act: 6,
       title: "Artifacts surface",
       caption: "Artifacts: the session's Show backlog, kept reviewable — every plan, diagram, and capture in one place.",
-      maturity: "shipped",
+      maturity: "planned",
       dwellMs: 2000,
       cursor: { target: "#rail-artifacts", action: "click" },
       // Deliberately silent — the caption carries the product story.
@@ -4002,8 +4974,8 @@
         driveOn: false,
         surface: "drive",
         participants: [
-          { ...ADAM, wstatus: "working", task: "explaining the race" },
-          { ...RILEY, wstatus: "working", task: "tightening retry docs" },
+          { ...CLINE, wstatus: "working", task: "pinning the caption slot" },
+          { ...RILEY, wstatus: "working", task: "adding regression checks" },
         ],
         pipVisible: false,
         feedMessages: [],
@@ -4025,10 +4997,10 @@
         showLeaveChoice: false,
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "explaining the race" },
-          { ...RILEY, wstatus: "working", task: "docs review" },
+          { ...CLINE, wstatus: "working", task: "pinning the caption slot" },
+          { ...RILEY, wstatus: "working", task: "checks review" },
         ],
-        artifacts: [ART_PLAN, ART_ARCH, ART_WALK, ART_CAPTURE, ART_HANDOFF],
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK, ART_CAPTURE, ART_HANDOFF],
         feedMessages: [
           { id: "m7", from: "system", who: "Hub", text: "call_end · building Tier-0 handoff from typed events." },
         ],
@@ -4050,38 +5022,39 @@
         surface: "drive-in-call",
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "explaining the race" },
-          { ...RILEY, wstatus: "working", task: "docs review" },
+          { ...CLINE, wstatus: "working", task: "writing up the change" },
+          { ...RILEY, wstatus: "working", task: "checks review" },
         ],
         stage: {
-          sharer: "Adam",
-          sharerId: "adam",
+          sharer: "Cline",
+          sharerId: "cline",
           pin: null,
           cards: [CARD_RILEY, CARD_CMD, CARD_TEST],
-          // Adam is back on the screen, drafting the PR body.
+          // Cline is back on the screen, writing up the change.
           work: {
             file: "PR_BODY.md",
-            tabs: ["PR_BODY.md", "router.ts"],
+            tabs: ["PR_BODY.md", "drive-product-demo.html"],
             code: [
-              { t: "## router-fix · pending-flag race" },
+              { t: "## demo-polish · smooth render" },
               { t: "" },
-              { t: "– one retry per timeout window, proven by unit test" },
-              { t: "– Riley tightened the scheduleRetry docs" },
+              { t: "– regions repaint only when their fingerprint changes" },
+              { t: "– Riley added regression checks in verify.js" },
             ],
             caret: null,
-            typing: "– guard prevents double scheduleRetry",
+            typing: "– captions live in one fixed slot",
             term: [
               { t: "$ git status --short" },
-              { t: "2 files changed · router.ts retry.ts", cls: "dim" },
+              { t: " M drive-product-demo.html", cls: "dim" },
+              { t: "?? PR_BODY.md", cls: "dim" },
             ],
             spin: false,
-            activity: "drafting the PR body",
+            activity: "writing up the change",
           },
         },
         sinceYouLeft: null,
-        narration: "Welcome back — nothing was torn down. I'm drafting the PR body while it's fresh.",
+        narration: "Welcome back — nothing was torn down. I'm writing up the change while it's fresh.",
         feedMessages: [
-          { id: "m8", from: "system", who: "Hub", text: "Rejoined router-fix · createOrAttach (idempotent)." },
+          { id: "m8", from: "system", who: "Hub", text: "Rejoined demo-polish · createOrAttach (idempotent)." },
         ],
       },
     },
@@ -4095,10 +5068,10 @@
       dwellMs: 1800,
       cursor: { target: "#feed", action: "move" },
       patch: {
-        sinceYouLeft: "Riley published 1 edit card. Tests still green. Now: explain race.",
-        nowLabel: "explain the race, then commit",
+        sinceYouLeft: "Riley published 1 edit card. Battery still green. Now: write up the change.",
+        nowLabel: "write up the change, then commit",
         nextLabel: "open PR",
-        narration: "Quick catch-up: Riley shipped the docs fix, and the tests stayed green the whole time.",
+        narration: "Quick catch-up: Riley's regression checks landed, and the battery stayed green the whole time.",
       },
     },
     {
@@ -4119,17 +5092,17 @@
         stage: {
           work: {
             code: [
-              { t: "## router-fix · pending-flag race" },
+              { t: "## demo-polish · smooth render" },
               { t: "" },
-              { t: "– one retry per timeout window, proven by unit test" },
-              { t: "– Riley tightened the scheduleRetry docs" },
-              { t: "– guard prevents double scheduleRetry" },
+              { t: "– regions repaint only when their fingerprint changes" },
+              { t: "– Riley added regression checks in verify.js" },
+              { t: "– captions live in one fixed slot" },
             ],
             caret: 4,
             typing: null,
             term: [
-              { t: '$ git commit -m "fix(router): guard pending retry"' },
-              { t: "[router-fix 4c2a11d] 2 files changed", cls: "dim" },
+              { t: '$ git commit -m "docs(drivecode): differential render + fixed caption slot in demo"' },
+              { t: "[demo-polish d227f3e] 1 file changed, 254 insertions(+), 122 deletions(-)", cls: "dim" },
               { t: "$ gh pr create --fill" },
               { t: "waiting for approval…", cls: "dim" },
             ],
@@ -4162,11 +5135,11 @@
       dwellMs: 2200,
       chime: "attention",
       patch: {
-        narration: "One thing before I open the PR — I need your sign-off. The approval card is on your screen.",
+        narration: "One thing before I open the pull request — I need your sign-off. The approval card is on your screen.",
         showGatesCard: true,
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "needs-you", task: "waiting on pr_create approval" },
+          { ...CLINE, wstatus: "needs-you", task: "waiting on pr_create approval" },
           { ...RILEY, wstatus: "blocked", task: "waits on PR review" },
         ],
       },
@@ -4181,28 +5154,31 @@
       dwellMs: 1800,
       cursor: { target: ".gates-card .approve", action: "click" },
       chime: "complete",
+      // Harrison's recorded sign-off (you-04) plays first, then Cline's
+      // v3-15 — sequenced by CLIP_SEQS; the beat holds for both clips.
+      speech: { who: "You", text: "Looks good — approved. Go ahead." },
       patch: {
-        narration: "Thanks. PR twelve is up, with the handoff attached.",
+        narration: "Thanks. PR ninety-one is up, with the before and after attached.",
         showGatesCard: false,
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "opening the PR" },
-          { ...RILEY, wstatus: "working", task: "reviewing PR #12" },
+          { ...CLINE, wstatus: "working", task: "opening the PR" },
+          { ...RILEY, wstatus: "working", task: "reviewing PR #91" },
         ],
         stage: {
           work: {
             term: [
               { t: "$ gh pr create --fill" },
               { t: "waiting for approval…", cls: "dim" },
-              { t: "PR #12 opened ✓", cls: "ok" },
+              { t: "PR #91 opened ✓", cls: "ok" },
             ],
             spin: false,
             activity: "done — PR open",
           },
         },
         feedMessages: [
-          { id: "m8", from: "system", who: "Hub", text: "Rejoined router-fix · createOrAttach (idempotent)." },
-          { id: "m9", from: "system", who: "Hub", text: "pr_create approved — PR #12 opened." },
+          { id: "m8", from: "system", who: "Hub", text: "Rejoined demo-polish · createOrAttach (idempotent)." },
+          { id: "m9", from: "system", who: "Hub", text: "pr_create approved — PR #91 opened." },
         ],
       },
     },
@@ -4221,9 +5197,9 @@
       id: "a10-tasks",
       act: 10,
       title: "Tasks · dependency map, first-class",
-      caption: "Tasks: the dependency map as a first-class page — what blocks what, across agents.",
+      caption: "Tasks: what blocks what, across agents — the lens ships in Status Hub today; this first-class page is planned.",
       hubOp: "report_status",
-      maturity: "shipped",
+      maturity: "planned",
       dwellMs: 1600,
       cursor: { target: "#rail-tasks", action: "click" },
       patch: { surface: "tasks" },
@@ -4242,21 +5218,21 @@
     {
       id: "a10-stop",
       act: 10,
-      title: "Stop router-fix · nothing lost",
+      title: "Stop demo-polish · nothing lost",
       caption: "Session stopped — config and history kept. Start it again tomorrow.",
       hubOp: "call_end",
       maturity: "planned",
       dwellMs: 2000,
-      cursor: { target: "#room-stop-router", action: "click" },
+      cursor: { target: "#room-stop-demo", action: "click" },
       // Deliberately silent — the caption carries the product story.
       patch: {
         inCall: false,
         driveOn: false,
         participants: [],
         rooms: [
-          { id: "router-fix", name: "router-fix", status: "paused", meta: "paused · config + history kept" },
-          { id: "bootstrap-flag", name: "bootstrap-flag", status: "paused", meta: "config + history kept" },
-          { id: "payments-audit", name: "payments-audit", status: "ended", meta: "handoff saved" },
+          { id: "demo-polish", name: "demo-polish", status: "paused", meta: "paused · config + history kept" },
+          { id: "voice-clips", name: "voice-clips", status: "paused", meta: "config + history kept" },
+          { id: "vscode-screen", name: "vscode-screen", status: "ended", meta: "handoff saved" },
         ],
       },
     },
@@ -4271,6 +5247,9 @@
       caption: "Demo complete — this is a live surface now. Every rail item, lens, toggle, and card works. Press Play to run it again.",
       maturity: "shipped",
       dwellMs: 2400,
+      // Cline's v3-16 first, THEN Harrison's recorded handback (you-05) —
+      // `after` keeps the derived transcript in that spoken order.
+      speech: { who: "You", text: "Nice. I'll take it from here.", after: true },
       patch: {
         surface: "drive-in-call",
         inCall: true,
@@ -4278,43 +5257,43 @@
         narration: "And we're back — everything right where we left it. Take the wheel.",
         participants: [
           { ...YOU, wstatus: "idle", task: "on the call" },
-          { ...ADAM, wstatus: "working", task: "watching CI on PR #12" },
-          { ...RILEY, wstatus: "working", task: "reviewing PR #12" },
+          { ...CLINE, wstatus: "working", task: "watching CI on PR #91" },
+          { ...RILEY, wstatus: "working", task: "reviewing PR #91" },
         ],
         rooms: [
-          { id: "router-fix", name: "router-fix", status: "live", meta: "Adam + Riley · resumed just now" },
-          { id: "bootstrap-flag", name: "bootstrap-flag", status: "paused", meta: "config + history kept" },
-          { id: "payments-audit", name: "payments-audit", status: "ended", meta: "handoff saved" },
+          { id: "demo-polish", name: "demo-polish", status: "live", meta: "Cline + Riley · resumed just now" },
+          { id: "voice-clips", name: "voice-clips", status: "paused", meta: "config + history kept" },
+          { id: "vscode-screen", name: "vscode-screen", status: "ended", meta: "handoff saved" },
         ],
         stage: {
-          sharer: "Adam",
-          sharerId: "adam",
+          sharer: "Cline",
+          sharerId: "cline",
           pin: null,
           cards: [CARD_RILEY, CARD_CMD, CARD_TEST],
-          // Adam's post-fix workspace — PR open, suite green, nothing lost.
+          // Cline's post-fix workspace — PR open, battery green, nothing lost.
           work: {
             file: "PR_BODY.md",
             code: [
-              { t: "## router-fix · pending-flag race" },
+              { t: "## demo-polish · smooth render" },
               { t: "" },
-              { t: "– one retry per timeout window, proven by unit test" },
-              { t: "– Riley tightened the scheduleRetry docs" },
-              { t: "– guard prevents double scheduleRetry" },
+              { t: "– regions repaint only when their fingerprint changes" },
+              { t: "– Riley added regression checks in verify.js" },
+              { t: "– captions live in one fixed slot" },
             ],
             caret: null,
             typing: null,
             term: [
-              { t: "$ gh pr checks 12" },
-              { t: "PR #12 open · suite green", cls: "ok" },
+              { t: "$ gh pr checks 91" },
+              { t: "PR #91 open · battery green", cls: "ok" },
             ],
             spin: false,
             activity: "idle — take the wheel",
           },
         },
-        artifacts: [ART_PLAN, ART_ARCH, ART_WALK, ART_CAPTURE, ART_HANDOFF],
+        artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK, ART_CAPTURE, ART_HANDOFF],
         feedMessages: [
-          { id: "m8", from: "system", who: "Hub", text: "Rejoined router-fix · createOrAttach (idempotent)." },
-          { id: "m9", from: "system", who: "Hub", text: "pr_create approved — PR #12 opened." },
+          { id: "m8", from: "system", who: "Hub", text: "Rejoined demo-polish · createOrAttach (idempotent)." },
+          { id: "m9", from: "system", who: "Hub", text: "pr_create approved — PR #91 opened." },
         ],
       },
     },
@@ -4322,9 +5301,40 @@
 
   // ---- Player ----
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const TOTAL_MS = BEATS.reduce(function (s, b) { return s + b.dwellMs; }, 0);
-  const CUM_MS = BEATS.reduce(function (a, b) {
-    a.push((a.length ? a[a.length - 1] : 0) + b.dwellMs);
+
+  // Read-along pacing. Per-beat spoken words — what goTo speaks on
+  // autoplay entry: the folded narration when it CHANGES to non-empty,
+  // plus the beat's human speech line (pin gestures, dictated inputs,
+  // clip sequences). Effective duration = max(dwellMs, words × WORD_MS):
+  // with voice muted a narration beat holds that long instead of racing
+  // its authored dwell, and the SAME estimate drives the progress bar and
+  // the CC timestamps — one clock. (Kokoro speaks ≈180wpm ≈ 333ms/word,
+  // so the estimate tracks voiced wall time; the dwell-only clock ran 77s
+  // against ~190s of real narrated playback.)
+  const WORD_MS = 350;
+  function wordCount(text) {
+    return text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  }
+  const SPOKEN_WORDS = (function () {
+    const counts = [];
+    let s = initialState;
+    let prev = "";
+    BEATS.forEach(function (b) {
+      s = fold(s, b.patch);
+      const narr = s.narration || "";
+      let words = narr && narr !== prev ? wordCount(narr) : 0;
+      if (b.speech && b.speech.text) words += wordCount(b.speech.text);
+      prev = narr;
+      counts.push(words);
+    });
+    return counts;
+  })();
+  function effectiveMs(i) {
+    return Math.max(BEATS[i].dwellMs, SPOKEN_WORDS[i] * WORD_MS);
+  }
+  const TOTAL_MS = BEATS.reduce(function (s, b, i) { return s + effectiveMs(i); }, 0);
+  const CUM_MS = BEATS.reduce(function (a, b, i) {
+    a.push((a.length ? a[a.length - 1] : 0) + effectiveMs(i));
     return a;
   }, []);
   let index = 0;
@@ -4333,9 +5343,16 @@
   let modeCycleTimer = null;
   let modeCycleIdx = 0;
 
-  function dwellFor(beat) {
-    if (reducedMotion) return Math.min(400, Math.round(beat.dwellMs * 0.35));
-    return beat.dwellMs;
+  function dwellFor(i) {
+    // Reduced motion trims animation, not reading: beats that speak keep
+    // their full read-along span (the audio gate still paces them when
+    // voiced); silent beats keep the fast cap.
+    if (reducedMotion) {
+      return SPOKEN_WORDS[i]
+        ? effectiveMs(i)
+        : Math.min(400, Math.round(BEATS[i].dwellMs * 0.35));
+    }
+    return BEATS[i].dwellMs;
   }
 
   // ---- Simulated cursor ----
@@ -4485,54 +5502,88 @@
   // ring lands on the right member row (presence.speaking, demoed).
   let sharerIdNow = "";
 
-  /** Pre-rendered dialogue clips (Kokoro-82M, v2 in-world set — see the
-   *  manifest at assets/demos/voice/README.md): beatId → filename, one per
-   *  spoken line; narration display text matches clip text verbatim. The
-   *  canvas lives in design/canvases/, so clips resolve two levels up. */
+  /** Pre-rendered dialogue clips (agents: Kokoro-82M; "You": Harrison's
+   *  recorded voice — see the manifest at assets/demos/voice/README.md):
+   *  beatId → filename, one per spoken line; narration display text
+   *  matches clip text verbatim. The canvas lives in design/canvases/, so
+   *  clips resolve two levels up. */
   const CLIP_BASE = "../../assets/demos/voice/";
   const CLIPS = {
-    "a1-join": "v2-01-adam-good-timing.mp3",
-    "a2-narration": "v2-02-adam-found-it.mp3",
-    "a3-plan": "v2-03-adam-plan-of-attack.mp3",
-    "a3-arch": "v2-04-adam-quick-map.mp3",
-    "a3-edit": "v2-05-adam-keep-the-map-up.mp3",
-    "a3-test": "v2-06-adam-green.mp3",
-    "a3-walk": "v2-07-adam-line-forty-three.mp3",
-    "a3-demo": "v2-08-adam-live-clean-200.mp3",
-    "a4-pause": "v2-09-adam-you-drive.mp3",
-    "a5-sharer": "v2-10-riley-grabbing-screen.mp3",
-    "a6-status": "v2-11-adam-keep-working.mp3",
-    "a8-rejoin": "v2-12-adam-welcome-back.mp3",
-    "a8-since": "v2-13-adam-quick-catch-up.mp3",
-    "a9-gates": "v2-14-adam-need-your-signoff.mp3",
-    "a9-approved": "v2-15-adam-pr-twelve-up.mp3",
-    "a10-explore": "v2-16-adam-take-the-wheel.mp3",
+    "a1-join": "v3-01-cline-looking-at-flashing.mp3",
+    "a2-narration": "v3-02-cline-found-it.mp3",
+    "a3-bug": "v3-17-cline-watch-the-flash.mp3",
+    "a3-plan": "v3-03-cline-the-plan.mp3",
+    "a3-arch": "v3-04-cline-render-map.mp3",
+    "a3-edit": "v3-05-cline-fingerprint-check.mp3",
+    "a3-test": "v3-06-cline-green-no-remounts.mp3",
+    "a3-walk": "v3-07-cline-walkthrough-guard.mp3",
+    "a3-demo": "v3-08-cline-smooth-live.mp3",
+    "a4-pause": "v3-09-cline-you-drive.mp3",
+    "a5-sharer": "v3-10-riley-regression-checks.mp3",
+    "a6-status": "v3-11-cline-keep-working.mp3",
+    "a8-rejoin": "v3-12-cline-welcome-back.mp3",
+    "a8-since": "v3-13-cline-catch-up.mp3",
+    "a9-gates": "v3-14-cline-signoff.mp3",
   };
 
-  /** Dialogue player. Plays the pre-rendered clip for the beat (CLIPS);
-   *  speechSynthesis survives only as the per-line error fallback (e.g.
-   *  the canvas opened standalone without the assets directory). Queue
-   *  depth 1: narration is ambient, not archival — a new line cancels the
-   *  one in flight. `speaking` is set synchronously on speak() and cleared
-   *  on cancel so the indicator works in headless engines that never fire
-   *  media events; real play/ended/error events refine it when they exist.
-   *  Every attempt lands in Voice.log ({beatId, text, mode:"clip"|"synth"})
-   *  so e2e can assert without audio; with the voice toggle off nothing is
-   *  attempted, so nothing is logged. Each speak() also opens a completion
-   *  promise (done()/pending()) the player uses for auto_after_say pacing. */
+  /** Sequenced dialogue — beats where two voices speak in order. Each
+   *  segment: {file, text?, speaker?}; text defaults to the beat's
+   *  narration line, speaker (a member id) to the stage sharer. The beat
+   *  holds until the LAST clip ends — one completion promise spans the
+   *  sequence, and Voice.log records the segments in play order. */
+  const CLIP_SEQS = {
+    // Your recorded sign-off first, then Cline's "PR ninety-one is up".
+    "a9-approved": [
+      { file: "you-04-approved.mp3", text: "Looks good — approved. Go ahead.", speaker: "you" },
+      { file: "v3-15-cline-pr-ninety-one.mp3" },
+    ],
+    // Cline hands back first; your recorded "I'll take it from here" answers.
+    "a10-explore": [
+      { file: "v3-16-cline-take-the-wheel.mp3" },
+      { file: "you-05-take-it-from-here.mp3", text: "Nice. I'll take it from here.", speaker: "you" },
+    ],
+  };
+
+  /** Human speech clips that play on beat ENTRY without a composer input —
+   *  the pin gesture, where the click is the share button. Beats with an
+   *  `input` field carry their clip on beat.input.clip instead (the STT
+   *  flow plays it as the transcription source). */
+  const SPEECH_CLIPS = {
+    "a5-you-pin": { file: "you-03-jumps-here-to-here.mp3", speaker: "you" },
+  };
+
+  /** Dialogue player. Plays the pre-rendered clip(s) for the beat — one
+   *  per line for CLIPS, an ordered sequence for CLIP_SEQS — with
+   *  speechSynthesis surviving only as the per-segment error fallback
+   *  (e.g. the canvas opened standalone without the assets directory).
+   *  Queue depth 1 across beats: narration is ambient, not archival — a
+   *  new line cancels the one in flight. `speaking` is set synchronously
+   *  on speak() and cleared on cancel so the indicator works in headless
+   *  engines that never fire media events; real play/ended/error events
+   *  refine it when they exist. Every segment lands in Voice.log
+   *  ({beatId, text, mode:"clip"|"synth", clip}) in play order so e2e can
+   *  assert without audio; with the voice toggle off nothing is attempted,
+   *  so nothing is logged. Each speak()/speakSegs() opens ONE completion
+   *  promise (done()/pending()) spanning its whole sequence — the player
+   *  uses it for auto_after_say pacing. The speaking ring follows the
+   *  SEGMENT's speaker (human clips ring #member-you) and falls back to
+   *  the stage sharer. */
   const Voice = (function () {
     const synthSupported = typeof speechSynthesis !== "undefined";
     const log = [];
-    const clipEls = {}; // beatId → HTMLAudioElement, created lazily
+    const clipEls = {}; // filename → HTMLAudioElement, created lazily
     let current = null; // in-flight SpeechSynthesisUtterance (fallback path)
     let currentClip = null; // in-flight Audio clip
     let speaking = false;
+    let segQueue = []; // remaining segments of the current utterance
+    let currentSpeakerId = null; // member id of the in-flight segment's voice
 
     // auto_after_say pacing: every speak() opens a completion promise the
-    // player awaits before advancing a voiced beat. It settles on clip
-    // `ended`, synth `end`, the synth duration-estimate safety net, or
-    // cancel() — so pause/manual nav can never leave a zombie advance.
-    // Settles land in doneLog ({beatId, at}) for e2e pacing assertions.
+    // player awaits before advancing a voiced beat. It settles when the
+    // LAST segment ends (clip `ended`, synth `end`, the synth
+    // duration-estimate safety net) or on cancel() — so pause/manual nav
+    // can never leave a zombie advance. Settles land in doneLog
+    // ({beatId, at}) for e2e pacing assertions.
     const doneLog = [];
     let pendingFlag = false;
     let doneResolve = null;
@@ -4558,28 +5609,35 @@
     }
 
     function syncUi() {
+      const spk = currentSpeakerId || sharerIdNow;
       document.querySelectorAll("#spotlight .presenter-bar .live-dot").forEach(function (dot) {
         dot.classList.toggle("speaking", speaking);
       });
       document.querySelectorAll(".member-row").forEach(function (row) {
-        row.classList.toggle("speaking", speaking && row.id === "member-" + sharerIdNow);
+        row.classList.toggle("speaking", speaking && row.id === "member-" + spk);
       });
     }
 
-    function clipEl(beatId) {
-      let a = clipEls[beatId];
+    function clipEl(file) {
+      let a = clipEls[file];
       if (!a) {
-        a = new Audio(CLIP_BASE + CLIPS[beatId]);
+        a = new Audio(CLIP_BASE + file);
         a.preload = "auto";
-        clipEls[beatId] = a;
+        clipEls[file] = a;
       }
       return a;
     }
 
     // Warm the opening clips on the Play gesture (the same moment the
-    // chime AudioContext unlocks); the rest are created lazily by speak().
+    // chime AudioContext unlocks) plus every input beat's human clip —
+    // their durations pace the STT chunk reveal. The rest load lazily.
     function preload() {
-      Object.keys(CLIPS).slice(0, 3).forEach(clipEl);
+      ["a1-join", "a2-narration", "a3-bug", "a3-plan"].forEach(function (k) {
+        if (CLIPS[k]) clipEl(CLIPS[k]);
+      });
+      BEATS.forEach(function (b) {
+        if (b.input && b.input.clip) clipEl(b.input.clip);
+      });
     }
 
     function dropUtterance() {
@@ -4598,21 +5656,36 @@
       }
     }
 
-    function speakSynth(text, beatId) {
-      log.push({ beatId: beatId, text: text, mode: "synth" });
+    /** Current segment finished — play the next one or settle the beat. */
+    function segDone() {
+      if (segQueue.length) {
+        playNextSeg();
+        return;
+      }
+      currentSpeakerId = null;
+      speaking = false;
+      syncUi();
+      settleUtterance();
+    }
+
+    /** One synth segment; continues the queue when it ends. Serves both
+     *  the no-clip narration path and the per-segment clip fallback. */
+    function speakSynthSeg(text) {
+      log.push({ beatId: currentBeatId, text: text, mode: "synth" });
       speaking = true;
       syncUi();
       // Duration-estimate safety net: if the engine never fires `end`
-      // (headless, no voices, immediate error), the estimate still settles
-      // the pacing promise so autoplay keeps a read-along cadence.
+      // (headless, no voices, immediate error), the estimate still moves
+      // the queue along so autoplay keeps a read-along cadence.
       const myTok = uttToken;
-      setTimeout(function () {
-        if (myTok !== uttToken) return;
+      let done = false;
+      const finish = function () {
+        if (done || myTok !== uttToken) return;
+        done = true;
         current = null;
-        speaking = false;
-        syncUi();
-        settleUtterance();
-      }, text.length * 90);
+        segDone();
+      };
+      setTimeout(finish, text.length * 90);
       if (!synthSupported) return;
       try {
         const u = new SpeechSynthesisUtterance(text);
@@ -4621,7 +5694,7 @@
           if (current === u) { speaking = true; syncUi(); }
         };
         u.onend = function () {
-          if (current === u) { current = null; speaking = false; syncUi(); settleUtterance(); }
+          if (current === u) finish();
         };
         u.onerror = function () {
           // No audio came out — the estimate above still paces the beat.
@@ -4632,47 +5705,109 @@
       } catch (e) { /* speech unavailable — indicator still cycles via cancel */ }
     }
 
-    function speak(text, beatId) {
-      if (!text || !voicePrefs.enabled) return;
-      dropClip();
-      dropUtterance();
-      beginUtterance(beatId);
-      if (!CLIPS[beatId]) {
-        // No clip mapped for this line — synth carries it.
-        speakSynth(text, beatId);
-        return;
-      }
-      log.push({ beatId: beatId, text: text, mode: "clip" });
+    /** Play the head of segQueue. Returns the Audio element driving it
+     *  (the STT flow reads its duration to pace the chunk reveal). */
+    function playNextSeg() {
+      const seg = segQueue.shift();
+      if (!seg) { segDone(); return null; }
+      log.push({ beatId: currentBeatId, text: seg.text, mode: "clip", clip: seg.file });
+      currentSpeakerId = seg.speaker || null;
       speaking = true;
       syncUi();
-      const a = clipEl(beatId);
+      const a = clipEl(seg.file);
       const fallBack = function () {
         // Clip unavailable (missing file / blocked playback) — the synth
         // speaks the same text so the talk track survives standalone. The
         // same completion promise keeps pacing the beat.
         if (currentClip !== a) return;
         currentClip = null;
-        speakSynth(text, beatId);
+        speakSynthSeg(seg.text);
       };
       a.onplay = function () {
         if (currentClip === a) { speaking = true; syncUi(); }
       };
       a.onended = function () {
-        if (currentClip === a) { currentClip = null; speaking = false; syncUi(); settleUtterance(); }
+        if (currentClip === a) { currentClip = null; segDone(); }
       };
       a.onerror = fallBack;
       a.volume = voicePrefs.volume / 100;
       currentClip = a;
       try { a.currentTime = 0; } catch (e) { /* not yet loaded — starts at 0 */ }
       let played;
-      try { played = a.play(); } catch (e) { fallBack(); return; }
+      try { played = a.play(); } catch (e) { fallBack(); return a; }
       if (played && typeof played.catch === "function") played.catch(fallBack);
+      return a;
+    }
+
+    /** Muted read-along: with the voice toggle off nothing plays, but a
+     *  spoken line still opens the SAME completion promise the audio path
+     *  gates on, settling after a silent-reading span (words × WORD_MS,
+     *  the shared read-along constant). auto_after_say then holds the
+     *  beat long enough to READ the caption instead of racing its
+     *  authored dwell — and pause / manual nav cancels the hold exactly
+     *  like a clip (cancel() settles the promise; the player's gen check
+     *  aborts the advance). Nothing lands in Voice.log: nothing was
+     *  attempted aloud. */
+    function readAlong(text, beatId) {
+      dropClip();
+      dropUtterance();
+      beginUtterance(beatId);
+      segQueue = [];
+      const myTok = uttToken;
+      setTimeout(function () {
+        if (myTok === uttToken) settleUtterance();
+      }, wordCount(text) * WORD_MS);
+    }
+
+    /** Speak an explicit clip sequence for a beat. Segments: {file, text,
+     *  speaker?}. Opens ONE completion promise across the sequence; each
+     *  segment logs in play order. Returns the first segment's Audio
+     *  element, or null when the voice toggle is off (the read-along
+     *  hold paces the beat instead — nothing plays). */
+    function speakSegs(segs, beatId) {
+      if (!segs || !segs.length) return null;
+      if (!voicePrefs.enabled) {
+        readAlong(segs.map(function (s) { return s.text || ""; }).join(" "), beatId);
+        return null;
+      }
+      dropClip();
+      dropUtterance();
+      beginUtterance(beatId);
+      segQueue = segs.slice();
+      return playNextSeg();
+    }
+
+    function speak(text, beatId) {
+      if (!text) return;
+      if (!voicePrefs.enabled) {
+        readAlong(text, beatId);
+        return;
+      }
+      const seq = CLIP_SEQS[beatId];
+      if (seq) {
+        speakSegs(seq.map(function (e) {
+          return { file: e.file, text: e.text || text, speaker: e.speaker || null };
+        }), beatId);
+        return;
+      }
+      if (CLIPS[beatId]) {
+        speakSegs([{ file: CLIPS[beatId], text: text, speaker: null }], beatId);
+        return;
+      }
+      // No clip mapped for this line — synth carries it.
+      dropClip();
+      dropUtterance();
+      beginUtterance(beatId);
+      segQueue = [];
+      speakSynthSeg(text);
     }
 
     function cancel() {
+      segQueue = [];
       dropClip();
       dropUtterance();
       uttToken++;
+      currentSpeakerId = null;
       settleUtterance();
       speaking = false;
       syncUi();
@@ -4680,6 +5815,7 @@
 
     return {
       speak: speak,
+      speakSegs: speakSegs,
       cancel: cancel,
       preload: preload,
       syncUi: syncUi,
@@ -4746,6 +5882,184 @@
     return { complete: complete, attention: attention, unlock: unlock, log: log };
   })();
 
+  // ---- Input choreography (typing / live dictation into the composer) ----
+  // Runs during autoplay between an input beat's FIRST click (the cursor
+  // spec: #composer-input or #composer-mic) and the Send press — against
+  // the previous beat's DOM, so the message the patch lands was visibly
+  // composed first. Cancel (pause / manual nav / scrub) resets the
+  // composer to its placeholder instantly: no zombie sends. Reduced
+  // motion: the text lands at once, but the gating (audio + sequence
+  // completion) still applies before Send.
+  const InputFX = (function () {
+    const TYPE_MS = 32; // per-character cadence for typed steers
+    const STT_FALLBACK_MS = 55; // per-char budget when clip duration is unknown
+    const CHUNK_PATTERN = [3, 2, 4, 3, 2, 4, 2, 3]; // irregular 2–4 word bursts
+    let gen = 0;
+    let timers = [];
+
+    function els() {
+      return {
+        composer: document.getElementById("composer"),
+        text: document.querySelector("#composer-input .composer-text"),
+        mic: document.getElementById("composer-mic"),
+      };
+    }
+
+    function later(fn, ms) {
+      timers.push(setTimeout(fn, ms));
+    }
+
+    function clearTimers() {
+      timers.forEach(clearTimeout);
+      timers = [];
+    }
+
+    /** Instant reset to the resting composer (placeholder text, mic cold).
+     *  Runs on every goTo — landing an input beat's patch clears the just-
+     *  sent text back to the placeholder in the same paint as the message
+     *  appearing in the feed. */
+    function reset() {
+      const e = els();
+      if (!e.composer || !e.text || !e.mic) return;
+      e.composer.classList.remove("focused", "listening", "armed");
+      e.mic.classList.remove("live");
+      e.text.textContent = e.text.getAttribute("data-placeholder");
+      e.text.scrollLeft = 0;
+    }
+
+    function cancel() {
+      gen++;
+      clearTimers();
+      reset();
+    }
+
+    function setText(t) {
+      const e = els();
+      e.composer.classList.add("armed");
+      e.text.textContent = t;
+      // Keep the tail in view — the caret end is where the action is.
+      e.text.scrollLeft = e.text.scrollWidth;
+    }
+
+    /** Split into 2–4 word bursts; `upto` marks the cumulative word count
+     *  so reveal times can spread proportionally across the clip. */
+    function chunkWords(text) {
+      const words = text.split(/\s+/).filter(Boolean);
+      const chunks = [];
+      let i = 0;
+      let p = 0;
+      while (i < words.length) {
+        i += Math.min(words.length - i, CHUNK_PATTERN[p % CHUNK_PATTERN.length]);
+        chunks.push({ upto: i });
+        p++;
+      }
+      return { words: words, chunks: chunks };
+    }
+
+    /** STT: mic hot + waveform; the beat's HUMAN clip plays (your recorded
+     *  voice is the transcription source) while the words land in
+     *  irregular chunks paced across the clip's duration (loadedmetadata;
+     *  length×55ms when unavailable). Resolves true once BOTH the audio
+     *  and the chunk reveal are done. */
+    function runStt(beat, myGen, instant) {
+      const e = els();
+      const input = beat.input;
+      e.composer.classList.add("listening");
+      e.mic.classList.add("live");
+      const audioEl = Voice.speakSegs(
+        [{ file: input.clip, text: input.text, speaker: "you" }],
+        beat.id,
+      );
+      const audioDone = Voice.pending() ? Voice.done() : Promise.resolve();
+      const chunksDone = new Promise(function (res) {
+        if (instant) {
+          setText(input.text);
+          res();
+          return;
+        }
+        const ck = chunkWords(input.text);
+        const total = ck.words.length;
+        let scheduled = false;
+        const schedule = function (durMs) {
+          if (scheduled || myGen !== gen) return;
+          scheduled = true;
+          // Short tail so the last words land before the clip ends.
+          const span = Math.max(600, durMs - 350);
+          let left = ck.chunks.length;
+          ck.chunks.forEach(function (c, i) {
+            // Proportional to words revealed, with a small alternating lag
+            // so the cadence reads as dictation, not a metronome.
+            const at = Math.min(span, Math.round(span * (c.upto / total)) + (i % 2 ? 90 : 0));
+            later(function () {
+              if (myGen !== gen) return;
+              setText(ck.words.slice(0, c.upto).join(" "));
+              left--;
+              if (!left) res();
+            }, at);
+          });
+        };
+        const fallbackMs = input.text.length * STT_FALLBACK_MS;
+        if (audioEl && isFinite(audioEl.duration) && audioEl.duration > 0) {
+          schedule(audioEl.duration * 1000);
+        } else if (audioEl) {
+          audioEl.addEventListener("loadedmetadata", function () {
+            if (isFinite(audioEl.duration) && audioEl.duration > 0) {
+              schedule(audioEl.duration * 1000);
+            }
+          }, { once: true });
+          later(function () { schedule(fallbackMs); }, 500);
+        } else {
+          // Voice muted — no clip; the fallback still paces the reveal.
+          schedule(fallbackMs);
+        }
+      });
+      return Promise.all([audioDone, chunksDone]).then(function () {
+        if (myGen !== gen) return false;
+        e.composer.classList.remove("listening");
+        e.mic.classList.remove("live");
+        return true;
+      });
+    }
+
+    /** Typed: focus ring + blinking caret, then the text lands character
+     *  by character (all at once under reduced motion). */
+    function runType(beat, myGen, instant) {
+      const e = els();
+      const text = beat.input.text;
+      e.composer.classList.add("focused");
+      return new Promise(function (res) {
+        if (instant) {
+          setText(text);
+          later(function () { res(myGen === gen); }, 150);
+          return;
+        }
+        let i = 0;
+        const tick = function () {
+          if (myGen !== gen) return; // cancelled — remaining timers cleared
+          i++;
+          setText(text.slice(0, i));
+          if (i < text.length) later(tick, TYPE_MS);
+          else later(function () { res(myGen === gen); }, 200);
+        };
+        later(tick, 120);
+      });
+    }
+
+    /** Perform the beat's input sequence. Resolves true when complete;
+     *  a cancelled run never resolves (its caller's gen check is moot). */
+    function run(beat, instant) {
+      const myGen = ++gen; // supersede any stale sequence
+      clearTimers();
+      const e = els();
+      if (!e.composer || !e.text || !e.mic) return Promise.resolve(true);
+      return beat.input.mode === "stt"
+        ? runStt(beat, myGen, instant)
+        : runType(beat, myGen, instant);
+    }
+
+    return { run: run, cancel: cancel, reset: reset };
+  })();
+
   function clearTimer() {
     if (timer != null) {
       clearTimeout(timer);
@@ -4778,8 +6092,10 @@
   }
 
   // auto_after_say: during autoplay a voiced beat advances only after BOTH
-  // its dwell elapsed AND its audio finished (+ a breathing pad). Beats
-  // without audio in flight pace exactly on dwell, as before. advanceGen
+  // its dwell elapsed AND its audio finished (+ a breathing pad). With the
+  // voice toggle off the read-along hold (Voice.readAlong) opens the same
+  // completion promise, so muted playback paces on reading time. Beats
+  // with nothing spoken pace exactly on dwell, as before. advanceGen
   // bumps on every navigation/pause so a gated advance that outlives its
   // beat dies quietly (cancel resolves the promise; the gen check aborts).
   const VOICE_PAD_MS = 250;
@@ -4800,7 +6116,7 @@
       restCursorAtEnd();
       return;
     }
-    const ms = dwellFor(BEATS[index]);
+    const ms = dwellFor(index);
     // Start the next beat's cursor leg early so the click impact lands
     // where the plain render used to happen. The lead is computed against
     // the dwell only — if audio is still playing when the cursor lands,
@@ -4817,7 +6133,12 @@
 
   function advanceWithCursor(i) {
     const myGen = advanceGen;
-    const spec = BEATS[i].cursor;
+    const beat = BEATS[i];
+    if (beat.input) {
+      advanceWithInput(i, myGen);
+      return;
+    }
+    const spec = beat.cursor;
     if (reducedMotion || !spec || spec.action === "none") {
       audioGate().then(function () {
         if (!playing || myGen !== advanceGen) return;
@@ -4841,6 +6162,35 @@
     });
   }
 
+  /** Input beats: the first click (input or mic — the beat's cursor spec,
+   *  still audio-gated against the previous line) starts the typed or
+   *  dictated sequence; only when it completes does the cursor move to
+   *  Send and press — then the patch lands. Every leg re-checks playing +
+   *  advanceGen, so pause / manual nav kills the flow with no zombie send
+   *  (InputFX.cancel resets the composer). Reduced motion drops the
+   *  cursor legs but keeps the full gating. */
+  function advanceWithInput(i, myGen) {
+    const beat = BEATS[i];
+    const finish = function (ok) {
+      if (!ok || !playing || myGen !== advanceGen) return;
+      goTo(i, true);
+    };
+    if (reducedMotion) {
+      audioGate().then(function () {
+        if (!playing || myGen !== advanceGen) return;
+        InputFX.run(beat, true).then(finish);
+      });
+      return;
+    }
+    Cursor.perform(beat.cursor, audioGate).then(function (ok) {
+      if (!ok || !playing || myGen !== advanceGen) return;
+      InputFX.run(beat, false).then(function (ok2) {
+        if (!ok2 || !playing || myGen !== advanceGen) return;
+        Cursor.perform({ target: "#composer-send", action: "click" }).then(finish);
+      });
+    });
+  }
+
   function restCursorAtEnd() {
     setTimeout(function () {
       if (!playing) Cursor.hide();
@@ -4853,7 +6203,12 @@
 
   function goTo(i, fromAuto) {
     advanceGen++; // any navigation invalidates gated advances in flight
+    if (introArmed) dismissIntro(); // any navigation closes the intro card
     if (!fromAuto) Cursor.hide();
+    // Any beat landing clears the composer: an input beat's just-sent text
+    // returns to the placeholder as its message appears in the feed, and
+    // manual nav / scrubs can never strand a half-typed line.
+    InputFX.reset();
     index = Math.max(0, Math.min(BEATS.length - 1, i));
     const state = seek(BEATS, index);
     const narr = state.narration || "";
@@ -4861,10 +6216,18 @@
     lastNarr = narr;
     render(state, BEATS[index]);
     if (fromAuto && playing) {
-      if (narrChanged && narr) Voice.speak(narr, BEATS[index].id);
-      const chime = BEATS[index].chime;
-      if (chime === "complete") Chime.complete(BEATS[index].id);
-      else if (chime === "attention") Chime.attention(BEATS[index].id);
+      const beat = BEATS[index];
+      if (narrChanged && narr) {
+        Voice.speak(narr, beat.id);
+      } else if (beat.speech && SPEECH_CLIPS[beat.id]) {
+        // Human line with a recorded clip and no composer input (the pin
+        // gesture): your voice plays on beat entry and paces the beat.
+        const sc = SPEECH_CLIPS[beat.id];
+        Voice.speakSegs([{ file: sc.file, text: beat.speech.text, speaker: sc.speaker }], beat.id);
+      }
+      const chime = beat.chime;
+      if (chime === "complete") Chime.complete(beat.id);
+      else if (chime === "attention") Chime.attention(beat.id);
     } else if (!fromAuto) {
       Voice.cancel();
     }
@@ -4887,6 +6250,7 @@
     setPlaying(false);
     Cursor.cancel();
     Voice.cancel();
+    InputFX.cancel(); // mid-entry pause: audio already stopped, text resets
   }
 
   function togglePlay() {
@@ -4952,6 +6316,8 @@
     const maturity = beat.maturity || "shipped";
     mat.textContent = maturity;
     mat.className = "badge " + (maturity === "planned" ? "planned" : "shipped");
+    mat.setAttribute("aria-label", "Maturity: " + maturity + " — " +
+      (maturity === "planned" ? "design intent" : "exists in the product today"));
 
     // Scrubber active states
     document.querySelectorAll("#scrubber button[data-act]").forEach(function (btn) {
@@ -4995,18 +6361,19 @@
     }
 
     document.getElementById("feed-sub").textContent =
-      state.inCall ? "router-fix · live" : "chat";
+      state.inCall ? "demo-polish · live" : "chat";
 
     // Feed — rebuilt only when its state slice changes; the entrance
     // animation plays only for messages that are genuinely new.
     const feed = document.getElementById("feed");
     const feedEmpty = state.surface === "chat" && !state.feedMessages.length;
-    const feedSig = JSON.stringify({ m: state.feedMessages, s: state.sinceYouLeft, e: feedEmpty });
+    const feedSlice = { m: state.feedMessages, s: state.sinceYouLeft, e: feedEmpty };
+    const feedSig = JSON.stringify(feedSlice);
     if (feedSig !== R.feedSig) {
       R.feedSig = feedSig;
+      feed.innerHTML = "";
       const prevMsgIds = R.msgIds;
       R.msgIds = {};
-      feed.innerHTML = "";
       if (state.sinceYouLeft) {
         const ban = document.createElement("div");
         ban.className = "banner";
@@ -5055,7 +6422,8 @@
         el.title = p.role === "agent" ? "Address " + p.name : p.name;
         el.innerHTML =
           '<span class="member-id"><span class="member-av">' + escapeHtml(p.name.slice(0, 1)) + "</span>" +
-          '<span class="member-name">' + escapeHtml(p.name) + "</span></span>" +
+          '<span class="member-name">' + escapeHtml(p.name) + "</span>" +
+          '<span class="member-eq" aria-hidden="true"><i></i><i></i><i></i></span></span>' +
           '<span class="member-status"><span class="member-dot" aria-hidden="true"></span>' +
           '<span class="member-task">' + escapeHtml(p.task || (p.role === "agent" ? "idle" : "in the room")) + "</span></span>";
         memberList.appendChild(el);
@@ -5158,6 +6526,9 @@
         if (barHtml !== R.barHtml) {
           R.barHtml = barHtml;
           R.el.bar.innerHTML = barHtml;
+          R.el.bar.classList.remove("swap");
+          void R.el.bar.offsetWidth;
+          R.el.bar.classList.add("swap");
         }
         // Body precedence lives in composeScreen: presented artifacts float
         // over the sharer's dimmed VS Code window; walkthroughs render in
@@ -5176,11 +6547,12 @@
         }
         if (bodyHtml !== R.bodyHtml) {
           R.bodyHtml = bodyHtml;
-          R.el.body.classList.toggle("ws-host", isWorkspace);
-          R.el.body.innerHTML = bodyHtml;
-          R.el.body.classList.remove("swap");
-          void R.el.body.offsetWidth;
-          R.el.body.classList.add("swap");
+          swapScreenBody(
+            bodyHtml,
+            isWorkspace,
+            state.stage.show ? railChip(state.stage.show.kindLabel) : null,
+            !state.stage.show && !state.stage.pin,
+          );
         }
       }
 
@@ -5195,14 +6567,28 @@
       }
 
       // Show backlog rail; dim toggles in place so it fades, not remounts.
+      // Up-next: peek at the NEXT beat's folded stage — when it presents a
+      // new artifact, that chip gets its heads-up glint one beat early.
+      // The derived id folds into the rail signature (a region repaints
+      // only when its signature changes).
       const backlog = state.stage.backlog || [];
-      const railSig = JSON.stringify(backlog);
+      let upNextId = null;
+      if (backlog.length && index + 1 < BEATS.length) {
+        const nextShow = fold(state, BEATS[index + 1].patch).stage.show;
+        if (nextShow && nextShow !== state.stage.show) {
+          const chip = backlog.find(function (b) {
+            return b.label === nextShow.kindLabel && (b.status === "planned" || b.status === "ready");
+          });
+          if (chip) upNextId = chip.id;
+        }
+      }
+      const railSig = JSON.stringify([backlog, upNextId]);
       if (railSig !== R.railSig) {
         R.railSig = railSig;
         R.el.rail.style.display = backlog.length ? "" : "none";
         R.el.rail.innerHTML = backlog.length
           ? '<span class="rail-label">Show backlog</span>' + backlog.map(function (b) {
-              return '<span class="show-chip ' + b.status + '">' + escapeHtml(b.label) + "</span>";
+              return '<span class="show-chip ' + b.status + (b.id === upNextId ? " up-next" : "") + '">' + escapeHtml(b.label) + "</span>";
             }).join("")
           : "";
       }
@@ -5266,15 +6652,18 @@
     });
 
     // CC transcript. feed-main swaps the feed list + composer for the
-    // derived transcript while ccOpen (members column stays). Its own
-    // signature (index + ccOpen): the derivation walks BEATS 0..index, so
-    // any beat move can change the visible lines.
+    // derived transcript while ccOpen (members column stays). The sticky
+    // user pref overrides the script in either direction; unset follows
+    // the beat. Its own signature (index + resolved state + pref — the
+    // pref is derived state and MUST fold into the signature): the
+    // derivation walks BEATS 0..index, so any beat move can change the
+    // visible lines.
     sharerIdNow = state.stage.sharerId || "";
-    const ccOn = !!state.ccOpen;
+    const ccOn = ccPref === "on" ? true : ccPref === "off" ? false : !!state.ccOpen;
     const ccBtn = document.getElementById("strip-cc");
     ccBtn.classList.toggle("on", ccOn);
     ccBtn.setAttribute("aria-pressed", String(ccOn));
-    const ccSig = JSON.stringify({ i: index, cc: ccOn });
+    const ccSig = JSON.stringify({ i: index, cc: ccOn, p: ccPref });
     if (ccSig !== R.ccSig) {
       R.ccSig = ccSig;
       document.querySelector(".feed-main").classList.toggle("cc-open", ccOn);
@@ -5313,7 +6702,7 @@
     // PiP
     const pip = document.getElementById("pip");
     pip.classList.toggle("on", !!state.pipVisible);
-    document.getElementById("pip-name").textContent = partnerName(state).split(" · ")[0] || "Adam";
+    document.getElementById("pip-name").textContent = partnerName(state).split(" · ")[0] || "Cline";
     document.getElementById("pip-narr").textContent = state.narration || "Still in call · companion chrome";
     document.getElementById("pip-hand").classList.toggle("on", youHandRaised(state));
 
@@ -5350,11 +6739,14 @@
 
   // ---- Artifacts surface ----
   // Small kind glyphs keyed by the kindLabel family (doc / diagram /
-  // walkthrough / capture), lucide-style strokes.
+  // walkthrough / capture), lucide-style strokes. An exact-label key wins
+  // over its family: walkthrough.animation gets a film glyph while
+  // walkthrough.code keeps the code chevrons.
   const ART_GLYPHS = {
     doc: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
     diagram: '<rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/>',
     walkthrough: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+    "walkthrough.animation": '<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M2 9h5"/><path d="M2 15h5"/><path d="M17 9h5"/><path d="M17 15h5"/><path d="m10.5 9.5 4 2.5-4 2.5z"/>',
     capture: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
   };
 
@@ -5365,7 +6757,7 @@
       return;
     }
     grid.innerHTML = artifacts.map(function (a) {
-      const glyph = ART_GLYPHS[a.kindLabel.split(".")[0]] || ART_GLYPHS.doc;
+      const glyph = ART_GLYPHS[a.kindLabel] || ART_GLYPHS[a.kindLabel.split(".")[0]] || ART_GLYPHS.doc;
       return (
         '<button type="button" class="art-card" data-art-id="' + escapeHtml(a.id) + '" title="Present on the shared screen">' +
           '<div class="art-head"><span class="art-kind">' + escapeHtml(a.kindLabel) + "</span>" +
@@ -5389,7 +6781,7 @@
     grid.innerHTML = rooms.map(function (r) {
       const second = r.status === "live"
         ? '<button type="button" class="sess-btn stop"' +
-          (r.id === "router-fix" ? ' id="room-stop-router"' : "") + ">Stop</button>"
+          (r.id === "demo-polish" ? ' id="room-stop-demo"' : "") + ">Stop</button>"
         : '<button type="button" class="sess-btn start">Start</button>';
       return (
         '<div class="sess-card ' + r.status + '" data-room-id="' + escapeHtml(r.id) + '">' +
@@ -5399,6 +6791,27 @@
         "</div>"
       );
     }).join("");
+  }
+
+  // ---- CC caption preference ----
+  // Tri-state sticky override for the transcript panel, persisted as
+  // "drive-demo-cc": "on" (always open), "off" (always closed), unset
+  // (follow the script's ccOpen). The strip button records user intent so
+  // the next beat's render re-asserts the USER's choice instead of
+  // closing the panel they just opened. Validated on read like every
+  // other stored pref.
+  const CC_STORE_KEY = "drive-demo-cc";
+  let ccPref = (function () {
+    try {
+      const raw = localStorage.getItem(CC_STORE_KEY);
+      return raw === "on" || raw === "off" ? raw : null;
+    } catch (e) { return null; }
+  })();
+  function saveCcPref() {
+    try {
+      if (ccPref) localStorage.setItem(CC_STORE_KEY, ccPref);
+      else localStorage.removeItem(CC_STORE_KEY);
+    } catch (e) { /* ignore */ }
   }
 
   // ---- CC transcript ----
@@ -5422,13 +6835,17 @@
       const b = BEATS[i];
       s = fold(s, b.patch);
       const at = i > 0 ? CUM_MS[i - 1] : 0;
-      if (b.speech && b.speech.text) {
-        lines.push({ at: at, who: b.speech.who, text: b.speech.text });
-      }
+      // speech.after files the human line after the beat's narration —
+      // matching the clip order when you ANSWER the agent (a10-explore).
+      const speech = b.speech && b.speech.text
+        ? { at: at, who: b.speech.who, text: b.speech.text }
+        : null;
+      if (speech && !b.speech.after) lines.push(speech);
       const narr = s.narration || "";
       if (narr && narr !== prevNarr) {
         lines.push({ at: at, who: s.stage.sharer || "Agent", text: narr });
       }
+      if (speech && b.speech.after) lines.push(speech);
       prevNarr = narr;
     }
     return lines;
@@ -5448,8 +6865,8 @@
 
   // ---- Shared-screen bodies ----
   // The literal cline-drive architecture: clients ← hub daemon (single
-  // writer) ← agents' typed events, with the director's show path and the
-  // fix site (scheduleRetry) highlighted.
+  // writer) ← agents' typed events, with the director's show path
+  // highlighted. Kept as an explorable reference artifact.
   const DRIVE_ARCH_SVG =
     '<svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="cline-drive architecture: agents publish typed events to the hub daemon, the single writer, which folds room state and broadcasts snapshots to clients; the director presents show artifacts to the Spotlight">' +
     '<rect class="grp" x="12" y="22" width="176" height="172" rx="8"/>' +
@@ -5467,9 +6884,8 @@
     '<g class="n"><rect x="240" y="126" width="120" height="24" rx="6"/><text x="300" y="142" text-anchor="middle">reduceRoom fold</text></g>' +
     '<g class="n"><rect x="240" y="164" width="156" height="24" rx="6"/><text x="318" y="180" text-anchor="middle">director · Show backlog</text></g>' +
     '<g class="n"><rect x="240" y="202" width="120" height="24" rx="6"/><text x="300" y="218" text-anchor="middle">rank → present</text></g>' +
-    '<g class="n hot"><rect x="386" y="88" width="104" height="24" rx="6"/><text x="438" y="104" text-anchor="middle">scheduleRetry</text></g>' +
-    '<text class="elabel" x="438" y="80" text-anchor="middle">the race lived here</text>' +
-    '<g class="n"><rect x="558" y="48" width="140" height="24" rx="6"/><text x="628" y="64" text-anchor="middle">Adam · Riley</text></g>' +
+    '<g class="n"><rect x="386" y="88" width="104" height="24" rx="6"/><text x="438" y="104" text-anchor="middle">snapshots</text></g>' +
+    '<g class="n"><rect x="558" y="48" width="140" height="24" rx="6"/><text x="628" y="64" text-anchor="middle">Cline · Riley</text></g>' +
     '<g class="n"><rect x="558" y="86" width="140" height="24" rx="6"/><text x="628" y="102" text-anchor="middle">typed work events</text></g>' +
     '<polyline class="e" points="548,62 508,62"/>' +
     '<polygon class="ah" points="508,62 515,58.5 515,65.5"/>' +
@@ -5488,7 +6904,97 @@
     '<text class="edge-label" x="208" y="166" text-anchor="middle">present</text>' +
     "</svg>";
 
+  // The demo's own render pipeline: beats fold state, render() pushes it
+  // into four regions — and the old innerHTML wipe at the rebuild edge is
+  // where the flash lived. This is the diagram the a3-arch beat presents,
+  // and it animates its own explanation (.anim-diagram): the fn-* node
+  // classes and the .flow-dots layer are driven by the phased CSS clock —
+  // dot offset-paths trace the polyline coordinates below, so keep them
+  // in sync if edges move. DRIVE_ARCH_SVG stays static.
+  const RENDER_FLOW_SVG =
+    '<svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="demo render pipeline: beats fold into state, render reads it, and the old innerHTML wipe re-mounted every region on every beat — the flash lived at that rebuild edge. Animated in three phases: state folds in, render fans out to four regions, then the rebuild edge pulses.">' +
+    '<rect class="grp" x="12" y="100" width="168" height="100" rx="8"/>' +
+    '<text class="grp-label" x="22" y="116">State</text>' +
+    '<rect class="grp" x="560" y="22" width="148" height="234" rx="8"/>' +
+    '<text class="grp-label" x="570" y="38">Regions</text>' +
+    '<g class="n fn-fold"><rect x="24" y="138" width="144" height="24" rx="6"/><text x="96" y="154" text-anchor="middle">BEATS · state fold</text></g>' +
+    '<g class="n fn-render"><rect x="240" y="138" width="96" height="24" rx="6"/><text x="288" y="154" text-anchor="middle">render()</text></g>' +
+    '<g class="n hot"><rect x="396" y="138" width="120" height="24" rx="6"/><text x="456" y="154" text-anchor="middle">innerHTML wipe</text></g>' +
+    '<text class="elabel" x="456" y="128" text-anchor="middle">the flash lived here</text>' +
+    '<g class="n fn-r1"><rect x="580" y="46" width="108" height="24" rx="6"/><text x="634" y="62" text-anchor="middle">feed</text></g>' +
+    '<g class="n fn-r2"><rect x="580" y="104" width="108" height="24" rx="6"/><text x="634" y="120" text-anchor="middle">roster</text></g>' +
+    '<g class="n fn-r3"><rect x="580" y="162" width="108" height="24" rx="6"/><text x="634" y="178" text-anchor="middle">screen</text></g>' +
+    '<g class="n fn-r4"><rect x="580" y="220" width="108" height="24" rx="6"/><text x="634" y="236" text-anchor="middle">deck</text></g>' +
+    '<polyline class="e" points="168,150 240,150"/>' +
+    '<polygon class="ah" points="240,150 233,146.5 233,153.5"/>' +
+    '<text class="edge-label" x="204" y="142" text-anchor="middle">every beat</text>' +
+    '<polyline class="e" points="336,150 396,150"/>' +
+    '<polygon class="ah" points="396,150 389,146.5 389,153.5"/>' +
+    '<text class="edge-label" x="366" y="142" text-anchor="middle">rebuild</text>' +
+    '<polyline class="e" points="516,144 548,144 548,58 580,58"/>' +
+    '<polygon class="ah" points="580,58 573,54.5 573,61.5"/>' +
+    '<polyline class="e" points="516,148 556,148 556,116 580,116"/>' +
+    '<polygon class="ah" points="580,116 573,112.5 573,119.5"/>' +
+    '<polyline class="e" points="516,152 556,152 556,174 580,174"/>' +
+    '<polygon class="ah" points="580,174 573,170.5 573,177.5"/>' +
+    '<polyline class="e" points="516,156 548,156 548,232 580,232"/>' +
+    '<polygon class="ah" points="580,232 573,228.5 573,235.5"/>' +
+    '<text class="edge-label" x="548" y="204" text-anchor="middle">re-mounts</text>' +
+    // Phase captions in the empty bottom-left band: one per phase of the
+    // shared clock, lit amber in turn. Living inside the viewBox keeps
+    // them visible wherever the diagram is (the overlay card crops the
+    // svg bottom margin at short viewports, so HTML below wouldn't be).
+    '<g class="anim-phases">' +
+    '<text class="anim-phase ph1" x="24" y="218">1 · state folds in</text>' +
+    '<text class="anim-phase ph2" x="24" y="232">2 · render fans out to four regions</text>' +
+    '<text class="anim-phase ph3" x="24" y="246">3 · the rebuild edge — where the flash lived</text>' +
+    "</g>" +
+    '<g class="flow-dots" aria-hidden="true">' +
+    '<circle class="flow-dot fd-fold" r="4"/>' +
+    '<circle class="flow-dot fd-fan fd-f1" r="3.5"/>' +
+    '<circle class="flow-dot fd-fan fd-f2" r="3.5"/>' +
+    '<circle class="flow-dot fd-fan fd-f3" r="3.5"/>' +
+    '<circle class="flow-dot fd-fan fd-f4" r="3.5"/>' +
+    "</g>" +
+    "</svg>";
+
+  /** The a3-bug explainer: one 4s clock, two mini feeds. BEFORE re-mounts
+   *  everything on the tick (white flash, simultaneous re-entry); AFTER
+   *  skips on the fingerprint match and animates only the new block. All
+   *  motion is CSS keyframes on .stage-anim (reduced motion → static
+   *  comparison with ghosted duplicates). */
+  const FLASH_ANIM_HTML =
+    '<div class="stage-anim" role="img" aria-label="Before the fix, every beat re-mounts all messages and the panel flashes white. After the fix, a fingerprint match skips the repaint and only the new message animates in.">' +
+      '<div class="anim-panel before">' +
+        '<div class="anim-head"><span class="anim-tick" aria-hidden="true"></span>' +
+          '<span class="anim-name">Before · every beat rebuilds</span></div>' +
+        '<div class="anim-feed"><div class="anim-flash" aria-hidden="true"></div>' +
+          '<div class="anim-slot"><span class="anim-ghost" aria-hidden="true"></span>' +
+            '<div class="anim-msg"><span class="av"></span><span class="bars"><i class="w70"></i><i class="w45"></i></span></div></div>' +
+          '<div class="anim-slot"><span class="anim-ghost" aria-hidden="true"></span>' +
+            '<div class="anim-msg"><span class="av"></span><span class="bars"><i class="w45"></i><i class="w70"></i></span></div></div>' +
+          '<div class="anim-slot"><span class="anim-ghost" aria-hidden="true"></span>' +
+            '<div class="anim-msg"><span class="av"></span><span class="bars"><i class="w70"></i><i class="w70"></i></span></div></div>' +
+        "</div>" +
+        '<div class="anim-cap">everything re-animates — that’s the flash</div>' +
+      "</div>" +
+      '<div class="anim-panel after">' +
+        '<div class="anim-head"><span class="anim-tick" aria-hidden="true"></span>' +
+          '<span class="anim-name">After · fingerprint match → skip</span></div>' +
+        '<div class="anim-feed"><span class="anim-sig">sig ✓ unchanged</span>' +
+          '<div class="anim-msg"><span class="av"></span><span class="bars"><i class="w70"></i><i class="w45"></i></span></div>' +
+          '<div class="anim-msg"><span class="av"></span><span class="bars"><i class="w45"></i><i class="w70"></i></span></div>' +
+          '<div class="anim-msg"><span class="av"></span><span class="bars"><i class="w70"></i><i class="w70"></i></span></div>' +
+          '<div class="anim-msg new"><span class="av"></span><span class="bars"><i class="w70"></i><i class="w45"></i></span></div>' +
+        "</div>" +
+        '<div class="anim-cap">nothing re-mounts — only new items animate</div>' +
+      "</div>" +
+    "</div>";
+
   function buildScreenBody(show) {
+    if (show.kind === "anim") {
+      return FLASH_ANIM_HTML;
+    }
     if (show.kind === "plan") {
       return '<div class="stage-plan">' + show.body.steps.map(function (s) {
         const mark = s.state === "done" ? "✓" : s.state === "now" ? "●" : "○";
@@ -5496,7 +7002,13 @@
       }).join("") + "</div>";
     }
     if (show.kind === "diagram") {
-      return '<div class="stage-diagram">' + DRIVE_ARCH_SVG + "</div>";
+      // The hub architecture diagram stays static; the render-pipeline
+      // diagram opts into the phased .anim-diagram explanation (traveling
+      // dots + phase captions on one shared CSS clock).
+      if (show.body && show.body.svg === "arch") {
+        return '<div class="stage-diagram">' + DRIVE_ARCH_SVG + "</div>";
+      }
+      return '<div class="stage-diagram anim-diagram">' + RENDER_FLOW_SVG + "</div>";
     }
     if (show.kind === "walk") {
       // No standalone widget: walkthroughs render inside the VS Code
@@ -5520,6 +7032,21 @@
   function vscIco(paths) {
     return '<svg class="vsc-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + "</svg>";
   }
+  /** Debug-toolbar icon: same stroke language as vscIco, toolbar-sized. */
+  function dbgIco(paths) {
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + "</svg>";
+  }
+  /** Floating debug toolbar (decorative — the simulated cursor never
+   *  targets it, so plain spans, hidden from the a11y tree wholesale). */
+  const VSC_DBGBAR =
+    '<div class="vsc-dbgbar" aria-hidden="true">' +
+      '<span class="dbg-btn">' + dbgIco('<path d="M7 4v16"/><path d="m12 6 8 6-8 6V6Z"/>') + "</span>" +
+      '<span class="dbg-btn">' + dbgIco('<path d="M4 12a8 8 0 0 1 15-4"/><path d="M19 3v5h-5"/><circle cx="12" cy="18" r="1.7"/>') + "</span>" +
+      '<span class="dbg-btn">' + dbgIco('<path d="M12 3v9"/><path d="m8 8 4 4 4-4"/><circle cx="12" cy="18" r="1.7"/>') + "</span>" +
+      '<span class="dbg-btn">' + dbgIco('<path d="M12 12V3"/><path d="m8 7 4-4 4 4"/><circle cx="12" cy="18" r="1.7"/>') + "</span>" +
+      '<span class="dbg-btn restart">' + dbgIco('<path d="M3 12a9 9 0 1 0 2.8-6.5"/><path d="M3 3v5h5"/>') + "</span>" +
+      '<span class="dbg-btn stop">' + dbgIco('<rect x="6" y="6" width="12" height="12" rx="1"/>') + "</span>" +
+    "</div>";
   const VSC_ICOS = {
     files: vscIco('<path d="M20 7h-3a2 2 0 0 1-2-2V2"/><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"/><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"/>'),
     search: vscIco('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
@@ -5530,18 +7057,20 @@
 
   /** Static explorer tree: the repo the demo's story lives in. */
   const VSC_TREE = [
-    { name: "src", dir: true },
-    { name: "router.ts", nest: true, ico: "ts" },
-    { name: "retry.ts", nest: true, ico: "ts" },
-    { name: "tests", dir: true },
-    { name: "router.test.ts", nest: true, ico: "ts" },
+    { name: "canvases", dir: true },
+    { name: "drive-product-demo.html", nest: true, ico: "html" },
+    { name: "drivemode-explainer.html", nest: true, ico: "html" },
+    { name: "verify.js", ico: "js" },
     { name: "PR_BODY.md", ico: "md" },
     { name: "package.json", ico: "json" },
   ];
-  const VSC_FICO = { ts: "TS", md: "M↓", json: "{}" };
+  const VSC_FICO = { ts: "TS", md: "M↓", json: "{}", html: "<>", js: "JS" };
 
   function vscLang(file) {
-    return /\.md$/.test(file || "") ? "md" : "ts";
+    if (/\.md$/.test(file || "")) return "md";
+    if (/\.html$/.test(file || "")) return "html";
+    if (/\.js$/.test(file || "")) return "js";
+    return "ts";
   }
 
   /** Minimal syntax highlighting: tokenize, escape per token, wrap in
@@ -5576,18 +7105,27 @@
     work = work || {};
     const file = walk ? walk.file : (work.file || "");
     const lang = vscLang(file);
-    const langLabel = lang === "md" ? "Markdown" : "TypeScript";
+    const langLabel = lang === "md" ? "Markdown"
+      : lang === "html" ? "HTML"
+      : lang === "js" ? "JavaScript"
+      : "TypeScript";
 
     // Editor lines: tokens + gutter (absolute numbers for a walkthrough),
-    // amber hl rows, current-line bg on the caret / type-in row.
+    // amber hl rows, current-line bg on the caret / type-in row. A debug
+    // walkthrough adds breakpoint / step / inline-value decorations; the
+    // step-through itself is pure CSS on the shared --dbg-total clock.
+    const dbg = !!(walk && walk.debug);
     const codeLines = walk ? (walk.lines || []) : (work.code || []);
     let lines = codeLines.map(function (l, i) {
       const n = walk ? l.n : i + 1;
       const cur = !walk && !work.typing && work.caret === i;
       let text = tok(l.t, lang);
       if (cur) text += '<span class="ws-caret" aria-hidden="true"></span>';
-      return '<div class="ws-cl' + (l.hl ? " hl" : "") + (cur ? " cur" : "") + '"><span class="ln">' + n +
-        '</span><span class="tx">' + text + "</span></div>";
+      if (dbg && l.ghost) text += '<span class="dbg-ghost">' + escapeHtml(l.ghost) + "</span>";
+      if (dbg && l.ret) text += '<span class="dbg-ghost dbg-ret">' + escapeHtml(l.ret) + "</span>";
+      return '<div class="ws-cl' + (l.hl ? " hl" : "") + (cur ? " cur" : "") +
+        (dbg && l.bp ? " dbg-bp" : "") + (dbg && l.step ? " dbg-s" + l.step : "") +
+        '"><span class="ln">' + n + '</span><span class="tx">' + text + "</span></div>";
     }).join("");
     if (!walk && work.typing) {
       lines += '<div class="ws-cl cur"><span class="ln">' + (codeLines.length + 1) +
@@ -5600,8 +7138,9 @@
       return '<i style="width:' + w + 'px"></i>';
     }).join("");
 
-    // Breadcrumbs: src › file › first function symbol (docs › file for md).
-    let crumbs = (lang === "md" ? "docs" : "src") +
+    // Breadcrumbs: src › file › first function symbol (docs › file for
+    // md and the canvas html; the demo file lives under docs/).
+    let crumbs = (lang === "md" || lang === "html" ? "docs" : "src") +
       ' <span class="sep">›</span> ' + escapeHtml(file);
     let symbol = "";
     for (let i = 0; i < codeLines.length; i++) {
@@ -5675,7 +7214,7 @@
     colC = Math.max(1, colC);
 
     return (
-      '<div class="vsc' + (cls ? " " + cls : "") + '">' +
+      '<div class="vsc' + (cls ? " " + cls : "") + (dbg ? " vsc-debug" : "") + '">' +
         '<div class="vsc-title"><span class="vsc-dots" aria-hidden="true"><i></i><i></i><i></i></span>' +
           '<span class="vsc-title-text">' + escapeHtml(file) + " — cline-drivecode</span></div>" +
         '<div class="vsc-main">' +
@@ -5686,7 +7225,7 @@
               (work.activity ? '<span class="vsc-activity">' + escapeHtml(work.activity) + "</span>" : "") +
             "</div>" +
             '<div class="vsc-crumbs">' + crumbs + "</div>" +
-            '<div class="vsc-body"><div class="vsc-code">' + lines + "</div>" +
+            '<div class="vsc-body">' + (dbg ? VSC_DBGBAR : "") + '<div class="vsc-code">' + lines + "</div>" +
               '<div class="vsc-map" aria-hidden="true">' + map + "</div></div>" +
             '<div class="vsc-panel">' +
               '<div class="vsc-panel-head"><span>Problems</span><span>Output</span><span class="on">Terminal</span></div>' +
@@ -5695,7 +7234,7 @@
           "</div>" +
         "</div>" +
         '<div class="vsc-status">' +
-          "<span>⎇ router-fix</span><span>✓ 0 problems</span>" +
+          "<span>⎇ demo-polish</span><span>✓ 0 problems</span>" +
           '<span class="sp"></span>' +
           "<span>Ln " + lnN + ", Col " + colC + "</span>" +
           "<span>" + langLabel + "</span>" +
@@ -5732,6 +7271,72 @@
     return null;
   }
 
+  /** Backlog chip for a kindLabel — the grow-from origin of a present. */
+  function railChip(label) {
+    if (!R.el || !R.el.rail) return null;
+    const chips = R.el.rail.querySelectorAll(".show-chip");
+    for (let i = 0; i < chips.length; i++) {
+      if (chips[i].textContent === label) return chips[i];
+    }
+    return null;
+  }
+
+  /** Bias the entering ov-card from its source (chip or artifact card):
+   *  a clamped fraction of the horizontal offset is enough to read as
+   *  "grows out of the chip" — no FLIP. Body rect can be zero while its
+   *  surface is hidden (explore click), so fall back to viewport center. */
+  function setGrowOrigin(fromEl) {
+    const body = R.el.body;
+    let dx = 0;
+    if (fromEl && fromEl.getClientRects().length) {
+      const br = body.getBoundingClientRect();
+      const cx = br.width ? br.left + br.width / 2 : window.innerWidth / 2;
+      const cr = fromEl.getBoundingClientRect();
+      dx = Math.max(-140, Math.min(140, Math.round((cr.left + cr.width / 2 - cx) * 0.3)));
+    }
+    body.style.setProperty("--grow-x", dx + "px");
+  }
+
+  /** Director-transition body swap. While a .vsc frame persists across
+   *  the change, the body itself never fades — only the pieces move: a
+   *  changed editor fades in place, a replaced artifact settles away
+   *  (.ov-leave ghost) above the incoming one, and a bare-workspace
+   *  return releases the dim (.release). Everything else keeps the
+   *  whole-body crossfade. */
+  function swapScreenBody(bodyHtml, isWorkspace, growFrom, plainWork) {
+    const body = R.el.body;
+    body.querySelectorAll(".stage-overlay.ov-leave").forEach(function (g) { g.remove(); });
+    // Hidden spotlight (beat lands on another surface): a ghost's leave
+    // animation could not run — it would replay on return, beats later.
+    // Plain swap there; the piece-wise path needs a rendered body.
+    const live = !!body.getClientRects().length;
+    const oldOv = body.querySelector(".stage-overlay");
+    const oldVsc = body.querySelector(".vsc");
+    const oldVscHtml = oldVsc ? oldVsc.outerHTML : null;
+    body.classList.remove("swap", "release");
+    body.classList.toggle("ws-host", isWorkspace);
+    body.innerHTML = bodyHtml;
+    const newVsc = body.querySelector(".vsc");
+    if (body.querySelector(".stage-overlay")) setGrowOrigin(growFrom);
+    if (live && oldVscHtml && newVsc) {
+      if (newVsc.outerHTML !== oldVscHtml) newVsc.classList.add("vsc-fade");
+      if (oldOv) {
+        oldOv.classList.add("ov-leave");
+        oldOv.setAttribute("aria-hidden", "true");
+        body.appendChild(oldOv);
+        // Child animations restart on re-append and bubble — only the
+        // overlay's own ov-leave end may drop the ghost.
+        oldOv.addEventListener("animationend", function (e) {
+          if (e.target === oldOv) oldOv.remove();
+        });
+        if (plainWork) body.classList.add("release");
+      }
+    } else {
+      void body.offsetWidth;
+      body.classList.add("swap");
+    }
+  }
+
   // ---- Customizable rail ----
   // Registry-driven: adding an entry here is all it takes — the config
   // loader merges stored order/hidden with the registry, appending new
@@ -5745,9 +7350,9 @@
     { id: "drive", label: "Drive", surface: "drive", icon: '<svg class="rail-ico" width="18" height="18" fill="currentColor" aria-hidden="true"><use href="#drive-mark"/></svg>' },
     { id: "rooms", label: "Rooms", surface: "rooms", planned: true, icon: railIco('<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.562Z"/>') },
     { id: "agents", label: "Agents", surface: "agents", planned: true, icon: railIco('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
-    { id: "tasks", label: "Tasks", surface: "tasks", icon: railIco('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>') },
+    { id: "tasks", label: "Tasks", surface: "tasks", planned: true, icon: railIco('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>') },
     { id: "status", label: "Status", surface: "status", icon: railIco('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>') },
-    { id: "artifacts", label: "Artifacts", surface: "artifacts", icon: railIco('<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>') },
+    { id: "artifacts", label: "Artifacts", surface: "artifacts", planned: true, icon: railIco('<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>') },
     { id: "inbox", label: "Inbox", surface: "inbox", planned: true, defaultHidden: true, icon: railIco('<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>') },
   ];
   const RAIL_STORE_KEY = "drive-demo-rail";
@@ -5907,6 +7512,20 @@
 
   // ---- Wire controls ----
   document.getElementById("btn-play").addEventListener("click", togglePlay);
+
+  // Intro overlay: its Play shares the #btn-play start path; × / Esc just
+  // close into explore mode. introArmed flips only after the boot render,
+  // so init's goTo(0) cannot self-dismiss — every navigation after that
+  // (transport, scrubber, keyboard, console goTo) closes the card.
+  let introArmed = false;
+  function dismissIntro() {
+    document.getElementById("intro-overlay").classList.add("gone");
+  }
+  document.getElementById("intro-play").addEventListener("click", function () {
+    dismissIntro();
+    if (!playing) play();
+  });
+  document.getElementById("intro-close").addEventListener("click", dismissIntro);
   const themeBtn = document.getElementById("btn-theme");
   function syncThemeLabel() {
     const dark = document.documentElement.classList.contains("dark");
@@ -6186,10 +7805,16 @@
   document.getElementById("strip-hand").addEventListener("click", function () {
     this.classList.toggle("on");
   });
-  // CC preview: a real click flips the transcript panel directly; the next
-  // scripted render re-asserts beat state (same pattern as #feed-toggle).
+  // CC toggle: unlike the other manual previews this one is STICKY — the
+  // click records user intent ("drive-demo-cc": open sets "on", close
+  // sets "off"), so every later render re-asserts the user's choice
+  // instead of the script closing the panel they just opened.
   document.getElementById("strip-cc").addEventListener("click", function () {
-    const open = document.querySelector(".feed-main").classList.toggle("cc-open");
+    const main = document.querySelector(".feed-main");
+    ccPref = main.classList.contains("cc-open") ? "off" : "on";
+    saveCcPref();
+    const open = ccPref === "on";
+    main.classList.toggle("cc-open", open);
     this.classList.toggle("on", open);
     this.setAttribute("aria-pressed", String(open));
     if (open) renderTranscript(index);
@@ -6212,7 +7837,7 @@
    *  browse Artifacts, click a card, watch the stage. Same composeScreen
    *  path as scripted beats: the artifact floats over the current beat's
    *  dimmed VS Code window (walkthroughs take over the editor). */
-  function previewArtifact(id) {
+  function previewArtifact(id, fromEl) {
     const show = ART_SHOWS[id];
     if (!show || !R.el) return;
     // Invalidate the screen signatures so the next scripted render
@@ -6227,6 +7852,9 @@
       '<span class="sticky-chip">sticky · ' + escapeHtml(show.sticky) + "</span>" +
       '<span class="pb-spacer"></span>' +
       (show.maturity === "planned" ? '<span class="badge planned">planned</span>' : "");
+    R.el.bar.classList.remove("swap");
+    void R.el.bar.offsetWidth;
+    R.el.bar.classList.add("swap");
     const st = seek(BEATS, index);
     const composed = composeScreen({
       sharer: st.stage.sharer,
@@ -6234,22 +7862,25 @@
       show: show,
       work: st.stage.work,
     });
-    R.el.body.classList.toggle("ws-host", !!(composed && composed.vsc));
-    R.el.body.innerHTML = composed ? composed.html : buildScreenBody(show);
-    R.el.body.classList.remove("swap");
-    void R.el.body.offsetWidth;
-    R.el.body.classList.add("swap");
+    // Grow from the clicked card while it is still on screen; a hidden
+    // or missing source falls back to the backlog chip, then to center.
+    swapScreenBody(
+      composed ? composed.html : buildScreenBody(show),
+      !!(composed && composed.vsc),
+      fromEl && fromEl.getClientRects().length ? fromEl : railChip(show.kindLabel),
+      false,
+    );
     Voice.syncUi();
     previewCallSurface();
   }
 
   document.getElementById("art-grid").addEventListener("click", function (e) {
     const card = e.target.closest ? e.target.closest(".art-card") : null;
-    if (card) previewArtifact(card.getAttribute("data-art-id"));
+    if (card) previewArtifact(card.getAttribute("data-art-id"), card);
   });
 
   // Room cards: Start/Stop flip the card's status dot + meta in place;
-  // Open on router-fix returns you to the live call.
+  // Open on demo-polish returns you to the live call.
   document.getElementById("sess-grid").addEventListener("click", function (e) {
     const btn = e.target.closest ? e.target.closest(".sess-btn") : null;
     if (!btn) return;
@@ -6272,7 +7903,7 @@
       btn.classList.add("stop");
       btn.textContent = "Stop";
     } else if (btn.classList.contains("open")) {
-      if (card.getAttribute("data-room-id") === "router-fix") previewCallSurface();
+      if (card.getAttribute("data-room-id") === "demo-polish") previewCallSurface();
     }
   });
 
@@ -6318,7 +7949,14 @@
   });
 
   window.addEventListener("keydown", function (e) {
-    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    // Interactive elements own their keys: Space on a focused button must
+    // activate THAT button (native behavior), not hijack the transport.
+    // Transport keys apply only when focus rests on the page background —
+    // which keeps Esc/Space dismissing the intro overlay from body, and
+    // Space on the overlay's own play button still starts playback via
+    // its native activation.
+    if (e.target && e.target.closest &&
+        e.target.closest("button, a, input, select, textarea, [tabindex]")) return;
     if (e.key === "ArrowRight") {
       e.preventDefault();
       pause();
@@ -6330,6 +7968,8 @@
     } else if (e.key === " ") {
       e.preventDefault();
       togglePlay();
+    } else if (e.key === "Escape") {
+      dismissIntro();
     }
   });
 
@@ -6355,17 +7995,36 @@
   applyRailWidth();
   applyDrawerWidth();
   goTo(0, false);
+  introArmed = true; // boot render done — navigation now dismisses the intro
 
   // Expose for smoke / console
   window.__DRIVE_DEMO__ = {
     beats: BEATS,
     seek: seek,
     goTo: function (i) { pause(); goTo(i, false); },
+    getIndex: function () { return index; },
     beatCount: BEATS.length,
     cursor: Cursor,
     voice: Voice,
     chime: Chime,
     transcriptAt: buildTranscript,
+    // Read-along clock (extend-only): the effective per-beat durations the
+    // progress bar and CC stamps run on, for e2e pacing assertions.
+    pacing: {
+      wordMs: WORD_MS,
+      spokenWords: SPOKEN_WORDS.slice(),
+      effectiveMs: effectiveMs,
+      totalMs: TOTAL_MS,
+      cumMs: CUM_MS.slice(),
+    },
+    cc: {
+      getPref: function () { return ccPref; },
+      setPref: function (p) {
+        ccPref = p === "on" || p === "off" ? p : null;
+        saveCcPref();
+        R.ccSig = null; // next render re-derives against the new pref
+      },
+    },
     rail: {
       getConfig: function () { return JSON.parse(JSON.stringify(railConfig)); },
       setConfig: function (cfg) {

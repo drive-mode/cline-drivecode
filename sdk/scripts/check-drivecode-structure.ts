@@ -95,7 +95,7 @@ export const PRODUCT_ROLE_DIRS = new Set([
 export const HARNESS_ROOT_FILES = new Set(["README.md", "decisions.tsv"]);
 export const HARNESS_ROOT_DIRS = new Set(["foundation", "delivery"]);
 
-export const ASSET_BUCKETS = new Set(["logos", "hub", "tui", "demos"]);
+export const ASSET_BUCKETS = new Set(["logos", "hub", "tui", "demos", "fonts"]);
 export const DESIGN_DIRS = new Set(["brand", "wireframes", "canvases"]);
 
 /** Legacy paths that must stay gone. */
@@ -257,7 +257,7 @@ export async function checkDrivecodeStructure(
 	for (const entry of await list(join(nest, "assets"))) {
 		const rel = report(`assets/${entry.name}`);
 		if (!entry.isDir) {
-			fail(rel, "no loose files in assets/ — use logos/, hub/, tui/, or demos/");
+			fail(rel, "no loose files in assets/ — use logos/, hub/, tui/, demos/, or fonts/");
 			continue;
 		}
 		if (!ASSET_BUCKETS.has(entry.name)) {
