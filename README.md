@@ -15,6 +15,14 @@ Stay on a call with your agents. See what they are doing. Steer.
 <em>Drive coding</em> — built on <a href="#cline-upstream">Cline</a>.
 </p>
 
+<p align="center">
+  <img src="docs/drivecode/assets/demos/drive-product-demo.gif" width="820" alt="Drive product demo: join a call, the director presents its plan and the system architecture on a shared screen while work cards land beneath it">
+</p>
+
+<p align="center">
+<sub>2× speed · <a href="docs/drivecode/design/canvases/drive-product-demo.html">open the interactive demo</a> (45 scripted beats, keyboard: ←/→/Space)</sub>
+</p>
+
 ---
 
 Prompting an agent is a turn-based conversation: you ask, you wait, you read a
