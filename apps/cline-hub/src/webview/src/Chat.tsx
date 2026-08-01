@@ -4,12 +4,16 @@ import {
 	buildCleanDrainInvite,
 	buildRecruitNeed,
 	buildVoiceAckNarration,
+	classifyStall,
+	diagnoseAndPropose,
 	formatCleanDrainNarration,
-	rankRecruitCandidates,
-	shouldOfferCleanDrain,
 	type RankedRecruit,
 	type RecruitCandidate,
 	type RecruitNeed,
+	rankRecruitCandidates,
+	type StallOpenFailure,
+	shouldOfferCleanDrain,
+	stallRollupSliceFromCounters,
 } from "@cline/drive";
 import type { AddressSet } from "@cline/shared";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -24,6 +28,11 @@ import type {
 	WebviewReasonLevel,
 	WebviewSessionSummary,
 } from "../../webview-protocol";
+import {
+	CHAT_HOST_MESSAGE_TYPES,
+	type ChatHostMessage,
+	isChatHostMessage,
+} from "./chatHostMessages";
 import {
 	appendAssistantDelta,
 	appendReasoningDelta,
@@ -41,6 +50,7 @@ import {
 	PendingApprovalsPanel,
 } from "./components/PendingApprovalsPanel";
 import { PlanEditor } from "./components/PlanEditor";
+import { hasNowLastFailure, steerAppliedBanner } from "./drive/agencyChrome";
 import {
 	listPlanTasks,
 	mutateBankAcceptSdlcFreeze,
@@ -50,37 +60,31 @@ import {
 	mutateBankEditPlanTasks,
 	mutateBankRecordFailure,
 } from "./drive/bankSession";
-import { hasNowLastFailure, steerAppliedBanner } from "./drive/agencyChrome";
-import { DriveHeaderControls } from "./drive/DriveCallChrome";
-import { DriveRoomChrome, DriveVoiceBar } from "./drive/DriveRoomChrome";
 import {
 	ChatForkAuditPanel,
 	isChatForkSession,
 } from "./drive/ChatForkAuditPanel";
-import { RouteSuggestChip } from "./drive/RouteSuggestChip";
-import { SdlcFreezeAcceptChip } from "./drive/SdlcFreezeAcceptChip";
+import { DriveHeaderControls } from "./drive/DriveCallChrome";
+import { DriveRoomChrome, DriveVoiceBar } from "./drive/DriveRoomChrome";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
+import { RecruitStallPicker } from "./drive/RecruitStallPicker";
+import { RouteSuggestChip } from "./drive/RouteSuggestChip";
+import { resolveRosterParticipants } from "./drive/rosterHelpers";
 import {
-	type RouteSuggestion,
 	type RouterUiMode,
+	type RouteSuggestion,
 	suggestRouteForUtterance,
 } from "./drive/routeSuggest";
+import { SdlcFreezeAcceptChip } from "./drive/SdlcFreezeAcceptChip";
 import { Spotlight } from "./drive/Spotlight";
+import { StickyStagePane } from "./drive/StickyStagePane";
 import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
-import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import {
 	planRecoveryAccept,
+	type RecoveryOptionKind,
 	resolveRecoveryOfferTarget,
 	shouldOfferRecoveryFork,
-	type RecoveryOptionKind,
 } from "./drive/stuckRecovery";
-import {
-	classifyStall,
-	diagnoseAndPropose,
-	stallRollupSliceFromCounters,
-	type StallOpenFailure,
-} from "@cline/drive";
-import { StickyStagePane } from "./drive/StickyStagePane";
 import {
 	applyBankSnapshot,
 	applySubModeIntent,
@@ -91,11 +95,11 @@ import {
 	toNativeMode,
 	toSharedDriveSubMode,
 } from "./drive/types";
-import { resolveRosterParticipants } from "./drive/rosterHelpers";
 import { useDriveSession } from "./drive/useDriveSession";
 import { createVoiceStack } from "./drive/voice/createVoiceStack";
 import { shouldSpeakDriveTts } from "./drive/voice/driveVoiceUi";
 import { clearVoiceCaptionAfterSend } from "./drive/voice/voiceCaptionState";
+import { subscribeToHostMessages } from "./lib/host-message-gateway";
 import { getVsCodeApi, postToHost } from "./vscode";
 
 type ProviderOption = Extract<
@@ -208,9 +212,8 @@ export default function Chat({
 	const [titleEditing, setTitleEditing] = useState(false);
 	const [forking, setForking] = useState(false);
 	const [forkError, setForkError] = useState<string | null>(null);
-	const [routeSuggestion, setRouteSuggestion] = useState<RouteSuggestion | null>(
-		null,
-	);
+	const [routeSuggestion, setRouteSuggestion] =
+		useState<RouteSuggestion | null>(null);
 	const [pendingRouteSend, setPendingRouteSend] = useState<{
 		prompt: string;
 		attachments?: WebviewChatAttachments;
@@ -430,8 +433,7 @@ export default function Chat({
 
 	const seatRecruitCandidate = useCallback(
 		(entry: RankedRecruit) => {
-			const roomId =
-				driveRef.current.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID;
+			const roomId = driveRef.current.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID;
 			postToHost({
 				type: "call_seat",
 				roomId,
@@ -530,8 +532,7 @@ export default function Chat({
 			}),
 			openFailures: openStallFailures,
 			nowTaskId: drive.bankSnapshot.nowTaskId,
-			callSessionId:
-				drive.callSessionId ?? lastCallSessionIdRef.current,
+			callSessionId: drive.callSessionId ?? lastCallSessionIdRef.current,
 			evidence: {
 				taskIds: openStallFailures.map((entry) => entry.taskId),
 				...(drive.bankSnapshot.activePlanId
@@ -571,8 +572,7 @@ export default function Chat({
 					planTaskIds: planEditorTasks.map((task) => task.id),
 					stallFailureFingerprint:
 						offer?.source === "auto_stall" ? offer.failureNote : null,
-					stallTaskId:
-						offer?.source === "auto_stall" ? offer.taskId : null,
+					stallTaskId: offer?.source === "auto_stall" ? offer.taskId : null,
 				});
 				if (!plan) {
 					return;
@@ -700,13 +700,8 @@ export default function Chat({
 								: plan.createTask,
 							correlation,
 						);
-						if (
-							defaultsRef.current.workspaceRoot?.trim() &&
-							!created.fromHub
-						) {
-							setStatus(
-								"Recovery not saved — workspace bank was not updated.",
-							);
+						if (defaultsRef.current.workspaceRoot?.trim() && !created.fromHub) {
+							setStatus("Recovery not saved — workspace bank was not updated.");
 							return;
 						}
 						let nextSnapshot = created.snapshot;
@@ -755,13 +750,7 @@ export default function Chat({
 				}
 			})();
 		},
-		[
-			bankSessionRef,
-			planEditorTasks,
-			sending,
-			setDrive,
-			setPlanEditorTasks,
-		],
+		[bankSessionRef, planEditorTasks, sending, setDrive, setPlanEditorTasks],
 	);
 
 	const dismissStuckRecovery = useCallback(() => {
@@ -905,12 +894,7 @@ export default function Chat({
 	// Intentional mount-once listener: reads latest state via refs / stable setters.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: message bus effect must not re-subscribe
 	useEffect(() => {
-		const handleMessage = (event: MessageEvent<WebviewOutboundMessage>) => {
-			const message = event.data;
-			if (!message || typeof message !== "object" || !("type" in message)) {
-				return;
-			}
-
+		const handleMessage = (message: ChatHostMessage) => {
 			switch (message.type) {
 				case "status":
 					setStatus(message.text);
@@ -1125,10 +1109,7 @@ export default function Chat({
 									callSessionId: driveRef.current.callSessionId,
 								},
 							);
-							if (
-								defaultsRef.current.workspaceRoot?.trim() &&
-								!fromHub
-							) {
+							if (defaultsRef.current.workspaceRoot?.trim() && !fromHub) {
 								return;
 							}
 							setDrive((current) => applyBankSnapshot(current, snapshot));
@@ -1216,11 +1197,13 @@ export default function Chat({
 			}
 		};
 
-		window.addEventListener("message", handleMessage);
+		const unsubscribe = subscribeToHostMessages({
+			types: CHAT_HOST_MESSAGE_TYPES,
+			guard: isChatHostMessage,
+			onMessage: handleMessage,
+		});
 		postToHost({ type: "ready" });
-		return () => {
-			window.removeEventListener("message", handleMessage);
-		};
+		return unsubscribe;
 	}, []);
 
 	useEffect(() => {
@@ -1430,13 +1413,10 @@ export default function Chat({
 					utterance: trimmed,
 				});
 				setDriveJoinNote(ack.text);
-				void createVoiceStack(driveVoiceResolved.topology).tts.speak(
-					ack.text,
-					{
-						volume: driveVoice.hardware.outputVolume,
-						sinkId: driveVoice.hardware.speakerDeviceId,
-					},
-				);
+				void createVoiceStack(driveVoiceResolved.topology).tts.speak(ack.text, {
+					volume: driveVoice.hardware.outputVolume,
+					sinkId: driveVoice.hardware.speakerDeviceId,
+				});
 			} else if (driveVoice.profile === "local") {
 				const ack = buildVoiceAckNarration({
 					profile: "local",
@@ -1468,10 +1448,7 @@ export default function Chat({
 			};
 
 			if (midTurn) {
-				setMessages((current) => [
-					...current,
-					createMessage("user", trimmed),
-				]);
+				setMessages((current) => [...current, createMessage("user", trimmed)]);
 				setStatus("Steer queued — will apply at the next tool boundary.");
 				postToHost({
 					type: "send",
@@ -1915,9 +1892,7 @@ export default function Chat({
 								drive.stageSharer === "you" ? "You" : drive.partnerName
 							}
 						>
-							{showStuckRecovery &&
-							recoveryOfferTarget &&
-							!recruitStall ? (
+							{showStuckRecovery && recoveryOfferTarget && !recruitStall ? (
 								<StuckRecoveryFork
 									className="mb-3"
 									disabled={isHydrating}
@@ -1981,10 +1956,7 @@ export default function Chat({
 															callSessionId: drive.callSessionId,
 														},
 													);
-												if (
-													defaults.workspaceRoot?.trim() &&
-													!fromHub
-												) {
+												if (defaults.workspaceRoot?.trim() && !fromHub) {
 													setStatus(
 														"SDLC freeze not saved — workspace bank was not updated.",
 													);
@@ -2033,24 +2005,21 @@ export default function Chat({
 											if (!planId) {
 												return;
 											}
-											const recovery = hasNowLastFailure(
-												drive.bankSnapshot,
+											const recovery = hasNowLastFailure(drive.bankSnapshot);
+											const { snapshot, fromHub } = await mutateBankCreateTask(
+												bankSessionRef.current,
+												defaults.workspaceRoot,
+												{
+													id: task.id,
+													title: task.title,
+													body: "",
+													planId,
+												},
+												{
+													roomId: drive.roomId,
+													callSessionId: drive.callSessionId,
+												},
 											);
-											const { snapshot, fromHub } =
-												await mutateBankCreateTask(
-													bankSessionRef.current,
-													defaults.workspaceRoot,
-													{
-														id: task.id,
-														title: task.title,
-														body: "",
-														planId,
-													},
-													{
-														roomId: drive.roomId,
-														callSessionId: drive.callSessionId,
-													},
-												);
 											if (defaults.workspaceRoot?.trim() && !fromHub) {
 												setStatus(
 													"Plan change not saved — workspace bank was not updated.",
@@ -2086,8 +2055,7 @@ export default function Chat({
 														taskId,
 														...(driveRef.current.attributionAgentId
 															? {
-																	agentId:
-																		driveRef.current.attributionAgentId,
+																	agentId: driveRef.current.attributionAgentId,
 																}
 															: {}),
 													},
@@ -2105,10 +2073,7 @@ export default function Chat({
 											cleanDrainCountersRef.current.completedCount += 1;
 											if (planId) {
 												setPlanEditorTasks(
-													await listPlanTasks(
-														bankSessionRef.current,
-														planId,
-													),
+													await listPlanTasks(bankSessionRef.current, planId),
 												);
 											} else {
 												setPlanEditorTasks([]);

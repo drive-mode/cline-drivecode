@@ -2,6 +2,11 @@
 
 import type { WebviewOutboundMessage } from "../../../webview-protocol";
 import { postToHost } from "../vscode";
+import {
+	type HostMessage,
+	isRecord,
+	subscribeToHostMessages,
+} from "./host-message-gateway";
 
 type PostToHost = typeof postToHost;
 
@@ -28,6 +33,36 @@ export function isBrowserTransportFailure(
 	return BROWSER_TRANSPORT_FAILURE_MESSAGES.has(message.text);
 }
 
+const DESKTOP_CLIENT_MESSAGE_TYPES = [
+	"status",
+	"error",
+	"desktopCommandResult",
+] as const;
+
+type DesktopClientHostMessage =
+	| { type: "status"; text: string }
+	| { type: "error"; text: string }
+	| { type: "desktopCommandResult"; id: string; ok: true; result?: unknown }
+	| { type: "desktopCommandResult"; id: string; ok: false; error: string };
+
+export function isDesktopClientHostMessage(
+	message: HostMessage,
+): message is DesktopClientHostMessage {
+	switch (message.type) {
+		case "status":
+		case "error":
+			return typeof message.text === "string";
+		case "desktopCommandResult":
+			return (
+				typeof message.id === "string" &&
+				typeof message.ok === "boolean" &&
+				(message.ok || typeof message.error === "string")
+			);
+		default:
+			return false;
+	}
+}
+
 export class HubDesktopClient {
 	private requestCounter = 0;
 	private readonly pending = new Map<string, PendingRequest>();
@@ -36,19 +71,31 @@ export class HubDesktopClient {
 	constructor(options: { postToHost?: PostToHost; listen?: boolean } = {}) {
 		this.postToHost = options.postToHost ?? postToHost;
 		if ((options.listen ?? true) && typeof window !== "undefined") {
-			window.addEventListener("message", (event) => {
-				this.handleMessage(event as MessageEvent<WebviewOutboundMessage>);
+			subscribeToHostMessages({
+				types: DESKTOP_CLIENT_MESSAGE_TYPES,
+				guard: isDesktopClientHostMessage,
+				onMessage: (message) => {
+					this.onHostMessage(message);
+				},
 			});
 		}
 	}
 
+	/** Test seam: feed one payload as if it arrived from the host bridge. */
 	handleMessage(event: Pick<MessageEvent<WebviewOutboundMessage>, "data">) {
-		const message = event.data;
+		const data: unknown = event.data;
 		if (
-			message &&
-			typeof message === "object" &&
-			(message.type === "status" || message.type === "error")
+			!isRecord(data) ||
+			typeof data.type !== "string" ||
+			!isDesktopClientHostMessage(data as HostMessage)
 		) {
+			return;
+		}
+		this.onHostMessage(data as DesktopClientHostMessage);
+	}
+
+	private onHostMessage(message: DesktopClientHostMessage) {
+		if (message.type === "status" || message.type === "error") {
 			if (isBrowserTransportFailure(message) && this.pending.size > 0) {
 				const error = new Error(message.text);
 				for (const pending of this.pending.values()) {
@@ -57,13 +104,6 @@ export class HubDesktopClient {
 				}
 				this.pending.clear();
 			}
-			return;
-		}
-		if (
-			!message ||
-			typeof message !== "object" ||
-			message.type !== "desktopCommandResult"
-		) {
 			return;
 		}
 

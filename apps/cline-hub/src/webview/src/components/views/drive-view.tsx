@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { DriveOpenCallRequest } from "../../drive/driveLaunch";
 import {
 	applyDriveRoomPreviewMessage,
 	type DriveRoomPreview,
@@ -26,10 +27,14 @@ import {
 	EMPTY_DRIVE_ROOM_PREVIEW,
 	isDriveRoomNotFoundMessage,
 } from "../../drive/driveRoomPreview";
-import type { DriveOpenCallRequest } from "../../drive/driveLaunch";
 import { DRIVE_DEFAULT_ROOM_ID } from "../../drive/types";
+import { subscribeToHostMessages } from "../../lib/host-message-gateway";
 import { postToHost } from "../../vscode";
 import { DriveMarkIcon } from "../icons/drive-mark";
+import {
+	DRIVE_VIEW_MESSAGE_TYPES,
+	isDriveViewHostMessage,
+} from "./drive-view-messages";
 import { PageFrame, PageHeader } from "./page-layout";
 
 const SNAPSHOT_STATES: readonly StatusState[] = [
@@ -273,45 +278,43 @@ export function DriveView({
 	}, [requestRoom, requestSummary]);
 
 	useEffect(() => {
-		function onMessage(event: MessageEvent) {
-			const message = event.data as { type?: unknown } & Record<
-				string,
-				unknown
-			>;
-			if (message.type === "status_summary_result") {
-				setSummary(message.summary as StatusSummary);
-			} else if (message.type === "status_updated") {
-				requestSummary();
-			}
-			const roomNotFound = isDriveRoomNotFoundMessage(message);
-			if (
-				message.type === "call_error" &&
-				message.command === "call_get_room" &&
-				!roomNotFound
-			) {
-				setRoomPreview(null);
-				setRoomLookupError(
-					typeof message.text === "string" && message.text.trim()
-						? message.text
-						: "Could not check the Pairing room.",
-				);
-				return;
-			}
-			if (
-				message.type === "room_snapshot" ||
-				message.type === "drive_event" ||
-				roomNotFound
-			) {
-				setRoomLookupError(null);
-				setRoomPreview((current) => {
-					const base = current ?? EMPTY_DRIVE_ROOM_PREVIEW;
-					const next = applyDriveRoomPreviewMessage(base, message);
-					return current === null && next === base ? null : next;
-				});
-			}
-		}
-		window.addEventListener("message", onMessage);
-		return () => window.removeEventListener("message", onMessage);
+		return subscribeToHostMessages({
+			types: DRIVE_VIEW_MESSAGE_TYPES,
+			guard: isDriveViewHostMessage,
+			onMessage: (message) => {
+				if (message.type === "status_summary_result") {
+					setSummary(message.summary);
+				} else if (message.type === "status_updated") {
+					requestSummary();
+				}
+				const roomNotFound = isDriveRoomNotFoundMessage(message);
+				if (
+					message.type === "call_error" &&
+					message.command === "call_get_room" &&
+					!roomNotFound
+				) {
+					setRoomPreview(null);
+					setRoomLookupError(
+						typeof message.text === "string" && message.text.trim()
+							? message.text
+							: "Could not check the Pairing room.",
+					);
+					return;
+				}
+				if (
+					message.type === "room_snapshot" ||
+					message.type === "drive_event" ||
+					roomNotFound
+				) {
+					setRoomLookupError(null);
+					setRoomPreview((current) => {
+						const base = current ?? EMPTY_DRIVE_ROOM_PREVIEW;
+						const next = applyDriveRoomPreviewMessage(base, message);
+						return current === null && next === base ? null : next;
+					});
+				}
+			},
+		});
 	}, [requestSummary]);
 
 	const blocked = summary?.byState.blocked ?? 0;

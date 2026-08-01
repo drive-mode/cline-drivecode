@@ -23,36 +23,38 @@
  * view never pulls the whole log.
  */
 
+import type { StatusSessionRow } from "@cline/drive";
+import { buildShippedDigest, formatShippedDigestMarkdown } from "@cline/drive";
 import type {
 	StatusState,
 	StatusSummary,
 	StatusUpdate,
 	TeamRuntimeState,
 } from "@cline/shared";
-import type { StatusSessionRow } from "@cline/drive";
-import {
-	buildShippedDigest,
-	formatShippedDigestMarkdown,
-} from "@cline/drive";
 import { ActivityIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { subscribeToHostMessages } from "../../lib/host-message-gateway";
+import { downloadTextFile } from "../../status/downloadTextFile";
+import { StatusSessionsPanel } from "../../status/StatusSessionsPanel";
 import type { StatusSessionRollupSource } from "../../status/status-session-rollup-source";
 import type { StatusTeamsSource } from "../../status/status-teams-source";
-import { StatusSessionsPanel } from "../../status/StatusSessionsPanel";
-import { downloadTextFile } from "../../status/downloadTextFile";
 import { postToHost } from "../../vscode";
-import { PageEmptyState, PageFrame, PageHeader } from "./page-layout";
 import { DependencyMap } from "./dependency-map";
+import { PageEmptyState, PageFrame, PageHeader } from "./page-layout";
 import {
 	hasActiveFilters,
 	matchesStatusFilters,
 	sectionHeadingCount,
 } from "./status-filters";
 import { relativeTime, STATE_STYLES, StatusRow } from "./status-row";
+import {
+	isStatusViewHostMessage,
+	STATUS_VIEW_MESSAGE_TYPES,
+} from "./status-view-messages";
 
 const PAGE_LIMIT = 50;
 
@@ -228,9 +230,7 @@ export function StatusView(props: {
 			})
 			.catch((err) => {
 				if (sessionsRequestRef.current !== requestId) return;
-				setSessionsError(
-					err instanceof Error ? err.message : String(err),
-				);
+				setSessionsError(err instanceof Error ? err.message : String(err));
 				setSessionRows([]);
 				setSessionsLoading(false);
 			});
@@ -256,66 +256,66 @@ export function StatusView(props: {
 	}, [mode, requestSessions]);
 
 	useEffect(() => {
-		function onMessage(event: MessageEvent) {
-			const message = event.data as { type: string } & Record<string, unknown>;
+		return subscribeToHostMessages({
+			types: STATUS_VIEW_MESSAGE_TYPES,
+			guard: isStatusViewHostMessage,
+			onMessage: (message) => {
+				if (message.type === "status_page") {
+					if (message.requestId !== activeRequestRef.current) return;
+					const page = message.updates;
+					const replace = replaceRequestRef.current;
+					setUpdates((current) => (replace ? page : [...current, ...page]));
+					setNextCursor(message.nextCursor ?? null);
+					setHasMore(message.hasMore === true);
+					setLoading(false);
+					return;
+				}
 
-			if (message.type === "status_page") {
-				if (message.requestId !== activeRequestRef.current) return;
-				const page = message.updates as StatusUpdate[];
-				const replace = replaceRequestRef.current;
-				setUpdates((current) => (replace ? page : [...current, ...page]));
-				setNextCursor((message.nextCursor as number | null) ?? null);
-				setHasMore(message.hasMore === true);
-				setLoading(false);
-				return;
-			}
+				if (message.type === "status_summary_result") {
+					setSummary(message.summary);
+					return;
+				}
 
-			if (message.type === "status_summary_result") {
-				setSummary(message.summary as StatusSummary);
-				return;
-			}
+				if (message.type === "status_tasks_snapshot_result") {
+					// Teams load through StatusTeamsSource adapters only.
+					return;
+				}
 
-			if (message.type === "status_tasks_snapshot_result") {
-				// Teams load through StatusTeamsSource adapters only.
-				return;
-			}
+				if (message.type === "team_progress") {
+					if (mode === "dependency-map") requestTasks();
+					return;
+				}
 
-			if (message.type === "team_progress") {
-				if (mode === "dependency-map") requestTasks();
-				return;
-			}
+				if (message.type === "status_error") {
+					if (message.requestId !== activeRequestRef.current) return;
+					setError(message.text);
+					setLoading(false);
+					return;
+				}
 
-			if (message.type === "status_error") {
-				if (message.requestId !== activeRequestRef.current) return;
-				setError(String(message.text));
-				setLoading(false);
-				return;
-			}
-
-			if (message.type === "status_updated") {
-				const live = message.update as StatusUpdate;
-				const matches = matchesStatusFilters(live, {
-					stateFilter,
-					agentFilter,
-					search,
-				});
-				setUpdates((current) => {
-					if (current.some((u) => u.updateId === live.updateId)) return current;
-					if (mode === "board") {
-						const withoutSubject = current.filter(
-							(u) => u.subject !== live.subject,
-						);
-						return matches ? [live, ...withoutSubject] : withoutSubject;
-					}
-					if (!matches) return current;
-					return [live, ...current];
-				});
-				requestSummary();
-			}
-		}
-
-		window.addEventListener("message", onMessage);
-		return () => window.removeEventListener("message", onMessage);
+				if (message.type === "status_updated") {
+					const live = message.update;
+					const matches = matchesStatusFilters(live, {
+						stateFilter,
+						agentFilter,
+						search,
+					});
+					setUpdates((current) => {
+						if (current.some((u) => u.updateId === live.updateId))
+							return current;
+						if (mode === "board") {
+							const withoutSubject = current.filter(
+								(u) => u.subject !== live.subject,
+							);
+							return matches ? [live, ...withoutSubject] : withoutSubject;
+						}
+						if (!matches) return current;
+						return [live, ...current];
+					});
+					requestSummary();
+				}
+			},
+		});
 	}, [mode, requestSummary, requestTasks, stateFilter, agentFilter, search]);
 
 	const toggleState = useCallback((value: StatusState) => {
@@ -423,29 +423,24 @@ export function StatusView(props: {
 
 			<div className="mb-4 flex flex-wrap items-center gap-2">
 				<div className="flex overflow-hidden rounded-md border">
-					{(
-						[
-							"board",
-							"changelog",
-							"dependency-map",
-							"sessions",
-						] as const
-					).map((value) => (
-						<button
-							className={cn(
-								"px-3 py-1.5 text-xs capitalize transition-colors",
-								mode === value
-									? "bg-primary text-primary-foreground"
-									: "text-muted-foreground hover:text-foreground",
-							)}
-							aria-pressed={mode === value}
-							key={value}
-							onClick={() => setMode(value)}
-							type="button"
-						>
-							{MODE_LABELS[value]}
-						</button>
-					))}
+					{(["board", "changelog", "dependency-map", "sessions"] as const).map(
+						(value) => (
+							<button
+								className={cn(
+									"px-3 py-1.5 text-xs capitalize transition-colors",
+									mode === value
+										? "bg-primary text-primary-foreground"
+										: "text-muted-foreground hover:text-foreground",
+								)}
+								aria-pressed={mode === value}
+								key={value}
+								onClick={() => setMode(value)}
+								type="button"
+							>
+								{MODE_LABELS[value]}
+							</button>
+						),
+					)}
 				</div>
 
 				{mode !== "sessions" && mode !== "dependency-map" ? (

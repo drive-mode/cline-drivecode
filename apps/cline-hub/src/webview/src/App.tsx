@@ -1,14 +1,9 @@
+import type { StatusSessionRow } from "@cline/drive";
 import {
 	DrivePlansDemoTeamsSource,
 	DriveSessionsDemoRollupSource,
 	readDrivecodeDemoHubBootstrap,
 } from "@cline/drivecode-demo";
-import type { StatusSessionRow } from "@cline/drive";
-import { HubStatusSessionRollupSource } from "./status/hub-status-session-rollup-source";
-import { HubStatusTeamsSource } from "./status/hub-status-teams-source";
-import type { StatusSessionRollupSource } from "./status/status-session-rollup-source";
-import type { StatusTeamsSource } from "./status/status-teams-source";
-import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import {
 	ActivityIcon,
 	ArrowUpDownIcon,
@@ -69,21 +64,27 @@ import type {
 	WebviewConnectedClient,
 	WebviewHubEvent,
 	WebviewHubState,
-	WebviewOutboundMessage,
 	WebviewSessionSummary,
 } from "../../webview-protocol";
+import { APP_HOST_MESSAGE_TYPES, isAppHostMessage } from "./appHostMessages";
 import { DriveMarkIcon } from "./components/icons/drive-mark";
 import { DriveView } from "./components/views/drive-view";
 import { PageFrame, PageHeader } from "./components/views/page-layout";
 import type { CustomizationSection } from "./components/views/settings/extensions-view";
 import type { SettingsSection } from "./components/views/settings/settings-view";
+import { ChatForkDemo } from "./drive/ChatForkDemo";
 import type {
 	DriveLaunchRequest,
 	DriveOpenCallRequest,
 } from "./drive/driveLaunch";
 import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
-import { ChatForkDemo } from "./drive/ChatForkDemo";
+import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
+import { subscribeToHostMessages } from "./lib/host-message-gateway";
 import { syncHubTheme } from "./lib/theme";
+import { HubStatusSessionRollupSource } from "./status/hub-status-session-rollup-source";
+import { HubStatusTeamsSource } from "./status/hub-status-teams-source";
+import type { StatusSessionRollupSource } from "./status/status-session-rollup-source";
+import type { StatusTeamsSource } from "./status/status-teams-source";
 import { postToHost } from "./vscode";
 
 const Chat = lazy(() => import("./Chat"));
@@ -1179,8 +1180,8 @@ function App() {
 	);
 	const [workspaceRoot, setWorkspaceRoot] = useState("");
 	const workspaceRootRef = useRef("");
-	const [locationSearch, setLocationSearch] = useState(
-		() => (typeof window !== "undefined" ? window.location.search : ""),
+	const [locationSearch, setLocationSearch] = useState(() =>
+		typeof window !== "undefined" ? window.location.search : "",
 	);
 	const [driveLaunchRequest, setDriveLaunchRequest] =
 		useState<DriveLaunchRequest | null>(null);
@@ -1201,12 +1202,12 @@ function App() {
 			return new DriveSessionsDemoRollupSource();
 		}
 		return new HubStatusSessionRollupSource(() => {
-			const fromDefaults = workspaceRoot.trim() || workspaceRootRef.current.trim();
+			const fromDefaults =
+				workspaceRoot.trim() || workspaceRootRef.current.trim();
 			if (fromDefaults) {
 				return fromDefaults;
 			}
-			return recentSessions.find((s) => s.workspaceRoot?.trim())
-				?.workspaceRoot;
+			return recentSessions.find((s) => s.workspaceRoot?.trim())?.workspaceRoot;
 		});
 	}, [demoHub.useDemoSessionsAdapter, recentSessions, workspaceRoot]);
 
@@ -1237,34 +1238,33 @@ function App() {
 	}, []);
 
 	useEffect(() => {
-		const handleMessage = (event: MessageEvent<WebviewOutboundMessage>) => {
-			const message = event.data;
-			if (!message || typeof message !== "object") {
-				return;
-			}
-			if (message.type === "hub_state") {
-				setHubState(message);
-				if (message.connected) {
-					setRestartPending(false);
+		const unsubscribe = subscribeToHostMessages({
+			types: APP_HOST_MESSAGE_TYPES,
+			guard: isAppHostMessage,
+			onMessage: (message) => {
+				if (message.type === "hub_state") {
+					setHubState(message);
+					if (message.connected) {
+						setRestartPending(false);
+					}
+					return;
 				}
-				return;
-			}
-			if (message.type === "defaults") {
-				const root =
-					typeof message.defaults?.workspaceRoot === "string"
-						? message.defaults.workspaceRoot
-						: "";
-				workspaceRootRef.current = root;
-				setWorkspaceRoot(root);
-				return;
-			}
-			if (message.type === "sessions") {
-				setRecentSessions(message.sessions);
-			}
-		};
-		window.addEventListener("message", handleMessage);
+				if (message.type === "defaults") {
+					const root =
+						typeof message.defaults?.workspaceRoot === "string"
+							? message.defaults.workspaceRoot
+							: "";
+					workspaceRootRef.current = root;
+					setWorkspaceRoot(root);
+					return;
+				}
+				if (message.type === "sessions") {
+					setRecentSessions(message.sessions);
+				}
+			},
+		});
 		postToHost({ type: "ready" });
-		return () => window.removeEventListener("message", handleMessage);
+		return unsubscribe;
 	}, []);
 
 	const restartHub = useCallback(() => {
@@ -1291,20 +1291,20 @@ function App() {
 	}, []);
 
 	const openDriveCall = useCallback((request: DriveOpenCallRequest) => {
-			nextDriveLaunchRequestIdRef.current += 1;
-			setDriveLaunchRequest({
-				id: nextDriveLaunchRequestIdRef.current,
-				...request,
-			});
-			const sessionId =
-				request.action === "focus" ? lastChatSessionIdRef.current : undefined;
-			setSelectedSessionId(sessionId);
-			const nextPath = chatPath(sessionId);
-			if (currentPathWithSearch() !== nextPath) {
-				window.history.pushState(null, "", nextPath);
-			}
-			setView("chat");
-		}, []);
+		nextDriveLaunchRequestIdRef.current += 1;
+		setDriveLaunchRequest({
+			id: nextDriveLaunchRequestIdRef.current,
+			...request,
+		});
+		const sessionId =
+			request.action === "focus" ? lastChatSessionIdRef.current : undefined;
+		setSelectedSessionId(sessionId);
+		const nextPath = chatPath(sessionId);
+		if (currentPathWithSearch() !== nextPath) {
+			window.history.pushState(null, "", nextPath);
+		}
+		setView("chat");
+	}, []);
 
 	const acknowledgeDriveLaunch = useCallback((requestId: number) => {
 		setDriveLaunchRequest((current) =>
