@@ -4,7 +4,8 @@
 //      at 1280x640 with zero page scroll and zero pageerrors;
 //   2. every beat's cursor spec resolves against the DOM it is performed on
 //      (the PREVIOUS beat's render, unless spec.when === "after"), lands
-//      in-viewport, and every click target is a <button>;
+//      in-viewport, and every click target is a <button>; hover specs
+//      (cursor or cursorAfter) resolve every path waypoint the same way;
 //   3. voice registry integrity: CLIPS / CLIP_SEQS / SPEECH_CLIPS keys are
 //      real beat ids and every referenced clip (plus inline beat input.clip)
 //      exists in ../../assets/demos/voice/;
@@ -45,7 +46,17 @@
 //  16) end packet: the a7-end-packet handoff panel hugs its content
 //      (no more than 25% dead space) instead of sizing to the room;
 //  17) maturity badges: PLANNED must not wear the amber live/voice hue
-//      in either theme (probed against the retired amber styling).
+//      in either theme (probed against the retired amber styling);
+//  18) takeover beat (a2-you-show): presenter bar reads "You are
+//      presenting" (other sharers keep "is"), the pin holds the pre-fix
+//      mock with both caption-jump spots rendered;
+//  19) takeover choreography: during autoplay at a2-you-show the
+//      simulated cursor really glides toward spot A then spot B across
+//      the pinned mock (two samples ~1.6s apart) and wears the hover
+//      ring on a waypoint;
+//  20) reduced motion: the takeover mock degrades to the static
+//      composition — no jump loop, both caption bars visible, the
+//      "jumps A -> B" annotation shown.
 //      The battery's LAST check compares every `bun verify.js`
 //      success line the demo shows against this run's real beat/check
 //      counts.
@@ -251,7 +262,8 @@ async function main() {
       "beat count " + beatCount + " != " + EXPECTED_BEATS + " (update EXPECTED_BEATS if intentional)");
     const beats = await page.evaluate(function () {
       return window.__DRIVE_DEMO__.beats.map(function (b) {
-        return { id: b.id, cursor: b.cursor || null, inputClip: (b.input && b.input.clip) || null };
+        return { id: b.id, cursor: b.cursor || null, cursorAfter: b.cursorAfter || null,
+          inputClip: (b.input && b.input.clip) || null };
       });
     });
 
@@ -272,10 +284,11 @@ async function main() {
     }
     await page.evaluate(function () { document.documentElement.classList.remove("dark"); });
 
-    // 2) Cursor specs resolve against the DOM they run on; clicks hit <button>s.
+    // 2) Cursor specs resolve against the DOM they run on; clicks hit
+    // <button>s. Hover specs are swept separately below.
     for (let i = 0; i < beatCount; i++) {
       const spec = beats[i].cursor;
-      if (!spec || spec.action === "none") continue;
+      if (!spec || spec.action === "none" || spec.action === "hover") continue;
       const ctx = spec.when === "after" ? i : Math.max(0, i - 1);
       // The player performs the spec after the previous beat's dwell
       // (>= 1.2s), so layout transitions (drawer flex-basis .35s, rail
@@ -297,6 +310,33 @@ async function main() {
       if (!r.err && spec.action === "click") {
         check(r.tag === "BUTTON", "beat " + i + " (" + beats[i].id + ") click target " +
           spec.target + " is <" + r.tag.toLowerCase() + ">, not <button>");
+      }
+    }
+
+    // 2b) Hover specs (cursor or cursorAfter): every path waypoint must
+    // resolve, render, and land in-viewport against the DOM the spec
+    // performs on (when === "after" -> the beat's OWN render). Mirrors
+    // the click-target sweep; hover targets need not be <button>s.
+    for (let i = 0; i < beatCount; i++) {
+      for (const spec of [beats[i].cursor, beats[i].cursorAfter]) {
+        if (!spec || spec.action !== "hover") continue;
+        const ctx = spec.when === "after" ? i : Math.max(0, i - 1);
+        await page.evaluate(function (ctx) { window.__DRIVE_DEMO__.goTo(ctx); }, ctx);
+        await new Promise(function (res) { setTimeout(res, 450); });
+        for (const sel of spec.path || []) {
+          const r = await page.evaluate(function (sel) {
+            const el = document.querySelector(sel);
+            if (!el) return { err: "no match" };
+            if (!el.getClientRects().length) return { err: "not rendered" };
+            const rect = el.getBoundingClientRect();
+            const px = rect.left + rect.width / 2;
+            const py = rect.top + rect.height / 2;
+            if (px < 0 || py < 0 || px > innerWidth || py > innerHeight) return { err: "off-viewport" };
+            return {};
+          }, sel);
+          check(!r.err, "beat " + i + " (" + beats[i].id + ") hover waypoint " + sel +
+            " against beat " + ctx + " DOM: " + r.err);
+        }
       }
     }
 
@@ -712,6 +752,120 @@ async function main() {
       }
     }
     await page.evaluate(function () { document.documentElement.classList.remove("dark"); });
+
+    // 18) Takeover beat: sharer is You, the pin holds the pre-fix mock
+    // with both caption-jump spots, and the presenter bar's grammar is
+    // right in both persons.
+    const showIdx = beats.findIndex(function (b) { return b.id === "a2-you-show"; });
+    check(showIdx > 0, "takeover: beat a2-you-show not found");
+    const takeover = await page.evaluate(function (i) {
+      const D = window.__DRIVE_DEMO__;
+      D.goTo(i);
+      const s = D.seek(D.beats, i);
+      const bar = document.querySelector("#spotlight .presenter-bar");
+      const pin = document.querySelector("#spotlight .screen-pin");
+      const mock = document.querySelector("#spotlight .pin-jump");
+      function spot(sel) {
+        const el = document.querySelector(sel);
+        if (!el || !el.getClientRects().length) return null;
+        return { cap: !!el.querySelector(".pj-cap") };
+      }
+      return {
+        sharer: s.stage.sharer,
+        pin: !!(pin && pin.getClientRects().length),
+        mock: !!(mock && mock.getClientRects().length),
+        bar: bar ? bar.textContent : "",
+        a: spot("#pin-jump-a"),
+        b: spot("#pin-jump-b"),
+      };
+    }, showIdx);
+    check(takeover.sharer === "You", "takeover: sharer is " + JSON.stringify(takeover.sharer) + ", not You");
+    check(takeover.pin, "takeover: human pin not rendered at a2-you-show");
+    check(takeover.mock, "takeover: pre-fix mock (.pin-jump) not rendered inside the pin");
+    check(/You\s*are presenting/.test(takeover.bar),
+      "takeover: presenter bar must read 'You are presenting' - got " + JSON.stringify(takeover.bar));
+    check(!!takeover.a && takeover.a.cap,
+      "takeover: jump spot A (#pin-jump-a) missing, hidden, or lacking its caption bar");
+    check(!!takeover.b && takeover.b.cap,
+      "takeover: jump spot B (#pin-jump-b) missing, hidden, or lacking its caption bar");
+    const rileyIdx = beats.findIndex(function (b) { return b.id === "a5-sharer"; });
+    const rileyBar = await page.evaluate(function (i) {
+      window.__DRIVE_DEMO__.goTo(i);
+      const bar = document.querySelector("#spotlight .presenter-bar");
+      return bar ? bar.textContent : "";
+    }, rileyIdx);
+    check(/Riley\s*is presenting/.test(rileyBar),
+      "takeover: a third-person sharer must keep 'is presenting' - got " + JSON.stringify(rileyBar));
+
+    // 19) Takeover choreography: replaying the beat under autoplay, the
+    // simulated cursor performs the hover pass — sampled twice, it must
+    // really move toward the waypoints and wear the hover ring. Sample 1
+    // (~1s) falls in the spot-A dwell, sample 2 (~2.6s) in the spot-B
+    // dwell; the beat advances no earlier than its 4.2s dwell.
+    await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, showIdx);
+    const spots = await page.evaluate(function () {
+      function c(sel) {
+        const r = document.querySelector(sel).getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }
+      return { a: c("#pin-jump-a"), b: c("#pin-jump-b") };
+    });
+    await page.click("#btn-play"); // play re-enters the current beat with choreography
+    function cursorSample() {
+      const t = getComputedStyle(document.getElementById("demo-cursor")).transform;
+      const m = t === "none" ? { e: -9999, f: -9999 } : new DOMMatrixReadOnly(t);
+      function ring(sel) {
+        const el = document.querySelector(sel);
+        return !!(el && el.classList.contains("demo-hovered"));
+      }
+      return { x: m.e, y: m.f, ringA: ring("#pin-jump-a"), ringB: ring("#pin-jump-b") };
+    }
+    await new Promise(function (res) { setTimeout(res, 1000); });
+    const s1 = await page.evaluate(cursorSample);
+    await new Promise(function (res) { setTimeout(res, 1600); });
+    const s2 = await page.evaluate(cursorSample);
+    await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
+    function dist(p, q) { return Math.hypot(p.x - q.x, p.y - q.y); }
+    check(dist(s1, s2) > 40,
+      "takeover autoplay: cursor barely moved between samples (" + Math.round(dist(s1, s2)) + "px)");
+    check(dist(s2, spots.b) < dist(s1, spots.b),
+      "takeover autoplay: cursor did not move toward spot B (" +
+      Math.round(dist(s1, spots.b)) + "px -> " + Math.round(dist(s2, spots.b)) + "px)");
+    check(dist(s1, spots.a) < 60 || dist(s2, spots.b) < 60,
+      "takeover autoplay: neither sample landed on a waypoint (A@" +
+      Math.round(dist(s1, spots.a)) + "px, B@" + Math.round(dist(s2, spots.b)) + "px)");
+    check(s1.ringA || s1.ringB || s2.ringA || s2.ringB,
+      "takeover autoplay: hover ring (.demo-hovered) never seen on a waypoint");
+
+    // 20) Reduced motion: the takeover mock is a static composition —
+    // no caption-jump loop, both caption bars visible, the annotation
+    // labeling the jump instead of motion.
+    await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
+    await page.reload({ waitUntil: "load" });
+    await page.waitForFunction("!!window.__DRIVE_DEMO__", { timeout: 15000 });
+    const rm = await page.evaluate(function (i) {
+      window.__DRIVE_DEMO__.goTo(i);
+      const capA = document.querySelector("#pin-jump-a .pj-cap");
+      const capB = document.querySelector("#pin-jump-b .pj-cap");
+      const arrow = document.querySelector(".pin-jump .pj-arrow");
+      function anim(el) { return el ? getComputedStyle(el).animationName : "missing"; }
+      return {
+        animA: anim(capA),
+        animB: anim(capB),
+        opA: capA ? getComputedStyle(capA).opacity : "0",
+        opB: capB ? getComputedStyle(capB).opacity : "0",
+        arrow: arrow ? getComputedStyle(arrow).display : "missing",
+      };
+    }, showIdx);
+    check(rm.animA === "none" && rm.animB === "none",
+      "reduced motion: caption-jump loop still runs (animation " + rm.animA + " / " + rm.animB + ")");
+    check(rm.opA === "1" && rm.opB === "1",
+      "reduced motion: both caption bars must be visible (opacity " + rm.opA + " / " + rm.opB + ")");
+    check(rm.arrow === "block",
+      "reduced motion: 'jumps A -> B' annotation not shown (display " + rm.arrow + ")");
+    await page.emulateMediaFeatures([]);
+    await page.reload({ waitUntil: "load" });
+    await page.waitForFunction("!!window.__DRIVE_DEMO__", { timeout: 15000 });
 
     check(pageErrors.length === 0, "pageerrors: " + pageErrors.join(" | "));
 

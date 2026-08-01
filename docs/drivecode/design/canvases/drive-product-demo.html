@@ -1174,6 +1174,133 @@
   }
   .screen-pin .title { font: 600 13px/1.2 var(--display); color: var(--text); margin-bottom: 4px; }
   .screen-pin .summary { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  /* a2-you-show pin body: your screenshot of THIS demo page, pre-fix, at
+     small scale — hub rail sliver, stage, feed strip. The caption bar
+     lives at spot A (below the stage) and JUMPS to spot B (top of the
+     page) on a 4s loop; the vacated spot keeps a dashed ghost outline
+     (the .anim-ghost language). Reduced motion: both spots hold still
+     and the A → B annotation labels the jump instead. */
+  .pin-jump {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    max-width: 400px;
+    margin: 10px 0;
+    padding: 8px;
+    border: 0.8px solid var(--hair);
+    border-radius: 7px;
+    background: var(--well);
+  }
+  .pin-jump .pj-rail {
+    flex: none;
+    width: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding-top: 3px;
+  }
+  .pin-jump .pj-rail i { width: 8px; height: 8px; border-radius: 3px; background: var(--line); }
+  .pin-jump .pj-page {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .pin-jump .pj-spot {
+    position: relative;
+    border: 1px dashed transparent;
+    border-radius: 6px;
+  }
+  .pin-jump .pj-tag {
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    font: 600 7px/1 var(--mono);
+    color: var(--dim);
+  }
+  .pin-jump .pj-cap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 7px;
+    border: 0.8px solid var(--hair);
+    border-radius: 5px;
+    background: var(--panel);
+  }
+  .pin-jump .pj-cap .pj-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--drive) 55%, transparent);
+    flex: none;
+  }
+  .pin-jump .pj-bars { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .pin-jump .pj-bars i { display: block; height: 3.5px; border-radius: 2px; background: var(--line); }
+  .pin-jump .pj-bars .w60 { width: 60%; }
+  .pin-jump .pj-bars .w35 { width: 35%; }
+  .pin-jump .pj-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 6px;
+    border: 0.8px solid var(--hair);
+    border-radius: 6px;
+    background: var(--panel);
+  }
+  .pin-jump .pj-stage .pj-wire { height: 5px; border-radius: 2px; background: var(--line); }
+  .pin-jump .pj-stage .w85 { width: 85%; }
+  .pin-jump .pj-stage .w60 { width: 60%; }
+  .pin-jump .pj-stage .w75 { width: 75%; }
+  .pin-jump .pj-feed { display: flex; gap: 4px; }
+  .pin-jump .pj-feed i {
+    flex: 1;
+    height: 10px;
+    border-radius: 4px;
+    border: 0.8px solid var(--hair);
+    background: var(--panel);
+  }
+  /* The jump: the same caption bar disappears at one spot and appears at
+     the other — abrupt on purpose, that IS the bug being shown. */
+  .pin-jump .pj-a .pj-cap { animation: pj-cap-a 4s linear infinite; }
+  .pin-jump .pj-b .pj-cap { animation: pj-cap-b 4s linear infinite; }
+  .pin-jump .pj-a { animation: pj-ghost-a 4s linear infinite; }
+  .pin-jump .pj-b { animation: pj-ghost-b 4s linear infinite; }
+  @keyframes pj-cap-a { 0%, 44% { opacity: 1; } 46%, 94% { opacity: 0; } 96%, 100% { opacity: 1; } }
+  @keyframes pj-cap-b { 0%, 44% { opacity: 0; } 46%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+  @keyframes pj-ghost-a {
+    0%, 44% { border-color: transparent; }
+    46%, 94% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    96%, 100% { border-color: transparent; }
+  }
+  @keyframes pj-ghost-b {
+    0%, 44% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    46%, 94% { border-color: transparent; }
+    96%, 100% { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+  }
+  .pin-jump .pj-arrow {
+    display: none;
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    transform: translateY(-50%);
+    font: 600 8px/1 var(--mono);
+    color: var(--dim);
+    border: 0.8px solid var(--hair);
+    border-radius: 999px;
+    padding: 3px 6px;
+    background: var(--panel);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pin-jump .pj-cap, .pin-jump .pj-spot { animation: none !important; }
+    .pin-jump .pj-cap { opacity: 1; }
+    .pin-jump .pj-spot { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    .pin-jump .pj-arrow { display: block; }
+  }
   .stage-plan { max-width: 560px; }
   .stage-plan .step {
     display: flex;
@@ -3324,6 +3451,9 @@
     animation: demo-ripple .45s var(--ease) forwards;
   }
   @keyframes demo-ripple { to { transform: scale(1.1); opacity: 0; } }
+  /* Hover affordance: the waypoint under a dwelling cursor wears a
+     hairline amber ring (live = the presenter's attention is here). */
+  .demo-hovered { outline: 0.8px solid color-mix(in srgb, var(--live) 75%, transparent); outline-offset: 2px; }
   /* Ring pulse instead of a brightness flash so the press reads on both themes. */
   .demo-pressed { animation: demo-pressed .18s var(--ease); }
   @keyframes demo-pressed {
@@ -4187,7 +4317,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L6409–L6412",
+      range: "L6584–L6587",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through, ghost/ret
       // are inline-value decorations (both strings match — the skip path,
@@ -4196,10 +4326,10 @@
       // asserts both stay true.
       debug: true,
       lines: [
-        { n: 6409, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 6410, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 6411, t: "      R.feedSig = feedSig;", hl: true },
-        { n: 6412, t: '      feed.innerHTML = "";' },
+        { n: 6584, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 6585, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 6586, t: "      R.feedSig = feedSig;", hl: true },
+        { n: 6587, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4239,8 +4369,13 @@
   };
 
   /** Cursor spec: performed against the PREVIOUS beat's DOM during autoplay,
-   *  so targets must be visible there.
-   * @typedef {{ target: string, action: 'click'|'move'|'none', offset?: {dx?:number,dy?:number} }} CursorSpec */
+   *  so targets must be visible there. action 'hover' glides through `path`
+   *  waypoints instead of a single target (no press), dwelling dwellMs[i]
+   *  on each; unresolvable waypoints skip silently, like hidden targets.
+   *  A beat's `cursorAfter` spec carries `when: 'after'`: it performs on
+   *  beat ENTRY against the beat's OWN render (the pin choreography), and
+   *  verify.js resolves it against that DOM too.
+   * @typedef {{ target?: string, action: 'click'|'move'|'none'|'hover', path?: string[], dwellMs?: number[], when?: 'after', offset?: {dx?:number,dy?:number} }} CursorSpec */
   /** Beat extras: `chime` fires a notification tone on beat entry during
    *  autoplay ('complete' = task done, 'attention' = needs you). `speech`
    *  marks a line the human SAYS on the call — it feeds the derived CC
@@ -4255,7 +4390,7 @@
    *  the mode pill cycles these labels while the beat is on screen — it
    *  never folds into state.
    * @typedef {{ mode: 'type'|'stt', text: string, clip?: string }} InputSpec
-   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,chime?:'complete'|'attention',speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
+   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,cursorAfter?:CursorSpec,chime?:'complete'|'attention',speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
   const BEATS = [
     {
       id: "a0-hub",
@@ -4380,18 +4515,21 @@
     },
     {
       // NEW in v4: Cline asked you to show it, so you take the screen. The
-      // sharer flips to You — a human pin holds the Spotlight (amber "You
-      // is presenting" treatment) while your recorded line plays. The pin
-      // body is a placeholder for now: V2 layers the hover choreography on
-      // this beat, so keep the id stable and the structure clean.
+      // sharer flips to You — a human pin holds the Spotlight while your
+      // recorded line plays. The pin body is your screenshot of the
+      // pre-fix demo (mock "jump"): its caption bar loops spot A → spot B,
+      // and the cursorAfter pass hovers A then B in time with the line —
+      // "from here" lands at A, "…to here" at B. The dwell covers the
+      // pass; the ~3s clip gates the advance either way.
       id: "a2-you-show",
       act: 2,
       title: "You take the Spotlight",
       caption: "You grab the screen — a human pin holds the Spotlight while you point at the jump.",
       hubOp: "call_set_stage",
       maturity: "shipped",
-      dwellMs: 1800,
+      dwellMs: 4200,
       cursor: { target: "#strip-share", action: "click" },
+      cursorAfter: { action: "hover", when: "after", path: ["#pin-jump-a", "#pin-jump-b"], dwellMs: [1100, 1300] },
       speech: { who: "You", text: "Here's what I mean — it jumps from here to here." },
       patch: {
         narration: "",
@@ -4401,6 +4539,7 @@
           pin: {
             label: "screen share · drive-product-demo.html (before the fix)",
             ref: "The demo page, pre-fix: every update repaints the whole page and the caption bar replays its entrance — it jumps from here to here.",
+            mock: "jump",
           },
         },
       },
@@ -4441,9 +4580,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '6412:      feed.innerHTML = "";', cls: "dim" },
-              { t: '6451:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '6487:      spot.innerHTML = "";', cls: "dim" },
+              { t: '6587:      feed.innerHTML = "";', cls: "dim" },
+              { t: '6626:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '6662:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -4787,7 +4926,7 @@
             caret: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 748 checks", cls: "ok" },
+              { t: "OK: 47 beats, 765 checks", cls: "ok" },
             ],
             spin: false,
             activity: "explaining the fix",
@@ -4836,7 +4975,7 @@
             typing: "// assert: same node before and after a beat",
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 748 checks", cls: "ok" },
+              { t: "OK: 47 beats, 765 checks", cls: "ok" },
             ],
             spin: false,
             activity: "adding regression checks",
@@ -4918,7 +5057,7 @@
             typing: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 748 checks", cls: "ok" },
+              { t: "OK: 47 beats, 765 checks", cls: "ok" },
             ],
             spin: false,
             activity: "pinning the caption slot",
@@ -5397,6 +5536,7 @@
     let x = window.innerWidth * 0.55;
     let y = window.innerHeight + 40;
     let gen = 0;
+    let hoverGen = 0; // any new cursor leg supersedes a running hover chain
     let visible = false;
 
     function setPos(nx, ny, ms) {
@@ -5444,6 +5584,7 @@
 
     function cancel() {
       gen++;
+      hoverGen++;
       const t = getComputedStyle(el).transform;
       el.style.transition = "none";
       if (t && t !== "none") el.style.transform = t;
@@ -5477,11 +5618,41 @@
       });
     }
 
+    /** Multi-waypoint hover: glide to each `path` selector in turn and
+     *  dwell `dwellMs[i]` there wearing the .demo-hovered ring — no press.
+     *  Unresolvable / off-viewport waypoints skip silently (the engine
+     *  convention); a cancel or any newer cursor leg stops the chain. */
+    function hover(spec) {
+      const myHover = hoverGen;
+      const dwells = spec.dwellMs || [];
+      let chain = Promise.resolve(true);
+      (spec.path || []).forEach(function (sel, i) {
+        chain = chain.then(function (ok) {
+          if (!ok || myHover !== hoverGen) return false;
+          const hit = resolve({ target: sel, offset: spec.offset });
+          if (!hit) return true;
+          return moveTo(hit.px, hit.py).then(function (ok2) {
+            if (!ok2 || myHover !== hoverGen) return false;
+            hit.el.classList.add("demo-hovered");
+            return new Promise(function (res) {
+              setTimeout(function () {
+                hit.el.classList.remove("demo-hovered");
+                res(true);
+              }, dwells[i] || 900);
+            });
+          });
+        });
+      });
+      return chain;
+    }
+
     /** `holdGate` (optional, promise-returning): awaited between cursor
      *  landing and the press — auto_after_say holds the click until the
      *  beat's audio finishes. A cancel during the hold drops the press. */
     function perform(spec, holdGate) {
       if (!spec || spec.action === "none") return Promise.resolve(true);
+      hoverGen++;
+      if (spec.action === "hover") return hover(spec);
       const hit = resolve(spec);
       if (!hit) return Promise.resolve(true);
       return moveTo(hit.px, hit.py).then(function (ok) {
@@ -5497,7 +5668,7 @@
     }
 
     function travelEstimate(spec) {
-      if (!spec || spec.action === "none") return 0;
+      if (!spec || spec.action === "none" || spec.action === "hover") return 0;
       const hit = resolve(spec);
       if (!hit) return 0;
       return travelMs(hit.px, hit.py) + (spec.action === "click" ? 200 : 60);
@@ -6266,6 +6437,10 @@
       const chime = beat.chime;
       if (chime === "complete") Chime.complete(beat.id);
       else if (chime === "attention") Chime.attention(beat.id);
+      // cursorAfter (when: "after"): post-entry choreography against THIS
+      // beat's fresh render — fire-and-forget, the audio gate paces the
+      // beat. Reduced motion shows the static composition instead.
+      if (!reducedMotion && beat.cursorAfter) Cursor.perform(beat.cursorAfter);
     } else if (!fromAuto) {
       Voice.cancel();
     }
@@ -6557,9 +6732,12 @@
           stickyChip = '<span class="sticky-chip">sticky · ' + escapeHtml(state.stage.show.sticky) + "</span>";
           if (state.stage.show.maturity === "planned") matBadge = '<span class="badge planned">planned</span>';
         }
+        // Second person special-cased: "You are presenting", every other
+        // sharer "<name> is presenting".
         const barHtml =
           '<span class="live-dot" aria-hidden="true"></span><b>' +
-          escapeHtml(presenter) + '</b><span>is presenting ·</span><span class="pk">' + escapeHtml(kindLabel) + "</span>" +
+          escapeHtml(presenter) + "</b><span>" + (presenter === "You" ? "are" : "is") +
+          ' presenting ·</span><span class="pk">' + escapeHtml(kindLabel) + "</span>" +
           stickyChip + '<span class="pb-spacer"></span>' + matBadge;
         if (barHtml !== R.barHtml) {
           R.barHtml = barHtml;
@@ -7286,6 +7464,24 @@
     return '<div class="stage-overlay' + (kind ? " " + kind : "") + '"><div class="ov-card">' + inner + "</div></div>";
   }
 
+  /** a2-you-show pin body (pin.mock === "jump"): your screenshot of THIS
+   *  demo, pre-fix, at small scale — hub rail sliver, stage, feed strip.
+   *  The caption bar sits at spot A (below the stage) and jumps to spot B
+   *  (top of the page) on a 4s CSS loop; the vacated spot keeps a dashed
+   *  ghost. The spot ids are the beat's cursorAfter hover waypoints.
+   *  Reduced motion: static, both spots shown, "jumps A → B" annotation. */
+  const PIN_JUMP_HTML =
+    '<div class="pin-jump" role="img" aria-label="Small screenshot of the demo page before the fix: the same caption bar disappears below the stage and reappears at the top of the page — it jumps between the two outlined spots on every update.">' +
+      '<div class="pj-rail" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' +
+      '<div class="pj-page" aria-hidden="true">' +
+        '<div class="pj-spot pj-b" id="pin-jump-b"><div class="pj-cap"><i class="pj-dot"></i><span class="pj-bars"><i class="w60"></i><i class="w35"></i></span></div><span class="pj-tag">B</span></div>' +
+        '<div class="pj-stage"><div class="pj-wire w85"></div><div class="pj-wire w60"></div><div class="pj-wire w75"></div></div>' +
+        '<div class="pj-spot pj-a" id="pin-jump-a"><div class="pj-cap"><i class="pj-dot"></i><span class="pj-bars"><i class="w60"></i><i class="w35"></i></span></div><span class="pj-tag">A</span></div>' +
+        '<div class="pj-feed"><i></i><i></i><i></i></div>' +
+        '<span class="pj-arrow">jumps A → B</span>' +
+      "</div>" +
+    "</div>";
+
   /** Shared-screen body precedence over {sharer, show, pin, work}:
    *  pin / presented artifact float over the sharer's dimmed VS Code
    *  window; a walkthrough takes over the editor itself; bare work is the
@@ -7296,6 +7492,7 @@
       const pinHtml =
         '<div class="screen-pin"><div class="kind">Your pin</div>' +
         '<div class="title">' + escapeHtml(stage.pin.label) + "</div>" +
+        (stage.pin.mock === "jump" ? PIN_JUMP_HTML : "") +
         '<div class="summary">' + escapeHtml(stage.pin.ref) + "</div></div>";
       if (work) return { html: buildVSCode(work, null, "vsc-dim") + stageOverlay(pinHtml, "pin"), vsc: true };
       return { html: pinHtml, vsc: false };
