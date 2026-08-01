@@ -624,6 +624,21 @@
   /* Entrance animation is opt-in: the differential render adds .rise only
      to nodes that are genuinely new, so unchanged content never replays it. */
   .msg.rise, .card.rise { animation: rise .28s var(--ease); }
+  /* SyncCue veil: a cued node keeps its layout reservation but stays
+     invisible until its narration fraction arrives (the reveal replays
+     the node's own entrance animation). */
+  .cued { visibility: hidden; }
+  /* SyncCue class accent: amber = live hairline pulse; under reduced
+     motion the pulse collapses (global rule) to a static outline. */
+  .say-hl {
+    outline: 0.8px solid color-mix(in srgb, var(--live) 70%, transparent);
+    outline-offset: 1px;
+    animation: say-hl-pulse 1.6s var(--ease) 2;
+  }
+  @keyframes say-hl-pulse {
+    0%, 100% { outline-color: color-mix(in srgb, var(--live) 30%, transparent); }
+    50% { outline-color: var(--live); }
+  }
   .msg.you { align-self: flex-end; border-color: var(--line-strong); }
   .msg.agent, .msg.system { align-self: flex-start; }
   .msg .who {
@@ -4337,7 +4352,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L6607–L6610",
+      range: "L6910–L6913",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through, ghost/ret
       // are inline-value decorations (both strings match — the skip path,
@@ -4346,10 +4361,10 @@
       // asserts both stay true.
       debug: true,
       lines: [
-        { n: 6607, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 6608, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 6609, t: "      R.feedSig = feedSig;", hl: true },
-        { n: 6610, t: '      feed.innerHTML = "";' },
+        { n: 6910, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 6911, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 6912, t: "      R.feedSig = feedSig;", hl: true },
+        { n: 6913, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4396,8 +4411,15 @@
    *  beat ENTRY against the beat's OWN render (the pin choreography), and
    *  verify.js resolves it against that DOM too.
    * @typedef {{ target?: string, action: 'click'|'move'|'none'|'hover', path?: string[], dwellMs?: number[], when?: 'after', offset?: {dx?:number,dy?:number} }} CursorSpec */
-  /** Beat extras: `chime` fires a notification tone on beat entry during
-   *  autoplay ('complete' = task done, 'attention' = needs you). `speech`
+  /** Beat extras: `sync` keys visuals (and notification chimes) to
+   *  FRACTIONS of the beat's narration clock — SyncCue schedules each
+   *  entry at `at × durationMs` of the line goTo just started, so the
+   *  visual lands ON the words that announce it. Cues: 'reveal' lifts
+   *  the .cued veil from `target` and replays its entrance, 'class'
+   *  adds `cls` to `target`, 'chime' fires the notification tone
+   *  ('complete' = task done, 'attention' = needs you). Static/scrub
+   *  entry applies the end state instead (reveals shown, classes on,
+   *  chimes silent). `speech`
    *  marks a line the human SAYS on the call — it feeds the derived CC
    *  transcript alongside narration transitions (nothing is stored);
    *  `after: true` files it after the beat's narration line (matching the
@@ -4410,7 +4432,8 @@
    *  the mode pill cycles these labels while the beat is on screen — it
    *  never folds into state.
    * @typedef {{ mode: 'type'|'stt', text: string, clip?: string }} InputSpec
-   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,cursorAfter?:CursorSpec,chime?:'complete'|'attention',speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
+   * @typedef {{ at: number, cue: 'reveal'|'class'|'chime', target?: string, cls?: string, kind?: 'complete'|'attention' }} SyncCueSpec
+   * @type {Array<{id:string,act:number,title:string,caption:string,hubOp?:string,maturity?:string,dwellMs:number,cursor?:CursorSpec,cursorAfter?:CursorSpec,sync?:SyncCueSpec[],speech?:{who:string,text:string,after?:boolean},input?:InputSpec,modeCycle?:string[],patch:object}>} */
   const BEATS = [
     {
       id: "a0-hub",
@@ -4600,9 +4623,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '6610:      feed.innerHTML = "";', cls: "dim" },
-              { t: '6649:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '6685:      spot.innerHTML = "";', cls: "dim" },
+              { t: '6913:      feed.innerHTML = "";', cls: "dim" },
+              { t: '6952:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '6988:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -4784,11 +4807,27 @@
       maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#spotlight .card.command", action: "move" },
-      chime: "complete",
+      // Narration-sync reference beat: the green lands ON "green" (~19%
+      // of the 6.12s clip), the chime rides the same instant, and the
+      // node-identity card takes the accent as the line explains it.
+      sync: [
+        { at: 0.19, cue: "reveal", target: "#spotlight .vsc-term .ws-tl.ok" },
+        { at: 0.19, cue: "reveal", target: "#spotlight .card.test" },
+        { at: 0.19, cue: "chime", kind: "complete" },
+        { at: 0.45, cue: "class", target: "#spotlight .card.test", cls: "say-hl" },
+      ],
       patch: {
         narration: "There we go — green. Same message node before and after the beat. Nothing re-mounts.",
         stage: {
           cards: [CARD_EDIT, CARD_CMD, CARD_TEST],
+          // The battery run lands green in the terminal on the same word.
+          work: {
+            term: [
+              { t: "$ bun verify.js" },
+              { t: "OK: 47 beats, 865 checks", cls: "ok" },
+            ],
+            activity: "battery green",
+          },
         },
       },
     },
@@ -4946,7 +4985,7 @@
             caret: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 824 checks", cls: "ok" },
+              { t: "OK: 47 beats, 865 checks", cls: "ok" },
             ],
             spin: false,
             activity: "explaining the fix",
@@ -4995,7 +5034,7 @@
             typing: "// assert: same node before and after a beat",
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 824 checks", cls: "ok" },
+              { t: "OK: 47 beats, 865 checks", cls: "ok" },
             ],
             spin: false,
             activity: "adding regression checks",
@@ -5077,7 +5116,7 @@
             typing: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 824 checks", cls: "ok" },
+              { t: "OK: 47 beats, 865 checks", cls: "ok" },
             ],
             spin: false,
             activity: "pinning the caption slot",
@@ -5324,7 +5363,9 @@
       hubOp: "approval",
       maturity: "planned",
       dwellMs: 2200,
-      chime: "attention",
+      // Attention chime keyed to "The card's on your screen" (~72% of
+      // v4-15; U3 refines the fraction).
+      sync: [{ at: 0.72, cue: "chime", kind: "attention" }],
       patch: {
         narration: "One thing before I open the pull request — I need your sign-off. The card's on your screen.",
         showGatesCard: true,
@@ -5344,7 +5385,9 @@
       maturity: "planned",
       dwellMs: 1800,
       cursor: { target: ".gates-card .approve", action: "click" },
-      chime: "complete",
+      // Complete chime keyed to "PR ninety-one's up" — the fraction is
+      // of the FULL two-clip sequence (you-04 + v4-16; U3 refines).
+      sync: [{ at: 0.55, cue: "chime", kind: "complete" }],
       // Harrison's recorded sign-off (you-04) plays first, then Cline's
       // v4-16 — sequenced by CLIP_SEQS; the beat holds for both clips.
       speech: { who: "You", text: "Looks good — approved. Go ahead." },
@@ -5815,12 +5858,66 @@
     let currentBeatId = null;
 
     function settleUtterance() {
+      uttMeta = null;
       if (!pendingFlag) return;
       pendingFlag = false;
       doneLog.push({ beatId: currentBeatId, at: performance.now() });
       const res = doneResolve;
       doneResolve = null;
       if (res) res();
+    }
+
+    // SayClock source (Voice.active): duration bookkeeping for the
+    // CURRENT utterance. Clip durations resolve like the STT pacer —
+    // finite .duration, then loadedmetadata, then a char estimate — and
+    // multi-segment sequences sum, refining in place as metadata lands
+    // (a good-enough monotone estimate; onUpdate tells the cue
+    // scheduler to re-arm). Muted read-along (words × WORD_MS) and the
+    // synth path (chars × 90) are synthetic constants.
+    let uttMeta = null; // { source, startedAt, segMs: number[], listeners: fn[] }
+
+    function metaInit(source, segMs) {
+      uttMeta = { source: source, startedAt: performance.now(), segMs: segMs, listeners: [] };
+    }
+
+    function metaTotal(m) {
+      return m.segMs.reduce(function (s, v) { return s + v; }, 0);
+    }
+
+    function metaFromSegs(segs) {
+      metaInit("clip", segs.map(function (seg) {
+        return Math.max(300, (seg.text || "").length * 90);
+      }));
+      const mine = uttMeta;
+      segs.forEach(function (seg, i) {
+        const a = clipEl(seg.file);
+        if (isFinite(a.duration) && a.duration > 0) {
+          mine.segMs[i] = a.duration * 1000;
+          return;
+        }
+        a.addEventListener("loadedmetadata", function () {
+          if (uttMeta !== mine) return; // a later line superseded this one
+          if (isFinite(a.duration) && a.duration > 0) {
+            mine.segMs[i] = a.duration * 1000;
+            const total = metaTotal(mine);
+            mine.listeners.forEach(function (cb) { cb(total); });
+          }
+        }, { once: true });
+      });
+    }
+
+    /** The CURRENT utterance's clock, or null: {source, durationMs,
+     *  elapsed(), onUpdate(cb)} — cb fires with the new total when a
+     *  late loadedmetadata refines a segment estimate. */
+    function active() {
+      if (!pendingFlag || !uttMeta) return null;
+      const mine = uttMeta;
+      return {
+        source: mine.source,
+        durationMs: metaTotal(mine),
+        elapsed: function () { return performance.now() - mine.startedAt; },
+        onUpdate: function (cb) { if (uttMeta === mine) mine.listeners.push(cb); },
+      };
     }
 
     function beginUtterance(beatId) {
@@ -5979,6 +6076,7 @@
       dropClip();
       dropUtterance();
       beginUtterance(beatId);
+      metaInit("muted", [wordCount(text) * WORD_MS]);
       segQueue = [];
       const myTok = uttToken;
       setTimeout(function () {
@@ -6000,6 +6098,7 @@
       dropClip();
       dropUtterance();
       beginUtterance(beatId);
+      metaFromSegs(segs);
       segQueue = segs.slice();
       return playNextSeg();
     }
@@ -6025,6 +6124,7 @@
       dropClip();
       dropUtterance();
       beginUtterance(beatId);
+      metaInit("synth", [text.length * 90]);
       segQueue = [];
       speakSynthSeg(text);
     }
@@ -6054,6 +6154,8 @@
       pending: function () { return pendingFlag; },
       done: function () { return donePromise; },
       doneLog: doneLog,
+      // SayClock source (extend-only): the current utterance's clock.
+      active: active,
     };
   })();
 
@@ -6088,7 +6190,7 @@
     }
 
     function fire(kind, beatId, notes) {
-      log.push({ kind: kind, beatId: beatId });
+      log.push({ kind: kind, beatId: beatId, at: performance.now() });
       if (!voicePrefs.enabled || !ctx) return;
       const peak = (voicePrefs.volume / 100) * 0.25;
       if (peak <= 0) return;
@@ -6108,6 +6210,204 @@
 
     return { complete: complete, attention: attention, unlock: unlock, log: log };
   })();
+
+  // ---- SyncCue (narration is the beat's clock) ----
+  // A beat's `sync` field keys visuals to fractions of the line that
+  // announces them. goTo establishes the SayClock {gen, beatId,
+  // durationMs, startedAt} right after narration starts (Voice.active
+  // supplies duration + elapsed) and each cue arms a generation-tagged
+  // timeout at `at × durationMs`. Clip metadata can land late — the
+  // clock re-arms on refinement, and cues whose moment already passed
+  // fire immediately, in order. Constraint (load-bearing): cue visuals
+  // are CLASS MUTATIONS on mounted nodes — the differential render's
+  // HTML signatures never change. 'reveal' lifts the .cued veil (layout
+  // reserved) and replays the node's entrance animation; 'class' adds
+  // cls; 'chime' rides the existing Chime path. Static/scrub entry
+  // applies END STATE (reveals shown, classes on, chimes silent);
+  // leaving a beat drops its transient classes so no accent outlives
+  // its narration on regions the differential render won't rebuild; a
+  // mid-beat repaint (vsc interaction) re-asserts the fired/pending
+  // split via afterRender.
+  const SyncCue = (function () {
+    let clock = null;   // active SayClock { gen, beatId, durationMs, startedAt }
+    let cueBeat = null; // beat whose cues are armed on the clock
+    let fired = null;   // per-cue fired flags, parallel to cueBeat.sync
+    let current = null; // beat whose cue effects are live on the DOM
+    let timers = [];
+    const log = []; // { beatId, cue, at, t } in fire order, for e2e
+
+    function clearTimers() {
+      timers.forEach(clearTimeout);
+      timers = [];
+    }
+
+    // Forced-restart idiom on the node's own entrance animation; the
+    // inline delay reset drops stagger delays (.ws-tl's --i ramp) so
+    // the reveal lands on the word, not a stagger later.
+    function replayEntrance(n) {
+      n.style.animation = "none";
+      void n.offsetWidth;
+      n.style.animation = "";
+      n.style.animationDelay = "0s";
+    }
+
+    function applyCue(c, beat, live) {
+      if (c.cue === "reveal") {
+        const n = document.querySelector(c.target);
+        if (!n) return;
+        n.classList.remove("cued");
+        if (live) replayEntrance(n);
+      } else if (c.cue === "class") {
+        const n = document.querySelector(c.target);
+        if (n) n.classList.add(c.cls);
+      } else if (c.cue === "chime" && live) {
+        if (c.kind === "attention") Chime.attention(beat.id);
+        else Chime.complete(beat.id);
+      }
+    }
+
+    function fireAt(i) {
+      if (!cueBeat || fired[i]) return;
+      fired[i] = true;
+      const c = cueBeat.sync[i];
+      log.push({ beatId: cueBeat.id, cue: c.cue, at: c.at, t: performance.now() });
+      applyCue(c, cueBeat, true);
+    }
+
+    // Arm (or re-arm after a duration refinement) every unfired cue.
+    // Cues whose moment has already passed fire immediately, in order.
+    function arm() {
+      clearTimers();
+      if (!clock || !cueBeat || !cueBeat.sync) return;
+      const myGen = clock.gen;
+      const elapsed = performance.now() - clock.startedAt;
+      cueBeat.sync
+        .map(function (c, i) { return i; })
+        .sort(function (a, b) { return cueBeat.sync[a].at - cueBeat.sync[b].at; })
+        .forEach(function (i) {
+          if (fired[i]) return;
+          const delay = cueBeat.sync[i].at * clock.durationMs - elapsed;
+          if (delay <= 0) {
+            fireAt(i);
+            return;
+          }
+          timers.push(setTimeout(function () {
+            if (myGen !== advanceGen) return;
+            fireAt(i);
+          }, delay));
+        });
+    }
+
+    /** Voiced/muted autoplay entry: establish the SayClock from the
+     *  utterance goTo just started and arm the cues. The .cued veil
+     *  lands in the same task as the render, so nothing paints
+     *  unveiled first. No narration → no clock: sync visuals settle
+     *  straight to end state. */
+    function schedule(beat) {
+      const act = Voice.active();
+      if (!act) {
+        applyEndState(beat);
+        return;
+      }
+      clock = { gen: advanceGen, beatId: beat.id, durationMs: act.durationMs, startedAt: performance.now() };
+      current = beat;
+      const mine = clock;
+      act.onUpdate(function (total) {
+        if (mine !== clock || mine.gen !== advanceGen) return;
+        clock.durationMs = total;
+        arm();
+      });
+      if (!beat.sync || !beat.sync.length) return;
+      cueBeat = beat;
+      fired = beat.sync.map(function () { return false; });
+      beat.sync.forEach(function (c) {
+        if (c.cue !== "reveal") return;
+        const n = document.querySelector(c.target);
+        if (n) n.classList.add("cued");
+      });
+      arm();
+    }
+
+    /** End state — the beat's complete look: reveals shown, classes
+     *  applied, chimes silent. Static entry, scrubs, and pause. */
+    function applyEndState(beat) {
+      clearTimers();
+      clock = null;
+      cueBeat = null;
+      current = beat;
+      (beat.sync || []).forEach(function (c) {
+        applyCue(c, beat, false);
+      });
+    }
+
+    /** Mid-beat pause completes the beat's look in place. */
+    function settle() {
+      if (current) applyEndState(current);
+    }
+
+    /** Leaving a beat: lift any remaining veils but DROP its transient
+     *  classes — an accent must not outlive its narration on regions
+     *  the differential render will not rebuild. */
+    function leave() {
+      clearTimers();
+      const beat = current;
+      clock = null;
+      cueBeat = null;
+      current = null;
+      if (!beat) return;
+      (beat.sync || []).forEach(function (c) {
+        const n = c.target ? document.querySelector(c.target) : null;
+        if (!n) return;
+        if (c.cue === "reveal") n.classList.remove("cued");
+        else if (c.cue === "class") n.classList.remove(c.cls);
+      });
+    }
+
+    /** A mid-beat repaint rebuilds regions from beat-pure HTML — fresh
+     *  nodes would unveil pending reveals and drop fired cues. Called
+     *  at the end of render() to re-assert the fired/pending split. */
+    function afterRender() {
+      if (!current) return;
+      (current.sync || []).forEach(function (c, i) {
+        const pending = !!(clock && cueBeat && fired && !fired[i]);
+        if (c.cue === "reveal") {
+          const n = document.querySelector(c.target);
+          if (n) n.classList.toggle("cued", pending);
+        } else if (c.cue === "class") {
+          const n = document.querySelector(c.target);
+          if (n) n.classList.toggle(c.cls, !pending);
+        }
+      });
+    }
+
+    return {
+      schedule: schedule,
+      applyEndState: applyEndState,
+      settle: settle,
+      leave: leave,
+      afterRender: afterRender,
+      clock: function () {
+        return clock
+          ? { gen: clock.gen, beatId: clock.beatId, durationMs: clock.durationMs, startedAt: clock.startedAt }
+          : null;
+      },
+      log: log,
+    };
+  })();
+
+  /** Set-piece duration binding: stamp the active SayClock's duration
+   *  on a mounted node's CSS clock variable and restart its animation,
+   *  so a one-clock set piece spans exactly its narration (U2 applies
+   *  this to the set-piece beats). Returns whether a clock was live. */
+  function bindSayDuration(el, cssVar) {
+    const c = SyncCue.clock();
+    if (!el || !c) return false;
+    el.style.setProperty(cssVar, Math.round(c.durationMs) + "ms");
+    el.style.animation = "none";
+    void el.offsetWidth;
+    el.style.animation = "";
+    return true;
+  }
 
   // ---- Input choreography (typing / live dictation into the composer) ----
   // Runs during autoplay between an input beat's FIRST click (the cursor
@@ -6432,6 +6732,7 @@
 
   function goTo(i, fromAuto) {
     advanceGen++; // any navigation invalidates gated advances in flight
+    SyncCue.leave(); // the previous beat's cues die with it (veils lifted, accents dropped)
     if (introArmed) dismissIntro(); // any navigation closes the intro card
     if (!fromAuto) Cursor.hide();
     // Any beat landing clears the composer: an input beat's just-sent text
@@ -6457,15 +6758,16 @@
         const sc = SPEECH_CLIPS[beat.id];
         Voice.speakSegs([{ file: sc.file, text: beat.speech.text, speaker: sc.speaker }], beat.id);
       }
-      const chime = beat.chime;
-      if (chime === "complete") Chime.complete(beat.id);
-      else if (chime === "attention") Chime.attention(beat.id);
+      // Narration is the beat's clock: sync cues (reveals, accents,
+      // chimes) key to fractions of the line that just started.
+      SyncCue.schedule(beat);
       // cursorAfter (when: "after"): post-entry choreography against THIS
       // beat's fresh render — fire-and-forget, the audio gate paces the
       // beat. Reduced motion shows the static composition instead.
       if (!reducedMotion && beat.cursorAfter) Cursor.perform(beat.cursorAfter);
     } else if (!fromAuto) {
       Voice.cancel();
+      SyncCue.applyEndState(BEATS[index]);
     }
     if (fromAuto || playing) scheduleAdvance();
     else clearTimer();
@@ -6486,6 +6788,7 @@
     setPlaying(false);
     Cursor.cancel();
     Voice.cancel();
+    SyncCue.settle(); // mid-beat pause completes the beat's look in place
     InputFX.cancel(); // mid-entry pause: audio already stopped, text resets
   }
 
@@ -6966,6 +7269,9 @@
     // Speaking indicator: the presenter bar and member rows above may have
     // been rebuilt — re-assert the live-utterance classes on the new nodes.
     Voice.syncUi();
+    // Cue state likewise: a mid-beat repaint rebuilds regions from
+    // beat-pure HTML — re-assert the fired/pending split.
+    SyncCue.afterRender();
   }
 
   function escapeHtml(s) {
@@ -7694,10 +8000,17 @@
     body.classList.toggle("ws-host", isWorkspace);
     body.innerHTML = bodyHtml;
     const newVsc = body.querySelector(".vsc");
-    if (body.querySelector(".stage-overlay")) setGrowOrigin(growFrom);
+    const newOv = body.querySelector(".stage-overlay");
+    if (newOv) setGrowOrigin(growFrom);
     if (live && oldVscHtml && newVsc) {
       if (newVsc.outerHTML !== oldVscHtml) newVsc.classList.add("vsc-fade");
-      if (oldOv) {
+      if (oldOv && newOv && oldOv.outerHTML === newOv.outerHTML) {
+        // Sticky hold with the workspace changing beneath it: the SAME
+        // overlay node persists — no ghost, no entrance replay. The held
+        // artifact stays rock-steady while the window moves (a3-test's
+        // terminal landing green under the held render map).
+        newOv.replaceWith(oldOv);
+      } else if (oldOv) {
         oldOv.classList.add("ov-leave");
         oldOv.setAttribute("aria-hidden", "true");
         body.appendChild(oldOv);
@@ -8413,6 +8726,12 @@
     cursor: Cursor,
     voice: Voice,
     chime: Chime,
+    // SyncCue (extend-only): the active SayClock ({gen, beatId,
+    // durationMs, startedAt} or null), the fired-cue trace, and the
+    // set-piece duration binder — for the battery and U2's set pieces.
+    sayClock: SyncCue.clock,
+    syncCueLog: SyncCue.log,
+    bindSayDuration: bindSayDuration,
     transcriptAt: buildTranscript,
     // Read-along clock (extend-only): the effective per-beat durations the
     // progress bar and CC stamps run on, for e2e pacing assertions.

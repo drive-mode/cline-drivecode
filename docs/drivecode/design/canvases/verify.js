@@ -69,6 +69,17 @@
 //      The battery's LAST check compares every `bun verify.js`
 //      success line the demo shows against this run's real beat/check
 //      counts.
+//  22) SyncCue — narration is the beat's clock: the engine surface
+//      (__DRIVE_DEMO__.sayClock / bindSayDuration) exists, every beat's
+//      `sync` entry has a sane fraction and a target that resolves at
+//      its beat; at the reference beat (a3-test) under VOICED autoplay
+//      the terminal OK line and TEST card are still veiled (.cued) at
+//      ~0.5s, revealed by ~2.5s with the complete chime logged ~1.2s
+//      AFTER beat entry (not at entry), and the say-hl accent applied
+//      by ~4s; static entry shows the end state (everything revealed,
+//      zero .cued remnants, accent on, no clock) and the accent does
+//      not outlive its beat; with the voice toggle OFF the same cues
+//      fire on the synthetic words x 350ms clock.
 //
 // Run from this directory. The empty package.json seed is load-bearing:
 // without it `bun add` walks up and attaches the dep to docs/package.json.
@@ -1026,6 +1037,189 @@ async function main() {
     check(ivDbg.dbg && ivDbg.bp && ivDbg.ghost,
       "interactive: returning to the walk file must restore the debug session intact");
     await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); });
+
+    // 22) SyncCue: narration is the beat's clock.
+    // 22a) Engine surface + every sync entry resolves at its beat.
+    const scSurface = await page.evaluate(function () {
+      const D = window.__DRIVE_DEMO__;
+      return {
+        accessor: typeof D.sayClock === "function",
+        atRest: typeof D.sayClock === "function" ? D.sayClock() === null : false,
+        bind: typeof D.bindSayDuration === "function",
+      };
+    });
+    check(scSurface.accessor, "synccue: __DRIVE_DEMO__.sayClock accessor missing");
+    check(scSurface.atRest, "synccue: sayClock must be null outside autoplay");
+    check(scSurface.bind, "synccue: __DRIVE_DEMO__.bindSayDuration missing");
+    const syncEntries = await page.evaluate(function () {
+      const out = [];
+      window.__DRIVE_DEMO__.beats.forEach(function (b, i) {
+        (b.sync || []).forEach(function (c, j) { out.push({ i: i, id: b.id, j: j, c: c }); });
+      });
+      return out;
+    });
+    check(syncEntries.length >= 6,
+      "synccue: expected sync entries on a3-test + a9-gates + a9-approved, saw " + syncEntries.length);
+    for (const s of syncEntries) {
+      check(s.c.at > 0 && s.c.at <= 1,
+        "synccue " + s.id + "[" + s.j + "]: fraction " + s.c.at + " outside (0,1]");
+      if (s.c.cue === "chime") {
+        check(s.c.kind === "complete" || s.c.kind === "attention",
+          "synccue " + s.id + "[" + s.j + "]: unknown chime kind " + JSON.stringify(s.c.kind));
+        continue;
+      }
+      check(s.c.cue === "reveal" || s.c.cue === "class",
+        "synccue " + s.id + "[" + s.j + "]: unknown cue " + JSON.stringify(s.c.cue));
+      if (s.c.cue === "class") {
+        check(typeof s.c.cls === "string" && s.c.cls.length > 0,
+          "synccue " + s.id + "[" + s.j + "]: class cue without cls");
+      }
+      const r = await page.evaluate(function (s) {
+        window.__DRIVE_DEMO__.goTo(s.i);
+        const el = document.querySelector(s.c.target);
+        if (!el) return { err: "no match" };
+        if (!el.getClientRects().length) return { err: "not rendered" };
+        return {};
+      }, s);
+      check(!r.err,
+        "synccue " + s.id + "[" + s.j + "] target " + s.c.target + " at its beat: " + r.err);
+    }
+
+    // 22b) Reference beat under voiced autoplay: the green lands ON the
+    // word — veiled at ~0.5s, revealed by ~2.5s, chime ~1.2s after
+    // entry (0.19 x the 6.12s clip), accent by ~4s.
+    const scIdx = beats.findIndex(function (b) { return b.id === "a3-test"; });
+    check(scIdx > 0, "synccue: beat a3-test not found");
+    await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, scIdx - 1);
+    const scRun = page.evaluate(function (idx) {
+      return new Promise(function (res) {
+        const D = window.__DRIVE_DEMO__;
+        const iv = setInterval(function () {
+          if (D.getIndex() !== idx) return;
+          clearInterval(iv);
+          const entry = performance.now();
+          function snap() {
+            const ok = document.querySelector("#spotlight .vsc-term .ws-tl.ok");
+            const card = document.querySelector("#spotlight .card.test");
+            return {
+              okThere: !!ok,
+              okCued: !!(ok && ok.classList.contains("cued")),
+              cardThere: !!card,
+              cardCued: !!(card && card.classList.contains("cued")),
+              hl: !!(card && card.classList.contains("say-hl")),
+              chimes: D.chime.log
+                .filter(function (c) { return c.beatId === "a3-test" && c.at >= entry; })
+                .map(function (c) { return { kind: c.kind, dt: Math.round(c.at - entry) }; }),
+              clock: D.sayClock(),
+            };
+          }
+          const out = { entered: true };
+          setTimeout(function () { out.early = snap(); }, 500);
+          setTimeout(function () { out.mid = snap(); }, 2500);
+          setTimeout(function () { out.late = snap(); res(out); }, 4000);
+        }, 40);
+        setTimeout(function () { clearInterval(iv); res({ entered: false }); }, 30000);
+      });
+    }, scIdx);
+    await page.click("#btn-play");
+    const sc = await scRun;
+    check(sc.entered, "synccue autoplay: never reached a3-test");
+    if (sc.entered) {
+      check(sc.early.okThere && sc.early.okCued,
+        "synccue autoplay @0.5s: terminal OK line should still be veiled - " + JSON.stringify(sc.early));
+      check(sc.early.cardThere && sc.early.cardCued,
+        "synccue autoplay @0.5s: TEST card should still be veiled - " + JSON.stringify(sc.early));
+      check(!sc.early.hl, "synccue autoplay @0.5s: say-hl must not be applied yet");
+      check(sc.early.chimes.length === 0,
+        "synccue autoplay @0.5s: chime fired at beat entry - " + JSON.stringify(sc.early.chimes));
+      check(!!sc.early.clock && sc.early.clock.beatId === "a3-test" && sc.early.clock.durationMs > 3000,
+        "synccue autoplay: sayClock missing or implausible - " + JSON.stringify(sc.early.clock));
+      check(sc.mid.okThere && !sc.mid.okCued,
+        "synccue autoplay @2.5s: terminal OK line still veiled - " + JSON.stringify(sc.mid));
+      check(sc.mid.cardThere && !sc.mid.cardCued,
+        "synccue autoplay @2.5s: TEST card still veiled - " + JSON.stringify(sc.mid));
+      check(sc.mid.chimes.length === 1 && sc.mid.chimes[0].kind === "complete" &&
+        sc.mid.chimes[0].dt > 700 && sc.mid.chimes[0].dt < 2600,
+        "synccue autoplay: complete chime should land ~1.2s after entry - " + JSON.stringify(sc.mid.chimes));
+      check(sc.late.hl,
+        "synccue autoplay @4s: say-hl accent not applied - " + JSON.stringify(sc.late));
+    }
+    await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
+
+    // 22c) Static entry: the end state — everything revealed, zero
+    // .cued remnants, the accent applied, no live clock — and the
+    // accent does not outlive its beat.
+    const scStatic = await page.evaluate(function (i) {
+      window.__DRIVE_DEMO__.goTo(i);
+      const ok = document.querySelector("#spotlight .vsc-term .ws-tl.ok");
+      const card = document.querySelector("#spotlight .card.test");
+      return {
+        cued: document.querySelectorAll("#spotlight .cued").length,
+        okShown: !!ok && !ok.classList.contains("cued"),
+        hl: !!card && card.classList.contains("say-hl"),
+        clock: window.__DRIVE_DEMO__.sayClock(),
+      };
+    }, scIdx);
+    check(scStatic.cued === 0,
+      "synccue static: " + scStatic.cued + " .cued remnant(s) after direct goTo to a3-test");
+    check(scStatic.okShown, "synccue static: terminal OK line must be revealed on static entry");
+    check(scStatic.hl, "synccue static: end state must include the say-hl accent");
+    check(scStatic.clock === null, "synccue static: sayClock must be null on static entry");
+    const scNext = await page.evaluate(function (i) {
+      window.__DRIVE_DEMO__.goTo(i + 1);
+      const card = document.querySelector("#spotlight .card.test");
+      return { there: !!card, hl: !!(card && card.classList.contains("say-hl")) };
+    }, scIdx);
+    check(scNext.there && !scNext.hl,
+      "synccue: the say-hl accent must not outlive its beat - " + JSON.stringify(scNext));
+
+    // 22d) Muted run: the same cues fire on the synthetic read-along
+    // clock (words x 350ms), sampled after fraction x clock + margin.
+    await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, scIdx - 1);
+    const scVoiceWasOn = await page.$eval("#btn-voice", function (el) {
+      return el.getAttribute("aria-pressed") === "true";
+    });
+    if (scVoiceWasOn) await page.click("#btn-voice");
+    const scMutedP = page.evaluate(function (idx) {
+      return new Promise(function (res) {
+        const D = window.__DRIVE_DEMO__;
+        const clockMs = D.pacing.spokenWords[idx] * D.pacing.wordMs;
+        const sampleAt = clockMs * 0.19 + 700;
+        const iv = setInterval(function () {
+          if (D.getIndex() !== idx) return;
+          clearInterval(iv);
+          const entry = performance.now();
+          setTimeout(function () {
+            const ok = document.querySelector("#spotlight .vsc-term .ws-tl.ok");
+            const card = document.querySelector("#spotlight .card.test");
+            res({
+              entered: true,
+              expectMs: clockMs,
+              clock: D.sayClock(),
+              okShown: !!ok && !ok.classList.contains("cued"),
+              cardShown: !!card && !card.classList.contains("cued"),
+              chimes: D.chime.log.filter(function (c) {
+                return c.beatId === "a3-test" && c.at >= entry;
+              }).length,
+            });
+          }, sampleAt);
+        }, 40);
+        setTimeout(function () { clearInterval(iv); res({ entered: false }); }, 30000);
+      });
+    }, scIdx);
+    await page.click("#btn-play");
+    const scm = await scMutedP;
+    check(scm.entered, "synccue muted: never reached a3-test");
+    if (scm.entered) {
+      check(!!scm.clock && scm.clock.durationMs === scm.expectMs,
+        "synccue muted: sayClock should be the synthetic words x 350 clock (" +
+        scm.expectMs + "ms) - got " + JSON.stringify(scm.clock));
+      check(scm.okShown, "synccue muted: terminal OK line not revealed on the synthetic clock");
+      check(scm.cardShown, "synccue muted: TEST card not revealed on the synthetic clock");
+      check(scm.chimes >= 1, "synccue muted: chime fire not logged on the synthetic clock");
+    }
+    await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
+    if (scVoiceWasOn) await page.click("#btn-voice"); // restore the toggle
 
     check(pageErrors.length === 0, "pageerrors: " + pageErrors.join(" | "));
 
