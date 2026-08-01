@@ -1,0 +1,58 @@
+# Optional reusable entrypoint: resolve stack context for caller workflows.
+# Example:
+#   jobs:
+#     stack:
+#       uses: ./.github/workflows/stack-context.yml
+#     e2e:
+#       needs: stack
+#       if: needs.stack.outputs.run_expensive == 'true'
+name: stack-context
+
+on:
+    workflow_call:
+        outputs:
+            is_stacked:
+                description: Whether this PR belongs to a stack
+                value: ${{ jobs.resolve.outputs.is_stacked }}
+            stack_number:
+                description: Stack number
+                value: ${{ jobs.resolve.outputs.stack_number }}
+            stack_size:
+                description: Stack size
+                value: ${{ jobs.resolve.outputs.stack_size }}
+            stack_position:
+                description: 1-based position
+                value: ${{ jobs.resolve.outputs.stack_position }}
+            stack_base_ref:
+                description: Trunk ref
+                value: ${{ jobs.resolve.outputs.stack_base_ref }}
+            is_lowest_unmerged:
+                description: Current bottom of remaining stack
+                value: ${{ jobs.resolve.outputs.is_lowest_unmerged }}
+            is_top:
+                description: Top of stack
+                value: ${{ jobs.resolve.outputs.is_top }}
+            run_expensive:
+                description: Gate for expensive CI
+                value: ${{ jobs.resolve.outputs.run_expensive }}
+
+permissions:
+    contents: read
+    pull-requests: read
+
+jobs:
+    resolve:
+        runs-on: ubuntu-latest
+        outputs:
+            is_stacked: ${{ steps.stack.outputs.is_stacked }}
+            stack_number: ${{ steps.stack.outputs.stack_number }}
+            stack_size: ${{ steps.stack.outputs.stack_size }}
+            stack_position: ${{ steps.stack.outputs.stack_position }}
+            stack_base_ref: ${{ steps.stack.outputs.stack_base_ref }}
+            is_lowest_unmerged: ${{ steps.stack.outputs.is_lowest_unmerged }}
+            is_top: ${{ steps.stack.outputs.is_top }}
+            run_expensive: ${{ steps.stack.outputs.run_expensive }}
+        steps:
+            - uses: actions/checkout@v4
+            - id: stack
+              uses: ./.github/actions/stack-context

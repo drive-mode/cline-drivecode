@@ -1,0 +1,91 @@
+# Resolve GitHub stacked-PR context for workflow gating and labeling.
+#
+# Reads github.event.pull_request.stack (null for standalone PRs).
+# See: https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/optimizing-ci-for-stacked-pull-requests
+name: stack-context
+description: Export stacked pull request metadata and gating flags
+
+outputs:
+    is_stacked:
+        description: Whether this PR belongs to a stack
+        value: ${{ steps.resolve.outputs.is_stacked }}
+    stack_number:
+        description: Stack number (empty if not stacked)
+        value: ${{ steps.resolve.outputs.stack_number }}
+    stack_size:
+        description: Number of PRs in the stack (empty if not stacked)
+        value: ${{ steps.resolve.outputs.stack_size }}
+    stack_position:
+        description: 1-based position in the stack (1 = bottom; empty if not stacked)
+        value: ${{ steps.resolve.outputs.stack_position }}
+    stack_base_ref:
+        description: Trunk branch the stack ultimately targets
+        value: ${{ steps.resolve.outputs.stack_base_ref }}
+    is_lowest_unmerged:
+        description: True when this PR's base equals the stack base (current bottom)
+        value: ${{ steps.resolve.outputs.is_lowest_unmerged }}
+    is_top:
+        description: True when position equals size (top of stack)
+        value: ${{ steps.resolve.outputs.is_top }}
+    run_expensive:
+        description: >
+            True for standalone PRs, lowest-unmerged stacked PRs, and top-of-stack PRs.
+            Use to gate expensive CI while keeping cheap checks on every layer.
+        value: ${{ steps.resolve.outputs.run_expensive }}
+
+runs:
+    using: composite
+    steps:
+        - id: resolve
+          shell: bash
+          env:
+              # Prefer event payload; fall back to empty for non-PR events.
+              STACK_JSON: ${{ toJson(github.event.pull_request.stack) }}
+              PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          run: |
+              set -euo pipefail
+
+              is_stacked=false
+              stack_number=
+              stack_size=
+              stack_position=
+              stack_base_ref=
+              is_lowest_unmerged=false
+              is_top=false
+              run_expensive=true
+
+              if [ -n "${STACK_JSON}" ] && [ "${STACK_JSON}" != "null" ]; then
+                is_stacked=true
+                stack_number=$(printf '%s' "$STACK_JSON" | jq -r '.number // empty')
+                stack_size=$(printf '%s' "$STACK_JSON" | jq -r '.size // empty')
+                stack_position=$(printf '%s' "$STACK_JSON" | jq -r '.position // empty')
+                stack_base_ref=$(printf '%s' "$STACK_JSON" | jq -r '.base.ref // empty')
+
+                if [ -n "$stack_base_ref" ] && [ "$stack_base_ref" = "${PR_BASE_REF:-}" ]; then
+                  is_lowest_unmerged=true
+                fi
+                if [ -n "$stack_position" ] && [ -n "$stack_size" ] && [ "$stack_position" = "$stack_size" ]; then
+                  is_top=true
+                fi
+
+                # Expensive CI: full surface at top, merge-candidate at lowest unmerged.
+                # Mid-stack layers still need cheap required checks elsewhere.
+                if [ "$is_lowest_unmerged" = true ] || [ "$is_top" = true ]; then
+                  run_expensive=true
+                else
+                  run_expensive=false
+                fi
+              fi
+
+              {
+                echo "is_stacked=${is_stacked}"
+                echo "stack_number=${stack_number}"
+                echo "stack_size=${stack_size}"
+                echo "stack_position=${stack_position}"
+                echo "stack_base_ref=${stack_base_ref}"
+                echo "is_lowest_unmerged=${is_lowest_unmerged}"
+                echo "is_top=${is_top}"
+                echo "run_expensive=${run_expensive}"
+              } >> "$GITHUB_OUTPUT"
+
+              echo "stack-context: stacked=${is_stacked} pos=${stack_position:--} size=${stack_size:--} lowest=${is_lowest_unmerged} top=${is_top} expensive=${run_expensive}"

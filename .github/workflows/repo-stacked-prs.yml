@@ -1,0 +1,166 @@
+# Annotate stacked pull requests: labels + sticky comment.
+# Additive only — does not replace product CI (drive-ci, sdk-test, etc.).
+#
+# Stack metadata: github.event.pull_request.stack
+# Docs: https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/optimizing-ci-for-stacked-pull-requests
+name: repo-stacked-prs
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+            - edited
+            - ready_for_review
+            - converted_to_draft
+            # When Actions documents `stacked` as a pull_request type, add it here.
+            # Until then, synchronize/edited cover stack link and retarget updates.
+
+concurrency:
+    group: stacked-prs-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    pull-requests: write
+    issues: write
+
+jobs:
+    annotate:
+        runs-on: ubuntu-latest
+        name: Annotate stack
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Resolve stack context
+              id: stack
+              uses: ./.github/actions/stack-context
+
+            - name: Sync stack labels
+              uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+              env:
+                  IS_STACKED: ${{ steps.stack.outputs.is_stacked }}
+                  STACK_NUMBER: ${{ steps.stack.outputs.stack_number }}
+                  STACK_SIZE: ${{ steps.stack.outputs.stack_size }}
+                  STACK_POSITION: ${{ steps.stack.outputs.stack_position }}
+                  STACK_BASE_REF: ${{ steps.stack.outputs.stack_base_ref }}
+                  IS_LOWEST: ${{ steps.stack.outputs.is_lowest_unmerged }}
+                  IS_TOP: ${{ steps.stack.outputs.is_top }}
+                  RUN_EXPENSIVE: ${{ steps.stack.outputs.run_expensive }}
+              with:
+                  script: |
+                      const pr = context.payload.pull_request
+                      const owner = context.repo.owner
+                      const repo = context.repo.repo
+                      const issue_number = pr.number
+
+                      const isStacked = process.env.IS_STACKED === "true"
+                      const size = process.env.STACK_SIZE || ""
+                      const position = process.env.STACK_POSITION || ""
+                      const stackNumber = process.env.STACK_NUMBER || ""
+                      const baseRef = process.env.STACK_BASE_REF || ""
+                      const isLowest = process.env.IS_LOWEST === "true"
+                      const isTop = process.env.IS_TOP === "true"
+                      const runExpensive = process.env.RUN_EXPENSIVE === "true"
+
+                      const STACK_PREFIX = "stack/"
+                      const wanted = new Set()
+                      if (isStacked && position && size) {
+                        wanted.add("stack")
+                        wanted.add(`${STACK_PREFIX}${position}-of-${size}`)
+                        if (isLowest) wanted.add(`${STACK_PREFIX}lowest-unmerged`)
+                        if (isTop) wanted.add(`${STACK_PREFIX}top`)
+                      }
+
+                      const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+                        owner, repo, issue_number,
+                      })
+                      const current = new Set(currentLabels.map((l) => l.name))
+
+                      // Ensure labels exist (ignore already_exists).
+                      for (const name of wanted) {
+                        if (current.has(name)) continue
+                        try {
+                          await github.rest.issues.createLabel({
+                            owner, repo, name,
+                            color: name === "stack" ? "0E8A16" : "BFDADC",
+                            description: name === "stack"
+                              ? "Part of a GitHub stacked pull request"
+                              : "Stacked PR layer marker (auto)",
+                          })
+                        } catch (err) {
+                          if (err.status !== 422) throw err
+                        }
+                        await github.rest.issues.addLabels({
+                          owner, repo, issue_number, labels: [name],
+                        })
+                        core.info(`added label: ${name}`)
+                      }
+
+                      for (const name of current) {
+                        if (name === "stack" || name.startsWith(STACK_PREFIX)) {
+                          if (!wanted.has(name)) {
+                            try {
+                              await github.rest.issues.removeLabel({
+                                owner, repo, issue_number, name,
+                              })
+                              core.info(`removed label: ${name}`)
+                            } catch (err) {
+                              if (err.status !== 404) throw err
+                            }
+                          }
+                        }
+                      }
+
+                      const marker = "<!-- cline-stacked-prs-bot -->"
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner, repo, issue_number, per_page: 100,
+                      })
+                      const existing = comments.find((c) => c.body && c.body.includes(marker))
+
+                      if (!isStacked) {
+                        if (existing) {
+                          await github.rest.issues.deleteComment({
+                            owner, repo, comment_id: existing.id,
+                          })
+                          core.info("removed stale stack comment")
+                        } else {
+                          core.info("not stacked; nothing to annotate")
+                        }
+                        return
+                      }
+
+                      const role = [
+                        isLowest ? "lowest unmerged (merge candidate)" : null,
+                        isTop ? "top of stack" : null,
+                      ].filter(Boolean).join("; ") || "mid-stack layer"
+
+                      const body = [
+                        marker,
+                        `## Stacked PR — layer ${position} of ${size}`,
+                        "",
+                        `| | |`,
+                        `|---|---|`,
+                        `| Stack | \`#${stackNumber}\` |`,
+                        `| Position | **${position}** / ${size} |`,
+                        `| Trunk | \`${baseRef}\` |`,
+                        `| Role | ${role} |`,
+                        `| Expensive CI gate | \`${runExpensive}\` (\`stack-context\` \`run_expensive\`) |`,
+                        "",
+                        "Each layer is reviewed as its own diff. Merge **bottom-up** (or merge a mid/top PR to land it and everything below). Use \`gh stack merge --yes\` — not \`gh pr merge\`.",
+                        "",
+                        "Agent skill: \`.agents/skills/stacked-pull-requests/\` · [GitHub stacked PRs](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs)",
+                      ].join("\n")
+
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner, repo, comment_id: existing.id, body,
+                        })
+                        core.info("updated stack comment")
+                      } else {
+                        await github.rest.issues.createComment({
+                          owner, repo, issue_number, body,
+                        })
+                        core.info("created stack comment")
+                      }

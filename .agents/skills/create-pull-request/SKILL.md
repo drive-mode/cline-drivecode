@@ -7,6 +7,8 @@ description: Create a GitHub pull request following project conventions. Use whe
 
 This skill guides you through creating a well-structured GitHub pull request that follows project conventions and best practices.
 
+**Stacked / multi-layer changes:** If the work has ordered dependency layers (shared packages → consumers, models → API → UI) or would produce a very large single diff, use [stacked-pull-requests](../stacked-pull-requests/SKILL.md) with `gh stack` instead of opening one monolithic PR.
+
 ## Prerequisites Check
 
 Before proceeding, verify the following:
