@@ -120,6 +120,7 @@ export function DriveRoomChrome({
 		chatForks,
 		workersPanelOpen,
 		joinDrive,
+		leaveDrive,
 		workspaceRoot,
 	} = session;
 
@@ -195,6 +196,7 @@ export function DriveRoomChrome({
 			<DriveCallStrip
 				disabled={disabled}
 				drive={drive}
+				onLeaveDrive={leaveDrive}
 				turnInFlight={turnInFlight}
 				workerCount={chatForks.length}
 				workersOpen={workersPanelOpen}

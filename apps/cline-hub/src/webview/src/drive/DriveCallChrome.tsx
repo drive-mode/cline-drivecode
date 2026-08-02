@@ -8,6 +8,7 @@ import {
 	MicOffIcon,
 	PhoneIcon,
 	PhoneOffIcon,
+	RotateCcwIcon,
 	Settings2Icon,
 	UsersIcon,
 	VolumeXIcon,
@@ -15,6 +16,18 @@ import {
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
 	interruptChromeCopy,
@@ -142,6 +155,118 @@ export function DriveHeaderControls({
 	);
 }
 
+/**
+ * One 30px icon-only call control — the canvas `.strip-btn`.
+ *
+ * Icon-only chrome is only a win when it stays labelled, so the label is a
+ * required prop and feeds both the tooltip and `aria-label`.
+ */
+function StripButton({
+	children,
+	disabled,
+	label,
+	onClick,
+	pressed,
+	tone = "neutral",
+}: {
+	children: ReactNode;
+	disabled?: boolean;
+	/** Accessible name — also the tooltip copy. */
+	label: string;
+	onClick: () => void;
+	/** Omit for controls that are not toggles (settings, leave). */
+	pressed?: boolean;
+	tone?: "neutral" | "live" | "danger";
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger
+				render={
+					<Button
+						aria-label={label}
+						aria-pressed={pressed}
+						className={cn(
+							"size-[30px] shrink-0 [&_svg]:size-[15px]",
+							tone === "live" &&
+								"border-amber-500/55 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:border-amber-400/55 dark:bg-amber-400/10 dark:text-amber-300",
+							tone === "danger" &&
+								"border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20",
+						)}
+						disabled={disabled}
+						onClick={onClick}
+						size="icon-sm"
+						type="button"
+						variant="outline"
+					/>
+				}
+			>
+				{children}
+			</TooltipTrigger>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
+	);
+}
+
+/**
+ * The strip's single piece of text status. The canvas cycles modes on click;
+ * a menu is used here so every mode stays one action away, as it was when the
+ * strip carried four mode buttons.
+ */
+function DriveModePill({
+	disabled,
+	onSubModeChange,
+	subMode,
+}: {
+	disabled?: boolean;
+	onSubModeChange: (mode: DriveSubMode) => void;
+	subMode: DriveSubMode;
+}) {
+	const label = `Working mode: ${subMode}`;
+	return (
+		<DropdownMenu>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<DropdownMenuTrigger
+							render={
+								<Button
+									aria-label={label}
+									// The outline variant repaints aria-expanded like a popover
+									// trigger; the pill keeps its amber skin while open.
+									className="h-[30px] shrink-0 rounded-full border-amber-500/45 bg-amber-500/15 px-3 text-xs font-semibold capitalize text-amber-700 aria-expanded:bg-amber-500/25 aria-expanded:text-amber-700 dark:border-amber-400/45 dark:bg-amber-400/15 dark:text-amber-300 dark:aria-expanded:text-amber-300"
+									disabled={disabled}
+									size="sm"
+									type="button"
+									variant="outline"
+								/>
+							}
+						/>
+					}
+				>
+					{subMode}
+				</TooltipTrigger>
+				<TooltipContent>{label}</TooltipContent>
+			</Tooltip>
+			<DropdownMenuContent align="start" className="min-w-32">
+				<DropdownMenuRadioGroup
+					onValueChange={(value) => onSubModeChange(value as DriveSubMode)}
+					value={subMode}
+				>
+					{SUB_MODES.map((mode) => (
+						<DropdownMenuRadioItem
+							className="capitalize"
+							key={mode}
+							value={mode}
+						>
+							{mode}
+						</DropdownMenuRadioItem>
+					))}
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
 export function DriveCallStrip({
 	drive,
 	disabled,
@@ -152,6 +277,7 @@ export function DriveCallStrip({
 	onHandToggle,
 	onSubModeChange,
 	onClearOverride,
+	onLeaveDrive,
 	onOpenSettings,
 	onToggleSpotlight,
 	onTogglePartnerMute,
@@ -168,6 +294,8 @@ export function DriveCallStrip({
 	onHandToggle: () => void;
 	onSubModeChange: (mode: DriveSubMode) => void;
 	onClearOverride?: () => void;
+	/** Hang up: leaves the call, work continues. Never the Tier-0 End. */
+	onLeaveDrive?: () => void;
 	onOpenSettings?: () => void;
 	onToggleSpotlight?: () => void;
 	onTogglePartnerMute?: () => void;
@@ -189,164 +317,162 @@ export function DriveCallStrip({
 		turnInFlight,
 	});
 	const interruptCopy = interruptChromeCopy(interruptPhase);
+	// Icon states carry the status the old text run spelled out; assistive tech
+	// gets the same facts back from a live region. One span per fact (and no
+	// aria-atomic) so a single toggle announces itself, not the whole strip.
+	const statusFacts: Array<{ id: string; text: string }> = [
+		{ id: "mic", text: drive.muted ? "You are muted" : "Your mic is live" },
+		{ id: "spotlight", text: `Spotlight on ${spotlightLabel}` },
+		{
+			id: "partner-audio",
+			text: [
+				drive.partnerMuted ? "muted" : null,
+				drive.partnerDeafened ? "deafened" : null,
+			]
+				.filter((part): part is string => part != null)
+				.map((part) => `${drive.partnerName} is ${part}`)
+				.join(", "),
+		},
+		{
+			id: "mode",
+			text: drive.postureOverride
+				? `Working mode ${drive.subMode}, posture override`
+				: `Working mode ${drive.subMode}`,
+		},
+		{ id: "hand", text: drive.handRaised ? "Your hand is raised" : "" },
+	];
 
 	return (
-		<div className="flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/5 px-4 py-2">
-			<span
-				aria-hidden
-				className={cn(
-					"inline-block size-2.5 rounded-full bg-amber-500",
-					!drive.muted && "animate-pulse",
-				)}
-			/>
-			<span className="text-sm font-medium">{drive.partnerName}</span>
-			<span className="text-xs text-muted-foreground">
-				{drive.muted ? "you muted" : "listening"} · spotlight {spotlightLabel}
-				{drive.partnerMuted ? " · partner muted" : ""}
-				{drive.partnerDeafened ? " · partner deafened" : ""}
-				{` · ${drive.subMode}`}
-				{drive.postureOverride ? ` · override` : " · bank"}
-				{drive.handRaised ? " · hand raised" : ""}
+		<div className="flex items-center gap-2 overflow-x-auto border-b border-amber-500/30 bg-amber-500/5 px-4 py-[7px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+			<span className="sr-only" role="status">
+				{statusFacts.map((fact) => (
+					// Trailing stop so adjacent facts do not run together aloud.
+					<span key={fact.id}>{fact.text ? `${fact.text}. ` : ""}</span>
+				))}
 			</span>
+			<StripButton
+				disabled={disabled}
+				label={drive.muted ? "Unmute" : "Mute"}
+				onClick={onMuteToggle}
+				pressed={drive.muted}
+				tone={drive.muted ? "danger" : "neutral"}
+			>
+				{drive.muted ? <MicOffIcon /> : <MicIcon />}
+			</StripButton>
+			<StripButton
+				disabled={disabled}
+				label={drive.handRaised ? "Lower hand" : "Raise hand"}
+				onClick={onHandToggle}
+				pressed={drive.handRaised}
+				tone={drive.handRaised ? "live" : "neutral"}
+			>
+				<HandIcon />
+			</StripButton>
+			<StripButton
+				disabled={disabled}
+				label={`Move Spotlight to ${nextSpotlightLabel}`}
+				onClick={() => onToggleSpotlight?.()}
+			>
+				<ApertureIcon />
+			</StripButton>
+			<StripButton
+				disabled={disabled}
+				label={
+					drive.partnerMuted
+						? `Unmute ${drive.partnerName}`
+						: `Mute ${drive.partnerName} (cannot speak)`
+				}
+				onClick={() => onTogglePartnerMute?.()}
+				pressed={drive.partnerMuted}
+				tone={drive.partnerMuted ? "live" : "neutral"}
+			>
+				<VolumeXIcon />
+			</StripButton>
+			<StripButton
+				disabled={disabled}
+				label={
+					drive.partnerDeafened
+						? `Undeafen ${drive.partnerName}`
+						: `Deafen ${drive.partnerName} (cannot hear)`
+				}
+				onClick={() => onTogglePartnerDeafen?.()}
+				pressed={drive.partnerDeafened}
+				tone={drive.partnerDeafened ? "live" : "neutral"}
+			>
+				<HeadphonesIcon />
+			</StripButton>
+			<DriveModePill
+				disabled={disabled}
+				onSubModeChange={onSubModeChange}
+				subMode={drive.subMode}
+			/>
+			{drive.postureOverride ? (
+				<StripButton
+					disabled={disabled}
+					label={`Clear ${drive.postureOverride} override (back to bank posture)`}
+					onClick={() => onClearOverride?.()}
+					tone="live"
+				>
+					<RotateCcwIcon />
+				</StripButton>
+			) : null}
+			{onToggleWorkers ? (
+				<StripButton
+					disabled={disabled}
+					label={
+						workerCount > 0 ? `Worker audit (${workerCount})` : "Worker audit"
+					}
+					onClick={() => onToggleWorkers()}
+					pressed={workersOpen}
+					tone={workersOpen ? "live" : "neutral"}
+				>
+					<span className="relative flex items-center justify-center">
+						<UsersIcon />
+						{workerCount > 0 ? (
+							<span
+								aria-hidden
+								className="absolute -top-2 -right-2 rounded-full bg-amber-500 px-1 text-[9px] leading-[13px] font-semibold text-amber-950"
+							>
+								{workerCount > 9 ? "9+" : workerCount}
+							</span>
+						) : null}
+					</span>
+				</StripButton>
+			) : null}
+			<StripButton
+				disabled={disabled}
+				label="Call settings"
+				onClick={() => onOpenSettings?.()}
+			>
+				<Settings2Icon />
+			</StripButton>
+			{onLeaveDrive ? (
+				<StripButton
+					disabled={disabled}
+					label="Leave call (work continues; rejoin to catch up)"
+					onClick={() => onLeaveDrive()}
+					tone="danger"
+				>
+					<PhoneIcon className="rotate-[135deg]" />
+				</StripButton>
+			) : null}
+			{/* Status, not a control: it yields the fixed room the buttons need. */}
 			{interruptCopy ? (
 				<span
 					aria-live="polite"
-					className="rounded border border-amber-600/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-100"
+					className="shrink-0 rounded-full border border-amber-600/40 bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-900 dark:text-amber-100"
 					data-slot="agency-interrupt"
 					role="status"
 				>
 					{interruptCopy}
 				</span>
 			) : null}
-			<div className="ml-auto flex flex-wrap items-center gap-1">
-				<fieldset
-					aria-label="Drive working mode"
-					className="m-0 flex flex-wrap items-center gap-1 border-0 p-0"
-				>
-					{SUB_MODES.map((mode) => (
-						<Button
-							aria-pressed={drive.subMode === mode}
-							className="h-7 px-2 text-xs capitalize"
-							disabled={disabled}
-							key={mode}
-							onClick={() => onSubModeChange(mode)}
-							size="sm"
-							type="button"
-							variant={drive.subMode === mode ? "default" : "ghost"}
-						>
-							{mode}
-						</Button>
-					))}
-				</fieldset>
-				{drive.postureOverride ? (
-					<Button
-						disabled={disabled}
-						onClick={() => onClearOverride?.()}
-						size="sm"
-						type="button"
-						variant="outline"
-						className="h-7 px-2 text-xs"
-					>
-						Clear override
-					</Button>
-				) : null}
-				<Button
-					aria-label={`Move Spotlight to ${nextSpotlightLabel}`}
-					disabled={disabled}
-					onClick={() => onToggleSpotlight?.()}
-					size="icon-sm"
-					type="button"
-					variant="ghost"
-					title="Move Spotlight between you and your partner"
-				>
-					<ApertureIcon className="size-3.5" />
-				</Button>
-				<Button
-					aria-label={
-						drive.partnerMuted ? "Unmute partner" : "Mute partner"
-					}
-					aria-pressed={drive.partnerMuted}
-					disabled={disabled}
-					onClick={() => onTogglePartnerMute?.()}
-					size="icon-sm"
-					type="button"
-					variant={drive.partnerMuted ? "default" : "ghost"}
-					title="Partner mute (cannot speak)"
-				>
-					<VolumeXIcon className="size-3.5" />
-				</Button>
-				<Button
-					aria-label={
-						drive.partnerDeafened
-							? "Undeafen partner"
-							: "Deafen partner"
-					}
-					aria-pressed={drive.partnerDeafened}
-					disabled={disabled}
-					onClick={() => onTogglePartnerDeafen?.()}
-					size="icon-sm"
-					type="button"
-					variant={drive.partnerDeafened ? "default" : "ghost"}
-					title="Partner deafen (cannot hear)"
-				>
-					<HeadphonesIcon className="size-3.5" />
-				</Button>
-				<Button
-					aria-label="Drive settings"
-					disabled={disabled}
-					onClick={() => onOpenSettings?.()}
-					size="icon-sm"
-					type="button"
-					variant="ghost"
-				>
-					<Settings2Icon className="size-3.5" />
-				</Button>
-				{onToggleWorkers ? (
-					<Button
-						aria-label="Workers audit"
-						aria-pressed={workersOpen}
-						disabled={disabled}
-						onClick={() => onToggleWorkers()}
-						size="sm"
-						type="button"
-						variant={workersOpen ? "default" : "ghost"}
-						className="h-7 gap-1 px-2 text-xs"
-						title="Open invisible worker audit pane"
-					>
-						<UsersIcon className="size-3.5" />
-						Workers
-						{workerCount > 0 ? (
-							<span className="rounded bg-background/40 px-1">{workerCount}</span>
-						) : null}
-					</Button>
-				) : null}
-				<Button
-					aria-label={drive.muted ? "Unmute" : "Mute"}
-					aria-pressed={drive.muted}
-					disabled={disabled}
-					onClick={onMuteToggle}
-					size="icon-sm"
-					type="button"
-					variant={drive.muted ? "default" : "ghost"}
-				>
-					{drive.muted ? (
-						<MicOffIcon className="size-3.5" />
-					) : (
-						<MicIcon className="size-3.5" />
-					)}
-				</Button>
-				<Button
-					aria-label={drive.handRaised ? "Lower hand" : "Raise hand"}
-					aria-pressed={drive.handRaised}
-					disabled={disabled}
-					onClick={onHandToggle}
-					size="icon-sm"
-					type="button"
-					variant={drive.handRaised ? "default" : "ghost"}
-				>
-					<HandIcon className="size-3.5" />
-				</Button>
-			</div>
+			<span className="ml-auto hidden shrink-0 pl-2 text-xs text-muted-foreground sm:inline">
+				with{" "}
+				<b className="font-medium text-amber-700 dark:text-amber-300">
+					{drive.partnerName}
+				</b>
+			</span>
 		</div>
 	);
 }
