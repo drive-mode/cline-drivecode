@@ -219,7 +219,7 @@ export function SessionProvider(props: {
 	const [driveSubMode, setDriveSubMode] = useState<
 		"plan" | "agent" | "ask" | "debug"
 	>("agent");
-	const drivePartnerName = "Adam";
+	const drivePartnerName = "Cline";
 
 	const toggleDrive = useCallback(() => {
 		setDriveActive((prev) => {

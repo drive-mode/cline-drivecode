@@ -25,10 +25,10 @@ export type DriveDemoFixture = {
 };
 
 export const DRIVE_DEMO_FIXTURE: DriveDemoFixture = {
-	room: { name: "router-fix", partnerName: "Adam" },
+	room: { name: "router-fix", partnerName: "Cline" },
 	roster: [
 		{ id: "you", displayName: "You", role: "human" },
-		{ id: "adam", displayName: "Adam", role: "agent" },
+		{ id: "cline", displayName: "Cline", role: "agent" },
 		{ id: "riley", displayName: "Riley", role: "agent" },
 		{ id: "sam", displayName: "Sam", role: "agent" },
 	],
@@ -125,7 +125,7 @@ function buildToolEvent(input: {
 
 export const SHARE_SCREEN_DEMO_FIXTURE: ShareScreenDemoFixture = {
 	roomName: "share-screen-simulated-live",
-	agentLabel: "Adam (agent partner)",
+	agentLabel: "Cline (agent partner)",
 	humanLabel: "You",
 	directorScript: {
 		scriptId: "script_share_screen_spotlight",

@@ -114,7 +114,7 @@ describe("driveVoiceUi", () => {
 
 	it("keeps the join note out of the narration queue", () => {
 		// Both effects see this text; only the join effect may speak it.
-		expect(isSpokenDriveJoinNote("On the call. Adam is on the parser.")).toBe(
+		expect(isSpokenDriveJoinNote("On the call. Cline is on the parser.")).toBe(
 			true,
 		);
 		expect(isSpokenDriveJoinNote("Since you left: two tests went green.")).toBe(

@@ -151,7 +151,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	stageLayout: false,
 	subMode: "plan",
 	postureOverride: null,
-	partnerName: "Adam",
+	partnerName: "Cline",
 	partnerNameInk: null,
 	// Joining a call with a hot mic is the wrong privacy default (spotlight S4).
 	// Safe only because `deafened` — not this — gates playback.

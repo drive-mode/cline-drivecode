@@ -1854,6 +1854,7 @@ export default function Chat({
 								(sending ? "partner working" : "idle")
 							}
 							onToggleFeed={toggleFeedCollapsed}
+							sharerIsAgent={drive.stageSharer === "agent"}
 							sharerLabel={
 								drive.stageSharer === "you" ? "You" : drive.partnerName
 							}

@@ -221,7 +221,7 @@ describe("DriveRoomStore", () => {
 			participant: {
 				id: "adam",
 				kind: "agent",
-				displayName: "Adam",
+				displayName: "Cline",
 				role: "partner",
 				status: "idle",
 				seatSources: [],
@@ -261,7 +261,7 @@ describe("DriveRoomStore", () => {
 		const participant = {
 			id: "adam",
 			kind: "agent" as const,
-			displayName: "Adam",
+			displayName: "Cline",
 			role: "partner" as const,
 			status: "idle" as const,
 			seatSources: [],
@@ -270,11 +270,11 @@ describe("DriveRoomStore", () => {
 		store.join({ roomId: "room_2", participant });
 		store.join({
 			roomId: "room_2",
-			participant: { ...participant, displayName: "Adam II" },
+			participant: { ...participant, displayName: "Cline II" },
 		});
 		const snapshot = store.getOrThrow("room_2");
 		expect(snapshot.participants).toHaveLength(1);
-		expect(snapshot.participants[0]?.displayName).toBe("Adam II");
+		expect(snapshot.participants[0]?.displayName).toBe("Cline II");
 	});
 
 	it("recordWork upserts stage.cards from edit and command", () => {
@@ -337,7 +337,7 @@ describe("joinCall", () => {
 		const first = joinCall({
 			roomId: "call_1",
 			human: { id: "you", displayName: "You" },
-			agent: { id: "adam", displayName: "Adam" },
+			agent: { id: "adam", displayName: "Cline" },
 		});
 		expect(first.created).toBe(true);
 		expect(first.snapshot.participants.map((p) => p.id).sort()).toEqual([
@@ -353,7 +353,7 @@ describe("joinCall", () => {
 		const second = joinCall({
 			roomId: "call_1",
 			human: { id: "you", displayName: "You" },
-			agent: { id: "adam", displayName: "Adam" },
+			agent: { id: "adam", displayName: "Cline" },
 		});
 		expect(second.created).toBe(false);
 		expect(second.snapshot.participants).toHaveLength(2);

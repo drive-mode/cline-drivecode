@@ -190,6 +190,7 @@ export function ShareScreenSpotlightDemo() {
 					narration={projection.narration}
 					nextLabel={projection.nextLabel}
 					nowLabel={projection.nowLabel}
+					sharerIsAgent={stageSharer === "agent"}
 					sharerLabel={sharerLabel}
 					className="h-full"
 				/>

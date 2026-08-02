@@ -29,6 +29,7 @@ import {
 	TestResultsSummary,
 	TestStatus,
 } from "@/components/ai-elements/test-results";
+import { ClineMarkIcon } from "@/components/icons/cline-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,6 +77,8 @@ export type SpotlightViewProps = {
 	cards: readonly StageCard[];
 	/** Who holds the spotlight (agent partner or You). */
 	sharerLabel: string;
+	/** True when the primary agent (Cline) holds the spotlight, for the idle avatar mark. */
+	sharerIsAgent?: boolean;
 	demo?: boolean;
 	/** Structured human share when you take the spotlight (hub pin). */
 	humanPin?: SpotlightHumanPin | null;
@@ -337,9 +340,12 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 /** Nothing staged — the sharer's plain workspace is what the room sees. */
 function ScreenIdle({
 	hint,
+	sharerIsAgent,
 	sharerLabel,
 }: {
 	hint?: string;
+	/** The primary agent (Cline) gets its bot mark; every human keeps an initial. */
+	sharerIsAgent?: boolean;
 	sharerLabel: string;
 }) {
 	// Match ScreenFrame: "You are sharing", everyone else "Riley is sharing".
@@ -348,9 +354,18 @@ function ScreenIdle({
 		<div className="flex max-h-full flex-col items-center gap-2 overflow-auto text-center">
 			<span
 				aria-hidden
-				className="grid size-11 place-items-center rounded-full border border-amber-500/45 bg-amber-500/15 font-mono text-base font-bold text-amber-300"
+				className={cn(
+					"grid size-11 shrink-0 place-items-center rounded-full border",
+					sharerIsAgent
+						? "border-violet-500/45 bg-violet-500/15 text-violet-300"
+						: "border-amber-500/45 bg-amber-500/15 font-mono text-base font-bold text-amber-300",
+				)}
 			>
-				{sharerLabel.slice(0, 1).toUpperCase()}
+				{sharerIsAgent ? (
+					<ClineMarkIcon className="size-5" />
+				) : (
+					sharerLabel.slice(0, 1).toUpperCase()
+				)}
 			</span>
 			<p className="text-[13px] font-semibold text-zinc-100">
 				{sharerLabel} {sharingVerb} sharing
@@ -532,6 +547,7 @@ function ShowBacklogRail({
 export function Spotlight({
 	cards,
 	sharerLabel,
+	sharerIsAgent,
 	demo,
 	humanPin,
 	humanSharing,
@@ -624,6 +640,7 @@ export function Spotlight({
 				) : (
 					<ScreenIdle
 						hint={cards.length === 0 ? emptyHint : undefined}
+						sharerIsAgent={sharerIsAgent}
 						sharerLabel={sharerLabel}
 					/>
 				)}

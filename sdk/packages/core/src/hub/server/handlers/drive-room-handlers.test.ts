@@ -42,7 +42,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_h1",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		expect(reply.ok).toBe(true);
@@ -90,7 +90,7 @@ describe("handleDriveRoomCommand", () => {
 				},
 				agent: {
 					id: "recorder_adam",
-					displayName: "Adam",
+					displayName: "Cline",
 					role: "recorder",
 				},
 				activateDrive: false,
@@ -131,7 +131,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_mute",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		ctx.published.length = 0;
@@ -216,7 +216,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_rename",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		ctx.published.length = 0;
@@ -268,7 +268,7 @@ describe("handleDriveRoomCommand", () => {
 				roomId: "room_pause",
 				sessionId: "sess_pause",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		expect(shouldDrivePauseAfterTool("sess_pause")).toBe(false);
@@ -311,7 +311,7 @@ describe("handleDriveRoomCommand", () => {
 				roomId: "room_multi_hand",
 				sessionId: "sess_multi_hand",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 
@@ -375,7 +375,7 @@ describe("handleDriveRoomCommand", () => {
 				roomId: "room_leave_pause",
 				sessionId: "sess_leave_pause",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		await handleDriveRoomCommand(ctx, {
@@ -411,7 +411,7 @@ describe("handleDriveRoomCommand", () => {
 				roomId: "room_leave_other",
 				sessionId: "sess_leave_other",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		await handleDriveRoomCommand(ctx, {
@@ -457,7 +457,7 @@ describe("handleDriveRoomCommand", () => {
 				roomId: "room_work",
 				sessionId: "sess_work",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		ctx.published.length = 0;
@@ -519,7 +519,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_plan",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		ctx.published.length = 0;
@@ -622,7 +622,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_test_plan",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		await handleDriveRoomCommand(ctx, {
@@ -657,7 +657,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_get",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		const got = await handleDriveRoomCommand(ctx, {
@@ -690,7 +690,7 @@ describe("handleDriveRoomCommand", () => {
 				roomId: "room_handoff",
 				sessionId: "sess_handoff",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		await handleDriveRoomCommand(ctx, {
@@ -783,7 +783,7 @@ describe("handleDriveRoomCommand", () => {
 				payload: {
 					roomId: "room_pack",
 					human: { id: "you", displayName: "You" },
-					agent: { id: "adam", displayName: "Adam" },
+					agent: { id: "adam", displayName: "Cline" },
 					workspaceRoot: root,
 				},
 			});
@@ -837,7 +837,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_end",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		await handleDriveRoomCommand(ctx, {
@@ -907,7 +907,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_away",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		await handleDriveRoomCommand(ctx, {
@@ -933,7 +933,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_away",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		expect(rejoined.ok).toBe(true);
@@ -952,7 +952,7 @@ describe("handleDriveRoomCommand", () => {
 			payload: {
 				roomId: "room_seat",
 				human: { id: "you", displayName: "You" },
-				agent: { id: "adam", displayName: "Adam" },
+				agent: { id: "adam", displayName: "Cline" },
 			},
 		});
 		const seated = await handleDriveRoomCommand(ctx, {
@@ -1020,7 +1020,7 @@ describe("handleDriveRoomCommand", () => {
 				payload: {
 					roomId: "demo-polish",
 					human: { id: "you", displayName: "You" },
-					agent: { id: "adam", displayName: "Adam" },
+					agent: { id: "adam", displayName: "Cline" },
 					workspaceRoot,
 				},
 			});
@@ -1094,7 +1094,7 @@ describe("handleDriveRoomCommand", () => {
 				payload: {
 					roomId: "demo-polish",
 					human: { id: "you", displayName: "You" },
-					agent: { id: "adam", displayName: "Adam" },
+					agent: { id: "adam", displayName: "Cline" },
 					workspaceRoot,
 				},
 			});
@@ -1146,7 +1146,7 @@ describe("handleDriveRoomCommand", () => {
 				payload: {
 					roomId: "project-a-room",
 					human: { id: "you", displayName: "You" },
-					agent: { id: "adam", displayName: "Adam" },
+					agent: { id: "adam", displayName: "Cline" },
 					workspaceRoot: workspaceA,
 				},
 			});
@@ -1194,7 +1194,7 @@ describe("handleDriveRoomCommand", () => {
 			}>;
 			expect(roomsA.map((r) => r.roomId)).toEqual(["project-a-room"]);
 			expect(roomsA[0]?.status).toBe("live");
-			expect(roomsA[0]?.participantNames).toEqual(["You", "Adam"]);
+			expect(roomsA[0]?.participantNames).toEqual(["You", "Cline"]);
 		} finally {
 			rmSync(workspaceA, { recursive: true, force: true });
 			rmSync(workspaceB, { recursive: true, force: true });
@@ -1220,7 +1220,7 @@ describe("handleDriveRoomCommand", () => {
 				payload: {
 					roomId: "default",
 					human: { id: "you", displayName: "You" },
-					agent: { id: "adam", displayName: "Adam" },
+					agent: { id: "adam", displayName: "Cline" },
 					workspaceRoot: workspaceA,
 				},
 			});

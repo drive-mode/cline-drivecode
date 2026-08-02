@@ -85,7 +85,7 @@ describe("formatStatusBarUsageText", () => {
 describe("drive status bar copy", () => {
 	it("describes join/leave affordance", () => {
 		expect("Drive off (click / Ctrl+Shift+D join call)").toContain("join call");
-		expect("Drive on · Adam · ask").toContain("Adam");
+		expect("Drive on · Cline · ask").toContain("Cline");
 	});
 });
 

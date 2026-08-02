@@ -16,7 +16,7 @@ const candidates: RecruitCandidate[] = [
 	},
 	{
 		slug: "pair-partner",
-		displayName: "Adam",
+		displayName: "Cline",
 		labels: ["pair", "general"],
 		domains: [],
 	},

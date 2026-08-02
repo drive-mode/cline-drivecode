@@ -163,7 +163,7 @@ export function StatusBar(props: StatusBarProps) {
 		autoApproveAll,
 		driveActive = false,
 		driveSubMode = "agent",
-		drivePartnerName = "Adam",
+		drivePartnerName = "Cline",
 		onToggleDrive,
 		workspaceName,
 		gitBranch,

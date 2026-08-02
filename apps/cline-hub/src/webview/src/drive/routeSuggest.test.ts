@@ -9,7 +9,7 @@ import { DRIVE_PARTICIPANT_PARTNER } from "./types";
 const partner: Participant = {
 	id: DRIVE_PARTICIPANT_PARTNER,
 	kind: "agent",
-	displayName: "Adam",
+	displayName: "Cline",
 	role: "partner",
 	status: "idle",
 	seatSources: [],

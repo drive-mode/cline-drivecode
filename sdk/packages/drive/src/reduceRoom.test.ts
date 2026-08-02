@@ -73,7 +73,7 @@ describe("reduceRoom", () => {
 			participant: {
 				id: "adam",
 				kind: "agent",
-				displayName: "Adam",
+				displayName: "Cline",
 				role: "partner",
 				status: "idle",
 				seatSources: [],
@@ -104,7 +104,7 @@ describe("reduceRoom", () => {
 			participant: {
 				id: "adam",
 				kind: "agent",
-				displayName: "Adam",
+				displayName: "Cline",
 				role: "partner",
 				status: "idle",
 				seatSources: [],
@@ -141,7 +141,7 @@ describe("reduceRoom", () => {
 			participant: {
 				id: "adam",
 				kind: "agent",
-				displayName: "Adam",
+				displayName: "Cline",
 				role: "partner",
 				status: "idle",
 				seatSources: [],
