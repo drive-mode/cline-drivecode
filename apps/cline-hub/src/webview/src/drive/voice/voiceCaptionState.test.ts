@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DRIVE_UI } from "../types";
+import {
+	appendDriveTranscriptLine,
+	clearDriveTranscript,
+} from "./driveTranscript";
 import { createDefaultDriveVoiceUi } from "./driveVoiceUi";
 import {
 	buildDrivePersistPayload,
 	clearVoiceCaptionAfterSend,
 	clearVoiceCaptionDraft,
+	DRIVE_FORBIDDEN_PERSIST_KEYS,
 	DRIVE_PERSIST_KEYS,
 	persistPayloadHasCaptionKeys,
 	shouldClearVoiceCaption,
@@ -46,7 +51,9 @@ describe("voiceCaptionState", () => {
 				modelSelection: { lastProvider: "anthropic" },
 				voiceCaption: "should not persist",
 				caption: "nope",
+				captions: "nope",
 				transcript: "nope",
+				driveTranscript: "nope",
 			},
 			driveUi: { active: true },
 			driveVoice: { profile: "cloud", facets: {}, settingsOpen: false },
@@ -55,9 +62,49 @@ describe("voiceCaptionState", () => {
 		expect(payload.driveVoice).toMatchObject({ profile: "cloud" });
 		expect(payload.modelSelection).toEqual({ lastProvider: "anthropic" });
 		expect(persistPayloadHasCaptionKeys(payload)).toBe(false);
-		expect(payload).not.toHaveProperty("voiceCaption");
-		expect(payload).not.toHaveProperty("caption");
-		expect(payload).not.toHaveProperty("transcript");
+		for (const key of DRIVE_FORBIDDEN_PERSIST_KEYS) {
+			expect(payload).not.toHaveProperty(key);
+		}
+	});
+
+	it("a full CC buffer leaves nothing in the persisted blob", () => {
+		// The reload test, in code: build the scrollback the panel would be
+		// showing, persist the same slices the hook persists, and require that
+		// none of it — not the lines, not a key that could hold them — survives
+		// (DRV-TRANSCRIPT: no transcript persistence on disk).
+		let lines = clearDriveTranscript();
+		for (let index = 0; index < 60; index += 1) {
+			lines = appendDriveTranscriptLine(lines, {
+				atMs: index * 1200,
+				text: `secret narration ${index}`,
+				who: "Cline",
+			});
+		}
+		expect(lines.length).toBeGreaterThan(0);
+
+		const payload = buildDrivePersistPayload({
+			// `modelSelection` is a bystander another feature owns: it proves the
+			// delete is targeted rather than the whole blob being dropped, which
+			// would make the assertions below pass for the wrong reason.
+			existing: {
+				driveTranscript: lines,
+				modelSelection: { lastProvider: "anthropic" },
+				transcript: lines,
+			},
+			driveUi: { ...DEFAULT_DRIVE_UI, active: true },
+			driveVoice: createDefaultDriveVoiceUi("cloud"),
+		});
+		expect(payload.modelSelection).toEqual({ lastProvider: "anthropic" });
+
+		const serialized = JSON.stringify(payload);
+		expect(serialized).not.toContain("secret narration");
+		for (const key of DRIVE_FORBIDDEN_PERSIST_KEYS) {
+			expect(payload).not.toHaveProperty(key);
+		}
+		// Everything Drive itself contributes stays inside the allow-list.
+		expect(
+			Object.keys(payload).filter((key) => key.startsWith("drive")),
+		).toEqual(DRIVE_PERSIST_KEYS.slice());
 	});
 
 	it("narration never reaches the persisted blob", () => {

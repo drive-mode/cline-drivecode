@@ -53,6 +53,11 @@ import { createVoiceStack } from "./voice/createVoiceStack";
 import { normalizeDriveHardwarePrefs } from "./voice/driveHardwarePrefs";
 import { createDriveNarrator, type DriveNarrator } from "./voice/driveNarrator";
 import {
+	appendDriveTranscriptLine,
+	clearDriveTranscript,
+	type DriveTranscriptLine,
+} from "./voice/driveTranscript";
+import {
 	applyHardwarePrefsPatch,
 	applyVoiceFacetPatch,
 	applyVoiceProfile,
@@ -613,6 +618,10 @@ export type UseDriveSessionResult = {
 		SetStateAction<Array<{ id: string; title: string }>>
 	>;
 	bankSessionRef: React.RefObject<DriveBankSession>;
+	/** CC panel visibility. Never persisted — the buffer it shows is not either. */
+	captionsOpen: boolean;
+	/** Recent spoken lines, newest last. Dropped whole when the call ends. */
+	transcriptLines: readonly DriveTranscriptLine[];
 	driveVoiceResolved: ReturnType<typeof resolveDriveVoiceTopology>;
 	/**
 	 * Narration playback for the resolved topology. Null until a topology
@@ -645,6 +654,8 @@ export type UseDriveSessionResult = {
 		onHandToggle: () => void;
 		onMuteToggle: () => void;
 		onOpenSettings: () => void;
+		onOutputVolumeChange: (outputVolume: number) => void;
+		onToggleCaptions: () => void;
 		onTogglePartnerDeafen: () => void;
 		onTogglePartnerMute: () => void;
 		onToggleSpotlight: () => void;
@@ -676,6 +687,27 @@ export function useDriveSession(
 	} | null>(null);
 	const narrationSeqRef = useRef(0);
 	const spokenNarrationSeqRef = useRef(0);
+	/**
+	 * CC transcript scrollback (drive-audio slice 5). React state, never
+	 * `driveUi` and never persisted — see `buildDrivePersistPayload`.
+	 */
+	const [transcriptLines, setTranscriptLines] =
+		useState<readonly DriveTranscriptLine[]>(clearDriveTranscript);
+	const [captionsOpen, setCaptionsOpen] = useState(false);
+	/** Origin of the panel's `m:ss` clock — the first line handed to it. */
+	const transcriptStartRef = useRef<number | null>(null);
+	const captionSpokenLine = useCallback((who: string, text: string) => {
+		const now = Date.now();
+		const startedAt = transcriptStartRef.current ?? now;
+		transcriptStartRef.current = startedAt;
+		setTranscriptLines((current) =>
+			appendDriveTranscriptLine(current, {
+				atMs: now - startedAt,
+				text,
+				who,
+			}),
+		);
+	}, []);
 	const queueNarration = useCallback((text: string) => {
 		const trimmed = text.trim();
 		// The join effect owns greeting / catch-up copy; speaking it here too
@@ -1526,6 +1558,46 @@ export function useDriveSession(
 		narrator,
 	]);
 
+	/**
+	 * Caption every narrated line into the CC buffer.
+	 *
+	 * Deliberately upstream of `shouldSpeakDriveTts` and of `narrator`: the
+	 * panel captions what the partner *says*, not what this browser happens to
+	 * play. A deafened user reads the panel instead of hearing it — gating it
+	 * on the audio path would empty it exactly when it is needed — and with
+	 * `tts.enabled` off (the product default) the narration still exists and
+	 * still renders as the Spotlight subtitle, so a panel that stayed blank
+	 * there would be dead on arrival.
+	 */
+	const captionedJoinNoteRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!drive.active || !driveJoinNote) {
+			return;
+		}
+		// Same filter the join speech uses: greeting and catch-up are the
+		// partner talking; acks and errors are chrome.
+		if (!isSpokenDriveJoinNote(driveJoinNote)) {
+			return;
+		}
+		if (captionedJoinNoteRef.current === driveJoinNote) {
+			return;
+		}
+		captionedJoinNoteRef.current = driveJoinNote;
+		captionSpokenLine(drive.partnerName, driveJoinNote);
+	}, [captionSpokenLine, drive.active, drive.partnerName, driveJoinNote]);
+
+	const captionedNarrationSeqRef = useRef(0);
+	useEffect(() => {
+		if (!drive.active || !narrationLine) {
+			return;
+		}
+		if (captionedNarrationSeqRef.current >= narrationLine.seq) {
+			return;
+		}
+		captionedNarrationSeqRef.current = narrationLine.seq;
+		captionSpokenLine(drive.partnerName, narrationLine.text);
+	}, [captionSpokenLine, drive.active, drive.partnerName, narrationLine]);
+
 	useEffect(() => {
 		if (!drive.active) {
 			spokenJoinNoteRef.current = null;
@@ -1533,6 +1605,17 @@ export function useDriveSession(
 			// narration outlives the call (DRV-PRIVACY).
 			narrator?.cancel();
 			setNarrationLine(null);
+			// Same reset for the CC buffer: the scrollback dies with the call,
+			// and the next call's clock starts at 0:00.
+			// `captionedNarrationSeqRef` is deliberately not reset, matching
+			// `spokenNarrationSeqRef`: `seq` only ever climbs, so a stale value
+			// can never suppress a line from the next call.
+			captionedJoinNoteRef.current = null;
+			transcriptStartRef.current = null;
+			setTranscriptLines((current) =>
+				current.length > 0 ? clearDriveTranscript() : current,
+			);
+			setCaptionsOpen(false);
 		}
 	}, [drive.active, narrator]);
 
@@ -1678,6 +1761,16 @@ export function useDriveSession(
 					settingsOpen: !current.settingsOpen,
 				}));
 			},
+			onToggleCaptions: () => {
+				setCaptionsOpen((open) => !open);
+			},
+			onOutputVolumeChange: (outputVolume: number) => {
+				// Same pref the settings slider writes — the strip is a second view
+				// of `driveVoice.hardware.outputVolume`, never a second value.
+				setDriveVoice((current) =>
+					applyHardwarePrefsPatch(current, { outputVolume }),
+				);
+			},
 			onTogglePartnerDeafen: () => {
 				// Hub is authoritative; wait for drive_room_changed.
 				postToHost({
@@ -1760,6 +1853,8 @@ export function useDriveSession(
 		planEditorTasks,
 		setPlanEditorTasks,
 		bankSessionRef,
+		captionsOpen,
+		transcriptLines,
 		driveVoiceResolved,
 		narrator,
 		workspaceRoot: args.workspaceRoot,

@@ -20,7 +20,10 @@ import {
 	type DriveEarconKind,
 } from "./driveEarcons";
 import type { DriveHardwarePrefs } from "./driveHardwarePrefs";
-import { clampOutputVolume } from "./driveHardwarePrefs";
+import {
+	outputVolumeFromPercent,
+	outputVolumePercent,
+} from "./driveHardwarePrefs";
 import type { DriveVoiceUi } from "./driveVoiceUi";
 import { resolveLlmEgressForUi } from "./driveVoiceUi";
 import { SpeakerDeviceSelect } from "./SpeakerDeviceSelect";
@@ -85,7 +88,7 @@ export function DriveSettingsPanel({
 		llm,
 		slot: "tts",
 	});
-	const volumePercent = Math.round(voice.hardware.outputVolume * 100);
+	const volumePercent = outputVolumePercent(voice.hardware.outputVolume);
 	const earconPercentOfPartner = Math.round(DRIVE_EARCON_GAIN_RATIO * 100);
 	const [rollupDump, setRollupDump] = useState<string | null>(null);
 	const [rollupBusy, setRollupBusy] = useState(false);
@@ -259,14 +262,18 @@ export function DriveSettingsPanel({
 					min={0}
 					onChange={(event) =>
 						onHardwareChange({
-							outputVolume: clampOutputVolume(
-								Number(event.target.value) / 100,
+							outputVolume: outputVolumeFromPercent(
+								Number(event.target.value),
 							),
 						})
 					}
 					type="range"
 					value={volumePercent}
 				/>
+				<p className="text-[11px] text-muted-foreground">
+					The same value the call strip slider edits — one volume, two places
+					to reach it.
+				</p>
 			</label>
 
 			<p className="text-xs text-muted-foreground">

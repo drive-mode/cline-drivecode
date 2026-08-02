@@ -32,6 +32,23 @@ export function shouldClearVoiceCaption(input: {
  */
 export const DRIVE_PERSIST_KEYS = ["driveUi", "driveVoice"] as const;
 
+/**
+ * Caption-bearing keys that must never survive a reload, hard-deleted on the
+ * way out.
+ *
+ * This is the enforced list, not `DRIVE_PERSIST_KEYS` — the payload builder
+ * passes the rest of the existing blob through untouched, because other
+ * features own keys in it. So a new caption surface has to register its key
+ * here; the CC transcript panel's `driveTranscript` is the latest.
+ */
+export const DRIVE_FORBIDDEN_PERSIST_KEYS = [
+	"voiceCaption",
+	"caption",
+	"captions",
+	"transcript",
+	"driveTranscript",
+] as const;
+
 export type DrivePersistPayload = {
 	driveUi: unknown;
 	driveVoice: unknown;
@@ -51,9 +68,9 @@ export function buildDrivePersistPayload(input: {
 		driveUi: input.driveUi,
 		driveVoice: input.driveVoice,
 	};
-	delete next.voiceCaption;
-	delete next.caption;
-	delete next.transcript;
+	for (const key of DRIVE_FORBIDDEN_PERSIST_KEYS) {
+		delete next[key];
+	}
 	return next;
 }
 
@@ -61,9 +78,7 @@ export function buildDrivePersistPayload(input: {
 export function persistPayloadHasCaptionKeys(
 	payload: Record<string, unknown>,
 ): boolean {
-	return (
-		Object.prototype.hasOwnProperty.call(payload, "voiceCaption") ||
-		Object.prototype.hasOwnProperty.call(payload, "caption") ||
-		Object.prototype.hasOwnProperty.call(payload, "transcript")
+	return DRIVE_FORBIDDEN_PERSIST_KEYS.some((key) =>
+		Object.hasOwn(payload, key),
 	);
 }

@@ -29,6 +29,21 @@ export function clampOutputVolume(value: number): number {
 	return Math.min(1, Math.max(0, value));
 }
 
+/**
+ * The 0–100 slider domain. Two sliders now read this pref — the call strip and
+ * the settings panel — so the conversion lives here rather than being spelled
+ * out at each one: a rounding difference between them would read as two
+ * controls disagreeing about the same value.
+ */
+export function outputVolumePercent(volume: number): number {
+	return Math.round(clampOutputVolume(volume) * 100);
+}
+
+/** Inverse of {@link outputVolumePercent}: slider input back to the pref. */
+export function outputVolumeFromPercent(percent: number): number {
+	return clampOutputVolume(percent / 100);
+}
+
 function normalizeDeviceId(value: unknown): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 }

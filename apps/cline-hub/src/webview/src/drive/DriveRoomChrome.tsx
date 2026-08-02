@@ -35,6 +35,7 @@ import {
 } from "./useDriveSession";
 import { DriveMicBar } from "./voice/DriveMicBar";
 import { DriveSettingsPanel } from "./voice/DriveSettingsPanel";
+import { DriveTranscriptPanel } from "./voice/DriveTranscriptPanel";
 import { DRIVE_EARCON_FACET_ID } from "./voice/driveEarcons";
 import { clearVoiceCaptionDraft } from "./voice/voiceCaptionState";
 
@@ -112,6 +113,7 @@ export function DriveRoomChrome({
 	) => void;
 }) {
 	const {
+		captionsOpen,
 		drive,
 		setDrive,
 		driveVoice,
@@ -119,6 +121,7 @@ export function DriveRoomChrome({
 		driveJoinNote,
 		stripHandlers,
 		chatForks,
+		transcriptLines,
 		workersPanelOpen,
 		joinDrive,
 		leaveDrive,
@@ -195,14 +198,19 @@ export function DriveRoomChrome({
 	return (
 		<>
 			<DriveCallStrip
+				captionsOpen={captionsOpen}
 				disabled={disabled}
 				drive={drive}
 				onLeaveDrive={leaveDrive}
+				outputVolume={driveVoice.hardware.outputVolume}
 				turnInFlight={turnInFlight}
 				workerCount={chatForks.length}
 				workersOpen={workersPanelOpen}
 				{...stripHandlers}
 			/>
+			{drive.active && captionsOpen ? (
+				<DriveTranscriptPanel lines={transcriptLines} />
+			) : null}
 			{!drive.active && drive.pendingPlanningImprove ? (
 				<PlanImproveGate
 					className="mx-4 mt-2"
