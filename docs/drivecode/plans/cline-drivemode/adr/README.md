@@ -28,6 +28,7 @@
 | [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | Accepted — Impl **partial** (schemas + interop stub) | [DRV-TASK-BANK](../features/DRV-TASK-BANK.md), [driveplan-agent-runtime](../initiatives/driveplan-agent-runtime/) |
 | ADR-0019 | DrivePlan–Kanban Interop wire | Reserved (see ADR-0018) | — |
 | [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | [DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md), [DRV-ISOLATION](../features/DRV-ISOLATION.md) |
+| [ADR-0021](ADR-0021-drive-credential-onboarding.md) | Drive credential onboarding (device-code first) | **Proposed** | [DRV-PLATFORM-CONFIG](../features/DRV-PLATFORM-CONFIG.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 

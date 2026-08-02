@@ -51,6 +51,7 @@
 | [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | **Accepted** | partial | `run.ts` + interop stub + Kanban `externalRef`; tools/guards follow-on |
 | ADR-0019 | DrivePlan–Kanban Interop wire | **Reserved** | — | Named by ADR-0018; not drafted yet |
 | [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | decision | Hold + rewind; coalesce projection; wire `run_expensive` |
+| [ADR-0021](ADR-0021-drive-credential-onboarding.md) | Drive credential onboarding (device-code first) | **Proposed** | none | Blocks the beta's credentialed-call gate. Credentials stay in Cline's `ProviderSettingsManager` per ADR-0010; Drive consumes a readiness boolean, never a key. Ships with three secret-hygiene fixes: the provider catalog broadcasts **plaintext API keys** today (`local-provider-service.ts:709`), the desktop-command OAuth reply returns a **raw token** (`desktop-commands.ts:194`), and Drive reports ready when unconfigured (`driveVoiceUi.ts:89` substitutes `anthropic`) |
 
 ## Leadership decisions (this wave)
 
