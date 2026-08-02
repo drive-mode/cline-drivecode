@@ -66,7 +66,9 @@ export function PlanEditor({
 					{treatment.hint}
 				</p>
 			) : null}
-			<ul className="space-y-1">
+			{/* Bounded, not unbounded — a growing plan scrolls in its own list
+			    rather than pushing on the Spotlight stage above it. */}
+			<ul className="max-h-32 space-y-1 overflow-y-auto">
 				{tasks.map((task, index) => {
 					const taskRecovery = Boolean(task.lastFailure?.trim());
 					return (

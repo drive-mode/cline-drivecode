@@ -97,6 +97,10 @@ function ArtifactCard({
 		<div
 			className={cn(
 				// The frame clips, so the card caps itself and scrolls its body.
+				// Sized to content by default (screen-body's grid hugs it) — plan
+				// and walkthrough cards want that, so a short one stays small
+				// rather than ballooning into empty space. `MermaidArtifact` opts
+				// into `self-stretch` itself, where it is load-bearing (below).
 				"flex max-h-full min-h-0 w-full max-w-[42rem] flex-col overflow-hidden rounded-lg border border-amber-400/45 bg-card",
 				className,
 			)}
@@ -167,7 +171,14 @@ function MermaidArtifact({ source, title }: { source: string; title: string }) {
 		[source],
 	);
 	return (
-		<ArtifactCard>
+		// `self-stretch` overrides screen-body's grid `place-items-center` (which
+		// sizes grid items to content) so this card gets a definite height to
+		// hand its `flex-1` body — without it the diagram's `h-full` SVG has no
+		// real height to resolve against and collapses to a few px regardless of
+		// how tall the frame is. Plan/walkthrough cards don't need this: their
+		// content sizes itself and stretching them would leave empty space under
+		// a short one.
+		<ArtifactCard className="self-stretch">
 			<ArtifactCardHeader eyebrow="mermaid · live render" title={title} />
 			{/* The diagram fits rather than scrolls — a scrolled diagram is half
 			    a diagram, and the room only sees what is on screen. */}

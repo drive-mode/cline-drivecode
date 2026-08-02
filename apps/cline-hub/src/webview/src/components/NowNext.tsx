@@ -31,14 +31,13 @@ export function NowNext({
 	onCleanDrainDismiss,
 	className,
 }: NowNextProps) {
-	if (!shouldShowNowNext(snapshot, cleanDrainInvite)) {
+	if (!shouldShowNowNext(snapshot, cleanDrainInvite, agencyBanner)) {
 		return null;
 	}
 
 	const successor = isCleanDrainSuccessor(cleanDrainInvite);
 	if (successor && cleanDrainInvite) {
-		const title =
-			cleanDrainInvite.planTitle?.trim() || cleanDrainInvite.planId;
+		const title = cleanDrainInvite.planTitle?.trim() || cleanDrainInvite.planId;
 		return (
 			<div
 				className={cn(

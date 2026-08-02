@@ -583,7 +583,13 @@ export function Spotlight({
 		>
 			<ScreenFrame
 				artifactKind={artifactKind}
-				className="min-h-[13rem] flex-1"
+				// The stage is the primary surface: it is the only `flex-1` item in
+				// this column, and its min-height is the layout contract's floor —
+				// 352px, comfortably above the 320px design-floor gate (1280×640).
+				// Every other child here is `shrink-0`/bounded chrome that must fit
+				// in what is left, and this pane (not the page) is what scrolls if
+				// it doesn't — see the column's own `overflow-auto` above.
+				className="min-h-[22rem] flex-1"
 				controls={
 					<>
 						<Badge className="shrink-0 text-[10px]" variant="outline">
@@ -686,7 +692,15 @@ export function Spotlight({
 					</span>
 				</div>
 			) : null}
-			{children}
+			{children ? (
+				// Everything a caller hangs off Spotlight (recovery forks, the
+				// worker audit, the plan editor) is secondary to the stage: bounded
+				// to a predictable share of the column and scrolling on its own
+				// rather than pushing the frame below its floor.
+				<div className="max-h-52 shrink-0 space-y-3 overflow-y-auto">
+					{children}
+				</div>
+			) : null}
 		</div>
 	);
 }

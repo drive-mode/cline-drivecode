@@ -87,13 +87,16 @@ export function DriveRoster({ session }: { session: UseDriveSessionResult }) {
 	);
 }
 
-/** Call strip, settings, now/next, join note — mounts above the conversation. */
+/**
+ * Settings, now/next, join note — mounts above the conversation. The call
+ * strip itself is {@link DriveCallStripDock}, mounted separately below the
+ * call surface.
+ */
 export function DriveRoomChrome({
 	session,
 	disabled,
 	providerId,
 	showRoster = true,
-	turnInFlight = false,
 	onCleanDrainContinue,
 	onCleanDrainDismiss,
 	onPlanningImproveResolved,
@@ -103,7 +106,6 @@ export function DriveRoomChrome({
 	providerId: string;
 	/** False when the caller mounts {@link DriveRoster} itself (feed drawer). */
 	showRoster?: boolean;
-	turnInFlight?: boolean;
 	onCleanDrainContinue?: () => void;
 	onCleanDrainDismiss?: () => void;
 	/** After accept/reject/mute — parent may mute identical offerKeys. */
@@ -119,12 +121,8 @@ export function DriveRoomChrome({
 		driveVoice,
 		setDriveVoice,
 		driveJoinNote,
-		stripHandlers,
-		chatForks,
 		transcriptLines,
-		workersPanelOpen,
 		joinDrive,
-		leaveDrive,
 		workspaceRoot,
 	} = session;
 
@@ -197,17 +195,6 @@ export function DriveRoomChrome({
 
 	return (
 		<>
-			<DriveCallStrip
-				captionsOpen={captionsOpen}
-				disabled={disabled}
-				drive={drive}
-				onLeaveDrive={leaveDrive}
-				outputVolume={driveVoice.hardware.outputVolume}
-				turnInFlight={turnInFlight}
-				workerCount={chatForks.length}
-				workersOpen={workersPanelOpen}
-				{...stripHandlers}
-			/>
 			{drive.active && captionsOpen ? (
 				<DriveTranscriptPanel lines={transcriptLines} />
 			) : null}
@@ -329,7 +316,17 @@ export function DriveRoomChrome({
 					voice={driveVoice}
 				/>
 			) : null}
-			{drive.active ? (
+			{/*
+			 * Spotlight (stageLayout) carries its own compact now/next line under
+			 * the frame, so the larger card is a duplicate there — but only of the
+			 * now/next titles. The card is also the sole host of the clean-drain
+			 * invite and the agency banner, whose controls are reachable nowhere
+			 * else, so it still mounts when it carries either of those.
+			 */}
+			{drive.active &&
+			(!drive.stageLayout ||
+				Boolean(drive.cleanDrainInvite) ||
+				Boolean(drive.agencyBanner)) ? (
 				<NowNext
 					agencyBanner={drive.agencyBanner}
 					cleanDrainInvite={drive.cleanDrainInvite}
@@ -352,6 +349,47 @@ export function DriveRoomChrome({
 				/>
 			) : null}
 		</>
+	);
+}
+
+/**
+ * The call strip, mounted on its own below the call surface (Spotlight +
+ * feed, or the plain chat column) rather than above it — the canvas source
+ * of truth (`drive-product-demo.html`) puts `.call-strip` after `.main-body`,
+ * not before, and this is the one surface whose height every layout below it
+ * already budgets for regardless of order. Split out of {@link DriveRoomChrome}
+ * so the caller can place it at the bottom of the page.
+ */
+export function DriveCallStripDock({
+	session,
+	disabled,
+	turnInFlight = false,
+}: {
+	session: UseDriveSessionResult;
+	disabled: boolean;
+	turnInFlight?: boolean;
+}) {
+	const {
+		captionsOpen,
+		drive,
+		driveVoice,
+		stripHandlers,
+		chatForks,
+		workersPanelOpen,
+		leaveDrive,
+	} = session;
+	return (
+		<DriveCallStrip
+			captionsOpen={captionsOpen}
+			disabled={disabled}
+			drive={drive}
+			onLeaveDrive={leaveDrive}
+			outputVolume={driveVoice.hardware.outputVolume}
+			turnInFlight={turnInFlight}
+			workerCount={chatForks.length}
+			workersOpen={workersPanelOpen}
+			{...stripHandlers}
+		/>
 	);
 }
 

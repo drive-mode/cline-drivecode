@@ -67,6 +67,7 @@ import {
 } from "./drive/ChatForkAuditPanel";
 import { DriveHeaderControls } from "./drive/DriveCallChrome";
 import {
+	DriveCallStripDock,
 	DriveRoomChrome,
 	DriveRoster,
 	DriveVoiceBar,
@@ -1803,7 +1804,6 @@ export default function Chat({
 					providerId={provider}
 					session={driveSession}
 					showRoster={!stageLayout}
-					turnInFlight={sending}
 				/>
 				<div
 					className={
@@ -2187,6 +2187,17 @@ export default function Chat({
 						/>
 					</div>
 				</div>
+				{/*
+				 * Canvas source of truth puts `.call-strip` below the call surface,
+				 * not above it — this is the one piece of Drive chrome that always
+				 * renders last, whichever surface (Spotlight or plain chat) is on
+				 * top of it. DriveCallStrip no-ops (returns null) off a call.
+				 */}
+				<DriveCallStripDock
+					disabled={isHydrating}
+					session={driveSession}
+					turnInFlight={sending}
+				/>
 			</div>
 		</PromptInputProvider>
 	);
