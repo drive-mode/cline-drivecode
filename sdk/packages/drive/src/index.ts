@@ -413,3 +413,15 @@ export {
 	type CompiledDriveagentView,
 	type DriveagentHomeCompileErrorCode,
 } from "./home/index.js";
+export {
+	applyProjection,
+	DRIVEPLAN_KANBAN_SYSTEM,
+	getCapabilities,
+	observe,
+	type ApplyProjectionResult,
+	type DriveplanExternalRef,
+	type KanbanInteropCapabilities,
+	type ObserveCursor,
+	type ObserveResult,
+	type ProjectedKanbanCard,
+} from "./kanbanInterop.js";

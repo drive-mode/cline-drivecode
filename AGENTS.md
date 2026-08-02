@@ -63,8 +63,11 @@ A Tauri v2 (Rust) shell + Next.js webview + a Bun "sidecar" backend. Rust and th
 
 - Use **ADR** (Architecture Decision Record) naming — never **ARD**; files live under `docs/drivecode/plans/cline-drivemode/adr/` as `ADR-NNNN-*`.
 - Prefer shipping Drive agent capabilities as **Cline skills** in this repo (`.agents` / `.cline` / package skills) rather than Claude-only skills when the feature belongs here.
+- Prefer evaluating upstream [`cline/plugins`](https://github.com/cline/plugins) before inventing parallel Drive-only capability packs.
 - In public docs and PRs, link with repo-relative `docs/drivecode/...` paths — not machine-absolute Windows paths.
-- Prefer feature-branch + PR for local WIP instead of leaving work only in stashes.
+- Prefer feature-branch + PR for local WIP instead of leaving work only in stashes; split related Drive delivery into **stacked PRs** when reviewability benefits.
+- Sync local `main` to `origin/main` before large planning or implementation sessions so work starts from the current tip.
+- Align Drive design canvases and UI visuals with Cline brand / design-system tokens under `docs/drivecode/design/brand/`.
 - Do not open multiple Cursor workspaces for one task; plan ahead and stay in the current workspace.
 - This fork does not require linked GitHub Issues on PRs — lead with a synopsis or feature summary instead.
 
@@ -72,4 +75,5 @@ A Tauri v2 (Rust) shell + Next.js webview + a Bun "sidecar" backend. Rust and th
 
 - Remote is the `hhalperin/cline-drivecode` fork of upstream Cline: sync upstream commits into the fork via PR; do not push Drive fork code upstream to `cline/cline`.
 - Drive planning backlog is often tracked in sibling `drivekanban` (forked Kanban) alongside `docs/drivecode/plans/` (e.g. TASK-GRAPH phase cards).
-- Design canvases and visual explainers for Drive live under `docs/drivecode/design/canvases/` (e.g. product demo, drivemode explainer, architecture explorer).
+- Target Drive↔DriveKanban boundary is **managed execution integration** (DriveMode/DrivePlan owns task truth, gates, and completion verification; DriveKanban is the execution workbench) — not a loose board sync; today the CLI is still launcher + seed only.
+- Design canvases and visual explainers for Drive live under `docs/drivecode/design/canvases/` (e.g. product demo, implementation-state-plane, drivemode explainer, architecture explorer); brand tokens live under `docs/drivecode/design/brand/`.

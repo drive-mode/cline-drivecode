@@ -25,6 +25,11 @@
 | [ADR-0015](ADR-0015-task-session-observability.md) | Local task-session observability; tasks as satisfaction unit | Proposed | [DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md), [DRV-PLAN-IMPROVE](../features/DRV-PLAN-IMPROVE.md) |
 | [ADR-0016](ADR-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** (2026-08-02) — Route B (fork); public self-hosted beta | — |
 | [ADR-0017](ADR-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | Proposed — **deferred behind S9** (owner: Harrison) | [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-TTS](../features/DRV-TTS.md) |
+| [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | Accepted — Impl **partial** (schemas + interop stub) | [DRV-TASK-BANK](../features/DRV-TASK-BANK.md), [driveplan-agent-runtime](../initiatives/driveplan-agent-runtime/) |
+| ADR-0019 | DrivePlan–Kanban Interop wire | Reserved (see ADR-0018) | — |
+| [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | [DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md), [DRV-ISOLATION](../features/DRV-ISOLATION.md) |
+
+Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 
 Product requirements: [../prd/prd-driveagent-portfolio.md](../prd/prd-driveagent-portfolio.md), [../prd/prd-pip-partner.md](../prd/prd-pip-partner.md), [../prd/prd-drive-as-cline-mode.md](../prd/prd-drive-as-cline-mode.md), [../prd/prd-task-bank-drive-loop.md](../prd/prd-task-bank-drive-loop.md), [../prd/prd-task-satisfaction-observability.md](../prd/prd-task-satisfaction-observability.md).
 Success metrics: [../prd/prd-success-metrics.md](../prd/prd-success-metrics.md) (phase/CI). Session satisfaction: [PRD 10](../prd/prd-task-satisfaction-observability.md).

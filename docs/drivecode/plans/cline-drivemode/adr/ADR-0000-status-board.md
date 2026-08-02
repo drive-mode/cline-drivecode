@@ -8,11 +8,20 @@
 
 | Status | Meaning |
 |---|---|
-| **Accepted** | Binding. Implementers may rely on it. |
+| **Accepted** | Binding decision. Implementers may rely on it. |
 | **Recommended** | Leadership default pending formal accept / `change: …`. Treat as Accepted for planning continuity unless overturned. |
 | **Proposed** | Written; not yet leadership-endorsed. |
 | **Superseded** | Replaced by a newer decision. Do not implement. |
 | **Open** | Needs an explicit answer before Phase 0 schemas freeze. |
+
+**Impl column** (decision hygiene — Accepted ≠ shipped):
+
+| Impl | Meaning |
+|---|---|
+| **shipped** | Tip matches the decision end-to-end for the named surface |
+| **partial** | Schemas / some paths landed; decision still has open enforcement or UI |
+| **decision** | Binding intent; little or no product path yet |
+| **deferred** | Explicitly off critical path |
 
 ## Acceptance record
 
@@ -20,25 +29,28 @@
 
 ## Architecture decision records
 
-| ID | Title | Status | Notes |
-|---|---|---|---|
-| [ADR-0001](ADR-0001-driveagent-home.md) | `.driveagent/` is the agent home | **Accepted** | |
-| [ADR-0002](ADR-0002-agent-graph-canonical-derived.md) | Canonical YAML → derived graph | **Accepted** | |
-| [ADR-0003](ADR-0003-recruit-and-roster-pack.md) | Recruit ranks; packs stay curated | **Accepted** | Lexical MVP |
-| [ADR-0004](ADR-0004-gated-learn-privacy.md) | Gated learn; no transcript dump | **Accepted** | |
-| [ADR-0005](ADR-0005-status-hub.md) | Status Hub: SQLite status log in the Cline SDK | **Accepted** — implemented | SDK-scope, not Drive-only. Store, service, hub ops, `report_status` tool, dashboard viewer |
-| [ADR-0006](ADR-0006-pip-partner-companion.md) | PiP Partner is a companion surface | **Accepted** | |
-| [ADR-0007](ADR-0007-drive-as-cline-mode.md) | Drive is a Cline mode | **Accepted** | |
-| [ADR-0008](ADR-0008-task-bank.md) | Task bank is Drive’s execution primitive | **Accepted** | |
-| [ADR-0009](ADR-0009-runtime-topology-local-cloud.md) | Runtime topology local / cloud / hybrid | **Accepted** | |
-| [ADR-0010](ADR-0010-provider-harness-byok.md) | Provider harness (BYOK) | **Accepted** | |
-| [ADR-0011](ADR-0011-demo-share-track.md) | Demo share track | **Accepted** | |
-| [ADR-0012](ADR-0012-agent-router.md) | Agent router for multi-agent rooms | **Accepted** | |
-| [ADR-0013](ADR-0013-state-partition.md) | Three-lane state partition | **Accepted** | Durable log + single live store; remote/org/audit are adapters |
-| [ADR-0014](ADR-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle (invisible auditable workers) | **Accepted** | Hub `drive.fork.*` + PromotePacket; reject CLI/checkpoint fork as worker substrate |
-| [ADR-0015](ADR-0015-task-session-observability.md) | Local task-session observability; tasks as satisfaction unit | **Proposed** | PRD 10; no phone-home; gated improve; deterministic cursor. **Impl note (2026-07-31):** Slice 2–3 + W4.1/W4.2 landed on branch (`classifyStall`, `PlanningProposal`, `PlanImproveGate`, auto stall → recovery fork). Status stays **Proposed** until leadership accept — do not flip to Accepted here. |
-| [ADR-0016](ADR-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** (2026-08-02) | **Route B — standalone fork product**, for now: stay in `hhalperin/cline-drivecode`, nothing upstream to `cline/cline`. Beta is **public + self-hosted** (clone and run), not hosted — the hub stays a local single-writer daemon and multi-human rooms stay a non-goal. Route C (upstream the protocol) stays revisitable; nothing in the MVP forecloses it. |
-| [ADR-0017](ADR-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | **Proposed — deferred** | Optional `cues[]` + `bindTimeline` on `ScriptBeatSchema`: fractions of the spoken line, artifact-relative refs, end state always reachable. Additive; reference implementation is the demo canvas. **Deferred behind spotlight S9**, which is itself out of the MVP cut — this decision is not on the beta's critical path. Revisit when S9 is scheduled. |
+| ID | Title | Status | Impl | Notes |
+|---|---|---|---|---|
+| [ADR-0001](ADR-0001-driveagent-home.md) | `.driveagent/` is the agent home | **Accepted** | partial | Resolve/load/compile + get; no hub home write |
+| [ADR-0002](ADR-0002-agent-graph-canonical-derived.md) | Canonical YAML → derived graph | **Accepted** | decision | Schemas + fixture; no `@cline/drive` graph compile |
+| [ADR-0003](ADR-0003-recruit-and-roster-pack.md) | Recruit ranks; packs stay curated | **Accepted** | partial | RosterPack expand + seat ops; lexical recruit ≠ full recruit |
+| [ADR-0004](ADR-0004-gated-learn-privacy.md) | Gated learn; no transcript dump | **Accepted** | partial | Event privacy yes; knowledge learn UI open |
+| [ADR-0005](ADR-0005-status-hub.md) | Status Hub: SQLite status log in the Cline SDK | **Accepted** | shipped | Store, service, hub ops, `report_status`, dashboard |
+| [ADR-0006](ADR-0006-pip-partner-companion.md) | PiP Partner is a companion surface | **Accepted** | decision | Companion IA; no PipPartner UI yet |
+| [ADR-0007](ADR-0007-drive-as-cline-mode.md) | Drive is a Cline mode | **Accepted** | partial | Join/Leave + postures; not Plan\|Act peer pill yet |
+| [ADR-0008](ADR-0008-task-bank.md) | Task bank is Drive’s execution primitive | **Accepted** | partial | Workspace bank shipped; receipt / covered-check → ADR-0018 |
+| [ADR-0009](ADR-0009-runtime-topology-local-cloud.md) | Runtime topology local / cloud / hybrid | **Accepted** | partial | `assertTopologyLegal` + seeds; cap name drift noted |
+| [ADR-0010](ADR-0010-provider-harness-byok.md) | Provider harness (BYOK) | **Accepted** | partial | Facets + secrets forbid; adapters not fully registry-wired |
+| [ADR-0011](ADR-0011-demo-share-track.md) | Demo share track | **Accepted** | partial | Schemas + snapshot stub; no demo events/track yet |
+| [ADR-0012](ADR-0012-agent-router.md) | Agent router for multi-agent rooms | **Accepted** | shipped | `planRoute` + addressSet |
+| [ADR-0013](ADR-0013-state-partition.md) | Three-lane state partition | **Accepted** | partial | Log + live + facets; two live maps wording soft |
+| [ADR-0014](ADR-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle | **Accepted** | shipped | Hub `drive.fork.*` + PromotePacket |
+| [ADR-0015](ADR-0015-task-session-observability.md) | Local task-session observability | **Proposed** | partial | Slices landed; leadership accept pending |
+| [ADR-0016](ADR-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** | decision | Route B fork; public self-hosted beta |
+| [ADR-0017](ADR-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | **Proposed — deferred** | deferred | Demo canvas only; behind S9 |
+| [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | **Accepted** | partial | `run.ts` + interop stub + Kanban `externalRef`; tools/guards follow-on |
+| ADR-0019 | DrivePlan–Kanban Interop wire | **Reserved** | — | Named by ADR-0018; not drafted yet |
+| [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | decision | Hold + rewind; coalesce projection; wire `run_expensive` |
 
 ## Leadership decisions (this wave)
 

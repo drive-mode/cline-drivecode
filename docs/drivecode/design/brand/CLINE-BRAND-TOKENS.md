@@ -192,9 +192,20 @@ which is reserved for marketing marks.
   primary CTA, and active state. Everything else is neutral. Rainbow-coloring
   a mock in brand purple is the fastest way to look off-brand.
 
+## Static design canvases
+
+Import [cline-canvas-tokens.css](cline-canvas-tokens.css) for Hub-aligned hex
+(`--brand-*` + dark surface ladder + short `--drive` / `--ok` aliases). Hub
+`index.css` remains the hex source of truth; `@cline/ui` `tokens.css` (oklch)
+stays for package UI / Storybook / ds-bundle — do not import it into file-URL
+canvases.
+
 ## Consumers in this folder
 
 | File | Uses |
 |---|---|
+| [cline-canvas-tokens.css](cline-canvas-tokens.css) | Shared Hub hex for canvases / explainers |
 | [drive-tab-discord-slack.html](../wireframes/drive-tab-discord-slack.html) | Full token set as CSS custom properties, both accent variants |
 | [index.html](../wireframes/index.html) | Surface ladder, accent, type stack |
+| [implementation-state-plane.html](../canvases/implementation-state-plane.html) | Imports `cline-canvas-tokens.css` |
+| [drivemode-explainer.html](../canvases/drivemode-explainer.html) | Imports `cline-canvas-tokens.css` |

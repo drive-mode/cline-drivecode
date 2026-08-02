@@ -23,7 +23,7 @@ Short definitions for terms that show up in PRs #1 and #2. Pair with [PR-1-2-dri
 | **Gated learn** | Ask before remembering | Propose → accept/reject/mute; no auto transcript → knowledge |
 | **`@cline/drive` / drivecode-sdk** | Rulebook for call mode | Same package role: pure Drive kernel + host port + conformance; not a second runtime |
 | **Events-first** | Tell the story as cards | Surfaces render versioned events; WebRTC pixels are later |
-| **ADR** | Written decision | Architecture Decision Record; 0001–0004 are Proposed until accepted |
+| **ADR** | Written decision | Architecture Decision Record under `plans/cline-drivemode/adr/`; see status board for Accepted vs Proposed |
 | **PRD 6** | Product requirements for portfolios | Driveagent portfolio / graph / recruit requirements doc |
 | **DRV-\*** | Feature tickets as docs | Checklistable feature specs under `features/` |
 | **Persona / narration** | How the partner talks | Senior-engineer tone; narrate decisions, not every keystroke |
@@ -31,6 +31,10 @@ Short definitions for terms that show up in PRs #1 and #2. Pair with [PR-1-2-dri
 | **Conformance kit** | Honesty test for hosts | Fail-closed checks that a host really supports declared Drive capabilities |
 | **DriveTask** | One unit of work | Durable implementable unit in `.drive/bank/tasks/`; Drive’s satisfaction unit (not tokens) |
 | **DrivePlan** | Ordered checklist of task ids | Ephemeral sequencer over tasks; `title` ≈ session intent (no separate Goal type) |
+| **DriveRun** | Approved decomposition of one task | Planner + controller artifact for one `DriveTask` ([ADR-0018](../plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md)) |
+| **DriveRunWorkItem** | Parallelizable piece of a run | Scheduler unit for a `DriveRun` — not room-wave `DriveWorkItem` |
+| **WorkLease** | Temporary agent authority | Mutation / tool-boundary attachment for a task attempt |
+| **Receipt** | Evidence for accept or recover | Verification record before archive when policy demands proof |
 | **Call session** | One join→leave window | Presence bound by `callSessionId` for duration + task rollups |
 | **Session rollup** | Local scorecard for a call | Counts only: completions, churn, clean-drain, engagement — no transcripts |
 | **Task-as-unit** | Measure Drive in tasks | Product doctrine: tasks are to Drive what tokens are to LLMs; next-task cursor stays deterministic |

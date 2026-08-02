@@ -1,0 +1,67 @@
+/**
+ * Shared Cline brand tokens for static Drive design canvases.
+ *
+ * Hex SoT: apps/cline-hub/src/webview/src/index.css + CLINE-BRAND-TOKENS.md
+ * Do NOT import @cline/ui oklch / ds-bundle component CSS here (file-URL canvases;
+ * Storybook oklch diverges from Hub hex users see).
+ *
+ * Usage: <link rel="stylesheet" href="../brand/cline-canvas-tokens.css" />
+ * Prefer Schibsted Grotesk (Hub --font-sans) via Google Fonts or self-hosted
+ * assets under docs/drivecode/assets/fonts/.
+ */
+
+:root {
+  /* Hub brand block */
+  --brand-purple: #9f58fa;
+  --brand-purple-border: #9663f1;
+  --brand-purple-text: #b98aff;
+  --brand-purple-review: #b87fff;
+  --brand-black: #151516;
+  --brand-white: #f8fafb;
+  --brand-green: #2bcc28;
+  --brand-green-live: #4ade80;
+  --brand-pink: #f53969;
+  --brand-blue: #5487c8;
+
+  /* Dark surface ladder (Hub .dark) */
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: #0d0d10;
+  --popover: #101013;
+  --secondary: #12131a;
+  --muted: #12131a;
+  --muted-foreground: #9ca3af;
+  --sidebar: #08080a;
+  --border: rgb(255 255 255 / 10%);
+  --destructive: var(--brand-pink);
+  --primary: var(--brand-purple);
+  --ring: var(--brand-purple-border);
+  --radius: 0.5625rem; /* 9px — Hub */
+
+  /* Canvas short aliases (thin wrappers; prefer --brand-* in new CSS) */
+  --bg: var(--background);
+  --bg-2: var(--sidebar);
+  --panel: var(--popover);
+  --panel-2: var(--secondary);
+  --line: var(--border);
+  --text: var(--foreground);
+  /* Canvas text aliases (do not mirror Hub --muted surface here) */
+  --muted: var(--muted-foreground);
+  --dim: #6b7280;
+
+  --drive: var(--brand-purple);
+  --drive-t: var(--brand-purple-text);
+  --drive-b: var(--brand-purple-border);
+  --hub: var(--brand-blue);
+  --ok: var(--brand-green);
+  --run: var(--brand-green-live); /* live / RUNNING — not cyan */
+  --fail: var(--brand-pink);
+  --leave: var(--brand-pink);
+  --review: var(--brand-purple-review);
+  --stage: var(--brand-purple-review);
+  --warn: var(--brand-blue); /* named gates = informational */
+
+  --sans: "Schibsted Grotesk", "Schibsted Grotesk Variable", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}

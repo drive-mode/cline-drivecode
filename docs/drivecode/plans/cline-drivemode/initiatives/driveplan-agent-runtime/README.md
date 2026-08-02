@@ -1,0 +1,31 @@
+# DrivePlan agent runtime
+
+**Status:** active
+**ADR:** [ADR-0018](../../adr/ADR-0018-agent-runtime-contract.md) (Accepted — Impl partial)
+**DRV:** [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md)
+
+## Purpose
+
+Ship the agent-first execution contract: `DriveTask` → `DriveRun` → `DriveRunWorkItem` ↔ managed Kanban card ↔ `WorkLease` / Receipt — without treating Kanban Done as archive authority.
+
+## Linked design
+
+- [implementation-state-plane.html](../../../../design/canvases/implementation-state-plane.html) — fixture visual of admission waves (not live Hub data)
+- Cursor canvas `driveplan-agent-runtime.canvas.tsx` (workspace canvases) — contract overview
+
+## Slices
+
+| Slice | Status | Notes |
+|---|---|---|
+| Hub brand tokens on state plane | done | `cline-canvas-tokens.css` |
+| Shared schemas (`DriveRun`, lease, receipt) | done | `@cline/shared` `drive/run.ts` — `DriveRunWorkItem` ≠ wave `DriveWorkItem` |
+| Read-only one-task/one-run projection | done | Kanban `externalRef` + `@cline/drive` `kanbanInterop` stub |
+| Agent Control tools | later | `driveplan.*` at mutation boundary |
+| Completion guard | later | receipt + verifier before archive |
+| ADR-0019 Interop wire | later | full host protocol |
+
+## Non-goals
+
+- Board-wide sync / seed-as-product-path
+- Remote curated plugins as product deps (`speak`, npm install path)
+- Overloading room-wave `DriveWorkItem` for run work items

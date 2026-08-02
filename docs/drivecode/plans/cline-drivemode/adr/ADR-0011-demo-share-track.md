@@ -17,11 +17,13 @@ DRV-SHARE already chose structured human share and deferred WebRTC. Users still 
 ## Decision
 
 1. **ShareMode** is `structured | demo | pixel`. Pixel is reserved and unimplemented until multi-user media design.
-2. **Demo artifacts** are discrete proof units (`DemoArtifactRef`) published as events (`drive_demo_frame`, later `drive_demo_clip`). Events carry metadata and URIs only, never inline media bytes.
-3. **Stage** gains a demo track (last N artifacts) beside the work track (edit/command/test).
+2. **Demo artifacts** are discrete proof units (`DemoArtifactRef`) published as events (intended: `drive_demo_frame`, later `drive_demo_clip`). Events carry metadata and URIs only, never inline media bytes.
+3. **Stage** gains a demo track (last N artifacts) beside the work track (edit/command/test) — **target shape**.
 4. **Agent tools** align with Cursor browser / computer-use patterns (`drive_browser_snapshot`, optional clip record).
 5. **Blobs are ephemeral by default.** Export is an explicit user act. Privacy forbidden-key tests extend to raw frame fields.
-6. HostCapabilities add `demoCapture`, `demoRecord`, `structuredShare` (ISP).
+6. HostCapabilities add demo capture affordances (tip: `demoCapture`; older drafts also named `demoRecord` / `structuredShare`).
+
+**Impl note (2026-08-02):** `ShareMode` / `DemoArtifactRef` schemas and Show / browser-snapshot producers exist. `DriveEventSchema` does **not** yet include `drive_demo_frame` / `drive_demo_clip`, and the live stage model is still sharer/pin/work cards — not a separate demo track. Read decisions above as Accepted target, not full ship.
 
 ## Consequences
 

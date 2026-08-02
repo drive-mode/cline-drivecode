@@ -106,19 +106,17 @@ re-orders the spotlight S1–S9 / drive-audio slice priorities.
   package), then S2 (ScreenFrame) and S6 (real renderers) as the visible
   product; S7/S8/S9 demo parity stays; S1/S4/S5 polish floats.
 
-## Recommendation (draft — advisory, not a decision)
+## Recommendation (historical draft — superseded by Accepted Route B)
 
-Route C. The defensible asset is the protocol; upstreaming it converts the
-fork's biggest cost (the rebase treadmill on protocol code) into the
-standard-setting move, while the hub and curated surfaces remain a product a
-solo maintainer can actually carry. Route A maximizes distribution but
-forfeits the product; Route B maximizes control but bets a solo maintainer
-against upstream's pace with zero distribution today.
+The analysis below originally recommended Route C. **Accepted decision is Route B
+(standalone fork product) for now** — see Status. Route C remains revisitable after
+the beta produces evidence; nothing in the MVP forecloses it.
 
-## Decision required (owner: Harrison)
+## Decision required (closed 2026-08-02)
 
-Questions only the owner can answer; this record stays Proposed until they
-are:
+Owner answered via Status: Route B + public self-hosted beta. The numbered
+questions below are retained as historical framing for a future Route C revisit;
+they do **not** keep this record in Proposed status.
 
 1. Who is the first external user, and how do they install? ("Clone this repo"
    is not an answer for a product route.)

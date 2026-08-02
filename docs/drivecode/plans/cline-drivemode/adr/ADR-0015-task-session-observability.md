@@ -14,7 +14,9 @@ Proposed
 
 Drive’s execution primitive is the task bank (ADR-0008). Leadership wants to measure whether Drive sessions satisfy users — call duration, tasks completed, plan clean-drain vs mid-plan churn, and post-success engagement — and to **act** when tasks do not complete (diagnose logs → propose better planning → gated accept).
 
-Existing [prd-success-metrics](../prd/prd-success-metrics.md) covers phase gates and privacy CI, and explicitly forbids phone-home Drive telemetry in MVP. Bank event schemas exist but production emission and call-session correlation are incomplete. A “task model” metaphor (tasks ≈ tokens) risks becoming a second runtime or a retention excuse if unbounded.
+Existing [prd-success-metrics](../prd/prd-success-metrics.md) covers phase gates and privacy CI, and explicitly forbids phone-home Drive telemetry in MVP. A “task model” metaphor (tasks ≈ tokens) risks becoming a second runtime or a retention excuse if unbounded.
+
+**Impl note (2026-08-02):** Partial slices are on tip — `callSessionId` on join/leave and bank events, session rollups from local JSONL, `classifyStall` / `PlanningProposal` / plan-improve store+resolve, stall → recovery fork paths. Status stays **Proposed** until leadership accept. Remaining gaps include honest dashboard spine completeness (e.g. dedicated `plan-ref changed` event naming) and product rollup UX.
 
 ## Decision
 

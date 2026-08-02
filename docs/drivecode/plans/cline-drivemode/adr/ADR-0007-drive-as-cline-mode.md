@@ -18,13 +18,15 @@ The product goal is different: **Drive is a mode of Cline**, akin to Plan and Ac
 
 ## Decision
 
-1. **Drive is a first-class Cline mode.** Users enter and exit Drive from the same mode surface family as Plan/Act (composer / mode pill). Native Cline without Drive remains Plan | Act only.
+1. **Drive is a first-class Cline mode (product intent).** Users should enter and exit Drive from the same mode surface family as Plan/Act. Native Cline without Drive remains Plan | Act only.
 2. **Mode enables features.** Drive mode on attaches or creates the active room and unlocks Drive affordances (presence, stage, address, PiP, ask/debug postures, interrupt). Drive mode off does not show those affordances.
 3. **Postures nest under Drive.** While Drive is active, posture is Plan | Agent | Ask | Debug (existing DRV-MODE-OVERLAY mapping to native plan/act). Ask/Debug are not peer top-level modes next to Drive.
 4. **Chat is the default work surface in Drive mode.** Session feed, composer, and (when on) stage split live in the familiar Chat column. Users should not need a separate app switch to pair-program.
 5. **Drive tab is room management, not a second product.** The hub activity for channels/rooms remains useful for multi-room discovery and roster depth, but it is **Cline hub navigation**, not “leave Cline for Drive.” Copy and chrome stay Cline-branded; avoid “open Drive” as if it were another product.
 6. **Join / Leave language.** Prefer “Drive on / Drive off” or mode selection over a standalone product launch. Chat Join call remains a valid synonym for entering Drive mode + attaching the room.
 7. **Amends D3.** Room-first domain stays. “Drive tab primary product home” is replaced by **Drive mode primary activation**; Drive tab is secondary IA for rooms. See [01-architecture.md](../foundation/01-architecture.md).
+
+**Impl note (2026-08-02):** Tip UX enters Drive via **Join/Leave call** (`toggleDrive` → room attach) with nested postures when seated. The composer still exposes native **Plan | Act** as the peer mode pill — Drive is not yet a third peer on that control. Decision above remains the target product shape; do not read Present-tense “mode pill” as fully shipped.
 
 ## Consequences
 

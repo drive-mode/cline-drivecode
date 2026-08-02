@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drive · Visual Explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../brand/cline-canvas-tokens.css" />
+<style>
+  /* Layout only — colors/fonts from cline-canvas-tokens.css (Hub hex SoT) */
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(1100px 600px at 78% -8%, color-mix(in srgb, var(--drive) 18%, transparent), transparent 60%),
+      radial-gradient(900px 520px at 10% 4%,  color-mix(in srgb, var(--hub) 14%, transparent), transparent 55%),
+      var(--bg);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--drive-t); }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 22px; }
+  section { padding: 60px 0; border-top: 0.8px solid var(--line); }
+  section:first-of-type { border-top: none; }
+
+  h1,h2,h3 { line-height: 1.15; margin: 0 0 .5em; letter-spacing: -0.01em; }
+  h2 { font-size: clamp(24px, 3.2vw, 34px); }
+  .eyebrow {
+    font: 600 12px/1 var(--mono);
+    letter-spacing: .22em; text-transform: uppercase;
+    color: var(--drive-t); margin-bottom: 14px;
+  }
+  .lead { color: var(--muted); font-size: 18px; max-width: 70ch; }
+  p.note { color: var(--dim); font-size: 14px; }
+  code, .mono { font-family: var(--mono); }
+
+  /* ---------- HERO ---------- */
+  .hero { padding: 74px 0 54px; text-align: center; position: relative; overflow: hidden; }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 76px); font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(100deg, var(--drive-t), var(--drive) 55%, var(--hub));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 10px;
+  }
+  .hero .full { color: var(--muted); font-weight: 500; font-size: clamp(15px,2.4vw,20px); letter-spacing:.02em; }
+  .hero .tag { margin: 22px auto 0; max-width: 62ch; color: var(--text); font-size: 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 30px; }
+  .chip {
+    background: var(--panel); border: 0.8px solid var(--line); border-radius: var(--radius);
+    padding: 9px 16px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center;
+  }
+  .chip b { color: var(--text); font-size: 15px; }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ---------- capability grid ---------- */
+  .grid { display: grid; gap: 16px; }
+  .cap-grid { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 0.8px solid var(--line); border-radius: var(--radius); padding: 20px;
+    position: relative; overflow: hidden;
+    transition: transform .25s ease, border-color .25s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--accent, var(--drive-b)); }
+  .card .ic {
+    width: 42px; height: 42px; border-radius: var(--radius); display: grid; place-items: center;
+    font-size: 22px; margin-bottom: 14px;
+    background: color-mix(in srgb, var(--accent, var(--drive)) 16%, transparent);
+    border: 0.8px solid color-mix(in srgb, var(--accent, var(--drive)) 40%, transparent);
+  }
+  .card h3 { font-size: 17px; margin-bottom: 6px; }
+  .card p { color: var(--muted); font-size: 14px; margin: 0; }
+  .card .edge { position:absolute; inset:0 auto 0 0; width:3px; background: var(--accent,var(--drive)); opacity:.8; }
+
+  /* ---------- section head + replay button ---------- */
+  .shead { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+  .btn {
+    font: 600 13px/1 var(--sans); cursor: pointer; user-select: none;
+    background: var(--panel-2); color: var(--text); border: 0.8px solid var(--line);
+    border-radius: var(--radius); padding: 11px 16px; display: inline-flex; align-items: center; gap: 9px;
+    transition: background .18s, border-color .18s, transform .1s;
+  }
+  .btn:hover { border-color: var(--drive-b); background: color-mix(in srgb, var(--drive) 12%, var(--panel-2)); }
+  .btn:active { transform: scale(.97); }
+  .btn .tri { color: var(--drive-t); font-size: 12px; }
+
+  /* ---------- LAYER STACK ---------- */
+  .layers { display: grid; gap: 14px; }
+  .layer {
+    --accent: var(--drive);
+    display: grid; grid-template-columns: 188px 1fr; gap: 18px; align-items: center;
+    background: var(--panel); border: 0.8px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); padding: 16px 18px; position: relative;
+    opacity: .35; transform: translateX(-8px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .layer.lit { opacity: 1; transform: none; border-color: var(--accent); }
+  .layer .lname { font-weight: 700; font-size: 15px; color: var(--accent); }
+  .layer .lname small { display:block; color: var(--muted); font-weight:500; font-size:11.5px; margin-top:3px; letter-spacing:.02em;}
+  .nodes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .node {
+    font: 600 12px/1 var(--mono); padding: 8px 11px; border-radius: calc(var(--radius) - 2px);
+    background: var(--bg-2); border: 0.8px solid var(--line); color: var(--muted);
+    transition: color .3s, border-color .3s, background .3s;
+  }
+  .layer.lit .node { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .layer.lit .node:hover { background: color-mix(in srgb, var(--accent) 14%, var(--bg-2)); }
+  .flowdown { text-align:center; color: var(--dim); font-size: 18px; height: 8px; margin: -4px 0; }
+
+  /* ---------- LIVE CALL FLOW ---------- */
+  .exec { display: grid; grid-template-columns: 1.35fr .9fr; gap: 20px; }
+  @media (max-width: 860px){ .exec { grid-template-columns: 1fr; } .layer{ grid-template-columns:1fr; } }
+  .track { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: start;
+    padding: 12px 0; position: relative;
+  }
+  .step .bullet {
+    width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--panel-2); border: 0.8px solid var(--line); color: var(--dim);
+    font: 700 13px/1 var(--mono); z-index: 2; transition: all .3s;
+  }
+  .step:not(:last-child)::before{
+    content:""; position:absolute; left:16.5px; top:38px; bottom:-8px; width:2px; background: var(--line); z-index:1;
+  }
+  .step.done::before { background: var(--drive); }
+  .step.on .bullet   { background: var(--drive); color: #fff; border-color: var(--drive-b); transform: scale(1.12); }
+  .step.done .bullet { background: color-mix(in srgb, var(--drive) 30%, var(--panel-2)); color: var(--drive-t); border-color: var(--drive-b); }
+  .step .lab { font-weight: 700; font-size: 14.5px; color: var(--text); }
+  .step .who { font: 600 11px/1 var(--mono); color: var(--drive-t); letter-spacing: .04em; }
+  .step .desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .step.on .desc { color: var(--text); }
+
+  .runstate {
+    background: var(--bg-2); border: 0.8px solid var(--line); border-radius: var(--radius); padding: 0; overflow: hidden;
+    position: sticky; top: 16px; align-self: start;
+  }
+  .runstate .bar {
+    display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:0.8px solid var(--line);
+    background: var(--panel); font: 600 12px/1 var(--mono); color: var(--muted);
+  }
+  .runstate .bar .d { width:11px; height:11px; border-radius:50%; }
+  .runstate pre { margin: 0; padding: 16px; font-family: var(--mono); font-size: 12.5px; color: #cbd8ee; overflow-x: auto; }
+  .runstate .k { color: var(--drive-t); }
+  .runstate .s { color: var(--hub); }
+  .stat-running { color: var(--run) !important; }
+  .stat-done    { color: var(--ok) !important; }
+  .stat-pause   { color: var(--leave) !important; }
+  .muted { color: var(--muted); }
+
+  /* ---------- THREE VERBS ---------- */
+  .verbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 720px){ .verbs { grid-template-columns: 1fr; } }
+  .verb {
+    background: var(--panel); border: 0.8px solid var(--line); border-radius: var(--radius); padding: 20px;
+    opacity: .35; transform: translateY(6px);
+    transition: opacity .45s ease, transform .45s ease, border-color .45s;
+  }
+  .verb.lit {
+    opacity: 1; transform: none;
+    border-color: color-mix(in srgb, var(--accent, var(--drive)) 50%, transparent);
+  }
+  .verb .vn { font: 700 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent, var(--drive-t)); margin-bottom: 10px; }
+  .verb h3 { font-size: 18px; margin-bottom: 8px; }
+  .verb p { color: var(--muted); font-size: 14px; margin: 0; }
+  .verb-arrow { display: none; }
+  @media (min-width: 721px) {
+    .verbs-wrap { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 10px; align-items: stretch; }
+    .verb-arrow { display: grid; place-items: center; color: var(--dim); font-size: 22px; opacity: .5; }
+    .verbs-wrap .verb { /* override grid parent */ }
+  }
+
+  /* ---------- NAMING FIREWALL ---------- */
+  .firewall { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px){ .firewall { grid-template-columns: 1fr; } }
+  .frow {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;
+    background: var(--panel); border: 0.8px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .frow .side { font: 700 13px/1.3 var(--mono); }
+  .frow .side small { display:block; color: var(--muted); font-weight: 500; font-size: 11px; margin-top: 4px; font-family: var(--sans); }
+  .frow .drive-w { color: var(--drive-t); }
+  .frow .native-w { color: var(--hub); }
+  .frow .neq { color: var(--leave); font: 700 14px/1 var(--mono); }
+  .frow .why { grid-column: 1 / -1; color: var(--dim); font-size: 12.5px; margin-top: 4px; padding-top: 8px; border-top: 0.8px dashed var(--line); }
+
+  /* ---------- REUSE TABLE ---------- */
+  .reuse { display: grid; gap: 10px; }
+  .rrow {
+    display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; align-items: start;
+    background: var(--panel); border: 0.8px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+  }
+  @media (max-width: 640px){ .rrow { grid-template-columns: 1fr; } }
+  .rrow .keep { font: 700 13px/1.3 var(--mono); color: var(--ok); }
+  .rrow .rule { color: var(--muted); font-size: 13.5px; }
+
+  footer { padding: 46px 0 70px; color: var(--dim); font-size: 13px; text-align:center; border-top:0.8px solid var(--line); }
+  footer .links { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <h1>Drive</h1>
+    <div class="full">Drive mode · pair-program on a call inside Cline</div>
+    <p class="tag"><b>Cline runs agents; Drive is a Cline mode that makes running them feel like being on a call.</b>
+      Discord-style rooms, a Spotlight of structured work, interruptible turns, privacy-strict by default.</p>
+    <div class="chips">
+      <div class="chip"><span class="dot" style="color:var(--drive)"></span><b>Room</b> collaboration unit</div>
+      <div class="chip"><span class="dot" style="color:var(--stage)"></span><b>Spotlight</b> shared stage</div>
+      <div class="chip"><span class="dot" style="color:var(--ok)"></span><b>RosterPack</b> seating presets</div>
+      <div class="chip"><span class="dot" style="color:var(--hub)"></span><b>Hub</b> single writer</div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ CAPABILITIES ============ -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">What it adds</div>
+    <h2>Five surfaces, one mode</h2>
+    <p class="lead">Drive sits on native Cline. It does not replace the agent loop or fork <code>ConfiguredAgent</code> YAML — it makes the same runtime feel like joining a call.</p>
+    <div class="grid cap-grid" style="margin-top:28px">
+      <div class="card" style="--accent:var(--drive)"><span class="edge"></span>
+        <div class="ic">📞</div><h3>Call room</h3>
+        <p>Join, roster, stay in the call. Chat Join is a shortcut into the active room — not a second product home.</p></div>
+      <div class="card" style="--accent:var(--stage)"><span class="edge"></span>
+        <div class="ic">💡</div><h3>Spotlight</h3>
+        <p>Typed stage cards for edits, commands, tests, plans, and decisions — events first, not pixels.</p></div>
+      <div class="card" style="--accent:var(--leave)"><span class="edge"></span>
+        <div class="ic">✋</div><h3>Address + interrupt</h3>
+        <p>Address one, many, or everyone. Raise a hand to pause after the current tool; steer mid-turn without fighting the agent.</p></div>
+      <div class="card" style="--accent:var(--hub)"><span class="edge"></span>
+        <div class="ic">🎛</div><h3>Mode overlay</h3>
+        <p>Drive on the same control family as Plan / Act. Postures Plan, Agent, Ask, and Debug while Drive stays on.</p></div>
+      <div class="card" style="--accent:var(--ok)"><span class="edge"></span>
+        <div class="ic">📋</div><h3>Status Hub</h3>
+        <p>Durable cross-agent status — Board, Changelog, Sessions — on <code>status.db</code> with a <code>seq</code> cursor.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE (animated) ============ -->
+<section>
+  <div class="wrap">
+    <div class="shead">
+      <div>
+        <div class="eyebrow">How it's built</div>
+        <h2>Four layers, one writer</h2>
+        <p class="lead">Apps project. The hub owns room state. <code>@cline/drive</code> proposes. Core commits turns and tools. Watch the stack light from the foundation up.</p>
+      </div>
+      <button class="btn" id="playLayers" type="button"><span class="tri">▶</span> Animate the stack</button>
+    </div>
+
+    <div class="layers" id="layerStack">
+      <div class="layer" style="--accent:var(--ok)" data-i="0">
+        <div class="lname">@cline/core + agents<small>turns, tools, hooks — host commits</small></div>
+        <div class="nodes">
+          <span class="node">ConfiguredAgent</span><span class="node">Team</span>
+          <span class="node">hooks</span><span class="node">session / turn</span>
+        </div>
+      </div>
+      <div class="flowdown">▲</div>
+      <div class="layer" style="--accent:var(--drive)" data-i="1">
+        <div class="lname">@cline/drive<small>kernel — harness proposes</small></div>
+        <div class="nodes">
+          <span class="node">propose policies</span><span class="node">reduceRoom</span>
+          <span class="node">projectStage</span><span class="node">interrupt / narration</span>
+        </div>
+      </div>
+      <div class="flowdown">▲</div>
+      <div class="layer" style="--accent:var(--hub)" data-i="2">
+        <div class="lname">Hub<small>single writer · ws://127.0.0.1:25463</small></div>
+        <div class="nodes">
+          <span class="node">room ops</span><span class="node">call_* / drive.*</span>
+          <span class="node">broadcast</span><span class="node">no :7891</span>
+        </div>
+      </div>
+      <div class="flowdown">▲</div>
+      <div class="layer" style="--accent:var(--stage)" data-i="3">
+        <div class="lname">Apps<small>thin renderers — apps project</small></div>
+        <div class="nodes">
+          <span class="node">Chat</span><span class="node">Drive tab</span>
+          <span class="node">Spotlight</span><span class="node">Status Hub</span><span class="node">CLI TUI</span>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:16px">Dependency direction stays legal: shared → llms → agents → core → apps. The Drive kernel depends on shared schemas; core consumes it. Nothing reaches into apps from the kernel.</p>
+  </div>
+</section>
+
+<!-- ============ LIVE CALL FLOW ============ -->
+<section>
+  <div class="wrap">
+    <div class="shead">
+      <div>
+        <div class="eyebrow">What happens live</div>
+        <h2>Inside a Drive call</h2>
+        <p class="lead">Press run. A human joins, Drive turns on, a partner seats, Spotlight publishes work,
+          address and steer fire, a raised hand pauses after the tool, then leave with handoff.
+          The room snapshot on the right updates in real time.</p>
+      </div>
+      <button class="btn" id="playExec" type="button"><span class="tri">▶</span> Run call flow</button>
+    </div>
+
+    <div class="exec">
+      <div class="track" id="execTrack">
+        <div class="step" data-i="0">
+          <div class="bullet">1</div>
+          <div><div class="lab">Join room</div><div class="who">apps · Chat Join / Drive tab</div>
+            <div class="desc">Open or focus the active call room — instant join, no lobby.</div></div>
+        </div>
+        <div class="step" data-i="1">
+          <div class="bullet">2</div>
+          <div><div class="lab">Drive on</div><div class="who">mode · peer to Plan / Act</div>
+            <div class="desc">Drive attaches or creates the room and enables Drive affordances.</div></div>
+        </div>
+        <div class="step" data-i="2">
+          <div class="bullet">3</div>
+          <div><div class="lab">Roster seat</div><div class="who">hub · participants[]</div>
+            <div class="desc">Human + pair partner seated; RosterPack expands to participants when used.</div></div>
+        </div>
+        <div class="step" data-i="3">
+          <div class="bullet">4</div>
+          <div><div class="lab">Spotlight</div><div class="who">stage · sharer: agent</div>
+            <div class="desc">Typed cards: edit → command → test. Events-first, not screen pixels.</div></div>
+        </div>
+        <div class="step" data-i="4">
+          <div class="bullet">5</div>
+          <div><div class="lab">Address set</div><div class="who">composer · everyone | agentIds</div>
+            <div class="desc">Recipients for the next send — one, many, everyone, or a pack.</div></div>
+        </div>
+        <div class="step" data-i="5">
+          <div class="bullet">6</div>
+          <div><div class="lab">Steer</div><div class="who">mid-turn queue</div>
+            <div class="desc">Steer message queued on the existing pending-prompt / turn primitives.</div></div>
+        </div>
+        <div class="step" data-i="6">
+          <div class="bullet">7</div>
+          <div><div class="lab">Raise hand</div><div class="who">interrupt · pause-after-tool</div>
+            <div class="desc">Partner finishes the current tool, then yields — user never fights for control.</div></div>
+        </div>
+        <div class="step" data-i="7">
+          <div class="bullet">8</div>
+          <div><div class="lab">Leave / handoff</div><div class="who">room · durable handoff</div>
+            <div class="desc">Leave the call; Chat can rejoin later. Session ends with a handoff, not a wipe.</div></div>
+        </div>
+      </div>
+
+      <div class="runstate">
+        <div class="bar"><span class="d" id="stateDot" style="background:var(--dim)"></span><span id="stateLabel">idle — press “Run call flow”</span></div>
+        <pre id="runjson"><span class="muted">// roomSnapshot will appear here…</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THREE VERBS ============ -->
+<section>
+  <div class="wrap">
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Contract</div>
+        <h2>Three verbs</h2>
+        <p class="lead">The harness proposes, the host commits, apps project. That split is the architecture — not a slogan.</p>
+      </div>
+      <button class="btn" id="playVerbs" type="button"><span class="tri">▶</span> Light the verbs</button>
+    </div>
+
+    <div class="verbs-wrap" id="verbStack">
+      <div class="verb" style="--accent:var(--drive)" data-i="0">
+        <div class="vn">1 · harness</div>
+        <h3>Proposes</h3>
+        <p><code>@cline/drive</code> owns mode, narration, and interrupt policy. Pure, testable — no UI, no transport, no persistence of its own.</p>
+      </div>
+      <div class="verb-arrow" aria-hidden="true">→</div>
+      <div class="verb" style="--accent:var(--ok)" data-i="1">
+        <div class="vn">2 · host</div>
+        <h3>Commits</h3>
+        <p><code>@cline/core</code> applies hooks and runs turns. Hub is the only writer of room state. Clients publish facts and receive broadcasts.</p>
+      </div>
+      <div class="verb-arrow" aria-hidden="true">→</div>
+      <div class="verb" style="--accent:var(--hub)" data-i="2">
+        <div class="vn">3 · apps</div>
+        <h3>Project</h3>
+        <p>Chat, Drive tab, Spotlight, Status Hub, and CLI are thin renderers of the same event stream — never writable client copies of room state.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ NAMING FIREWALL ============ -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Do not conflate</div>
+    <h2>Naming firewall</h2>
+    <p class="lead">Drive words and native Cline words look adjacent. Mixing them forks the model.</p>
+    <div class="firewall" style="margin-top:24px">
+      <div class="frow">
+        <div class="side drive-w">RosterPack<small>seating preset</small></div>
+        <div class="neq">≠</div>
+        <div class="side native-w">Team<small>runtime execution group</small></div>
+        <div class="why">Curated pack expands into participants. Never rename Cline Team to RosterPack.</div>
+      </div>
+      <div class="frow">
+        <div class="side drive-w">AgentProfile<small>appearance overlay</small></div>
+        <div class="neq">≠</div>
+        <div class="side native-w">ConfiguredAgent<small>behavior definition</small></div>
+        <div class="why">Display name + ink channels overlay <code>.cline/agents/*.yaml</code>. Prompts and tools stay on the host.</div>
+      </div>
+      <div class="frow">
+        <div class="side drive-w">Spotlight<small>product UI label</small></div>
+        <div class="neq">≠</div>
+        <div class="side native-w">stage<small>wire protocol field</small></div>
+        <div class="why">Surfaces say Spotlight; hub still says <code>stage</code> / <code>StageState</code> / <code>call_set_stage</code>.</div>
+      </div>
+      <div class="frow">
+        <div class="side drive-w">Room<small>collaboration unit</small></div>
+        <div class="neq">≠</div>
+        <div class="side native-w">Session<small>agent turn container</small></div>
+        <div class="why">Room holds participants, stage, addressSet. Session remains the turn lifecycle container underneath.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REUSE ============ -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Overlay, not fork</div>
+    <h2>What we deliberately reuse</h2>
+    <p class="lead">Drivecode is an overlay on native Cline — keep these, do not invent a parallel stack.</p>
+    <div class="reuse" style="margin-top:24px">
+      <div class="rrow">
+        <div class="keep">Hub on :25463</div>
+        <div class="rule">Single writer. Nothing defaults to <code>:7891</code>. No second daemon.</div>
+      </div>
+      <div class="rrow">
+        <div class="keep">ConfiguredAgent / .cline/agents/*.yaml</div>
+        <div class="rule">Prompts, tools, skills, provider, and model stay here. Drive owns appearance in a call — nothing else.</div>
+      </div>
+      <div class="rrow">
+        <div class="keep">Cline Team</div>
+        <div class="rule">Runtime execution group. RosterPack is seating only — never rename Team.</div>
+      </div>
+      <div class="rrow">
+        <div class="keep">Hook engine</div>
+        <div class="rule">Drive policies decide; core applies. No chrome DOM hacks, no monkey-patches.</div>
+      </div>
+      <div class="rrow">
+        <div class="keep">Pending-prompt / turn queue</div>
+        <div class="rule">Steer queue builds on existing primitives rather than a side channel.</div>
+      </div>
+      <div class="rrow">
+        <div class="keep">Bundled ai-elements</div>
+        <div class="rule">Stage cards render with existing UI building blocks — assembly work, not component invention.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="drive-product-demo.html">product demo</a>
+      <a href="implementation-state-plane.html">implementation state plane</a>
+      <a href="../plans/cline-drivemode/foundation/00-vision.md">00-vision</a>
+      <a href="../plans/cline-drivemode/foundation/01-architecture.md">01-architecture</a>
+      <a href="../reference/native-vs-drivecode.md">native-vs-drivecode</a>
+      <a href="../HANDOFF.md">HANDOFF</a>
+    </div>
+    <p>Open this file in a browser — no build step. Sources live under <code>docs/drivecode/</code>.</p>
+  </div>
+</footer>
+
+<script>
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+const busy = new Set();
+async function guarded(key, fn){ if(busy.has(key)) return; busy.add(key); try{ await fn(); } finally { busy.delete(key); } }
+
+/* ---------- 1. Layer stack (foundation → apps) ---------- */
+const layers = $$('#layerStack .layer');
+async function animLayers(){
+  layers.forEach(l => l.classList.remove('lit'));
+  for (const l of layers){ l.classList.add('lit'); await sleep(520); }
+}
+$('#playLayers').addEventListener('click', () => guarded('layers', animLayers));
+
+/* ---------- 2. Live call flow + room snapshot ---------- */
+const steps = $$('#execTrack .step');
+const runjson = $('#runjson'), stateDot = $('#stateDot'), stateLabel = $('#stateLabel');
+function jline(k,v,cls=''){ return `  <span class="k">"${k}"</span>: <span class="s ${cls}">${v}</span>`; }
+
+async function animExec(){
+  steps.forEach(s => s.classList.remove('on','done'));
+  stateDot.style.background = 'var(--drive)';
+  stateLabel.textContent = 'running…';
+  runjson.innerHTML = '<span class="muted">// attaching room…</span>';
+
+  const paint = (fields) => {
+    const lines = Object.entries(fields).map(([k,v]) => {
+      const cls = v.cls || '';
+      return jline(k, v.val, cls);
+    });
+    runjson.innerHTML = '{\n' + lines.join(',\n') + '\n}';
+  };
+
+  const snaps = [
+    { mode:'"off"', participants:'[]', stage:'null', addressSet:'[]', interrupt:'null', status:'"joining"', scls:'stat-running' },
+    { mode:'"on"', participants:'["human"]', stage:'null', addressSet:'[]', interrupt:'null', status:'"drive_on"', scls:'stat-running' },
+    { mode:'"on"', participants:'["human","pair_partner"]', stage:'null', addressSet:'[]', interrupt:'null', status:'"seated"', scls:'stat-running' },
+    { mode:'"on"', participants:'["human","pair_partner"]', stage:'{ "sharer": "agent", "card": "edit" }', addressSet:'[]', interrupt:'null', status:'"spotlight"', scls:'stat-running' },
+    { mode:'"on"', participants:'["human","pair_partner"]', stage:'{ "sharer": "agent", "card": "command" }', addressSet:'["pair_partner"]', interrupt:'null', status:'"addressed"', scls:'stat-running' },
+    { mode:'"on"', participants:'["human","pair_partner"]', stage:'{ "sharer": "agent", "card": "test" }', addressSet:'["pair_partner"]', interrupt:'null', status:'"steering"', scls:'stat-running' },
+    { mode:'"on"', participants:'["human","pair_partner"]', stage:'{ "sharer": "agent", "card": "test" }', addressSet:'["pair_partner"]', interrupt:'"pause_after_tool"', status:'"raised_hand"', scls:'stat-pause' },
+    { mode:'"off"', participants:'[]', stage:'null', addressSet:'[]', interrupt:'null', status:'"left"', scls:'stat-done' },
+  ];
+
+  for (let i=0;i<steps.length;i++){
+    const s = steps[i];
+    steps.forEach(x=>x.classList.remove('on'));
+    s.classList.add('on');
+    if (i>0) steps[i-1].classList.add('done');
+
+    const sn = snaps[i];
+    paint({
+      roomId: { val: '"room_demo_01"' },
+      mode: { val: sn.mode },
+      participants: { val: sn.participants },
+      stage: { val: sn.stage },
+      addressSet: { val: sn.addressSet },
+      interrupt: { val: sn.interrupt },
+      status: { val: sn.status, cls: sn.scls },
+    });
+
+    if (i===6){
+      stateDot.style.background = 'var(--leave)';
+      stateLabel.innerHTML = 'raise hand · <span style="color:var(--leave)">pause-after-tool</span>';
+    } else if (i===7){
+      stateDot.style.background = 'var(--ok)';
+      stateLabel.innerHTML = '✓ left — handoff sealed';
+    } else {
+      stateDot.style.background = 'var(--drive)';
+      stateLabel.textContent = 'running… ' + sn.status.replace(/"/g,'');
+    }
+    await sleep(i===6 ? 900 : 700);
+  }
+  steps[steps.length-1].classList.add('done');
+}
+$('#playExec').addEventListener('click', () => guarded('exec', animExec));
+
+/* ---------- 3. Three verbs ---------- */
+const verbs = $$('#verbStack .verb');
+async function animVerbs(){
+  verbs.forEach(v => v.classList.remove('lit'));
+  for (const v of verbs){ v.classList.add('lit'); await sleep(480); }
+}
+$('#playVerbs').addEventListener('click', () => guarded('verbs', animVerbs));
+
+/* ---------- auto-play each section once when scrolled into view ---------- */
+const seen = new Set();
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting) return;
+    const id = e.target.id;
+    if(seen.has(id)) return; seen.add(id);
+    if(id==='layerStack')  guarded('layers', animLayers);
+    if(id==='execTrack')   guarded('exec',   animExec);
+    if(id==='verbStack')   guarded('verbs',  animVerbs);
+  });
+}, {threshold: 0.4});
+['layerStack','execTrack','verbStack'].forEach(id=>{ const el=$('#'+id); if(el) io.observe(el); });
+</script>
+</body>
+</html>

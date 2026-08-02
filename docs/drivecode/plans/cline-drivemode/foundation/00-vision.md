@@ -63,7 +63,7 @@ Primary chrome is the Drive tab. Call Stage and voice still stage in phases. Wir
 - **Phase 2 is the stage and room depth.** Split conversation + stage inside the room view. Bidirectional stage share (`sharer: human | agent`). Room vs per-agent transcript focus. Address set. Call strip, now/next, steer, interrupt.
 - **Phase 3 is voice.** Mic, light TTS on narration, live captions. Voice comes after text plus stage because the stage is the product's core loop.
 
-Variant C (PiP Partner) stays rejected. It trades the screen-share core for a novelty overlay and has no VS Code path.
+Variant C (PiP Partner **as primary IA**) stays rejected — it trades the screen-share core for a novelty overlay and has no VS Code editor path. **PiP as companion** (glanceable call controls while staying in Chat) is **in scope** per [ADR-0006](../adr/ADR-0006-pip-partner-companion.md); Drive tab + Spotlight remain authoritative room/share surfaces.
 
 ## Who this is for
 

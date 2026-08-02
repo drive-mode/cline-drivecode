@@ -45,6 +45,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [task-satisfaction-observability/](initiatives/task-satisfaction-observability/) | Task-centric session metrics + gated plan improve |
 | [session-satisfaction-moments/](initiatives/session-satisfaction-moments/) | Product moments + [visual plan](initiatives/session-satisfaction-moments/visual-plan.md) / [canvas](../../design/canvases/session-satisfaction-moments-canvas.html) |
 | [drive-product-demo/](initiatives/drive-product-demo/) | Full-system product demo scene-player ([canvas](../../design/canvases/drive-product-demo.html)) |
+| [driveplan-agent-runtime/](initiatives/driveplan-agent-runtime/) | ADR-0018 DriveRun / lease / receipt + Kanban projection stub |
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |

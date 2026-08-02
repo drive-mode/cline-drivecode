@@ -61,6 +61,12 @@ No build work in this plan. The desired state, phasing, and buy-not-build media 
 
 **Gate.** Design review of the multi-user doc against everything the MVP shipped. Confirm the MVP foreclosed nothing: event versioning in place, roles present in the roster, mute enforced hub-side, stage reducer stream-agnostic, Drive tab IA already multi-room shaped. Remote events and any SFU purchase get their own plan after this review.
 
+## Parallel track · DrivePlan agent runtime (ADR-0018)
+
+Does **not** replace Phase 1–3 gates. Schemas and a read-only one-task/one-run Kanban projection stub may land while phase UX continues. Tools and completion-guard enforcement are follow-on slices.
+
+Initiative: [driveplan-agent-runtime/](../initiatives/driveplan-agent-runtime/). Decision: [ADR-0018](../adr/ADR-0018-agent-runtime-contract.md). Design fixture: [implementation-state-plane.html](../../../design/canvases/implementation-state-plane.html).
+
 ## Dependency sketch
 
 ```

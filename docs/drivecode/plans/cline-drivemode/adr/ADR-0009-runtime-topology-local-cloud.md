@@ -24,8 +24,10 @@ Signaling stays on the hub loopback. LLM routing already exists in `@cline/llms`
 4. **Local profile is airgap for LLM and voice.** STT must be `local-worker`. TTS must be browser `speechSynthesis` or local-worker. Web Speech (`platform-cloud` egress) is forbidden. Cloud `ConfiguredAgent` base URLs are forbidden.
 5. **Cloud profile** allows cloud LLMs and may use Web Speech or cloud STT/TTS APIs. Default first-install profile is `cloud`.
 6. **Hybrid** requires an explicit `runtime.egressCeiling` facet. Combinations that exceed the ceiling fail closed.
-7. **Audio never enters hub events.** STT adapters emit text; MuteGate admits utterance text only.
-8. **HostCapabilities** expose `voiceTextIngress` (can admit mute-gated text), not boolean STT/TTS engine catalogs.
+7. **Audio never enters hub events.** STT adapters emit text; utterance text is admitted only through mute-gated voice ingress (product name historically “MuteGate”).
+8. **HostCapabilities** expose a voice I/O capability for mute-gated text admission (tip field: `voiceIo`), not boolean STT/TTS engine catalogs. Prefer hub **discovery** over hardcoded writer URLs; preferred loopback defaults may exist but binds fall back when busy.
+
+**Impl note (2026-08-02):** Pure `assertTopologyLegal` + facet seeding for local/cloud/hybrid are shipped. Older prose said `voiceTextIngress` / `MuteGate` as type names — those symbols are not in `hostPort.ts`. Hub preferred port `25463` may still appear as a default string alongside discovery.
 
 ## Consequences
 

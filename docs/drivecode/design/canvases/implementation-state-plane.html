@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drive · Implementation state plane</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../brand/cline-canvas-tokens.css" />
+<style>
+  /* Layout only — colors/fonts from cline-canvas-tokens.css (Hub hex SoT) */
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(1100px 600px at 78% -8%, color-mix(in srgb, var(--brand-purple) 18%, transparent), transparent 60%),
+      radial-gradient(900px 520px at 10% 4%, color-mix(in srgb, var(--brand-blue) 14%, transparent), transparent 55%),
+      var(--bg);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--drive-t); }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 22px; }
+  section { padding: 48px 0 64px; }
+
+  h1, h2, h3 { line-height: 1.15; margin: 0 0 .5em; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; }
+  h2 { font-size: clamp(20px, 2.6vw, 26px); }
+  .eyebrow {
+    font: 600 12px/1 var(--mono);
+    letter-spacing: .22em; text-transform: uppercase;
+    color: var(--drive-t); margin-bottom: 14px;
+  }
+  .lead { color: var(--muted); font-size: 17px; max-width: 72ch; margin: 0 0 8px; }
+  .note { color: var(--dim); font-size: 13.5px; margin: 0 0 22px; max-width: 72ch; }
+  code, .mono { font-family: var(--mono); }
+
+  .shead {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+  }
+  .btn {
+    font: 600 13px/1 var(--sans); cursor: pointer; user-select: none;
+    background: var(--panel-2); color: var(--text); border: 0.8px solid var(--line);
+    border-radius: var(--radius); padding: 11px 16px; display: inline-flex; align-items: center; gap: 8px;
+    transition: background .18s, border-color .18s, transform .1s;
+  }
+  .btn:hover { border-color: var(--drive-b); background: var(--panel); }
+  .btn:active { transform: scale(.97); }
+  .btn[aria-pressed="true"] { border-color: var(--drive-b); color: var(--drive-t); }
+
+  .plane-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(260px, .85fr);
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .plane-layout { grid-template-columns: 1fr; }
+  }
+
+  .runner {
+    background: var(--panel);
+    border: 0.8px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+  }
+  .runner .rtitle {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 4px;
+  }
+  .runner .rtitle h3 { margin: 0; font-size: 18px; }
+  .runner .path { font: 600 11.5px/1 var(--mono); color: var(--dim); }
+  .runner .sub { color: var(--muted); font-size: 14px; margin: 4px 0 18px; }
+
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px;
+    color: var(--muted); font-size: 12.5px;
+  }
+  .legend span { display: flex; gap: 7px; align-items: center; }
+  .legend i {
+    width: 11px; height: 11px; border-radius: 3px; display: inline-block;
+  }
+
+  .waves { display: flex; flex-direction: column; gap: 0; }
+  .gate {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    color: var(--dim); font: 600 11px/1 var(--mono); letter-spacing: .04em;
+  }
+  .gate .pill {
+    border: 0.8px dashed var(--line); border-radius: var(--radius); padding: 6px 12px;
+    color: var(--muted); transition: all .3s; white-space: nowrap;
+  }
+  .gate.lit .pill {
+    border-color: var(--warn); color: var(--warn);
+    border-style: solid;
+  }
+  .gate .ln { flex: 1; height: 0.8px; background: var(--line); }
+
+  .wave {
+    border: 0.8px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+    background: var(--bg-2); opacity: .5;
+    transition: opacity .4s, border-color .4s;
+  }
+  .wave.lit {
+    opacity: 1;
+    border-color: var(--drive-b);
+  }
+  .wave .wh {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; gap: 10px; flex-wrap: wrap;
+  }
+  .wave .wh b { font: 700 13px/1 var(--mono); color: var(--drive-t); }
+  .wave .wh small { color: var(--dim); font: 600 11px/1 var(--mono); }
+
+  .tasks { display: flex; gap: 10px; flex-wrap: wrap; }
+  .task {
+    flex: 1 1 150px; min-width: 140px;
+    border: 0.8px solid var(--line); border-radius: var(--radius);
+    padding: 11px 12px 14px; background: var(--card);
+    position: relative; transition: all .35s; cursor: pointer;
+    text-align: left; font: inherit; color: inherit;
+  }
+  .task:focus-visible {
+    outline: 2px solid var(--drive-t); outline-offset: 2px;
+  }
+  .task.is-focused {
+    border-color: var(--drive-b);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-purple) 40%, transparent);
+  }
+  .task .tid { font: 700 11px/1 var(--mono); color: var(--muted); padding-right: 72px; }
+  .task .td { font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+  .task .st {
+    position: absolute; top: 10px; right: 10px;
+    font: 700 9px/1 var(--mono); letter-spacing: .06em;
+    padding: 4px 6px; border-radius: calc(var(--radius) - 4px);
+    background: var(--panel-2); color: var(--dim); border: 0.8px solid var(--line);
+  }
+  .task[data-s="RUNNING"] { border-color: var(--run); }
+  .task[data-s="RUNNING"] .st { color: var(--run); border-color: var(--run); }
+  .task[data-s="RUNNING"] .tid { color: var(--text); }
+  .task[data-s="SUCCESS"] { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+  .task[data-s="SUCCESS"] .st { color: var(--ok); border-color: var(--ok); }
+  .task[data-s="FAILED"] { border-color: var(--fail); }
+  .task[data-s="FAILED"] .st { color: var(--fail); border-color: var(--fail); }
+  .task[data-s="AWAITING_REVIEW"] { border-color: color-mix(in srgb, var(--review) 55%, var(--line)); }
+  .task[data-s="AWAITING_REVIEW"] .st { color: var(--review); border-color: var(--review); }
+
+  .detail {
+    background: var(--panel);
+    border: 0.8px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 18px 20px;
+    position: sticky;
+    top: 16px;
+    min-height: 220px;
+  }
+  .detail h2 { font-size: 15px; margin: 0 0 10px; color: var(--drive-t); font-family: var(--mono); letter-spacing: .02em; }
+  .detail .empty { color: var(--dim); font-size: 13.5px; margin: 0; }
+  .detail dl { margin: 0; display: grid; gap: 10px; }
+  .detail dt { font: 600 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+  .detail dd { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .detail dd strong { color: var(--text); font-weight: 600; }
+  .detail .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .detail .chip {
+    font: 600 11px/1 var(--mono); padding: 5px 8px; border-radius: calc(var(--radius) - 4px);
+    border: 0.8px solid var(--line); background: var(--panel-2); color: var(--muted);
+  }
+
+  #tip {
+    position: fixed; z-index: 40; max-width: 280px;
+    background: var(--panel-2); border: 0.8px solid var(--line);
+    border-radius: var(--radius); padding: 10px 12px;
+    pointer-events: none; opacity: 0; transform: translateY(4px);
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  #tip.show { opacity: 1; transform: translateY(0); }
+  #tip .t-id { font: 700 11px/1.2 var(--mono); color: var(--drive-t); margin-bottom: 6px; }
+  #tip .t-row { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  #tip .t-row b { color: var(--text); font-weight: 600; }
+
+  footer {
+    border-top: 0.8px solid var(--line); padding: 28px 0 40px;
+    color: var(--dim); font-size: 13px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wave, .task, .gate .pill, #tip { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<section>
+  <div class="wrap">
+    <div class="shead">
+      <div>
+        <div class="eyebrow">implementation-state-plane</div>
+        <h1>DriveRun admission plane</h1>
+        <p class="lead">
+          Waves run sequentially. Work items inside a wave run in parallel under a
+          lease budget. Named gates clear before admission — not generic
+          <code>review_gate</code> labels.
+        </p>
+        <p class="note">
+          Design projection of intended <a href="../../plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md">ADR-0018</a>
+          state for one DriveTask / DriveRun. Not live Hub bank data.
+        </p>
+      </div>
+      <button type="button" class="btn" id="replayBtn" aria-label="Replay animation from the start">Replay</button>
+    </div>
+
+    <div class="plane-layout">
+      <div class="runner" id="runner" aria-label="Implementation state plane">
+        <div class="rtitle">
+          <h3 id="runTitle">Fix auth retry race · run_auth_retry_v1</h3>
+          <span class="path" id="runPath">drive.run · task/auth-retry-race</span>
+        </div>
+        <p class="sub">
+          <code>max_parallel: 3</code> · waves sequential · work items parallel ·
+          autoplay when visible
+        </p>
+        <div class="waves" id="waveStack"></div>
+        <div class="legend">
+          <span><i style="background:var(--run)"></i> RUNNING</span>
+          <span><i style="background:var(--ok)"></i> SUCCESS</span>
+          <span><i style="background:var(--fail)"></i> FAILED · retry</span>
+          <span><i style="background:var(--review)"></i> AWAITING_REVIEW</span>
+          <span><i style="background:var(--warn)"></i> named gate</span>
+        </div>
+      </div>
+
+      <aside class="detail" id="detail" aria-live="polite">
+        <h2>Work item</h2>
+        <p class="empty" id="detailEmpty">Hover a bubble for a quick peek. Click to pin full detail here.</p>
+        <div id="detailBody" hidden></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Drive · implementation-state-plane<br />
+    <span class="muted">Adapted from MOS surge wave-runner motion · Hub brand tokens via cline-canvas-tokens.css ·
+    <a href="drivemode-explainer.html">architecture explainer</a></span>
+  </div>
+</footer>
+
+<div id="tip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+"use strict";
+
+const FIXTURE = {
+  driveTaskId: "auth-retry-race",
+  driveTaskTitle: "Fix auth retry race",
+  driveRunId: "run_auth_retry_v1",
+  maxParallel: 3,
+  waves: [
+    {
+      id: "wave_0",
+      title: "wave_0 · inspect",
+      meta: "3 work items · parallel",
+      gate: {
+        id: "gate_admission",
+        label: "gate.admission · run_spec_accepted",
+      },
+      items: [
+        {
+          id: "read_router",
+          label: "Read retry router",
+          objective: "Locate the race window in the auth retry path.",
+          writeClaims: [],
+          isolation: "read_only",
+          evidence: ["path:src/services/auth/retry.ts"],
+          finalStatus: "SUCCESS",
+        },
+        {
+          id: "read_manifest",
+          label: "Read workspace manifest",
+          objective: "Confirm callers and package boundaries.",
+          writeClaims: [],
+          isolation: "read_only",
+          evidence: ["path:src/services/workspace/workspace-manifest.ts"],
+          finalStatus: "SUCCESS",
+        },
+        {
+          id: "map_callers",
+          label: "Map callers",
+          objective: "List dependents that must stay green after the patch.",
+          writeClaims: [],
+          isolation: "read_only",
+          evidence: ["note:caller-map"],
+          finalStatus: "SUCCESS",
+        },
+      ],
+    },
+    {
+      id: "wave_1",
+      title: "wave_1 · implement",
+      meta: "depends: wave_0 · 2 work items",
+      gate: {
+        id: "gate_wave_checkpoint",
+        label: "gate.wave_checkpoint · evidence_ready",
+      },
+      items: [
+        {
+          id: "patch_retry",
+          label: "Patch retry.ts",
+          objective: "Serialize overlapping retries with a bounded window.",
+          writeClaims: ["src/services/auth/retry.ts"],
+          isolation: "worktree_isolated",
+          evidence: ["diff:retry.ts", "tests:unit"],
+          finalStatus: "SUCCESS",
+        },
+        {
+          id: "patch_tests",
+          label: "Patch retry tests",
+          objective: "Cover timeout path and concurrent callers.",
+          writeClaims: ["src/services/auth/retry.test.ts"],
+          isolation: "worktree_isolated",
+          evidence: ["diff:retry.test.ts"],
+          flaky: true,
+          finalStatus: "SUCCESS",
+        },
+      ],
+    },
+    {
+      id: "wave_2",
+      title: "wave_2 · prove",
+      meta: "depends: wave_1 · 2 work items",
+      gate: {
+        id: "gate_receipt",
+        label: "gate.receipt · human_verification",
+      },
+      items: [
+        {
+          id: "run_unit",
+          label: "Run unit suite",
+          objective: "Prove retry tests pass in the leased worktree.",
+          writeClaims: [],
+          isolation: "worktree_isolated",
+          evidence: ["test-summary:auth-retry"],
+          finalStatus: "SUCCESS",
+        },
+        {
+          id: "open_pr",
+          label: "Open PR",
+          objective: "Publish branch + PR refs for receipt verification.",
+          writeClaims: [],
+          isolation: "worktree_isolated",
+          evidence: ["branch:fix/auth-retry-race", "pr:#pending"],
+          finalStatus: "AWAITING_REVIEW",
+        },
+      ],
+    },
+  ],
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const tip = $("#tip");
+const detailEmpty = $("#detailEmpty");
+const detailBody = $("#detailBody");
+
+let animGen = 0;
+let paused = false;
+let started = false;
+const itemIndex = new Map();
+
+function setStatus(el, s) {
+  el.dataset.s = s;
+  const st = $(".st", el);
+  if (st) st.textContent = s;
+}
+
+function buildStack() {
+  const stack = $("#waveStack");
+  stack.innerHTML = "";
+  itemIndex.clear();
+
+  FIXTURE.waves.forEach((wave, wi) => {
+    const gate = document.createElement("div");
+    gate.className = "gate";
+    gate.dataset.gate = String(wi);
+    gate.innerHTML =
+      '<span class="pill"></span><span class="ln" aria-hidden="true"></span>';
+    $(".pill", gate).textContent = wave.gate.label;
+    stack.appendChild(gate);
+
+    const waveEl = document.createElement("div");
+    waveEl.className = "wave";
+    waveEl.dataset.w = String(wi);
+    waveEl.innerHTML =
+      '<div class="wh"><b></b><small></small></div><div class="tasks"></div>';
+    $("b", waveEl).textContent = wave.title;
+    $("small", waveEl).textContent = wave.meta;
+
+    const tasks = $(".tasks", waveEl);
+    wave.items.forEach((item) => {
+      itemIndex.set(item.id, { item, wave });
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "task";
+      btn.dataset.id = item.id;
+      btn.dataset.s = "PENDING";
+      if (item.flaky) btn.dataset.flaky = "1";
+      btn.dataset.final = item.finalStatus;
+      btn.setAttribute("aria-label", `Work item ${item.id}`);
+      btn.innerHTML =
+        '<div class="tid"></div><div class="td"></div><div class="st">PENDING</div>';
+      $(".tid", btn).textContent = item.id;
+      $(".td", btn).textContent = item.label;
+      tasks.appendChild(btn);
+    });
+    stack.appendChild(waveEl);
+  });
+}
+
+function renderDetail(id) {
+  const hit = itemIndex.get(id);
+  if (!hit) return;
+  const { item, wave } = hit;
+  detailEmpty.hidden = true;
+  detailBody.hidden = false;
+  const claims =
+    item.writeClaims.length === 0
+      ? '<span class="chip">none (read)</span>'
+      : item.writeClaims.map((c) => `<span class="chip">${escapeHtml(c)}</span>`).join("");
+  const evidence = item.evidence
+    .map((e) => `<span class="chip">${escapeHtml(e)}</span>`)
+    .join("");
+  detailBody.innerHTML = `
+    <dl>
+      <div><dt>Work item</dt><dd><strong>${escapeHtml(item.id)}</strong> · ${escapeHtml(item.label)}</dd></div>
+      <div><dt>Wave</dt><dd>${escapeHtml(wave.title)}</dd></div>
+      <div><dt>Objective</dt><dd>${escapeHtml(item.objective)}</dd></div>
+      <div><dt>Isolation</dt><dd><code>${escapeHtml(item.isolation)}</code></dd></div>
+      <div><dt>Write claims</dt><dd><div class="chips">${claims}</div></dd></div>
+      <div><dt>Evidence requirements</dt><dd><div class="chips">${evidence}</div></dd></div>
+      <div><dt>Gate before next admission</dt><dd>${escapeHtml(wave.gate.label)}</dd></div>
+      <div><dt>DriveTask</dt><dd><code>${escapeHtml(FIXTURE.driveTaskId)}</code> · ${escapeHtml(FIXTURE.driveTaskTitle)}</dd></div>
+    </dl>`;
+  $$(".task").forEach((t) => t.classList.toggle("is-focused", t.dataset.id === id));
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function showTip(el, item) {
+  tip.innerHTML = `
+    <div class="t-id">${escapeHtml(item.id)}</div>
+    <div class="t-row"><b>Status</b> · ${escapeHtml(el.dataset.s || "PENDING")}</div>
+    <div class="t-row"><b>Objective</b> · ${escapeHtml(item.objective)}</div>
+    <div class="t-row"><b>Isolation</b> · ${escapeHtml(item.isolation)}</div>
+    <div class="t-row"><b>Claims</b> · ${
+      item.writeClaims.length ? escapeHtml(item.writeClaims.join(", ")) : "none"
+    }</div>
+    <div class="t-row"><b>Evidence</b> · ${escapeHtml(item.evidence.join(", "))}</div>`;
+  tip.classList.add("show");
+  tip.setAttribute("aria-hidden", "false");
+  positionTip(el);
+}
+
+function positionTip(el) {
+  const r = el.getBoundingClientRect();
+  const tipW = tip.offsetWidth || 260;
+  const tipH = tip.offsetHeight || 120;
+  let left = r.left + r.width / 2 - tipW / 2;
+  let top = r.top - tipH - 10;
+  if (top < 8) top = r.bottom + 10;
+  left = Math.max(8, Math.min(left, window.innerWidth - tipW - 8));
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+}
+
+function hideTip() {
+  tip.classList.remove("show");
+  tip.setAttribute("aria-hidden", "true");
+}
+
+function focusItem(id, pushHash) {
+  if (!itemIndex.has(id)) return;
+  renderDetail(id);
+  if (pushHash) {
+    const hash = `#work-item/${id}`;
+    if (location.hash !== hash) {
+      history.replaceState(null, "", hash);
+    }
+  }
+}
+
+function resetVisual() {
+  $$("#waveStack .wave").forEach((w) => {
+    w.classList.remove("lit");
+    $$(".task", w).forEach((t) => setStatus(t, "PENDING"));
+  });
+  $$("#waveStack .gate").forEach((g) => g.classList.remove("lit"));
+}
+
+async function waitWhilePaused(gen) {
+  while (paused && gen === animGen) await sleep(120);
+  return gen === animGen;
+}
+
+async function animLoop(gen) {
+  const waves = $$("#waveStack .wave");
+  const gates = $$("#waveStack .gate");
+
+  if (reduceMotion) {
+    resetVisual();
+    waves.forEach((w) => {
+      w.classList.add("lit");
+      $$(".task", w).forEach((t) => setStatus(t, t.dataset.final || "SUCCESS"));
+    });
+    return;
+  }
+
+  while (gen === animGen) {
+    resetVisual();
+    for (let wi = 0; wi < waves.length; wi++) {
+      if (!(await waitWhilePaused(gen))) return;
+      const g = gates[wi];
+      const w = waves[wi];
+      g.classList.add("lit");
+      await sleep(650);
+      if (gen !== animGen) return;
+      if (!(await waitWhilePaused(gen))) return;
+
+      w.classList.add("lit");
+      const tasks = $$(".task", w);
+      tasks.forEach((t) => setStatus(t, "RUNNING"));
+      await sleep(950);
+      if (gen !== animGen) return;
+
+      for (const t of tasks) {
+        if (!(await waitWhilePaused(gen))) return;
+        if (t.dataset.flaky === "1") {
+          setStatus(t, "FAILED");
+          await sleep(700);
+          if (gen !== animGen) return;
+          setStatus(t, "RUNNING");
+          await sleep(650);
+          if (gen !== animGen) return;
+        }
+        setStatus(t, t.dataset.final || "SUCCESS");
+        await sleep(120);
+        if (gen !== animGen) return;
+      }
+      g.classList.remove("lit");
+      await sleep(350);
+      if (gen !== animGen) return;
+    }
+    await sleep(1500);
+    if (gen !== animGen) return;
+  }
+}
+
+function startAnim() {
+  animGen += 1;
+  const gen = animGen;
+  animLoop(gen);
+}
+
+function bindInteractions() {
+  $("#waveStack").addEventListener("pointerover", (e) => {
+    const t = e.target.closest(".task");
+    if (!t || !itemIndex.has(t.dataset.id)) return;
+    showTip(t, itemIndex.get(t.dataset.id).item);
+  });
+  $("#waveStack").addEventListener("pointermove", (e) => {
+    const t = e.target.closest(".task");
+    if (t && tip.classList.contains("show")) positionTip(t);
+  });
+  $("#waveStack").addEventListener("pointerout", (e) => {
+    const t = e.target.closest(".task");
+    if (!t) return;
+    const to = e.relatedTarget && e.relatedTarget.closest
+      ? e.relatedTarget.closest(".task")
+      : null;
+    if (to === t) return;
+    hideTip();
+  });
+  $("#waveStack").addEventListener("click", (e) => {
+    const t = e.target.closest(".task");
+    if (!t) return;
+    hideTip();
+    focusItem(t.dataset.id, true);
+  });
+  $("#waveStack").addEventListener("keydown", (e) => {
+    const t = e.target.closest(".task");
+    if (!t) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      focusItem(t.dataset.id, true);
+    }
+  });
+
+  $("#replayBtn").addEventListener("click", () => startAnim());
+
+  document.addEventListener("visibilitychange", () => {
+    paused = document.hidden;
+  });
+
+  window.addEventListener("hashchange", () => {
+    const m = location.hash.match(/^#work-item\/([^/]+)$/);
+    if (m) focusItem(decodeURIComponent(m[1]), false);
+  });
+}
+
+function bootFromHash() {
+  const m = location.hash.match(/^#work-item\/([^/]+)$/);
+  if (m) focusItem(decodeURIComponent(m[1]), false);
+}
+
+buildStack();
+bindInteractions();
+bootFromHash();
+
+const runner = $("#runner");
+const io = new IntersectionObserver(
+  (entries) => {
+    const entry = entries[0];
+    if (!entry) return;
+    if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
+      if (!started) {
+        started = true;
+        startAnim();
+      }
+      paused = document.hidden;
+    } else if (started) {
+      paused = true;
+    }
+  },
+  { threshold: [0, 0.4, 0.6, 1] }
+);
+io.observe(runner);
+
+function runnerMostlyVisible() {
+  const r = runner.getBoundingClientRect();
+  const vh = window.innerHeight || 1;
+  const visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+  return visible / Math.max(r.height, 1) >= 0.4;
+}
+
+if (runnerMostlyVisible()) {
+  started = true;
+  startAnim();
+}
+</script>
+</body>
+</html>

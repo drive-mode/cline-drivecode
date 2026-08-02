@@ -4,7 +4,7 @@
 
 Drivecode should make Cline feel like a pair-programming call with recruitable agents, shared work, and clear room context. The product north star is a Drive tab with Discord-style information architecture, Slack-like chrome, pair-call interactions, and the cline.bot visual brand.
 
-**Current agent work (2026-07-30):** product gaps and satisfaction residuals — not harness leverage. Systems map: [plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md](plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md) §13.0. Living satisfaction checklist: [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md).
+**Current agent work (2026-08-02):** ADR validation fixes + DrivePlan agent-runtime track ([ADR-0018](plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md), [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/)); satisfaction residuals remain. Systems map: [plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md](plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md) §13.0. Living satisfaction checklist: [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md). Audit: [research/19-adr-validation-audit.md](plans/cline-drivemode/research/19-adr-validation-audit.md).
 
 ## Requirements
 
@@ -67,7 +67,8 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
 - `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ADR-0015](plans/cline-drivemode/adr/ADR-0015-task-session-observability.md) Proposed).
 - `docs/drivecode/plans/cline-drivemode/initiatives/session-satisfaction-moments/` defines product moments on the call arc ([visual plan](plans/cline-drivemode/initiatives/session-satisfaction-moments/visual-plan.md), [canvas](design/canvases/session-satisfaction-moments-canvas.html)).
 - **Remaining implementation checklist:** [delivery/REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md) (satisfaction track landed; residuals in that file).
-- `docs/drivecode/plans/cline-drivemode/adr/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, and gated learning (see status board).
+- `docs/drivecode/plans/cline-drivemode/adr/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, gated learning, and agent runtime (see status board + **Impl** column).
+- `docs/drivecode/plans/cline-drivemode/initiatives/driveplan-agent-runtime/` ships [ADR-0018](plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md) slices (`DriveRun` / lease / receipt; Kanban projection stub). Parallel to phased TASK-GRAPH UX — does not replace Phase 1–3 gates.
 - `docs/drivecode/plans/cline-drivemode/examples/driveagent-pair-partner/` is the concrete agent-home and graph fixture.
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
 - `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the end-to-end systems analysis (context, interfaces, NFRs, as-is/to-be, delivery slices) — **§13.0 is current as-is**.
@@ -106,6 +107,7 @@ CLI Status uses the live hub adapter; CLI Drive chrome is a **local toggle** (no
 
 ### Top gaps
 
+- ADR-0018 follow-ons: Agent Control tools + completion/receipt guard (schemas + interop stub landed) — [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/).
 - Satisfaction residuals: W1.1 redirect/narration, host `.driveagent` skill compile, `privacy.debugRetention` UI + raised caps, durable `privacy.retention`, ADR-0015 still **Proposed** — [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md).
 - `DRV-GATES` taxonomy landed (`gates.ts`); still needs expiry rules and an owner for the approval feed UI.
 - Hub reconnect needs acceptance criteria and degraded-state UX under `DRV-ROOM-MVP`.
