@@ -3,8 +3,7 @@ import {
 	DrivePlansDemoStatusSnapshotSource,
 	readDrivecodeDemoCliBootstrap,
 } from "@cline/drivecode-demo";
-import type { Message } from "@cline/shared";
-import { formatDisplayUserInput, truncateStr } from "@cline/shared";
+import { formatDisplayUserInput } from "@cline/shared";
 import type { KeyEvent } from "@opentui/core";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { ChoiceContext } from "@opentui-ui/dialog";
