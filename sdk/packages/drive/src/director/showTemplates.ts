@@ -35,6 +35,55 @@ export const KIT_MERMAID_SEC_NETWORK = `flowchart TB
   end
   HubDaemon -.->|"no remoteBridge by default"| RemoteClients["remote clients"]`;
 
+/**
+ * The literal cline-drive topology: agents publish typed work to the hub
+ * daemon — the single writer — which appends the durable log, folds it with
+ * reduceRoom and broadcasts RoomSnapshot to client surfaces, while the
+ * director path ranks the Show backlog and presents onto the Spotlight screen.
+ *
+ * Ground-truthed against the code, not the marketing shape:
+ * - append-then-fold order: hub/collaboration/room.ts commit()
+ * - rank -> produce -> present: hub/driveShowRuntime.ts
+ * - lanes 1 and 2 of ADR-0013 (durable event log, single live room)
+ * - :25463 from CLINE_HUB_WRITER_ENDPOINT in ../hostPort.ts
+ *
+ * The presented-show surface is the Spotlight ScreenFrame, not StickyStagePane:
+ * spotlight S2 moved the artifact inside the frame and dropped the pane from
+ * Chat.tsx, leaving it wired only into ChatForkDemo.
+ *
+ * The agent lane is deliberately generic. The canvas reference names "Cline ·
+ * Riley", but Riley is a webview demo fixture, not a component — naming it
+ * here would put a persona into a diagram that claims to be the real system.
+ *
+ * Budget: keep this at or under 20 lines. Until a Spotlight-side mermaid
+ * renderer lands, produceMermaidShowArtifact stages the source as text in a
+ * 640x360 card and anything past line 20 is clipped off the screen.
+ *
+ * TB, not the LR the other kit entries use: three lanes of two parallel hub
+ * paths lay out at ~6:1 under LR, which is an unreadable strip in the
+ * Spotlight frame. Same topology either way.
+ */
+export const KIT_MERMAID_ARCH_CLINE_DRIVE = `flowchart TB
+  subgraph Agents
+    ClineAgent["Cline agent session"]
+  end
+  subgraph HubDaemon["HubDaemon :25463 · single writer"]
+    CallOps["call_* ops"]
+    EventLog["event log · durable"]
+    RoomPlane["rooms · reduceRoom fold"]
+    DriveLive["DriveLive · director"]
+    ShowBacklog["Show backlog · rank · produce"]
+  end
+  subgraph Clients
+    HubWebview["Hub webview · room snapshot"]
+    SpotlightScreen["Spotlight · ScreenFrame"]
+  end
+  ClineAgent -->|"call_record_work"| CallOps
+  CallOps -->|"DriveEvent"| EventLog --> RoomPlane
+  CallOps -->|"drive.show.*"| DriveLive --> ShowBacklog
+  RoomPlane -->|"RoomSnapshot"| HubWebview
+  ShowBacklog -->|"drive.show.presented"| SpotlightScreen`;
+
 /** MVP kit for planner/screen-manager produce steps. */
 export const SHOW_TEMPLATE_KIT: readonly ShowTemplate[] = [
 	{
@@ -46,6 +95,18 @@ export const SHOW_TEMPLATE_KIT: readonly ShowTemplate[] = [
 		defaultArgs: {
 			diagramType: "architecture",
 			mermaidSource: KIT_MERMAID_ARCH_OVERVIEW,
+			source: "SHOW_TEMPLATE_KIT",
+		},
+	},
+	{
+		templateId: "arch.cline-drive",
+		artifactKind: "diagram.architecture",
+		title: "cline-drive · system architecture",
+		intent: "Present the real cline-drive topology on the Spotlight",
+		produceTool: "render_mermaid",
+		defaultArgs: {
+			diagramType: "architecture",
+			mermaidSource: KIT_MERMAID_ARCH_CLINE_DRIVE,
 			source: "SHOW_TEMPLATE_KIT",
 		},
 	},

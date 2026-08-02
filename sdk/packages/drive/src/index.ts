@@ -380,6 +380,7 @@ export {
 } from "./director/planShowIntents.js";
 export {
 	getShowTemplate,
+	KIT_MERMAID_ARCH_CLINE_DRIVE,
 	KIT_MERMAID_ARCH_OVERVIEW,
 	KIT_MERMAID_FLOW_DATA,
 	KIT_MERMAID_SEC_NETWORK,
