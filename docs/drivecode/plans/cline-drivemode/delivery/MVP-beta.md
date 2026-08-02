@@ -1,6 +1,9 @@
 # Drive mode MVP — public self-hosted beta
 
-**Status:** active track (opened 2026-08-02)
+**Status:** all five phases delivered (opened 2026-08-02, phases 0–5 merged
+2026-08-02). Open items are listed under
+[What still needs a human](#what-still-needs-a-human-before-the-beta-opens) —
+none of them are code.
 **Goal:** anyone can clone `hhalperin/cline-drivecode`, run it, and pair with an
 agent on a voice call with a shared Spotlight.
 **Decisions that shape it:** [ADR-0016](../adr/ADR-0016-distribution-and-positioning.md)
@@ -67,16 +70,50 @@ project — **built first, synced second**.
 | 1 | The call looks like the demo | **done** (#107 #108 #110 #114) | S1 → S2, then S4 + S5 in parallel. Webview recomposition of `Chat.tsx`, `Spotlight.tsx`, `DriveCallChrome.tsx`, `App.tsx` nav. No wire changes. | visual parity vs the canvas at 1280×640 light+dark |
 | 2 | Spotlight presents real work | **done** (#115 #116 #117) | S3 → S6 → S7. Reuse `ai-elements/plan.tsx` and the streamdown mermaid plugin. | present each artifact kind on a live room — **not yet exercised on a live room**; renderers verified against real produced artifacts |
 | 3 | Voice | **done** (#118 #119 #120 #121) | drive-audio 1–5 on `browser-speechSynthesis`; narrator gated by `advance: auto_after_say`; wire `speech-input.tsx` into the Drive composer. `tts.enabled` stays default-off (DRV-TTS). | narration speaks; **deafen** cancels in-flight speech, and mic mute does not — verified by instrumented playback, **not yet by ear** |
-| 4 | Rooms | next | New `View` entry + `components/views/rooms-view.tsx` over ADR-0013's durable facets. | stop a room, restart it, config + history survive |
-| 5 | Self-hosted packaging | | Tagged release + workflow, install docs, preflight, support path, plain-language privacy note (events carry metadata only). | a clean clone on a second machine reaches a working call using only the README |
+| 4 | Rooms | **done** (#123) | New `View` entry + `components/views/rooms-view.tsx`. Durability came from ADR-0013 **lane 1**, not the facets — facets are user/workspace-scoped, not per-room. No schema change. | **passed** — stop → restart, and a killed-and-restarted hub process, both keep config + history |
+| 5 | Self-hosted packaging | **done** (#124 #125) | Draft-only release workflow, install + privacy docs, `preflight`, issue template. | **passed on a second clone**, not a second machine — see below |
 
-**Deferred out of Phase 3, not dropped:** the first-call `tts.enabled` prompt
-(the facet ships default-off with no in-product path to turn it on yet), and
-per-agent `voiceSlot` (drive-audio 6). Both are additive.
+**Deferred, not dropped:** the first-call `tts.enabled` prompt (the facet ships
+default-off with no in-product path to turn it on yet), per-agent `voiceSlot`
+(drive-audio 6), and re-keying `DriveRoomStore` by workspace + roomId so two
+open workspaces cannot share a live entry for a same-named room. The last one
+wants an ADR, not a patch — listing and durability are already correct.
 
-**Two gates are asserted but not yet demonstrated** — presenting each artifact
-kind on a live room, and hearing narration. Both need a human pass on a real
-hub session; neither is blocked by code.
+## What still needs a human before the beta opens
+
+Code is not the blocker on any of these.
+
+1. **A credentialed call.** No API key was ever entered. The no-credential
+   demo route is verified end to end; the real call leg is not.
+2. **Hearing it.** Voice was verified by instrumented playback — `speechSynthesis`
+   transitions, deafen cutting in 63ms, generated WAVs decoding at peak 0.89 —
+   but nobody has listened. `join` and `taskComplete` are the earcon pair most
+   likely to sound alike.
+3. **Presenting each artifact kind on a live room** (the Phase 2 gate).
+   Renderers were verified against real produced artifacts, not a live room.
+4. **A genuinely separate machine** for the Phase 5 gate. A second clone passed;
+   ports were held locally, so the hub ran with `CLINE_HUB_PORT` overridden.
+5. **Support path** — GitHub issues on the fork ships as *proposed*, not decided.
+6. **Cutting the first tag.** The release workflow is `workflow_dispatch` only,
+   requires a typed confirmation, and creates a **draft**. Nothing publishes
+   without a human.
+
+## Privacy: the plan was wrong, the docs are right
+
+This plan previously described the beta privacy note as "events carry metadata
+only". **That is false for the conversation track.** `conversation.message.text`
+and `conversation.narration.text` are plain strings
+(`sdk/packages/shared/src/drive/events.ts:117`) and persist to
+`.cline/drive/rooms/<id>/events.jsonl`. Work, presence and control events are
+genuinely metadata; conversation is not.
+
+Two further gaps found while writing the note: the **default STT sends
+microphone audio to your browser vendor** (Web Speech API, already labelled
+`egress: "platform-cloud"` in the provider manifest but undocumented), and
+`DRV-PRIVACY` still lists a schema assertion as open that has since shipped.
+
+[reference/privacy.md](../../../reference/privacy.md) states the accurate
+version. Where behaviour is narrower than the slogan, the slogan loses.
 
 ## Verification
 
