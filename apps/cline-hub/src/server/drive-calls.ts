@@ -32,12 +32,20 @@ export async function handleCallCommand(
 		[key: string]: unknown;
 	},
 ): Promise<void> {
+	// Every call_* frame names its room. Errors carry it back so a client
+	// waiting on one room's command cannot be tripped by another room's
+	// failure of the same command.
+	const frameRoomId =
+		typeof frame.roomId === "string" && frame.roomId.trim()
+			? frame.roomId
+			: undefined;
 	if (!ctx.uiClient) {
 		ctx.send(peer, {
 			type: "call_error",
 			text: "Hub is not connected.",
 			code: "hub_disconnected",
 			command: frame.type,
+			...(frameRoomId ? { roomId: frameRoomId } : {}),
 		});
 		return;
 	}
@@ -55,6 +63,7 @@ export async function handleCallCommand(
 				text: reply.error?.message ?? "Call command failed.",
 				code: reply.error?.code,
 				command: frame.type,
+				...(frameRoomId ? { roomId: frameRoomId } : {}),
 			});
 			return;
 		}
@@ -77,6 +86,10 @@ export async function handleCallCommand(
 			typeof reply.payload?.handoffNarration === "string"
 				? reply.payload.handoffNarration
 				: undefined;
+		// Only call_end sets `ended`, on both its normal and idempotent
+		// double-end paths, and broadcast snapshots never carry it. That makes
+		// it the one field that says "this snapshot is the reply to a stop".
+		const ended = reply.payload?.ended === true;
 		if (snapshot && roomId) {
 			ctx.send(peer, {
 				type: "room_snapshot",
@@ -86,6 +99,7 @@ export async function handleCallCommand(
 				...(callSessionId ? { callSessionId } : {}),
 				...(whileAwayNote ? { whileAwayNote } : {}),
 				...(handoffNarration ? { handoffNarration } : {}),
+				...(ended ? { ended: true } : {}),
 			});
 		}
 	} catch (error) {
@@ -94,6 +108,7 @@ export async function handleCallCommand(
 			text: error instanceof Error ? error.message : String(error),
 			code: "call_command_failed",
 			command: frame.type,
+			...(frameRoomId ? { roomId: frameRoomId } : {}),
 		});
 	}
 }

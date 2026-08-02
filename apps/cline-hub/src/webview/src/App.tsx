@@ -10,6 +10,7 @@ import {
 	BotIcon,
 	ClockIcon,
 	CodeIcon,
+	DoorOpenIcon,
 	FileTextIcon,
 	Folder,
 	FunnelIcon,
@@ -86,6 +87,8 @@ import {
 	setStoredNavRailCollapsed,
 } from "./lib/nav-rail";
 import { syncHubTheme } from "./lib/theme";
+import type { DriveRoomsSource } from "./rooms/drive-rooms-source";
+import { HubDriveRoomsSource } from "./rooms/hub-drive-rooms-source";
 import { HubStatusSessionRollupSource } from "./status/hub-status-session-rollup-source";
 import { HubStatusTeamsSource } from "./status/hub-status-teams-source";
 import type { StatusSessionRollupSource } from "./status/status-session-rollup-source";
@@ -103,6 +106,11 @@ const StatusView = lazy(() =>
 		default: module.StatusView,
 	})),
 );
+const RoomsView = lazy(() =>
+	import("./components/views/rooms-view").then((module) => ({
+		default: module.RoomsView,
+	})),
+);
 const CustomizationSectionView = lazy(() =>
 	import("./components/views/settings/extensions-view").then((module) => ({
 		default: module.CustomizationSectionView,
@@ -114,6 +122,7 @@ type View =
 	| "sessions"
 	| "drive"
 	| "status"
+	| "rooms"
 	| "chat"
 	| "models"
 	| "rules"
@@ -132,6 +141,7 @@ const VIEW_PATHS: Record<View, string> = {
 	sessions: "/sessions",
 	drive: "/drive",
 	status: "/status",
+	rooms: "/rooms",
 	chat: "/chat",
 	models: "/models",
 	rules: "/rules",
@@ -183,6 +193,7 @@ function viewFromPath(pathname: string): View {
 	if (pathname === VIEW_PATHS.sessions) return "sessions";
 	if (pathname === VIEW_PATHS.drive) return "drive";
 	if (pathname === VIEW_PATHS.status) return "status";
+	if (pathname === VIEW_PATHS.rooms) return "rooms";
 	if (pathname === VIEW_PATHS.chat) return "chat";
 	if (pathname === VIEW_PATHS.models) return "models";
 	if (
@@ -419,6 +430,7 @@ function Shell({
 			| "chat"
 			| "drive"
 			| "status"
+			| "rooms"
 			| "rules"
 			| "hooks"
 			| "mcp"
@@ -432,9 +444,10 @@ function Shell({
 	}>;
 	const driveNavItems = [
 		{ view: "drive", label: "Drive", icon: DriveMarkIcon },
+		{ view: "rooms", label: "Rooms", icon: DoorOpenIcon },
 		{ view: "status", label: "Status Hub", icon: ActivityIcon },
 	] satisfies Array<{
-		view: Extract<View, "drive" | "status">;
+		view: Extract<View, "drive" | "rooms" | "status">;
 		label: string;
 		// Wider than the lucide icons elsewhere: the Drive mark is a plain
 		// function component, and renderNavButton only needs `className`.
@@ -1275,19 +1288,35 @@ function App() {
 		}
 		return new HubStatusTeamsSource();
 	}, [demoHub.useDemoTeamsAdapter]);
+	/** Hub defaults first, then whichever recent session names a workspace. */
+	const resolveWorkspaceRoot = useCallback((): string | undefined => {
+		const fromDefaults =
+			workspaceRoot.trim() || workspaceRootRef.current.trim();
+		if (fromDefaults) {
+			return fromDefaults;
+		}
+		return recentSessions.find((s) => s.workspaceRoot?.trim())?.workspaceRoot;
+	}, [recentSessions, workspaceRoot]);
 	const statusSessionSource = useMemo((): StatusSessionRollupSource => {
 		if (demoHub.useDemoSessionsAdapter) {
 			return new DriveSessionsDemoRollupSource();
 		}
-		return new HubStatusSessionRollupSource(() => {
-			const fromDefaults =
-				workspaceRoot.trim() || workspaceRootRef.current.trim();
-			if (fromDefaults) {
-				return fromDefaults;
-			}
-			return recentSessions.find((s) => s.workspaceRoot?.trim())?.workspaceRoot;
-		});
-	}, [demoHub.useDemoSessionsAdapter, recentSessions, workspaceRoot]);
+		return new HubStatusSessionRollupSource(resolveWorkspaceRoot);
+	}, [demoHub.useDemoSessionsAdapter, resolveWorkspaceRoot]);
+	/**
+	 * The source holds no state, so one instance lasts the session. The Rooms
+	 * page re-lists on the workspace root *value* instead: it settles from
+	 * undefined once the hub reports it, and then stays put across the hub's
+	 * periodic rebroadcasts rather than re-reading every room's event log.
+	 */
+	const roomsSource = useMemo(
+		(): DriveRoomsSource => new HubDriveRoomsSource(),
+		[],
+	);
+	const roomsWorkspaceRoot = useMemo(
+		() => resolveWorkspaceRoot(),
+		[resolveWorkspaceRoot],
+	);
 
 	useEffect(() => {
 		syncHubTheme();
@@ -1390,6 +1419,21 @@ function App() {
 		);
 	}, []);
 
+	/**
+	 * Open or restart a room from the Rooms page. Join is the restart: the hub
+	 * hydrates a stopped room from the durable log, so config and history come
+	 * back with it (ADR-0013).
+	 */
+	const openRoom = useCallback(
+		(roomId: string) => {
+			openDriveCall({
+				action: "join",
+				roomId: roomId.trim() || DRIVE_DEFAULT_ROOM_ID,
+			});
+		},
+		[openDriveCall],
+	);
+
 	const openStatusSessionRoom = useCallback(
 		(row: StatusSessionRow) => {
 			openDriveCall({
@@ -1463,6 +1507,15 @@ function App() {
 				<DriveView
 					onOpenCall={openDriveCall}
 					onOpenStatus={() => navigate("status")}
+				/>
+			);
+		}
+		if (view === "rooms") {
+			return (
+				<RoomsView
+					onOpenRoom={openRoom}
+					roomsSource={roomsSource}
+					workspaceRoot={roomsWorkspaceRoot}
 				/>
 			);
 		}
@@ -1583,7 +1636,10 @@ function App() {
 		demoHub.useShareScreenSpotlightDemo,
 		acknowledgeDriveLaunch,
 		driveLaunchRequest,
+		openRoom,
 		openStatusSessionRoom,
+		roomsSource,
+		roomsWorkspaceRoot,
 		statusSessionSource,
 		statusTeamsSource,
 		hubState,

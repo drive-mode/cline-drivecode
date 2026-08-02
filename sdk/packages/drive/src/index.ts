@@ -409,6 +409,12 @@ export {
 	type SpotlightReject,
 } from "./room/participantControls.js";
 export {
+	type DriveRoomDirectoryEntry,
+	type DriveRoomStatus,
+	projectRoomDirectoryEntry,
+	sortRoomDirectory,
+} from "./room/roomDirectory.js";
+export {
 	compileDriveagentHome,
 	DriveagentHomeCompileError,
 	type CompiledDriveagentView,

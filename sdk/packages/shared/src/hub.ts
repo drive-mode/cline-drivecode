@@ -500,6 +500,7 @@ export type HubCommandName =
 	| "call_seat"
 	| "call_record_work"
 	| "call_get_room"
+	| "call_list_rooms"
 	| "cron.event.ingest"
 	| "cron.event.list"
 	| "cron.event.get"

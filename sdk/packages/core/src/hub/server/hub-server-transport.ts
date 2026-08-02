@@ -487,6 +487,7 @@ export class HubServerTransport implements NativeHubTransport {
 			case "call_seat":
 			case "call_record_work":
 			case "call_get_room":
+			case "call_list_rooms":
 				return await handleDriveRoomCommand(this.ctx, envelope);
 			case "status.publish":
 			case "status.query":

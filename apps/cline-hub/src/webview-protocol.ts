@@ -472,6 +472,12 @@ export type WebviewInboundMessage =
 			callSessionId?: string;
 	  }
 	| {
+			/** Read-only room directory over the durable log (ADR-0013). */
+			type: "call_list_rooms";
+			requestId?: string;
+			workspaceRoot?: string;
+	  }
+	| {
 			/** Gated plan-improve accept | reject | mute (DRV-PLAN-IMPROVE). */
 			type: "drive_plan_improve_resolve";
 			workspaceRoot: string;
@@ -684,6 +690,12 @@ export type WebviewOutboundMessage =
 			whileAwayNote?: string;
 			/** End Tier-0 handoff narration text (DRV-LEAVE-END). */
 			handoffNarration?: string;
+			/**
+			 * True only on a `call_end` reply — both the normal close and the
+			 * idempotent double-end. Broadcast roster snapshots never set it, so
+			 * a client awaiting a stop can tell the reply from ambient traffic.
+			 */
+			ended?: boolean;
 	  }
 	| {
 			type: "drive_event";
@@ -693,7 +705,14 @@ export type WebviewOutboundMessage =
 			seq?: number;
 			callSessionId?: string;
 	  }
-	| { type: "call_error"; text: string; code?: string; command?: string }
+	| {
+			type: "call_error";
+			text: string;
+			code?: string;
+			command?: string;
+			/** Room the failed command targeted, when the frame named one. */
+			roomId?: string;
+	  }
 	| {
 			type: "drive_bank_snapshot";
 			snapshot: import("@cline/shared").BankSnapshot;
@@ -713,6 +732,17 @@ export type WebviewOutboundMessage =
 	  }
 	| {
 			type: "drive_session_rollups_error";
+			text: string;
+			code?: string;
+			requestId?: string;
+	  }
+	| {
+			type: "drive_rooms";
+			rooms: unknown[];
+			requestId?: string;
+	  }
+	| {
+			type: "drive_rooms_error";
 			text: string;
 			code?: string;
 			requestId?: string;

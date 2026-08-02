@@ -28,6 +28,7 @@ import { handleDrivePlanImproveWebviewCommand } from "./server/drive-plan-improv
 import { handleDriveSessionRollupsWebviewCommand } from "./server/drive-session-rollups";
 import { handleCallCommand } from "./server/drive-calls";
 import { handleDriveWebviewCommand } from "./server/drive-commands";
+import { handleDriveRoomsWebviewCommand } from "./server/drive-rooms";
 import { rejectVoiceSendIfMuted } from "./server/drive-mute-gate";
 import {
 	createJsonResponse,
@@ -372,6 +373,8 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						frame.type === "drive_bank_accept_sdlc_freeze"
 					) {
 						await handleDriveBankWebviewCommand(ctx, peer, frame);
+					} else if (frame.type === "call_list_rooms") {
+						await handleDriveRoomsWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_session_rollups") {
 						await handleDriveSessionRollupsWebviewCommand(
 							ctx,
