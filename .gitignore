@@ -79,11 +79,16 @@ apps/vscode/webview-ui/src/**/*.js.map
 # SDK Session files / User data
 .cline/data
 .cline/tmp
-# Drive hub runtime state: facets, provider registries and room event logs.
-# Written into the tracked .cline/ tree, so without this a self-hosted tester
-# dirties their clone by running the app — and `git add -A` would commit their
-# own room history.
-.cline/drive
+# Drive hub runtime state: facets, provider registries, room event logs and the
+# task bank. Written into the tracked .cline/ tree, so without this a
+# self-hosted tester dirties their clone by running the app — and `git add -A`
+# would commit their own room history.
+#
+# NOT root-anchored. The hub writes relative to its own cwd, so the documented
+# `bun run --cwd apps/cline-hub dev` produces apps/cline-hub/.cline/drive and
+# apps/cline-hub/.drive — which a root-anchored rule misses entirely.
+**/.cline/drive/
+**/.drive/
 *.db
 *.db-shm
 *.db-wal
