@@ -22,6 +22,7 @@
         "cli": "bun --conditions=development --cwd apps/cli dev",
         "code": "bun --conditions=development -F @cline/code dev",
         "clean": "bun run sdk/scripts/clean.ts",
+        "preflight": "bun apps/cli/src/commands/preflight.ts",
         "check:links": "bun sdk/scripts/check-links.ts",
         "check:drivecode-docs": "bun sdk/scripts/check-drivecode-structure.ts",
         "test:drivecode-docs": "bun test sdk/scripts/check-drivecode-structure.test.ts",

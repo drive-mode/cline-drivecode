@@ -337,12 +337,20 @@ milestones — not after every tool call.
 
 ## Quickstart
 
-Requires [Bun](https://bun.sh) 1.3+ and Node 22+.
+Drive is **public but self-hosted**: clone this repository and run it on your
+own machine. There is no hosted service and nothing to sign up for. Requires
+[Bun](https://bun.sh) 1.3.13+ and Node 22+.
 
 ```bash
-bun install
-bun run build:sdk          # required first — packages resolve each other through dist/
+git clone https://github.com/hhalperin/cline-drivecode.git
+cd cline-drivecode
+bun install --frozen-lockfile
+bun run build:sdk               # required — packages resolve each other through dist/
+bun run preflight               # toolchain, build output, ports, provider
 ```
+
+`bun run preflight` also works before install — it just reports the install and
+build steps as the ones still to do.
 
 **Hub (Drive tab, Spotlight, Status Hub)**
 
@@ -350,15 +358,24 @@ bun run build:sdk          # required first — packages resolve each other thro
 bun run --cwd apps/cline-hub dev
 ```
 
-Open the dashboard URL printed in the terminal and click **Connect**. Preferred
-ports are used when free; if they are busy, the next free ports are chosen
-automatically. The hub daemon is the same: clients discover it — you do not
-hardcode a port.
+Two URLs are printed. Open the one labelled **`Cline Hub dashboard listening`**
+(default `http://127.0.0.1:8787/`), not the Vite one, and click **Connect**.
+Preferred ports are used when free; if they are busy, the next free ports are
+chosen automatically — read them from your terminal rather than hardcoding one.
+`dev` starts the hub daemon for you.
 
 - **Drive** in the sidebar is the home for everything above.
-- **Start a Drive call** opens a room with an agent.
+- **Start a Drive call** opens a room with an agent. The call renders around
+  the chat surface, so the URL changes — that is expected.
 - **Status Hub** is the Board, Changelog, and Dependency map.
 - In a call, **Drive Settings** chooses local/cloud/hybrid plus STT/TTS providers.
+
+**Bring your own key.** A real call needs a provider. An API key env var alone
+does not select one, so either run
+`bun run cli auth --provider <id> --apikey <key> --modelid <model>` or pick a
+provider under **Settings → Providers** in the dashboard. To look around with
+no credentials, open `/drive?demoShareScreen=1` on the dashboard URL — the
+scripted share-screen demo.
 
 **CLI (TUI)**
 
@@ -366,8 +383,18 @@ hardcode a port.
 bun run cli -i
 ```
 
-The interactive TUI auto-spawns the hub daemon. Use `bun run cli doctor` if
-something looks unhealthy.
+The interactive TUI auto-spawns the hub daemon. Use `bun run cli doctor
+preflight` when something will not start, and `bun run cli doctor` /
+`bun run cli doctor fix` when something is already running and shouldn't be.
+
+**Self-hosted beta**
+
+- [Install guide](docs/drivecode/reference/install.md) — prerequisites,
+  Windows notes, ports, expected test failures, uninstall
+- [Privacy](docs/drivecode/reference/privacy.md) — what is written to disk and
+  what leaves your machine
+- [Support](docs/drivecode/plans/cline-drivemode/ops/beta-support.md) — where
+  to report a problem
 
 | In the TUI | How |
 |---|---|

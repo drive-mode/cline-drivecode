@@ -1,0 +1,88 @@
+name: Drive beta report
+description: Report a bug or ask a question about the self-hosted Drive beta
+labels: ['drive', 'beta']
+body:
+    - type: markdown
+      attributes:
+          value: |
+              For the self-hosted Drive beta in this repository. Support is one
+              maintainer on a best-effort basis — there is no SLA.
+
+              **Do not paste API keys.** Drive does not record audio or keep
+              captions, so there is no transcript to attach. Preflight output
+              contains no secrets, but it does print the path to your provider
+              settings file — redact your username if that matters to you.
+    - type: dropdown
+      id: surface
+      attributes:
+          label: Surface
+          description: Where did it happen?
+          options:
+              - Install / build (clone, bun install, build:sdk)
+              - Hub dashboard (Connect, navigation)
+              - Drive call (join, leave, roster)
+              - Spotlight (presented artifacts)
+              - Voice (mic, captions, narration)
+              - Status Hub (Board, Changelog, Dependency map, Sessions)
+              - CLI / TUI
+              - Other
+          default: 0
+      validations:
+          required: true
+    - type: textarea
+      id: preflight
+      attributes:
+          label: Preflight output
+          description: Paste the full output of `bun run cli doctor preflight` (or `bun run preflight` if the install has not completed).
+          render: text
+      validations:
+          required: true
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened?
+          description: What did you expect instead?
+      validations:
+          required: true
+    - type: textarea
+      id: steps
+      attributes:
+          label: Steps to reproduce
+          value: |
+              1.
+              2.
+              3.
+      validations:
+          required: false
+    - type: input
+      id: provider-model
+      attributes:
+          label: Provider and model
+          description: A stalled call is usually a provider problem. Key not needed.
+          placeholder: 'e.g., anthropic / claude-sonnet-4-6'
+      validations:
+          required: false
+    - type: input
+      id: commit
+      attributes:
+          label: Commit
+          description: Output of `git rev-parse --short HEAD`.
+          placeholder: 'e.g., bfe01e4ad'
+      validations:
+          required: false
+    - type: textarea
+      id: system
+      attributes:
+          label: OS and browser
+          placeholder: |
+              OS: Windows 11 / macOS 15 / Ubuntu 24.04
+              Browser: Chrome 141
+      validations:
+          required: false
+    - type: checkboxes
+      id: known-issues
+      attributes:
+          label: Known issues
+          description: See docs/drivecode/reference/install.md.
+          options:
+              - label: This is not one of the two test failures that are expected on Windows.

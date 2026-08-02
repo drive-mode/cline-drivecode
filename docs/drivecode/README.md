@@ -26,6 +26,8 @@ All Drive / drivecode docs live under this folder:
 
 - [Status Hub](#status-hub)
 - [Drive Mode and Spotlight](#drive-mode-and-spotlight)
+- [Install (self-hosted)](reference/install.md)
+- [Privacy](reference/privacy.md)
 - [Architecture diagrams](reference/architecture.md)
 - [Where the code lives](#where-the-code-lives)
 - [Skills inventory](reference/skills-inventory.md)

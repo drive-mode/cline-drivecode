@@ -593,6 +593,25 @@ export function createDoctorCommand(
 		});
 
 	doctor
+		.command("preflight")
+		.description(
+			"Check prerequisites before starting the hub (Bun/Node, install, build output, ports, provider)",
+		)
+		.option("--cwd <path>", "Workspace root", process.cwd())
+		.option("--json", "Output as JSON")
+		.action(async function (this: Command) {
+			const opts = this.opts<{ cwd: string; json?: boolean }>();
+			const { formatPreflightReport, runPreflight } = await import(
+				"./preflight"
+			);
+			const report = await runPreflight({ cwd: opts.cwd });
+			io.writeln(
+				opts.json ? JSON.stringify(report) : formatPreflightReport(report),
+			);
+			setExitCode(report.ok ? 0 : 1);
+		});
+
+	doctor
 		.command("log")
 		.description("Open the CLI log file")
 		.action(async () => {
@@ -610,7 +629,7 @@ export function createDoctorCommand(
 			}
 		});
 
-			doctor
+	doctor
 		.command("session-rollups")
 		.description(
 			"Dump local Drive SessionRollups from room + bank JSONL (no network)",
@@ -626,10 +645,9 @@ export function createDoctorCommand(
 				callSession?: string;
 				json?: boolean;
 			}>();
-			const {
-				formatSessionRollupsDump,
-				readSessionRollups,
-			} = await import("@cline/core/hub");
+			const { formatSessionRollupsDump, readSessionRollups } = await import(
+				"@cline/core/hub"
+			);
 			const limit = Math.max(1, Number.parseInt(opts.limit, 10) || 10);
 			const rollups = readSessionRollups(opts.cwd, {
 				limit,

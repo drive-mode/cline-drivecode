@@ -62,6 +62,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [MATRIX-workflow-coverage.md](leadership/MATRIX-workflow-coverage.md) | Workflow ↔ feature coverage matrix |
 | [decisions/](decisions/) | Leadership DECs (agent SoT, package location, product forks) |
 | [ops/hub-drive-ops.md](ops/hub-drive-ops.md) | Hub op catalog and failure modes |
+| [ops/beta-support.md](ops/beta-support.md) | Where self-hosted beta testers report problems (proposed default) |
 | [schemas/README.md](schemas/README.md) | Phase 0 schema index |
 | [prd/](prd/) | Product requirements. PRD 6 Driveagent portfolio / knowledge graph / recruit; success metrics |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn (+ status board) |
