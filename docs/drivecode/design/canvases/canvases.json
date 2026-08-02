@@ -17,11 +17,12 @@
         "gifWidth": 820,
         "frameMs": 110,
         "cut": [
-          { "from": "a2-message", "to": "a2-narration", "step": 2 },
-          { "from": "a3-bug", "to": "a3-bug", "step": 1 },
-          { "from": "a3-plan", "to": "a3-arch", "step": 2 },
-          { "from": "a3-edit", "to": "a3-test", "step": 2 },
-          { "from": "a3-walk", "to": "a3-demo", "step": 2 },
+          { "from": "a2-message", "to": "a2-you-show", "step": 2 },
+          { "from": "a2-narration", "to": "a2-narration", "step": 3 },
+          { "from": "a3-bug", "to": "a3-bug", "step": 2 },
+          { "from": "a3-arch", "to": "a3-arch", "step": 2 },
+          { "from": "a3-edit", "to": "a3-test", "step": 3 },
+          { "from": "a3-walk", "to": "a3-demo", "step": 3 },
           { "from": "a9-approved", "to": "a9-approved", "step": 2 }
         ]
       },
