@@ -295,6 +295,16 @@ type DriveSessionHostMessage = HostMessage & {
 				artifactKind?: string;
 				uri?: string;
 				ownerParticipantId: string;
+				/**
+				 * The source the hub materialized `uri` from. The Spotlight
+				 * re-renders artifacts from it client-side, so it is a read field
+				 * here even though nothing in this hook consumes it.
+				 */
+				produce?: {
+					tool?: string;
+					templateId?: string;
+					args?: Record<string, unknown>;
+				};
 			}>;
 		};
 		chatForks?: ChatForkRecord[];

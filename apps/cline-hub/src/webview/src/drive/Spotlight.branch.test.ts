@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolvePresentedArtifact } from "./artifactBody";
 
 /**
  * Human vs agent Spotlight branch rules (mirrors Spotlight.tsx props).
@@ -77,6 +78,26 @@ describe("Spotlight narration vs staged artifact", () => {
 		expect(staged({ caption: "Reading the failing test now." })).toBe(false);
 		expect(staged({ title: "Data flow" })).toBe(true);
 		expect(staged({ uri: "data:image/png;base64,AAA" })).toBe(true);
+	});
+
+	it("stages a beat-only show once its backlog item completes it", () => {
+		// A `drive_script_beat` presents a show with a caption and nothing else,
+		// so on its own it must not stage. Once the same show id resolves against
+		// the backlog the frame gets the item's title, and the gate flips —
+		// which is why the client-side renderers need no widening here.
+		const beat = { showItemId: "s1", caption: "Here is the layout." };
+		expect(staged(beat)).toBe(false);
+		expect(
+			staged(
+				resolvePresentedArtifact(beat, [
+					{
+						id: "s1",
+						title: "Architecture overview",
+						produce: { tool: "render_mermaid" },
+					},
+				]) ?? {},
+			),
+		).toBe(true);
 	});
 
 	it("subtitles a script beat that lands before anything is staged", () => {

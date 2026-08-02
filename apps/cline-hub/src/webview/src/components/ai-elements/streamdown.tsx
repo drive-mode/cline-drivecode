@@ -150,7 +150,17 @@ function createLazyMermaidPlugin(): DiagramPlugin {
 	};
 }
 
-const streamdownPlugins = { cjk, mermaid: createLazyMermaidPlugin() };
+/**
+ * Fresh plugin set for a surface that needs its own mermaid config. The
+ * mermaid plugin holds its config on the instance, so a surface that renders
+ * on a different background (the Spotlight's fixed-dark screen) must own its
+ * instance — sharing one would let the last config win for every surface.
+ */
+export function createHubStreamdownPlugins() {
+	return { cjk, mermaid: createLazyMermaidPlugin() };
+}
+
+const streamdownPlugins = createHubStreamdownPlugins();
 
 export type HubStreamdownProps = StreamdownProps;
 

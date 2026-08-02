@@ -37,6 +37,8 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { SpotlightProduce } from "./artifactBody";
+import { ScreenArtifact } from "./ScreenArtifact";
 import {
 	projectShowRail,
 	type ShowRailEntry,
@@ -62,6 +64,12 @@ export type SpotlightArtifact = {
 	 */
 	caption?: string;
 	uri?: string;
+	/**
+	 * The backlog item's `produce` block for this show. The hub keeps the
+	 * source it materialized `uri` from, so the screen re-renders the real
+	 * artifact client-side instead of the SVG stub where it can.
+	 */
+	produce?: SpotlightProduce;
 };
 
 export type SpotlightViewProps = {
@@ -324,27 +332,6 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 			return _exhaustive;
 		}
 	}
-}
-
-/** Presented director artifact — the sticky pane's content, inside the frame. */
-function ScreenArtifact({ artifact }: { artifact: SpotlightArtifact }) {
-	return (
-		<figure className="flex max-h-full min-h-0 w-full max-w-3xl flex-col items-center gap-3">
-			{artifact.uri ? (
-				// The screen scales the artifact; it never scrolls out of frame.
-				<img
-					alt={artifact.caption ?? artifact.title ?? "Presented artifact"}
-					className="min-h-0 w-full flex-1 rounded-md border border-white/10 bg-background object-contain"
-					src={artifact.uri}
-				/>
-			) : null}
-			<figcaption className="w-full shrink-0 text-center">
-				<p className="text-sm font-medium text-zinc-100">
-					{artifact.title ?? "Presented artifact"}
-				</p>
-			</figcaption>
-		</figure>
-	);
 }
 
 /** Nothing staged — the sharer's plain workspace is what the room sees. */

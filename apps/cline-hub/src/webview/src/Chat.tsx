@@ -51,6 +51,7 @@ import {
 } from "./components/PendingApprovalsPanel";
 import { PlanEditor } from "./components/PlanEditor";
 import { hasNowLastFailure, steerAppliedBanner } from "./drive/agencyChrome";
+import { resolvePresentedArtifact } from "./drive/artifactBody";
 import {
 	listPlanTasks,
 	mutateBankAcceptSdlcFreeze,
@@ -80,7 +81,7 @@ import {
 	suggestRouteForUtterance,
 } from "./drive/routeSuggest";
 import { SdlcFreezeAcceptChip } from "./drive/SdlcFreezeAcceptChip";
-import { Spotlight } from "./drive/Spotlight";
+import { Spotlight, type SpotlightArtifact } from "./drive/Spotlight";
 import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
 import {
 	planRecoveryAccept,
@@ -328,6 +329,12 @@ export default function Chat({
 		midPlanAddCount: 0,
 		planTitle: "Current work",
 	});
+
+	/** Artifact bound to the Spotlight frame — presented show + its backlog item. */
+	const presentedArtifact: SpotlightArtifact | null = useMemo(
+		() => resolvePresentedArtifact(presentedShow, showBacklog),
+		[presentedShow, showBacklog],
+	);
 
 	/** Mid-call stall slice (W4.1) — counters + open lastFailure; no utterance. */
 	const openStallFailures: StallOpenFailure[] = useMemo(() => {
@@ -1791,17 +1798,7 @@ export default function Chat({
 							// The frame, not the backlog `status`, decides which chip
 							// reads `showing` — a room sync can land after the present.
 							activeShowId={presentedShow?.showItemId ?? null}
-							artifact={
-								presentedShow
-									? {
-											caption: presentedShow.caption,
-											kind: presentedShow.artifactKind,
-											sticky: presentedShow.sticky,
-											title: presentedShow.title,
-											uri: presentedShow.uri,
-										}
-									: null
-							}
+							artifact={presentedArtifact}
 							backlog={showBacklog}
 							cards={drive.stageCards}
 							className="min-h-0 min-w-0 flex-1"
