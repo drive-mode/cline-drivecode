@@ -79,6 +79,11 @@ apps/vscode/webview-ui/src/**/*.js.map
 # SDK Session files / User data
 .cline/data
 .cline/tmp
+# Drive hub runtime state: facets, provider registries and room event logs.
+# Written into the tracked .cline/ tree, so without this a self-hosted tester
+# dirties their clone by running the app — and `git add -A` would commit their
+# own room history.
+.cline/drive
 *.db
 *.db-shm
 *.db-wal
