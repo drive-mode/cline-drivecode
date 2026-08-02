@@ -2,7 +2,25 @@
 
 ## Status
 
-Proposed — decision owner: Harrison. Not covered by any blanket accept; requires an explicit route choice.
+**Accepted 2026-08-02 — Route B (standalone fork product), for now.**
+
+Harrison's call: keep Drive mode in the `hhalperin/cline-drivecode` fork and
+merge nothing upstream to `cline/cline` for now.
+
+**Beta shape (decided 2026-08-02):** public, **self-hosted** — anyone can clone
+the fork and run it. Not a hosted service: the hub remains a locally-spawned
+single-writer daemon and multi-human rooms stay an explicit non-goal (see
+[spotlight-screen-share](../initiatives/spotlight-screen-share/overview.md)
+non-goals). This obliges the packaging work in the MVP plan — a tagged release
+artifact, install docs proven by a clean clone on a second machine, a preflight
+check, and a support path.
+
+**What this defers rather than closes.** Route C (upstream the protocol, keep
+the hub as the product) remains the recommendation in the analysis below and is
+revisitable once the beta produces evidence. Nothing in the MVP forecloses it:
+the schemas stay clean and the fork's divergence stays confined to Drive
+surfaces. The rebase-treadmill cost named under Consequences is accepted
+knowingly for the beta window.
 
 ## Metadata
 

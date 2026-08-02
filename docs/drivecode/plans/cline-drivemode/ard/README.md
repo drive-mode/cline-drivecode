@@ -23,8 +23,8 @@
 | [ARD-0013](ARD-0013-state-partition.md) | Three-lane state partition (event log / live room / facets) | Accepted | [DRV-KERNEL](../features/DRV-KERNEL.md) |
 | [ARD-0014](ARD-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle (invisible auditable workers) | Accepted | [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md), [DRV-TRANSCRIPT](../features/DRV-TRANSCRIPT.md), [DRV-PARALLEL-WAVES](../features/DRV-PARALLEL-WAVES.md) |
 | [ARD-0015](ARD-0015-task-session-observability.md) | Local task-session observability; tasks as satisfaction unit | Proposed | [DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md), [DRV-PLAN-IMPROVE](../features/DRV-PLAN-IMPROVE.md) |
-| [ARD-0016](ARD-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | Proposed — owner: Harrison | — |
-| [ARD-0017](ARD-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | Proposed — owner: Harrison | [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-TTS](../features/DRV-TTS.md) |
+| [ARD-0016](ARD-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** (2026-08-02) — Route B (fork); public self-hosted beta | — |
+| [ARD-0017](ARD-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | Proposed — **deferred behind S9** (owner: Harrison) | [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-TTS](../features/DRV-TTS.md) |
 
 Product requirements: [../prd/prd-driveagent-portfolio.md](../prd/prd-driveagent-portfolio.md), [../prd/prd-pip-partner.md](../prd/prd-pip-partner.md), [../prd/prd-drive-as-cline-mode.md](../prd/prd-drive-as-cline-mode.md), [../prd/prd-task-bank-drive-loop.md](../prd/prd-task-bank-drive-loop.md), [../prd/prd-task-satisfaction-observability.md](../prd/prd-task-satisfaction-observability.md).  
 Success metrics: [../prd/prd-success-metrics.md](../prd/prd-success-metrics.md) (phase/CI). Session satisfaction: [PRD 10](../prd/prd-task-satisfaction-observability.md).

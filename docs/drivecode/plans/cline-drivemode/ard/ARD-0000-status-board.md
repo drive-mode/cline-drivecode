@@ -37,8 +37,8 @@
 | [ARD-0013](ARD-0013-state-partition.md) | Three-lane state partition | **Accepted** | Durable log + single live store; remote/org/audit are adapters |
 | [ARD-0014](ARD-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle (invisible auditable workers) | **Accepted** | Hub `drive.fork.*` + PromotePacket; reject CLI/checkpoint fork as worker substrate |
 | [ARD-0015](ARD-0015-task-session-observability.md) | Local task-session observability; tasks as satisfaction unit | **Proposed** | PRD 10; no phone-home; gated improve; deterministic cursor. **Impl note (2026-07-31):** Slice 2–3 + W4.1/W4.2 landed on branch (`classifyStall`, `PlanningProposal`, `PlanImproveGate`, auto stall → recovery fork). Status stays **Proposed** until leadership accept — do not flip to Accepted here. |
-| [ARD-0016](ARD-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Proposed** | Routes A/B/C (upstream / fork product / hybrid). Owner: Harrison — explicit route choice required; not covered by any blanket accept. |
-| [ARD-0017](ARD-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | **Proposed** | Optional `cues[]` + `bindTimeline` on `ScriptBeatSchema`: fractions of the spoken line, artifact-relative refs, end state always reachable. Additive; reference implementation is the demo canvas. |
+| [ARD-0016](ARD-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** (2026-08-02) | **Route B — standalone fork product**, for now: stay in `hhalperin/cline-drivecode`, nothing upstream to `cline/cline`. Beta is **public + self-hosted** (clone and run), not hosted — the hub stays a local single-writer daemon and multi-human rooms stay a non-goal. Route C (upstream the protocol) stays revisitable; nothing in the MVP forecloses it. |
+| [ARD-0017](ARD-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | **Proposed — deferred** | Optional `cues[]` + `bindTimeline` on `ScriptBeatSchema`: fractions of the spoken line, artifact-relative refs, end state always reachable. Additive; reference implementation is the demo canvas. **Deferred behind spotlight S9**, which is itself out of the MVP cut — this decision is not on the beta's critical path. Revisit when S9 is scheduled. |
 
 ## Leadership decisions (this wave)
 
@@ -73,8 +73,8 @@ SDK amendments (reducer/projection in `@cline/drive`; host port + conformance ki
 | Catch-up orientation copy owner | DRV-LEAVE-END | One factual “since you left” line from stage reducer |
 | One-shot fork vs specialist | Later; not Phase 0 | Out of Phase 0; track under W-33 |
 | Session satisfaction metrics accept | [ARD-0015](ARD-0015-task-session-observability.md), [PRD 10](../prd/prd-task-satisfaction-observability.md) | Local rollups + gated plan improve; leadership dual-proxy defaults in [BRIEF-task-satisfaction](../leadership/BRIEF-task-satisfaction.md) |
-| Distribution route (upstream vs fork vs hybrid) | [ARD-0016](ARD-0016-distribution-and-positioning.md) | Owner: Harrison. Route choice re-orders spotlight S1–S9 and drive-audio slice priorities |
-| Narration cue schema accept | [ARD-0017](ARD-0017-narration-bound-presentation-cues.md) | Owner: Harrison. Additive `cues[]`/`bindTimeline` on `ScriptBeatSchema`; blocks spotlight S9 being built as specified |
+| Voice backend for the beta | [drive-audio](../initiatives/drive-audio/overview.md) | MVP ships on the shipped `browser-speechSynthesis` backend so no tester needs API keys; BYOK providers are already modelled in `drive/src/topology/` and land immediately after. Owner: Harrison — confirm the robotic-but-zero-config tradeoff is acceptable for beta. |
+| Beta support path | MVP Phase 5 | GitHub issues on the fork vs something more managed. Owner: Harrison. |
 
 ## Explicitly not open anymore (closed by this wave’s defaults)
 
@@ -83,6 +83,9 @@ SDK amendments (reducer/projection in `@cline/drive`; host port + conformance ki
 - Pixel user-share in MVP → **Rejected** ([DEC-open-product-forks](../decisions/DEC-open-product-forks.md)).
 - Dual prompt stores (facets + homes) → **Rejected** ([DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md)).
 - Background turns in unfocused rooms (MVP) → **Rejected**.
+- Distribution route (upstream vs fork vs hybrid) → **Route B, fork** ([ARD-0016](ARD-0016-distribution-and-positioning.md), 2026-08-02). Revisitable after the beta.
+- Hosted beta → **Rejected** for the MVP: the beta is public but **self-hosted**. A hosted hub would require multi-human rooms and a hosted-hub initiative, both explicit non-goals today.
+- Narration cue schema accept ([ARD-0017](ARD-0017-narration-bound-presentation-cues.md)) → **deferred**, not open: spotlight S9 is outside the MVP cut, so this is off the beta's critical path.
 
 ## Change control
 
