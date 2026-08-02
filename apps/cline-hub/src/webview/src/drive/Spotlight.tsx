@@ -5,6 +5,7 @@
  */
 
 import type { StageCard, StagePin } from "@cline/shared";
+import { PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
 	CodeBlock,
@@ -29,6 +30,12 @@ import {
 	TestStatus,
 } from "@/components/ai-elements/test-results";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export type SpotlightHumanPin = Pick<StagePin, "kind" | "label"> & {
@@ -47,6 +54,10 @@ export type SpotlightViewProps = {
 	nowLabel?: string;
 	nextLabel?: string;
 	emptyHint?: string;
+	/** Fold state of the feed drawer beside the Spotlight. */
+	feedCollapsed?: boolean;
+	/** Omit to hide the fold toggle — surfaces without a feed have nothing to fold. */
+	onToggleFeed?: () => void;
 	className?: string;
 	children?: ReactNode;
 };
@@ -258,16 +269,19 @@ export function Spotlight({
 	nowLabel,
 	nextLabel,
 	emptyHint = "Waiting for partner tool activity on this session.",
+	feedCollapsed,
+	onToggleFeed,
 	className,
 	children,
 }: SpotlightViewProps) {
 	const showHumanPrimary = Boolean(humanPin) && (humanSharing || Boolean(humanPin));
 	const suppressAgentCards = Boolean(humanPin) && humanSharing !== false;
+	const feedToggleLabel = feedCollapsed ? "Show chat feed" : "Hide chat feed";
 
 	return (
 		<div
 			className={cn(
-				"flex min-h-0 min-w-0 flex-1 flex-col border-l bg-muted/20",
+				"flex min-h-0 min-w-0 flex-1 flex-col bg-muted/20",
 				className,
 			)}
 		>
@@ -285,6 +299,37 @@ export function Spotlight({
 						{showHumanPrimary ? "Human share" : "Live room"}
 					</Badge>
 				)}
+				{onToggleFeed ? (
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Button
+									aria-expanded={!feedCollapsed}
+									aria-label={feedToggleLabel}
+									// The ghost variant styles aria-expanded like a popover
+									// trigger; here it only reports the drawer's fold state.
+									className={cn(
+										"shrink-0 aria-expanded:bg-transparent",
+										feedCollapsed
+											? "text-amber-700 dark:text-amber-300"
+											: "text-muted-foreground hover:text-foreground aria-expanded:text-muted-foreground",
+									)}
+									onClick={onToggleFeed}
+									size="icon-sm"
+									type="button"
+									variant="ghost"
+								/>
+							}
+						>
+							{feedCollapsed ? (
+								<PanelRightOpenIcon className="size-3.5" />
+							) : (
+								<PanelRightCloseIcon className="size-3.5" />
+							)}
+						</TooltipTrigger>
+						<TooltipContent side="bottom">{feedToggleLabel}</TooltipContent>
+					</Tooltip>
+				) : null}
 			</div>
 			<div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
 				{humanPin ? <HumanPinContent pin={humanPin} /> : null}

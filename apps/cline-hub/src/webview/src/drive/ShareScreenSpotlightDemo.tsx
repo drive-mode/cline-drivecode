@@ -180,7 +180,7 @@ export function ShareScreenSpotlightDemo() {
 					nextLabel={projection.nextLabel}
 					nowLabel={projection.nowLabel}
 					sharerLabel={sharerLabel}
-					className="h-full border-l-0"
+					className="h-full"
 				/>
 			</div>
 		</PageFrame>

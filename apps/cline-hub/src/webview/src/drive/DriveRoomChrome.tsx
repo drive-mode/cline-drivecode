@@ -40,11 +40,30 @@ import {
 import { downloadTextFile } from "../status/downloadTextFile";
 import { useEffect, useState } from "react";
 
+/** Call roster wired to the session — mounts wherever the roster belongs. */
+export function DriveRoster({ session }: { session: UseDriveSessionResult }) {
+	const { drive, setDrive } = session;
+	if (!drive.active) {
+		return null;
+	}
+	return (
+		<Roster
+			drive={drive}
+			onDriveChange={setDrive}
+			onTranscriptFocus={(participantId) => {
+				setDrive((current) => applyTranscriptFocus(current, participantId));
+			}}
+			workspaceRoot={session.workspaceRoot}
+		/>
+	);
+}
+
 /** Call strip, settings, now/next, join note — mounts above the conversation. */
 export function DriveRoomChrome({
 	session,
 	disabled,
 	providerId,
+	showRoster = true,
 	turnInFlight = false,
 	onCleanDrainContinue,
 	onCleanDrainDismiss,
@@ -53,6 +72,8 @@ export function DriveRoomChrome({
 	session: UseDriveSessionResult;
 	disabled: boolean;
 	providerId: string;
+	/** False when the caller mounts {@link DriveRoster} itself (feed drawer). */
+	showRoster?: boolean;
 	turnInFlight?: boolean;
 	onCleanDrainContinue?: () => void;
 	onCleanDrainDismiss?: () => void;
@@ -177,18 +198,7 @@ export function DriveRoomChrome({
 					row={planReentry}
 				/>
 			) : null}
-			{drive.active ? (
-				<Roster
-					drive={drive}
-					onDriveChange={setDrive}
-					onTranscriptFocus={(participantId) => {
-						setDrive((current) =>
-							applyTranscriptFocus(current, participantId),
-						);
-					}}
-					workspaceRoot={session.workspaceRoot}
-				/>
-			) : null}
+			{showRoster ? <DriveRoster session={session} /> : null}
 			{drive.active && driveVoice.settingsOpen ? (
 				<DriveSettingsPanel
 					onClose={() =>

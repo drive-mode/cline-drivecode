@@ -65,7 +65,11 @@ import {
 	isChatForkSession,
 } from "./drive/ChatForkAuditPanel";
 import { DriveHeaderControls } from "./drive/DriveCallChrome";
-import { DriveRoomChrome, DriveVoiceBar } from "./drive/DriveRoomChrome";
+import {
+	DriveRoomChrome,
+	DriveRoster,
+	DriveVoiceBar,
+} from "./drive/DriveRoomChrome";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
@@ -99,7 +103,12 @@ import { useDriveSession } from "./drive/useDriveSession";
 import { createVoiceStack } from "./drive/voice/createVoiceStack";
 import { shouldSpeakDriveTts } from "./drive/voice/driveVoiceUi";
 import { clearVoiceCaptionAfterSend } from "./drive/voice/voiceCaptionState";
+import {
+	readDriveFeedCollapsed,
+	writeDriveFeedCollapsed,
+} from "./lib/drive-feed-collapsed";
 import { subscribeToHostMessages } from "./lib/host-message-gateway";
+import { cn } from "./lib/utils";
 import { getVsCodeApi, postToHost } from "./vscode";
 
 type ProviderOption = Extract<
@@ -276,6 +285,19 @@ export default function Chat({
 
 	const driveRef = useRef(drive);
 	driveRef.current = drive;
+	/** Spotlight-primary split: Spotlight owns the room, feed folds beside it. */
+	const stageLayout = drive.active && drive.stageLayout;
+	const feedRoomKey = drive.roomId ?? DRIVE_DEFAULT_ROOM_ID;
+	const [feedCollapsed, setFeedCollapsed] = useState(false);
+	/** Fold state is webview-local and per room — rejoining restores the drawer. */
+	useEffect(() => {
+		setFeedCollapsed(readDriveFeedCollapsed(feedRoomKey));
+	}, [feedRoomKey]);
+	const toggleFeedCollapsed = useCallback(() => {
+		const next = !feedCollapsed;
+		setFeedCollapsed(next);
+		writeDriveFeedCollapsed(feedRoomKey, next);
+	}, [feedCollapsed, feedRoomKey]);
 	/** Guard bind_now spam — one bind per now-task while Agent posture. */
 	const lastBoundNowTaskIdRef = useRef<string | null>(null);
 	/** Mute identical stuck-recovery offers until a new failure fingerprint. */
@@ -356,7 +378,7 @@ export default function Chat({
 	const recoveryOfferTargetRef = useRef(recoveryOfferTarget);
 	recoveryOfferTargetRef.current = recoveryOfferTarget;
 	const showStuckRecovery = shouldOfferRecoveryFork({
-		driveActive: drive.active && drive.stageLayout,
+		driveActive: stageLayout,
 		nowTaskId: drive.bankSnapshot.nowTaskId,
 		nowLastFailure: drive.bankSnapshot.nowLastFailure,
 		dismissedOfferKey: dismissedRecoveryOfferKey,
@@ -1753,121 +1775,27 @@ export default function Chat({
 					}}
 					providerId={provider}
 					session={driveSession}
+					showRoster={!stageLayout}
 					turnInFlight={sending}
 				/>
 				<div
 					className={
-						drive.active && drive.stageLayout
-							? "flex min-h-0 flex-1"
+						stageLayout
+							? "flex min-h-0 min-w-0 flex-1"
 							: "flex min-h-0 flex-1 flex-col"
 					}
 				>
-					<div
-						className={
-							drive.active && drive.stageLayout
-								? "flex min-h-0 w-[42%] min-w-[280px] flex-col border-r"
-								: "flex min-h-0 flex-1 flex-col"
-						}
-					>
-						<ConversationPanel
-							forkError={forkError}
-							forking={forking}
-							isHydrating={isHydrating}
-							messages={visibleMessages}
-							onFork={() => {
-								setForking(true);
-								setForkError(null);
-								postToHost({ type: "forkSession" });
-							}}
-							sending={sending}
-						/>
-						<PendingApprovalsPanel
-							approvals={pendingApprovals}
-							onRespond={respondToApproval}
-						/>
-						<DriveVoiceBar
-							disabled={isHydrating}
-							onSendSpoken={sendDrivePrompt}
-							onSttError={setStatus}
-							sending={sending}
-							session={driveSession}
-						/>
-						{routeSuggestion ? (
-							<RouteSuggestChip
-								onAccept={acceptRouteSuggestion}
-								onDismiss={skipRouteSuggestion}
-								suggestion={routeSuggestion}
-							/>
-						) : null}
-						<Composer
-							autoApproveTools={autoApproveTools}
-							disabled={isHydrating}
-							enableSpawn={enableSpawn}
-							enableTeams={enableTeams}
-							enableTools={enableTools}
-							maxIterations={maxIterations}
-							model={model}
-							mode={mode}
-							modelSelectorOpen={modelSelectorOpen}
-							models={models}
-							onAbort={() => {
-								postToHost({ type: "abort" });
-								setStatus("Abort requested...");
-							}}
-							onAutoApproveToolsChange={setAutoApproveTools}
-							onEnableSpawnChange={setEnableSpawn}
-							onEnableTeamsChange={setEnableTeams}
-							onEnableToolsChange={setEnableTools}
-							onModeChange={setMode}
-							onMaxIterationsChange={setMaxIterations}
-							onModelChange={setModel}
-							pendingSteers={pendingSteers}
-							onModelSelectorOpenChange={setModelSelectorOpen}
-							onProviderChange={(nextProvider) => {
-								setProvider(nextProvider);
-								const rememberedModel =
-									lastSelection.lastModelByProvider[nextProvider];
-								const providerModelIds = (
-									modelsByProvider[nextProvider] ?? []
-								).map((item) => item.id);
-								if (
-									rememberedModel &&
-									providerModelIds.includes(rememberedModel)
-								) {
-									setModel(rememberedModel);
-									return;
-								}
-								setModel("");
-							}}
-							onSend={({ prompt, attachments, attachmentCount }) => {
-								gateRouteThenFlush({
-									prompt,
-									attachments,
-									attachmentCount,
-									source: "text",
-								});
-							}}
-							onSystemPromptChange={setSystemPrompt}
-							onReasonLevelChange={setReasonLevel}
-							provider={provider}
-							providers={providers}
-							sending={sending}
-							status={status}
-							systemPrompt={systemPrompt}
-							reasonLevel={effectiveReasonLevel}
-							workspaceRoot={defaults.workspaceRoot}
-						/>
-					</div>
-					{drive.active && drive.stageLayout ? (
+					{stageLayout ? (
 						<Spotlight
 							cards={drive.stageCards}
-							className="min-h-0 flex-1"
+							className="min-h-0 min-w-0 flex-1"
 							demo={drive.demo}
 							emptyHint={
 								drive.demo
 									? "Demo mode — join Drive to project live hub stage cards."
 									: "Waiting for partner tool activity on this session."
 							}
+							feedCollapsed={feedCollapsed}
 							humanPin={
 								drive.stageSharer === "you" && drive.stagePin
 									? {
@@ -1888,6 +1816,7 @@ export default function Chat({
 								drive.bankSnapshot.nowTaskId ??
 								(sending ? "partner working" : "idle")
 							}
+							onToggleFeed={toggleFeedCollapsed}
 							sharerLabel={
 								drive.stageSharer === "you" ? "You" : drive.partnerName
 							}
@@ -2122,6 +2051,109 @@ export default function Chat({
 							</div>
 						</Spotlight>
 					) : null}
+					<div
+						className={
+							stageLayout
+								? cn(
+										"flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-l transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none",
+										feedCollapsed
+											? "w-0 border-l-0 opacity-0"
+											: "w-[340px] max-w-[45%]",
+									)
+								: "flex min-h-0 flex-1 flex-col"
+						}
+						inert={stageLayout && feedCollapsed}
+					>
+						{stageLayout ? <DriveRoster session={driveSession} /> : null}
+						<ConversationPanel
+							forkError={forkError}
+							forking={forking}
+							isHydrating={isHydrating}
+							messages={visibleMessages}
+							onFork={() => {
+								setForking(true);
+								setForkError(null);
+								postToHost({ type: "forkSession" });
+							}}
+							sending={sending}
+						/>
+						<PendingApprovalsPanel
+							approvals={pendingApprovals}
+							onRespond={respondToApproval}
+						/>
+						<DriveVoiceBar
+							disabled={isHydrating}
+							onSendSpoken={sendDrivePrompt}
+							onSttError={setStatus}
+							sending={sending}
+							session={driveSession}
+						/>
+						{routeSuggestion ? (
+							<RouteSuggestChip
+								onAccept={acceptRouteSuggestion}
+								onDismiss={skipRouteSuggestion}
+								suggestion={routeSuggestion}
+							/>
+						) : null}
+						<Composer
+							autoApproveTools={autoApproveTools}
+							disabled={isHydrating}
+							enableSpawn={enableSpawn}
+							enableTeams={enableTeams}
+							enableTools={enableTools}
+							maxIterations={maxIterations}
+							model={model}
+							mode={mode}
+							modelSelectorOpen={modelSelectorOpen}
+							models={models}
+							onAbort={() => {
+								postToHost({ type: "abort" });
+								setStatus("Abort requested...");
+							}}
+							onAutoApproveToolsChange={setAutoApproveTools}
+							onEnableSpawnChange={setEnableSpawn}
+							onEnableTeamsChange={setEnableTeams}
+							onEnableToolsChange={setEnableTools}
+							onModeChange={setMode}
+							onMaxIterationsChange={setMaxIterations}
+							onModelChange={setModel}
+							pendingSteers={pendingSteers}
+							onModelSelectorOpenChange={setModelSelectorOpen}
+							onProviderChange={(nextProvider) => {
+								setProvider(nextProvider);
+								const rememberedModel =
+									lastSelection.lastModelByProvider[nextProvider];
+								const providerModelIds = (
+									modelsByProvider[nextProvider] ?? []
+								).map((item) => item.id);
+								if (
+									rememberedModel &&
+									providerModelIds.includes(rememberedModel)
+								) {
+									setModel(rememberedModel);
+									return;
+								}
+								setModel("");
+							}}
+							onSend={({ prompt, attachments, attachmentCount }) => {
+								gateRouteThenFlush({
+									prompt,
+									attachments,
+									attachmentCount,
+									source: "text",
+								});
+							}}
+							onSystemPromptChange={setSystemPrompt}
+							onReasonLevelChange={setReasonLevel}
+							provider={provider}
+							providers={providers}
+							sending={sending}
+							status={status}
+							systemPrompt={systemPrompt}
+							reasonLevel={effectiveReasonLevel}
+							workspaceRoot={defaults.workspaceRoot}
+						/>
+					</div>
 				</div>
 			</div>
 		</PromptInputProvider>
