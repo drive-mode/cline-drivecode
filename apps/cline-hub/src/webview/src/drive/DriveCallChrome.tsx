@@ -414,30 +414,3 @@ export function DriveStageCards({ cards }: { cards: readonly StageCard[] }) {
 		</div>
 	);
 }
-
-
-export function DriveNarrationBanner({
-	partnerName,
-	text,
-}: {
-	partnerName: string;
-	text: string;
-}) {
-	return (
-		<div
-			aria-atomic="true"
-			aria-live="polite"
-			className="mx-4 mb-2 flex gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm italic text-amber-900 dark:text-amber-100"
-			role="status"
-		>
-			<span
-				aria-hidden
-				className="mt-0.5 inline-block size-5 shrink-0 rounded-full border-2 border-amber-500 bg-amber-400/40"
-			/>
-			<span>
-				<span className="not-italic font-medium">{partnerName}: </span>
-				{text}
-			</span>
-		</div>
-	);
-}

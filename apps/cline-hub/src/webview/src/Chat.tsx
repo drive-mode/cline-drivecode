@@ -81,7 +81,6 @@ import {
 } from "./drive/routeSuggest";
 import { SdlcFreezeAcceptChip } from "./drive/SdlcFreezeAcceptChip";
 import { Spotlight } from "./drive/Spotlight";
-import { StickyStagePane } from "./drive/StickyStagePane";
 import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
 import {
 	planRecoveryAccept,
@@ -1789,6 +1788,17 @@ export default function Chat({
 				>
 					{stageLayout ? (
 						<Spotlight
+							artifact={
+								presentedShow
+									? {
+											caption: presentedShow.caption,
+											kind: presentedShow.artifactKind,
+											sticky: presentedShow.sticky,
+											title: presentedShow.title,
+											uri: presentedShow.uri,
+										}
+									: null
+							}
 							cards={drive.stageCards}
 							className="min-h-0 min-w-0 flex-1"
 							demo={drive.demo}
@@ -1808,6 +1818,11 @@ export default function Chat({
 									: null
 							}
 							humanSharing={drive.stageSharer === "you"}
+							// The presented show's caption is live narration —
+							// `drive_script_beat` overwrites it with the spoken line, and a
+							// beat can arrive before anything is staged. It outranks the
+							// one-time join note, which is orientation copy.
+							narration={presentedShow?.caption ?? driveJoinNote}
 							nextLabel={
 								drive.bankSnapshot.nextTitle ??
 								drive.bankSnapshot.nextTaskId ??
@@ -1845,12 +1860,6 @@ export default function Chat({
 									ranked={recruitStall.ranked}
 								/>
 							) : null}
-							<StickyStagePane
-								caption={presentedShow?.caption}
-								drive={drive}
-								title={presentedShow?.title}
-								uri={presentedShow?.uri}
-							/>
 							<ChatForkAuditPanel
 								auditMessages={auditMessages}
 								className="mt-3"

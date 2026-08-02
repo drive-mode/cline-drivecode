@@ -1,11 +1,21 @@
-import { NowNext } from "../components/NowNext";
+import type { PlanReentryRowModel } from "@cline/drive";
 import {
-	DriveCallStrip,
-	DriveNarrationBanner,
-} from "./DriveCallChrome";
-import { DriveMicBar } from "./voice/DriveMicBar";
-import { DriveSettingsPanel } from "./voice/DriveSettingsPanel";
-import { clearVoiceCaptionDraft } from "./voice/voiceCaptionState";
+	applyPlanImproveAccept,
+	buildShippedDigest,
+	createMemoryBankFs,
+	formatShippedDigestMarkdown,
+	planPlanImproveResolve,
+	statusSessionRowFromUnknown,
+} from "@cline/drive";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { NowNext } from "../components/NowNext";
+import { downloadTextFile } from "../status/downloadTextFile";
+import { DriveCallStrip } from "./DriveCallChrome";
+import { PlanImproveGate } from "./PlanImproveGate";
+import { PlanReentryRow } from "./PlanReentryRow";
+import { requestPlanImproveResolve } from "./planImproveResolve";
+import { loadPlanReentryRow } from "./planReentryLoad";
 import { Roster } from "./Roster";
 import { applyTranscriptFocus } from "./rosterHelpers";
 import {
@@ -17,28 +27,45 @@ import {
 	tickShowDirector,
 } from "./sampleShowPresent";
 import { requestSessionRollupsDump } from "./sessionRollupsDump";
-import { PlanReentryRow } from "./PlanReentryRow";
-import { loadPlanReentryRow } from "./planReentryLoad";
-import { PlanImproveGate } from "./PlanImproveGate";
-import { requestPlanImproveResolve } from "./planImproveResolve";
 import {
 	applyHardwarePrefsPatch,
 	applyVoiceFacetPatch,
 	applyVoiceProfile,
 	type UseDriveSessionResult,
 } from "./useDriveSession";
-import { Button } from "@/components/ui/button";
-import type { PlanReentryRowModel } from "@cline/drive";
-import {
-	applyPlanImproveAccept,
-	buildShippedDigest,
-	createMemoryBankFs,
-	formatShippedDigestMarkdown,
-	planPlanImproveResolve,
-	statusSessionRowFromUnknown,
-} from "@cline/drive";
-import { downloadTextFile } from "../status/downloadTextFile";
-import { useEffect, useState } from "react";
+import { DriveMicBar } from "./voice/DriveMicBar";
+import { DriveSettingsPanel } from "./voice/DriveSettingsPanel";
+import { clearVoiceCaptionDraft } from "./voice/voiceCaptionState";
+
+/**
+ * Narration banner for surfaces without the Spotlight frame. In the Spotlight
+ * layout the same text renders as the screen's subtitle slot instead.
+ */
+function DriveNarrationBanner({
+	partnerName,
+	text,
+}: {
+	partnerName: string;
+	text: string;
+}) {
+	return (
+		<div
+			aria-atomic="true"
+			aria-live="polite"
+			className="mx-4 mb-2 flex gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm italic text-amber-900 dark:text-amber-100"
+			role="status"
+		>
+			<span
+				aria-hidden
+				className="mt-0.5 inline-block size-5 shrink-0 rounded-full border-2 border-amber-500 bg-amber-400/40"
+			/>
+			<span>
+				<span className="not-italic font-medium">{partnerName}: </span>
+				{text}
+			</span>
+		</div>
+	);
+}
 
 /** Call roster wired to the session — mounts wherever the roster belongs. */
 export function DriveRoster({ session }: { session: UseDriveSessionResult }) {
@@ -208,14 +235,10 @@ export function DriveRoomChrome({
 						}))
 					}
 					onHardwareChange={(patch) => {
-						setDriveVoice((current) =>
-							applyHardwarePrefsPatch(current, patch),
-						);
+						setDriveVoice((current) => applyHardwarePrefsPatch(current, patch));
 					}}
 					onProfileChange={(profile) => {
-						setDriveVoice((current) =>
-							applyVoiceProfile(current, profile),
-						);
+						setDriveVoice((current) => applyVoiceProfile(current, profile));
 					}}
 					onSttChange={(sttId) => {
 						setDriveVoice((current) =>
@@ -276,19 +299,11 @@ export function DriveRoomChrome({
 						});
 						const rollups = result.rollups
 							.map(statusSessionRowFromUnknown)
-							.filter(
-								(row): row is NonNullable<typeof row> =>
-									row != null,
-							);
+							.filter((row): row is NonNullable<typeof row> => row != null);
 						const digest = buildShippedDigest({ rollups });
 						const markdown = formatShippedDigestMarkdown(digest);
-						const stamp = digest.generatedAt
-							.slice(0, 19)
-							.replace(/[:T]/g, "-");
-						downloadTextFile(
-							`drive-shipped-digest-${stamp}.md`,
-							markdown,
-						);
+						const stamp = digest.generatedAt.slice(0, 19).replace(/[:T]/g, "-");
+						downloadTextFile(`drive-shipped-digest-${stamp}.md`, markdown);
 						return `Downloaded drive-shipped-digest-${stamp}.md (${digest.sessionCount} sessions, ${digest.tasksCompletedTotal} tasks).`;
 					}}
 					presentSampleDisabled={disabled || !drive.active}
@@ -307,7 +322,12 @@ export function DriveRoomChrome({
 					snapshot={drive.bankSnapshot}
 				/>
 			) : null}
-			{driveJoinNote ? (
+			{/*
+			 * Same gate Chat.tsx mounts the Spotlight on. `stageLayout` is
+			 * persisted UI state that outlives `active`, so testing it alone
+			 * would swallow the Tier-0 handoff note once the call ends.
+			 */}
+			{driveJoinNote && !(drive.active && drive.stageLayout) ? (
 				<DriveNarrationBanner
 					partnerName={drive.partnerName}
 					text={driveJoinNote}

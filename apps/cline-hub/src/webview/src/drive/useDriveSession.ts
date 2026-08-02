@@ -287,10 +287,12 @@ type DriveSessionHostMessage = HostMessage & {
 		}>;
 		director?: {
 			activeShowId?: string | null;
+			stickyShowIds?: string[];
 			showBacklog?: Array<{
 				id: string;
 				title: string;
 				caption: string;
+				artifactKind?: string;
 				uri?: string;
 				ownerParticipantId: string;
 			}>;
@@ -406,6 +408,14 @@ function isDriveRoomChangedRoom(
 		) {
 			return false;
 		}
+		const stickyShowIds = value.director.stickyShowIds;
+		if (
+			stickyShowIds !== undefined &&
+			(!Array.isArray(stickyShowIds) ||
+				!stickyShowIds.every((id) => typeof id === "string"))
+		) {
+			return false;
+		}
 		const backlog = value.director.showBacklog;
 		if (
 			backlog !== undefined &&
@@ -416,6 +426,7 @@ function isDriveRoomChangedRoom(
 						typeof item.id === "string" &&
 						typeof item.title === "string" &&
 						typeof item.caption === "string" &&
+						isOptionalString(item.artifactKind) &&
 						isOptionalString(item.uri) &&
 						typeof item.ownerParticipantId === "string",
 				))
@@ -553,6 +564,19 @@ export function shouldReattachDriveSession({
 	);
 }
 
+/** Director show currently bound to the Spotlight frame (hub-authored). */
+export type PresentedShow = {
+	showItemId: string;
+	/** ShowArtifactKind of the active backlog item — presenter-bar eyebrow. */
+	artifactKind?: string;
+	/** Sticky policy in force for this show ("hold" | "replace"). */
+	sticky?: "hold" | "replace";
+	title?: string;
+	caption?: string;
+	uri?: string;
+	ownerParticipantId?: string;
+};
+
 export type UseDriveSessionResult = {
 	drive: DriveUiState;
 	setDrive: Dispatch<SetStateAction<DriveUiState>>;
@@ -578,13 +602,7 @@ export type UseDriveSessionResult = {
 	refreshDriveRoom: (roomId?: string) => boolean;
 	toggleDrive: () => void;
 	toggleStage: () => void;
-	presentedShow: {
-		showItemId: string;
-		title?: string;
-		caption?: string;
-		uri?: string;
-		ownerParticipantId?: string;
-	} | null;
+	presentedShow: PresentedShow | null;
 	chatForks: ChatForkRecord[];
 	showBacklog: ShowBacklogItem[];
 	workersPanelOpen: boolean;
@@ -619,13 +637,9 @@ export function useDriveSession(
 		readPersistedDriveVoice,
 	);
 	const [voiceCaption, setVoiceCaption] = useState("");
-	const [presentedShow, setPresentedShow] = useState<{
-		showItemId: string;
-		title?: string;
-		caption?: string;
-		uri?: string;
-		ownerParticipantId?: string;
-	} | null>(null);
+	const [presentedShow, setPresentedShow] = useState<PresentedShow | null>(
+		null,
+	);
 	const [chatForks, setChatForks] = useState<ChatForkRecord[]>([]);
 	const [showBacklog, setShowBacklog] = useState<ShowBacklogItem[]>([]);
 	const [workersPanelOpen, setWorkersPanelOpen] = useState(false);
@@ -963,13 +977,22 @@ export function useDriveSession(
 	useEffect(() => {
 		const onMessage = (message: DriveSessionHostMessage) => {
 			if (message.type === "drive_show_presented" && message.showItemId) {
-				setPresentedShow({
-					showItemId: message.showItemId,
+				// This message carries no artifactKind/sticky — keep the ones the
+				// room broadcast already established for the same show.
+				const showItemId = message.showItemId;
+				setPresentedShow((current) => ({
+					...(current?.showItemId === showItemId
+						? {
+								artifactKind: current.artifactKind,
+								sticky: current.sticky,
+							}
+						: {}),
+					showItemId,
 					title: message.title,
 					caption: message.caption,
 					uri: message.uri,
 					ownerParticipantId: message.ownerParticipantId,
-				});
+				}));
 				return;
 			}
 			if (message.type === "drive_script_beat") {
@@ -1219,8 +1242,13 @@ export function useDriveSession(
 				// static show caption while `drive_script_beat` owns live narration.
 				// Preserve the sticky caption so a later room sync (including the
 				// command-reply echo) does not clobber beat `say`.
+				const sticky = (room.director?.stickyShowIds ?? []).includes(active.id)
+					? "hold"
+					: "replace";
 				setPresentedShow((current) => ({
 					showItemId: active.id,
+					artifactKind: active.artifactKind,
+					sticky,
 					title: active.title,
 					caption:
 						current?.showItemId === active.id

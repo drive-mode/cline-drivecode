@@ -1,8 +1,18 @@
-import { PauseIcon, PlayIcon, RotateCcwIcon, SkipBackIcon, SkipForwardIcon } from "lucide-react";
+import {
+	PauseIcon,
+	PlayIcon,
+	RotateCcwIcon,
+	SkipBackIcon,
+	SkipForwardIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CommandBadge, PageFrame, PageHeader } from "../components/views/page-layout";
+import {
+	CommandBadge,
+	PageFrame,
+	PageHeader,
+} from "../components/views/page-layout";
 import {
 	projectShareScreenDemo,
 	SHARE_SCREEN_DEMO_FIXTURE,
@@ -177,6 +187,7 @@ export function ShareScreenSpotlightDemo() {
 							: null
 					}
 					humanSharing={stageSharer === "human"}
+					narration={projection.narration}
 					nextLabel={projection.nextLabel}
 					nowLabel={projection.nowLabel}
 					sharerLabel={sharerLabel}

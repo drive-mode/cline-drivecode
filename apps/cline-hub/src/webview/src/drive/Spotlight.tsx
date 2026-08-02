@@ -6,7 +6,7 @@
 
 import type { StageCard, StagePin } from "@cline/shared";
 import { PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
 	CodeBlock,
 	CodeBlockCopyButton,
@@ -42,6 +42,22 @@ export type SpotlightHumanPin = Pick<StagePin, "kind" | "label"> & {
 	ref?: string;
 };
 
+/** Presented show bound to the frame (director artifact, hub-authored). */
+export type SpotlightArtifact = {
+	/** ShowArtifactKind of the presented item — presenter-bar eyebrow. */
+	kind?: string;
+	/** Director sticky policy for this show ("hold" | "replace"). */
+	sticky?: string;
+	title?: string;
+	/**
+	 * Live narration for this show — the backlog caption until a script beat
+	 * overwrites it. It renders in the frame's subtitle slot rather than the
+	 * figcaption, so a beat that lands before anything is staged stays readable.
+	 */
+	caption?: string;
+	uri?: string;
+};
+
 export type SpotlightViewProps = {
 	cards: readonly StageCard[];
 	/** Who holds the spotlight (agent partner or You). */
@@ -51,6 +67,13 @@ export type SpotlightViewProps = {
 	humanPin?: SpotlightHumanPin | null;
 	/** When true, agent work cards are dimmed under the human pin. */
 	humanSharing?: boolean;
+	/** Presented director artifact rendered inside the frame. */
+	artifact?: SpotlightArtifact | null;
+	/**
+	 * Live narration for the subtitle slot under the screen. Passing the prop
+	 * (even as null) reserves the slot so arriving text never shifts layout.
+	 */
+	narration?: string | null;
 	nowLabel?: string;
 	nextLabel?: string;
 	emptyHint?: string;
@@ -61,6 +84,27 @@ export type SpotlightViewProps = {
 	className?: string;
 	children?: ReactNode;
 };
+
+/**
+ * The screen is fixed-dark in both themes: a share reads as a screen, not as a
+ * themed panel. `dark` re-scopes every shadcn token for the subtree (the
+ * `&:is(.dark *)` variant), and these overrides pin the surface ladder to the
+ * canvas values so artifact bodies sit on the screen, not on app chrome.
+ */
+const SCREEN_SURFACE = {
+	"--background": "#0e0f13",
+	"--card": "#171923",
+	"--muted": "#1b1d26",
+	"--popover": "#171923",
+	"--secondary": "#1b1d26",
+} as CSSProperties;
+
+/** Faint dot grid — the display reads as a surface, not as empty space. */
+const SCREEN_BODY_TEXTURE = {
+	backgroundImage:
+		"radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
+	backgroundSize: "18px 18px",
+} as CSSProperties;
 
 function languageFromTitle(title: string): string {
 	const lower = title.toLowerCase();
@@ -120,7 +164,11 @@ function CommandStageCard({ card }: { card: StageCard }) {
 			<TerminalHeader>
 				<TerminalTitle>
 					<span className="mr-2 inline-flex">
-						<Badge className="text-[10px] uppercase" variant="outline">
+						{/* Terminal is fixed-dark in both themes, so the badge is too. */}
+						<Badge
+							className="border-zinc-700 text-[10px] text-zinc-300 uppercase"
+							variant="outline"
+						>
 							command
 						</Badge>
 					</span>
@@ -129,7 +177,9 @@ function CommandStageCard({ card }: { card: StageCard }) {
 			</TerminalHeader>
 			{/* Plain children avoid ansi-to-react default-import ESM quirk in TerminalContent. */}
 			<TerminalContent>
-				<pre className="whitespace-pre-wrap break-words text-zinc-100">{output}</pre>
+				<pre className="whitespace-pre-wrap break-words text-zinc-100">
+					{output}
+				</pre>
 			</TerminalContent>
 		</Terminal>
 	);
@@ -179,7 +229,9 @@ function StageCardView({ card }: { card: StageCard }) {
 			return (
 				<div className="rounded-md border bg-background p-2">
 					<div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-						<span className="rounded border px-1.5 py-0.5">{card.category}</span>
+						<span className="rounded border px-1.5 py-0.5">
+							{card.category}
+						</span>
 						<span className="truncate font-medium normal-case text-foreground">
 							{card.title}
 						</span>
@@ -208,7 +260,9 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 						<span className="rounded border border-amber-500/40 px-1.5 py-0.5">
 							selection
 						</span>
-						<span className="truncate normal-case text-foreground">{pin.label}</span>
+						<span className="truncate normal-case text-foreground">
+							{pin.label}
+						</span>
 					</div>
 					<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words p-3 font-mono text-[11px] text-foreground">
 						{body}
@@ -235,7 +289,10 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 					<TerminalHeader>
 						<TerminalTitle>
 							<span className="mr-2 inline-flex">
-								<Badge className="text-[10px] uppercase" variant="outline">
+								<Badge
+									className="border-zinc-700 text-[10px] text-zinc-300 uppercase"
+									variant="outline"
+								>
 									terminal
 								</Badge>
 							</span>
@@ -256,9 +313,156 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 	}
 }
 
+/** Presented director artifact — the sticky pane's content, inside the frame. */
+function ScreenArtifact({ artifact }: { artifact: SpotlightArtifact }) {
+	return (
+		<figure className="flex max-h-full min-h-0 w-full max-w-3xl flex-col items-center gap-3">
+			{artifact.uri ? (
+				// The screen scales the artifact; it never scrolls out of frame.
+				<img
+					alt={artifact.caption ?? artifact.title ?? "Presented artifact"}
+					className="min-h-0 w-full flex-1 rounded-md border border-white/10 bg-background object-contain"
+					src={artifact.uri}
+				/>
+			) : null}
+			<figcaption className="w-full shrink-0 text-center">
+				<p className="text-sm font-medium text-zinc-100">
+					{artifact.title ?? "Presented artifact"}
+				</p>
+			</figcaption>
+		</figure>
+	);
+}
+
+/** Nothing staged — the sharer's plain workspace is what the room sees. */
+function ScreenIdle({
+	hint,
+	sharerLabel,
+}: {
+	hint?: string;
+	sharerLabel: string;
+}) {
+	// Match ScreenFrame: "You are sharing", everyone else "Riley is sharing".
+	const sharingVerb = sharerLabel === "You" ? "are" : "is";
+	return (
+		<div className="flex max-h-full flex-col items-center gap-2 overflow-auto text-center">
+			<span
+				aria-hidden
+				className="grid size-11 place-items-center rounded-full border border-amber-500/45 bg-amber-500/15 font-mono text-base font-bold text-amber-300"
+			>
+				{sharerLabel.slice(0, 1).toUpperCase()}
+			</span>
+			<p className="text-[13px] font-semibold text-zinc-100">
+				{sharerLabel} {sharingVerb} sharing
+			</p>
+			<p className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">
+				workspace
+			</p>
+			{hint ? (
+				<p className="max-w-sm text-[11px] text-zinc-400">{hint}</p>
+			) : null}
+		</div>
+	);
+}
+
 /**
- * Full spotlight column: sharer header, cards, optional now/next strip.
- * Prefer this over DriveStagePanel + DriveStageCards for live projection.
+ * The shared screen — a fixed-dark display in both themes, with the presenter
+ * bar on top and a reserved narration subtitle slot beneath.
+ */
+export function ScreenFrame({
+	artifactKind,
+	children,
+	className,
+	controls,
+	human,
+	narration,
+	presenter,
+	stickyMode,
+}: {
+	/** Eyebrow describing what is on screen ("diagram.architecture", …). */
+	artifactKind: string;
+	/**
+	 * Screen body. The box clips, so a body that can outgrow the screen must
+	 * cap itself (`max-h-full overflow-auto`) rather than rely on the frame.
+	 */
+	children: ReactNode;
+	className?: string;
+	/** Chrome pinned to the right of the presenter bar (badges, fold toggle). */
+	controls?: ReactNode;
+	/** A human pin holds the screen — amber frame + second-person copy. */
+	human: boolean;
+	/** Undefined hides the subtitle slot; null/"" reserves it empty. */
+	narration?: string | null;
+	presenter: string;
+	stickyMode?: string;
+}) {
+	// Second person is special-cased: "You are presenting", everyone else
+	// "Riley is presenting".
+	const presentingVerb = presenter === "You" ? "are" : "is";
+
+	return (
+		<div
+			className={cn(
+				"dark @container relative flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background",
+				human ? "border-amber-500/55" : "border-white/15",
+				className,
+			)}
+			style={SCREEN_SURFACE}
+		>
+			<div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5">
+				<span
+					aria-hidden
+					className={cn(
+						"size-[7px] shrink-0 rounded-full",
+						human ? "bg-amber-400 motion-safe:animate-pulse" : "bg-emerald-400",
+					)}
+				/>
+				<p
+					aria-atomic="true"
+					aria-live="polite"
+					className="flex min-w-0 flex-1 items-center gap-x-1.5 whitespace-nowrap text-[11px] font-medium text-zinc-300"
+					role="status"
+				>
+					<span className="max-w-40 shrink-0 truncate font-semibold text-white">
+						{presenter}
+					</span>
+					<span className="shrink-0">{presentingVerb} presenting ·</span>
+					<span className="min-w-0 truncate font-semibold text-[10px] uppercase tracking-[0.07em] text-amber-300">
+						{artifactKind}
+					</span>
+					{stickyMode ? (
+						// Narrow screens drop the chip rather than wrap the bar.
+						<span className="hidden shrink-0 rounded-full border border-white/15 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400 @min-[26rem]:inline">
+							sticky · {stickyMode}
+						</span>
+					) : null}
+				</p>
+				{controls}
+			</div>
+			<div
+				className="grid min-h-0 flex-1 place-items-center overflow-hidden p-4"
+				style={SCREEN_BODY_TEXTURE}
+			>
+				{children}
+			</div>
+			{narration === undefined ? null : (
+				<p
+					aria-atomic="true"
+					aria-live="polite"
+					className="line-clamp-2 h-12 shrink-0 border-t border-white/[0.08] px-4 py-2 text-center text-xs italic leading-tight text-amber-100"
+					role="status"
+				>
+					{narration}
+				</p>
+			)}
+		</div>
+	);
+}
+
+/**
+ * Full spotlight column: the shared screen, the work deck beneath it, and the
+ * plan cursor. Prefer this over DriveStagePanel + DriveStageCards for live
+ * projection.
  */
 export function Spotlight({
 	cards,
@@ -266,6 +470,8 @@ export function Spotlight({
 	demo,
 	humanPin,
 	humanSharing,
+	artifact,
+	narration,
 	nowLabel,
 	nextLabel,
 	emptyHint = "Waiting for partner tool activity on this session.",
@@ -274,102 +480,125 @@ export function Spotlight({
 	className,
 	children,
 }: SpotlightViewProps) {
-	const showHumanPrimary = Boolean(humanPin) && (humanSharing || Boolean(humanPin));
+	const showHumanPrimary = Boolean(humanPin);
 	const suppressAgentCards = Boolean(humanPin) && humanSharing !== false;
 	const feedToggleLabel = feedCollapsed ? "Show chat feed" : "Hide chat feed";
+	const staged = Boolean(artifact?.uri || artifact?.title);
+	const artifactKind = showHumanPrimary
+		? "structured share"
+		: staged
+			? (artifact?.kind ?? "artifact")
+			: "workspace";
 
 	return (
 		<div
 			className={cn(
-				"flex min-h-0 min-w-0 flex-1 flex-col bg-muted/20",
+				"flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-auto bg-muted/20 p-3",
 				className,
 			)}
 		>
-			<div className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
-				<span className="text-emerald-600 dark:text-emerald-400">
-					● in the spotlight
-				</span>
-				<span className="truncate font-medium text-foreground">{sharerLabel}</span>
-				{demo ? (
-					<Badge className="ml-auto shrink-0 text-[10px]" variant="outline">
-						Demo fixture
-					</Badge>
-				) : (
-					<Badge className="ml-auto shrink-0 text-[10px]" variant="outline">
-						{showHumanPrimary ? "Human share" : "Live room"}
-					</Badge>
-				)}
-				{onToggleFeed ? (
-					<Tooltip>
-						<TooltipTrigger
-							render={
-								<Button
-									aria-expanded={!feedCollapsed}
-									aria-label={feedToggleLabel}
-									// The ghost variant styles aria-expanded like a popover
-									// trigger; here it only reports the drawer's fold state.
-									className={cn(
-										"shrink-0 aria-expanded:bg-transparent",
-										feedCollapsed
-											? "text-amber-700 dark:text-amber-300"
-											: "text-muted-foreground hover:text-foreground aria-expanded:text-muted-foreground",
+			<ScreenFrame
+				artifactKind={artifactKind}
+				className="min-h-[13rem] flex-1"
+				controls={
+					<>
+						<Badge className="shrink-0 text-[10px]" variant="outline">
+							{demo
+								? "Demo fixture"
+								: showHumanPrimary
+									? "Human share"
+									: "Live room"}
+						</Badge>
+						{onToggleFeed ? (
+							<Tooltip>
+								<TooltipTrigger
+									render={
+										<Button
+											aria-expanded={!feedCollapsed}
+											aria-label={feedToggleLabel}
+											// The ghost variant styles aria-expanded like a popover
+											// trigger; here it only reports the drawer's fold state.
+											className={cn(
+												"shrink-0 aria-expanded:bg-transparent",
+												feedCollapsed
+													? "text-amber-300"
+													: "text-zinc-400 hover:text-white aria-expanded:text-zinc-400",
+											)}
+											onClick={onToggleFeed}
+											size="icon-sm"
+											type="button"
+											variant="ghost"
+										/>
+									}
+								>
+									{feedCollapsed ? (
+										<PanelRightOpenIcon className="size-3.5" />
+									) : (
+										<PanelRightCloseIcon className="size-3.5" />
 									)}
-									onClick={onToggleFeed}
-									size="icon-sm"
-									type="button"
-									variant="ghost"
-								/>
-							}
-						>
-							{feedCollapsed ? (
-								<PanelRightOpenIcon className="size-3.5" />
-							) : (
-								<PanelRightCloseIcon className="size-3.5" />
-							)}
-						</TooltipTrigger>
-						<TooltipContent side="bottom">{feedToggleLabel}</TooltipContent>
-					</Tooltip>
-				) : null}
-			</div>
-			<div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
-				{humanPin ? <HumanPinContent pin={humanPin} /> : null}
-				{cards.length === 0 && !humanPin ? (
-					<p className="text-xs text-muted-foreground">{emptyHint}</p>
-				) : null}
-				{!suppressAgentCards
-					? cards.map((card) => (
-							<StageCardView card={card} key={card.id} />
-						))
-					: cards.length > 0
-						? (
-								<div className="space-y-2 opacity-40" aria-hidden>
-									<p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-										Agent deck paused while you hold the spotlight
-									</p>
-									{cards.map((card) => (
-										<StageCardView card={card} key={card.id} />
-									))}
-								</div>
-							)
-						: null}
-				{children}
-			</div>
+								</TooltipTrigger>
+								<TooltipContent side="bottom">{feedToggleLabel}</TooltipContent>
+							</Tooltip>
+						) : null}
+					</>
+				}
+				human={showHumanPrimary}
+				narration={narration}
+				presenter={sharerLabel}
+				stickyMode={showHumanPrimary || !staged ? undefined : artifact?.sticky}
+			>
+				{humanPin ? (
+					<div className="max-h-full w-full max-w-2xl overflow-auto">
+						<HumanPinContent pin={humanPin} />
+					</div>
+				) : staged && artifact ? (
+					<ScreenArtifact artifact={artifact} />
+				) : (
+					<ScreenIdle
+						hint={cards.length === 0 ? emptyHint : undefined}
+						sharerLabel={sharerLabel}
+					/>
+				)}
+			</ScreenFrame>
+			{cards.length > 0 ? (
+				<section
+					aria-label="Agent work deck"
+					className={cn(
+						"shrink-0 motion-safe:transition-opacity",
+						suppressAgentCards && "opacity-40",
+					)}
+				>
+					{suppressAgentCards ? (
+						<p className="mb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+							Agent deck paused while you hold the spotlight
+						</p>
+					) : null}
+					<div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]">
+						{cards.map((card) => (
+							<div className="max-h-56 min-w-0 overflow-auto" key={card.id}>
+								<StageCardView card={card} />
+							</div>
+						))}
+					</div>
+				</section>
+			) : null}
 			{nowLabel != null || nextLabel != null ? (
-				<div className="grid grid-cols-2 gap-2 border-t p-3">
-					<div className="rounded-md border bg-background p-2">
-						<div className="text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
-							now
-						</div>
-						<div className="text-xs">{nowLabel ?? "—"}</div>
-					</div>
-					<div className="rounded-md border bg-background p-2">
-						<div className="text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
-							next
-						</div>
-						<div className="text-xs">{nextLabel ?? "—"}</div>
-					</div>
+				<div className="flex shrink-0 flex-wrap items-center gap-x-3.5 gap-y-1 text-[11px]">
+					<span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-300">
+						now
+					</span>
+					<span className="min-w-0 truncate text-muted-foreground">
+						{nowLabel ?? "—"}
+					</span>
+					<span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-300">
+						next
+					</span>
+					<span className="min-w-0 truncate text-muted-foreground">
+						{nextLabel ?? "—"}
+					</span>
 				</div>
 			) : null}
+			{children}
 		</div>
 	);
 }
