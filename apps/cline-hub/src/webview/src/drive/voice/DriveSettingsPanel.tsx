@@ -12,6 +12,13 @@ import {
 } from "@/components/ai-elements/mic-selector";
 import { Button } from "@/components/ui/button";
 import { listDriveSettingsProviders } from "./driveSettingsModel";
+import {
+	DRIVE_EARCON_FACET_ID,
+	DRIVE_EARCON_GAIN_RATIO,
+	DRIVE_EARCON_KINDS,
+	DRIVE_EARCON_LABEL,
+	type DriveEarconKind,
+} from "./driveEarcons";
 import type { DriveHardwarePrefs } from "./driveHardwarePrefs";
 import { clampOutputVolume } from "./driveHardwarePrefs";
 import type { DriveVoiceUi } from "./driveVoiceUi";
@@ -28,6 +35,7 @@ export function DriveSettingsPanel({
 	onSttChange,
 	onTtsChange,
 	onTtsEnabledChange,
+	onEarconChange,
 	onHardwareChange,
 	onPresentSampleDiagram,
 	onEnqueueSampleDiagram,
@@ -46,6 +54,7 @@ export function DriveSettingsPanel({
 	onSttChange: (sttId: string) => void;
 	onTtsChange: (ttsId: string) => void;
 	onTtsEnabledChange: (enabled: boolean) => void;
+	onEarconChange: (kind: DriveEarconKind, enabled: boolean) => void;
 	onHardwareChange: (patch: Partial<DriveHardwarePrefs>) => void;
 	/** Sample / dev — posts drive.show.present (no LLM). */
 	onPresentSampleDiagram?: () => void;
@@ -77,6 +86,7 @@ export function DriveSettingsPanel({
 		slot: "tts",
 	});
 	const volumePercent = Math.round(voice.hardware.outputVolume * 100);
+	const earconPercentOfPartner = Math.round(DRIVE_EARCON_GAIN_RATIO * 100);
 	const [rollupDump, setRollupDump] = useState<string | null>(null);
 	const [rollupBusy, setRollupBusy] = useState(false);
 	const [digestBusy, setDigestBusy] = useState(false);
@@ -158,6 +168,26 @@ export function DriveSettingsPanel({
 				/>
 				<span>Speak partner narration (off by default)</span>
 			</label>
+
+			<div className="space-y-1">
+				<span className="text-xs text-muted-foreground">Earcons</span>
+				{DRIVE_EARCON_KINDS.map((kind) => (
+					<label className="flex items-center gap-2 text-sm" key={kind}>
+						<input
+							checked={voice.facets[DRIVE_EARCON_FACET_ID[kind]] === true}
+							data-testid={`drive-earcon-${kind}`}
+							onChange={(event) => onEarconChange(kind, event.target.checked)}
+							type="checkbox"
+						/>
+						<span>{DRIVE_EARCON_LABEL[kind]}</span>
+					</label>
+				))}
+				<p className="text-[11px] text-muted-foreground">
+					Short synthesized tones at {earconPercentOfPartner}% of partner
+					volume. Mute silences all of them, as does a system reduced-motion
+					preference.
+				</p>
+			</div>
 
 			<div className="space-y-1">
 				<span className="text-xs text-muted-foreground">Microphone</span>

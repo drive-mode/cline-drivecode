@@ -58,6 +58,10 @@ export function defaultFacetValuesFromProfile(
 		"tts.enabled": false,
 		"tts.maxSpokenSentences": 3,
 		"captions.enabled": true,
+		"earcons.taskComplete": true,
+		"earcons.approvalRequired": true,
+		"earcons.join": true,
+		"earcons.leave": true,
 		"drive.defaults.pairAgent": { kind: "builtin", id: "pair_partner" },
 	};
 }

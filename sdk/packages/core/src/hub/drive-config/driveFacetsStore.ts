@@ -31,6 +31,10 @@ const FACET_IDS = [
 	"tts.enabled",
 	"tts.maxSpokenSentences",
 	"captions.enabled",
+	"earcons.taskComplete",
+	"earcons.approvalRequired",
+	"earcons.join",
+	"earcons.leave",
 	"drive.defaults.pairAgent",
 ] as const satisfies ReadonlyArray<keyof DriveFacetValues>;
 

@@ -21,6 +21,10 @@ export const DriveFacetIdSchema = z.enum([
 	"tts.enabled",
 	"tts.maxSpokenSentences",
 	"captions.enabled",
+	"earcons.taskComplete",
+	"earcons.approvalRequired",
+	"earcons.join",
+	"earcons.leave",
 	"drive.defaults.pairAgent",
 ]);
 export type DriveFacetId = z.infer<typeof DriveFacetIdSchema>;
@@ -57,6 +61,14 @@ export const DriveFacetValuesSchema = z
 		"tts.enabled": z.boolean(),
 		"tts.maxSpokenSentences": z.number().int().positive(),
 		"captions.enabled": z.boolean(),
+		// Earcons are individually toggleable and default on: they only sound
+		// inside an active Drive call, at 25% of partner volume, and mute /
+		// reduced-motion silence all of them. Defaulted (not required) so facet
+		// files written before this slice still parse.
+		"earcons.taskComplete": z.boolean().default(true),
+		"earcons.approvalRequired": z.boolean().default(true),
+		"earcons.join": z.boolean().default(true),
+		"earcons.leave": z.boolean().default(true),
 		"drive.defaults.pairAgent": PairAgentRefSchema,
 	})
 	.strict();

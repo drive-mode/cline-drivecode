@@ -100,7 +100,9 @@ import {
 	toSharedDriveSubMode,
 } from "./drive/types";
 import { useDriveSession } from "./drive/useDriveSession";
+import { driveOutputSilenced } from "./drive/voice/driveEarcons";
 import { shouldSpeakDriveTts } from "./drive/voice/driveVoiceUi";
+import { useDriveEarcons } from "./drive/voice/useDriveEarcons";
 import { clearVoiceCaptionAfterSend } from "./drive/voice/voiceCaptionState";
 import {
 	readDriveFeedCollapsed,
@@ -284,6 +286,24 @@ export default function Chat({
 
 	const driveRef = useRef(drive);
 	driveRef.current = drive;
+
+	useDriveEarcons({
+		active: drive.active,
+		facets: driveVoice.facets,
+		// Earcons follow output silence, not whether the mic is hot — deafen is
+		// the human's own output mute, matching `shouldSpeakDriveTts`.
+		outputSilenced: driveOutputSilenced({
+			selfSilenced: drive.deafened,
+			partnerMuted: drive.partnerMuted,
+		}),
+		outputVolume: driveVoice.hardware.outputVolume,
+		speakerDeviceId: driveVoice.hardware.speakerDeviceId,
+		planId: drive.bankSnapshot.activePlanId,
+		openTaskIds: drive.bankSnapshot.openTaskIds,
+		pendingApprovalIds: pendingApprovals.map((item) => item.approvalId),
+		participantIds: drive.participants.map((item) => item.id),
+	});
+
 	/** Spotlight-primary split: Spotlight owns the room, feed folds beside it. */
 	const stageLayout = drive.active && drive.stageLayout;
 	const feedRoomKey = drive.roomId ?? DRIVE_DEFAULT_ROOM_ID;

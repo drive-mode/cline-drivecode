@@ -35,6 +35,7 @@ import {
 } from "./useDriveSession";
 import { DriveMicBar } from "./voice/DriveMicBar";
 import { DriveSettingsPanel } from "./voice/DriveSettingsPanel";
+import { DRIVE_EARCON_FACET_ID } from "./voice/driveEarcons";
 import { clearVoiceCaptionDraft } from "./voice/voiceCaptionState";
 
 /**
@@ -260,6 +261,13 @@ export function DriveRoomChrome({
 						setDriveVoice((current) =>
 							applyVoiceFacetPatch(current, {
 								"tts.enabled": enabled,
+							}),
+						);
+					}}
+					onEarconChange={(kind, enabled) => {
+						setDriveVoice((current) =>
+							applyVoiceFacetPatch(current, {
+								[DRIVE_EARCON_FACET_ID[kind]]: enabled,
 							}),
 						);
 					}}
