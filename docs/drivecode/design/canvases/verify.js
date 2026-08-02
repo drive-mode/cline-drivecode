@@ -79,7 +79,10 @@
 //      by ~4s; static entry shows the end state (everything revealed,
 //      zero .cued remnants, accent on, no clock) and the accent does
 //      not outlive its beat; with the voice toggle OFF the same cues
-//      fire on the synthetic words x 350ms clock.
+//      fire on the synthetic words x 350ms clock; and three of the
+//      authored cue tables (a2-narration, a3-edit, a9-gates) are
+//      sampled under voiced autoplay either side of their fraction —
+//      still veiled before it, revealed after.
 //  23) set pieces re-keyed to the v4 narration: under voiced autoplay
 //      each of the four set-piece beats (a3-arch, a3-walk, a3-bug,
 //      a2-you-show) stamps the SayClock duration on its --*-total
@@ -1067,8 +1070,9 @@ async function main() {
       });
       return out;
     });
-    check(syncEntries.length >= 6,
-      "synccue: expected sync entries on a3-test + a9-gates + a9-approved, saw " + syncEntries.length);
+    check(syncEntries.length >= 25,
+      "synccue: expected the authored cue tables across the script (~27 entries), saw " +
+      syncEntries.length);
     for (const s of syncEntries) {
       check(s.c.at > 0 && s.c.at <= 1,
         "synccue " + s.id + "[" + s.j + "]: fraction " + s.c.at + " outside (0,1]");
@@ -1229,6 +1233,61 @@ async function main() {
     }
     await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
     if (scVoiceWasOn) await page.click("#btn-voice"); // restore the toggle
+
+    // 22e) The authored cue tables, away from the reference beat: the
+    // veil must lift ON the words, not at beat entry. Runs in the page —
+    // wait for beat entry, give clip metadata 400ms to refine the clock,
+    // then sample the cued element ~0.8s BEFORE its fraction and ~0.9s
+    // after, both scheduled off the clock's own startedAt so the
+    // entry-poll jitter cancels.
+    function cueRunner(arg) {
+      return new Promise(function (res) {
+        const D = window.__DRIVE_DEMO__;
+        function snap() {
+          const el = document.querySelector(arg.target);
+          return { there: !!el, cued: !!(el && el.classList.contains("cued")) };
+        }
+        const iv = setInterval(function () {
+          if (D.getIndex() !== arg.idx) return;
+          clearInterval(iv);
+          setTimeout(function () {
+            const c = D.sayClock();
+            if (!c || c.beatId !== arg.id) { res({ entered: true, noClock: true }); return; }
+            const out = { entered: true, durationMs: c.durationMs };
+            const at = c.durationMs * arg.at;
+            const gone = performance.now() - c.startedAt;
+            setTimeout(function () { out.before = snap(); }, Math.max(0, at - 800 - gone));
+            setTimeout(function () { out.after = snap(); res(out); },
+              Math.max(150, Math.min(c.durationMs - 300, at + 900) - gone));
+          }, 400);
+        }, 40);
+        setTimeout(function () { clearInterval(iv); res({ entered: false }); }, 90000);
+      });
+    }
+    async function cueCheck(arg) {
+      const idx = beats.findIndex(function (b) { return b.id === arg.id; });
+      check(idx > 0, "cue table: beat " + arg.id + " not found");
+      if (idx <= 0) return;
+      arg.idx = idx;
+      await page.evaluate(function (i) { window.__DRIVE_DEMO__.goTo(i); }, idx - 1);
+      const runP = page.evaluate(cueRunner, arg);
+      await page.click("#btn-play");
+      const r = await runP;
+      await page.evaluate(function () { window.__DRIVE_DEMO__.goTo(0); }); // pause
+      check(r.entered && !r.noClock,
+        "cue table " + arg.id + ": no live SayClock under voiced autoplay - " + JSON.stringify(r));
+      if (!r.entered || r.noClock) return;
+      const when = arg.at + " x " + Math.round(r.durationMs) + "ms";
+      check(r.before.there && r.before.cued,
+        "cue table " + arg.id + ": " + arg.target + " should still be veiled before " +
+        when + " - " + JSON.stringify(r.before));
+      check(r.after.there && !r.after.cued,
+        "cue table " + arg.id + ": " + arg.target + " should be revealed after " +
+        when + " - " + JSON.stringify(r.after));
+    }
+    await cueCheck({ id: "a2-narration", at: 0.26, target: "#spotlight .vsc-term .ws-tl:nth-child(2)" });
+    await cueCheck({ id: "a3-edit", at: 0.52, target: "#spotlight .card.edit" });
+    await cueCheck({ id: "a9-gates", at: 0.72, target: "#gates-card" });
 
     // 23) Set pieces re-keyed to the v4 narration: under voiced autoplay
     // each set-piece beat binds its clock var to the SayClock (sayBind)

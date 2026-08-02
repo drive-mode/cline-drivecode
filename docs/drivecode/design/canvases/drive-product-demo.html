@@ -639,6 +639,19 @@
     0%, 100% { outline-color: color-mix(in srgb, var(--live) 30%, transparent); }
     50% { outline-color: var(--live); }
   }
+  /* SyncCue hint ring: one soft amber breath on a control the agent just
+     asked you to reach for ("grab the screen and show me"). Same outline
+     language as .say-hl, softer and single-pass; reduced motion keeps the
+     static ring (global rule collapses the breath). */
+  .hint-ring {
+    outline: 0.8px solid color-mix(in srgb, var(--live) 45%, transparent);
+    outline-offset: 2px;
+    animation: hint-ring-pulse 1.8s var(--ease) 1;
+  }
+  @keyframes hint-ring-pulse {
+    0%, 100% { outline-color: color-mix(in srgb, var(--live) 18%, transparent); }
+    45% { outline-color: color-mix(in srgb, var(--live) 85%, transparent); }
+  }
   /* bindSayDuration restart: added + removed in one task (a reflow in
      between), so every animation under the bound node re-enters at 0%
      the instant its narration clock starts. Never painted. */
@@ -1551,9 +1564,21 @@
     background: var(--panel);
   }
   .stage-capture .shot { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-  .stage-capture .wire { height: 10px; border-radius: 4px; background: var(--well); border: 0.8px solid var(--hair); }
+  .stage-capture .wire {
+    height: 10px;
+    border-radius: 4px;
+    background: var(--well);
+    border: 0.8px solid var(--hair);
+    /* The capture ticks one beat on the a3-demo cue ("beats advancing"):
+       the rows re-flow to the next beat's shape. Widths transition — the
+       mock demonstrates the fix by never re-mounting to change. */
+    transition: width .5s var(--ease);
+  }
   .stage-capture .wire.w60 { width: 60%; }
   .stage-capture .wire.w85 { width: 85%; }
+  .stage-capture.advanced .wire { width: 74%; }
+  .stage-capture.advanced .wire.w60 { width: 88%; }
+  .stage-capture.advanced .wire.w85 { width: 46%; }
   .stage-capture .toast {
     align-self: flex-start;
     font: 600 10px/1 var(--mono);
@@ -4429,7 +4454,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L7095–L7098",
+      range: "L7217–L7220",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through (s3 is the
       // "remember the new one" assignment), ghost/ret are inline-value
@@ -4439,10 +4464,10 @@
       // true.
       debug: true,
       lines: [
-        { n: 7095, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 7096, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 7097, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
-        { n: 7098, t: '      feed.innerHTML = "";' },
+        { n: 7217, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 7218, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 7219, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
+        { n: 7220, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4633,6 +4658,11 @@
       cursor: { target: "#composer-mic", action: "click" },
       input: { mode: "stt", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?", clip: "you-01-fix-the-flashing.mp3" },
       speech: { who: "You", text: "Cline — the demo flashes and refreshes the whole page every time it updates. Can you make it one smooth experience?" },
+      // The SayClock here is Cline's REPLY (v4-01) — the dictation has
+      // already finished against the previous beat's DOM. His ask points
+      // at the control you use next: the share button takes one soft ring
+      // on "grab the screen" (~40% of 5.57s), and the next beat clicks it.
+      sync: [{ at: 0.40, cue: "class", target: "#strip-share", cls: "hint-ring" }],
       patch: {
         narration: "Yep, I see it. Actually — grab the screen and show me exactly where it jumps.",
         feedMessages: [
@@ -4687,6 +4717,23 @@
       maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#spotlight", action: "move" },
+      // The diagnosis, keyed to v4-02 (11.50s). The rg hits land on
+      // "found it" (0.26); the accent then walks the culprit body one
+      // line per clause — clear the region (0.42 "we rebuild the entire
+      // page"), re-add every message (0.55 "everything replays"), clear
+      // the next region (0.68 "its entrance animation"); and "Let me put
+      // it up" (0.92) lights the Now/Next rail he just filled in. The
+      // terminal rows are positional: the rg command is child 1, its
+      // three hits are children 2–4 (verify.js re-runs the search).
+      sync: [
+        { at: 0.26, cue: "reveal", target: "#spotlight .vsc-term .ws-tl:nth-child(2)" },
+        { at: 0.26, cue: "reveal", target: "#spotlight .vsc-term .ws-tl:nth-child(3)" },
+        { at: 0.26, cue: "reveal", target: "#spotlight .vsc-term .ws-tl:nth-child(4)" },
+        { at: 0.42, cue: "class", target: "#spotlight .vsc-code .ws-cl:nth-child(2)", cls: "say-hl" },
+        { at: 0.55, cue: "class", target: "#spotlight .vsc-code .ws-cl:nth-child(3)", cls: "say-hl" },
+        { at: 0.68, cue: "class", target: "#spotlight .vsc-code .ws-cl:nth-child(4)", cls: "say-hl" },
+        { at: 0.92, cue: "class", target: "#spotlight .plan-cursor", cls: "say-hl" },
+      ],
       patch: {
         narration: "Perfect, that's all I need. Okay — found it. Every beat, we rebuild the entire page, so everything replays its entrance animation. That's your flash. Let me put it up.",
         nowLabel: "measuring re-mounts per beat",
@@ -4714,9 +4761,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '7098:      feed.innerHTML = "";', cls: "dim" },
-              { t: '7137:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '7173:      spot.innerHTML = "";', cls: "dim" },
+              { t: '7220:      feed.innerHTML = "";', cls: "dim" },
+              { t: '7259:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '7295:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -4818,6 +4865,15 @@
       maturity: "shipped",
       dwellMs: 2200,
       cursor: { target: "#spotlight", action: "move" },
+      // One row per clause of v4-04 (9.24s): the accent walks the card as
+      // he reads it — fingerprint (0.14), skip the repaint (0.42), only
+      // animate what's new (0.70). The rows carry positional `step-N`
+      // classes from buildScreenBody.
+      sync: [
+        { at: 0.14, cue: "class", target: "#spotlight .stage-plan .step-0", cls: "say-hl" },
+        { at: 0.42, cue: "class", target: "#spotlight .stage-plan .step-1", cls: "say-hl" },
+        { at: 0.70, cue: "class", target: "#spotlight .stage-plan .step-2", cls: "say-hl" },
+      ],
       patch: {
         showHowInset: false,
         narration: "So here's the plan. Fingerprint what each region shows, skip the repaint when nothing changed, and only animate what's actually new.",
@@ -4870,8 +4926,21 @@
       caption: "sticky: hold — the diagram stays up while call_record_work folds the edit into the deck.",
       hubOp: "call_record_work",
       maturity: "shipped",
-      dwellMs: 2000,
+      // Dwell raised past the 0.52 cue: the dwell only sets when the NEXT
+      // beat's cursor leg starts, and a3-command's cursor targets this
+      // card — it must not glide to a still-veiled box. The audio gate
+      // still paces the beat, so the visible length is unchanged.
+      dwellMs: 4600,
       cursor: { target: "#spotlight .screen", action: "move" },
+      // v4-06 (7.30s): the EDIT card enters on "Adding the fingerprint
+      // check now" (0.52) — its own rise replays at cue time — and the
+      // added guard line takes the accent on "if a region didn't change"
+      // (0.78). The held render map above is untouched: no state moves,
+      // so its bound clock never restarts.
+      sync: [
+        { at: 0.52, cue: "reveal", target: "#spotlight .card.edit" },
+        { at: 0.78, cue: "class", target: "#spotlight .card.edit .diff .dl.add", cls: "say-hl" },
+      ],
       patch: {
         showHowInset: false,
         narration: "I'll keep the map up while I work. Adding the fingerprint check now — if a region didn't change, we don't touch it.",
@@ -4925,7 +4994,7 @@
           work: {
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 890 checks", cls: "ok" },
+              { t: "OK: 47 beats, 977 checks", cls: "ok" },
             ],
             activity: "battery green",
           },
@@ -4996,6 +5065,10 @@
       maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: "#strip-mute", action: "click" },
+      // v4-08 (5.23s): the caption slot IS the subject of the line, so
+      // the slot itself settles under a hairline ring on "one home for
+      // the captions" (0.35). Outline only — the fixed reserve never moves.
+      sync: [{ at: 0.35, cue: "class", target: "#spotlight .caption-slot", cls: "say-hl" }],
       patch: {
         muted: false,
         posture: "paused_after_tool",
@@ -5046,6 +5119,11 @@
       maturity: "planned",
       dwellMs: 1800,
       cursor: { target: "#spotlight .screen", action: "move" },
+      // v4-10 (4.80s): the capture ticks one beat on "beats advancing"
+      // (0.45) — the rows re-flow in place, nothing re-mounts. Nothing
+      // fires after: the stillness through "zero flashes. Smooth." is
+      // the whole point.
+      sync: [{ at: 0.45, cue: "class", target: "#spotlight .stage-capture", cls: "advanced" }],
       patch: {
         narration: "And here it is live — beats advancing, zero flashes. Smooth.",
         artifacts: [ART_ANIM, ART_PLAN, ART_RENDER, ART_ARCH, ART_WALK, ART_CAPTURE],
@@ -5089,7 +5167,7 @@
             caret: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 890 checks", cls: "ok" },
+              { t: "OK: 47 beats, 977 checks", cls: "ok" },
             ],
             spin: false,
             activity: "explaining the fix",
@@ -5120,6 +5198,18 @@
       maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#spotlight .screen", action: "move" },
+      // v4-11 (6.77s): the sharer flip mounts Riley's window at entry —
+      // chrome, tabs, explorer — but her work arrives on the words. The
+      // editor body (code AND minimap — veiling only the code would leave
+      // the minimap describing invisible lines) and the whole terminal
+      // panel lift their veil on "I'm adding regression checks" (0.55).
+      // The panel is veiled as a container, not row by row: the deck
+      // compresses the window here and how many rows fit is a layout
+      // question, not a cue one.
+      sync: [
+        { at: 0.55, cue: "reveal", target: "#spotlight .vsc-body" },
+        { at: 0.55, cue: "reveal", target: "#spotlight .vsc-term" },
+      ],
       patch: {
         stage: {
           sharer: "Riley",
@@ -5138,7 +5228,7 @@
             typing: "// assert: same node before and after a beat",
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 890 checks", cls: "ok" },
+              { t: "OK: 47 beats, 977 checks", cls: "ok" },
             ],
             spin: false,
             activity: "adding regression checks",
@@ -5193,6 +5283,11 @@
       maturity: "planned",
       dwellMs: 1600,
       cursor: { target: "#rail-status", action: "click" },
+      // v4-12 (5.28s): you have navigated away, so the caption's home on
+      // this beat is the PiP narration line — it settles under the ring
+      // on "Pinning the caption slot into place now" (0.60). The Spotlight
+      // slot itself is off-surface here and would have nothing to pulse.
+      sync: [{ at: 0.60, cue: "class", target: "#pip-narr", cls: "say-hl" }],
       patch: {
         surface: "status",
         statusLens: "board",
@@ -5220,7 +5315,7 @@
             typing: null,
             term: [
               { t: "$ bun verify.js" },
-              { t: "OK: 47 beats, 890 checks", cls: "ok" },
+              { t: "OK: 47 beats, 977 checks", cls: "ok" },
             ],
             spin: false,
             activity: "pinning the caption slot",
@@ -5401,11 +5496,25 @@
       maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: "#feed", action: "move" },
+      // v4-14 (6.72s): the catch-up claim is proved on screen — Cline
+      // re-runs the battery and the green line lands on "the battery
+      // stayed green" (0.62; 0.58 read a beat early, on "and the").
+      sync: [{ at: 0.62, cue: "reveal", target: "#spotlight .vsc-term .ws-tl.ok" }],
       patch: {
         sinceYouLeft: "Riley published 1 edit card. Battery still green. Now: write up the change.",
         nowLabel: "write up the change, then commit",
         nextLabel: "open PR",
         narration: "Quick catch-up — Riley's regression checks landed, and the battery stayed green the whole time.",
+        stage: {
+          work: {
+            // ONE row: the deck compresses the window here, so the panel
+            // shows a single terminal line — and that line has to be the
+            // green one the narration points at.
+            term: [
+              { t: "OK: 47 beats, 977 checks", cls: "ok" },
+            ],
+          },
+        },
       },
     },
     {
@@ -5466,10 +5575,17 @@
       caption: "High-impact tools surface an approval card (taxonomy shipped; feed UI planned).",
       hubOp: "approval",
       maturity: "planned",
-      dwellMs: 2200,
-      // Attention chime keyed to "The card's on your screen" (~72% of
-      // v4-15; U3 refines the fraction).
-      sync: [{ at: 0.72, cue: "chime", kind: "attention" }],
+      // Dwell raised past the 0.72 cue for the same reason as a3-edit:
+      // a9-approved's cursor CLICKS this card, so its leg must not start
+      // before the card exists. Audio still gates the press and the beat.
+      dwellMs: 5600,
+      // "The card's on your screen" starts at 72% of v4-15 (6.55s) — the
+      // card and the attention chime arrive on that clause together, so
+      // the sentence is literally true the instant it is spoken.
+      sync: [
+        { at: 0.72, cue: "reveal", target: "#gates-card" },
+        { at: 0.72, cue: "chime", kind: "attention" },
+      ],
       patch: {
         narration: "One thing before I open the pull request — I need your sign-off. The card's on your screen.",
         showGatesCard: true,
@@ -5489,9 +5605,15 @@
       maturity: "planned",
       dwellMs: 1800,
       cursor: { target: ".gates-card .approve", action: "click" },
-      // Complete chime keyed to "PR ninety-one's up" — the fraction is
-      // of the FULL two-clip sequence (you-04 + v4-16; U3 refines).
-      sync: [{ at: 0.55, cue: "chime", kind: "complete" }],
+      // "PR ninety-one's up" opens the second clip — 55% of the FULL
+      // two-clip sequence (you-04 + v4-16). The Hub card in the feed lifts
+      // its veil on that phrase, riding the same instant as the complete
+      // chime. (The terminal's green ✓ is the third row of a panel that
+      // shows one at this width, so it carries nothing to cue.)
+      sync: [
+        { at: 0.55, cue: "reveal", target: "#feed .msg:last-child" },
+        { at: 0.55, cue: "chime", kind: "complete" },
+      ],
       // Harrison's recorded sign-off (you-04) plays first, then Cline's
       // v4-16 — sequenced by CLIP_SEQS; the beat holds for both clips.
       speech: { who: "You", text: "Looks good — approved. Go ahead." },
@@ -7729,9 +7851,12 @@
       return FLASH_ANIM_HTML;
     }
     if (show.kind === "plan") {
-      return '<div class="stage-plan">' + show.body.steps.map(function (s) {
+      // Positional `step-N` classes are the sync-cue handles: a3-plan
+      // accents one row per clause of the spoken plan. Build-time and
+      // index-derived, so the HTML signature stays stable.
+      return '<div class="stage-plan">' + show.body.steps.map(function (s, i) {
         const mark = s.state === "done" ? "✓" : s.state === "now" ? "●" : "○";
-        return '<div class="step ' + s.state + '"><span class="tick">' + mark + "</span>" + escapeHtml(s.label) + "</div>";
+        return '<div class="step ' + s.state + " step-" + i + '"><span class="tick">' + mark + "</span>" + escapeHtml(s.label) + "</div>";
       }).join("") + "</div>";
     }
     if (show.kind === "diagram") {
