@@ -4,7 +4,7 @@
 demo canvas (PR #91, extended by PR #94)
 **Design source of truth:** [drive-product-demo.html](../../../../design/canvases/drive-product-demo.html)
 (canvas wins on look/feel; shipped schemas win on data)
-**Positioning context:** [ARD-0016](../../ard/ARD-0016-distribution-and-positioning.md) (Proposed)
+**Positioning context:** [ADR-0016](../../adr/ADR-0016-distribution-and-positioning.md) (Proposed)
 
 Ship the Spotlight as a literal shared screen — the agent's monitor — with the
 feed as a fold-away drawer, icon call chrome, and director artifacts presented

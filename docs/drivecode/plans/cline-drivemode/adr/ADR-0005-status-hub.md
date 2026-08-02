@@ -1,4 +1,4 @@
-# ARD-0005: Status Hub is an SQLite-backed, append-only status log in the Cline SDK
+# ADR-0005: Status Hub is an SQLite-backed, append-only status log in the Cline SDK
 
 ## Status
 
@@ -9,7 +9,7 @@ Accepted — implemented
 - Date: 2026-07-27
 - Deciders: Harrison (product), Drivecode planning
 - Scope: **Cline SDK (`sdk/packages/*`), not Drive-only.** Drive is the first consumer, not the owner.
-- Related: [01-architecture.md](../foundation/01-architecture.md) D2 (hub is the single writer), ARD-0002, [AHP review](#why-seq-exists)
+- Related: [01-architecture.md](../foundation/01-architecture.md) D2 (hub is the single writer), ADR-0002, [AHP review](#why-seq-exists)
 
 ## Product framing
 

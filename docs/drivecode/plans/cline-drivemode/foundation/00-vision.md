@@ -86,5 +86,5 @@ One developer and one pair partner in the MVP roster. The UI still shows the ros
 - Multi-human calls, WebRTC, or any media server.
 - Multiple concurrent agents on the stage by default (DRV-TEAM-OPT is the flagged exception).
 - Pixel screen capture as the agent stage path.
-- A second daemon. The hub on `:25463` is the only server. Nothing defaults to `:7891`.
-- A second prompt/tool registry inside Drive call facets or `AgentProfile`. Agent definitions are authored under `.driveagent/<slug>/` and **compile** into the host runtime (see [DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md) and [ARD-0001](../ard/ARD-0001-driveagent-home.md)). Drive overlays appearance only; there is exactly one runtime path.
+- A second daemon. The hub is the only server (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set). Nothing defaults to `:7891`.
+- A second prompt/tool registry inside Drive call facets or `AgentProfile`. Agent definitions are authored under `.driveagent/<slug>/` and **compile** into the host runtime (see [DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md) and [ADR-0001](../adr/ADR-0001-driveagent-home.md)). Drive overlays appearance only; there is exactly one runtime path.

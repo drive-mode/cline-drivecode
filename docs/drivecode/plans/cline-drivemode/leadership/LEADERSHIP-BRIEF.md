@@ -1,6 +1,6 @@
 # Leadership brief · Drivecode planning wave
 
-> **Status note (2026-07-30).** ARD-0000…0014 + DEC bundle are **Accepted** (2026-07-29 `accept all`; ARD-0014 on main). The three “load-bearing forks” below are **closed**. Treat this brief as the planning-wave record; current as-is is [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) §13.0 and nest [HANDOFF.md](../../../HANDOFF.md).
+> **Status note (2026-07-30).** ADR-0000…0014 + DEC bundle are **Accepted** (2026-07-29 `accept all`; ADR-0014 on main). The three “load-bearing forks” below are **closed**. Treat this brief as the planning-wave record; current as-is is [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) §13.0 and nest [HANDOFF.md](../../../HANDOFF.md).
 
 **Role lens.** Software engineering lead + product manager.
 **Purpose.** Close contradictions, force decisions, freeze Phase 0 entry, and leave implementers a single source of truth.
@@ -31,7 +31,7 @@ Phase 0 schema work may start only when [CHECKLIST-phase0-entry.md](CHECKLIST-ph
 
 | ID | Recommendation | Rationale |
 |---|---|---|
-| ARD-0001…0004 | **Accept as written** | Portfolio/recruit is the differentiator; compile bridge preserves single runtime |
+| ADR-0001…0004 | **Accept as written** | Portfolio/recruit is the differentiator; compile bridge preserves single runtime |
 | DEC-agent-SoT | **Author in `.driveagent/`; compile into host; never dual-write prompts into Drive facets** | Resolves vision vs PRD without a second registry |
 | DEC-package | **`@cline/drive` in this monorepo for phase 1** | Matches SDK arena; avoids syncTypes failure mode |
 | DEC-focusPolicy | **MVP: one active runtime room; unfocused rooms are view-only (no background turns)** | Cheap, predictable cost; multi-room IA still ships |
@@ -47,7 +47,7 @@ Human override format (from existing handoffs): `accept all` | `change: <id and 
 
 | Artifact | Purpose |
 |---|---|
-| [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md) | Single status board for ARDs + open decisions |
+| [adr/ADR-0000-status-board.md](../adr/ADR-0000-status-board.md) | Single status board for ADRs + open decisions |
 | [decisions/DEC-agent-source-of-truth.md](../decisions/DEC-agent-source-of-truth.md) | Resolve vision vs Driveagent home |
 | [decisions/DEC-package-location.md](../decisions/DEC-package-location.md) | Close monorepo vs separate repo |
 | [decisions/DEC-open-product-forks.md](../decisions/DEC-open-product-forks.md) | Focus, streams, share, accent, revise-not-restart |
@@ -75,7 +75,7 @@ Human override format (from existing handoffs): `accept all` | `change: <id and 
 ### Should (Phase 1–2 without blocking join)
 
 - Participant sheet chooser (Transcript | Profile) with classifier strip (W-19 / W-37).
-- Builtin / example Driveagent home loadable as fixture (ARD-0001 compile path).
+- Builtin / example Driveagent home loadable as fixture (ADR-0001 compile path).
 - Stage + address + steer + interrupt (Phase 2 gate).
 - Gates v1 for high-impact tools (W-24 / W-25).
 - Requirements / decision / phase-entry stage cards (W-41, W-42, W-44).
@@ -115,11 +115,11 @@ Human override format (from existing handoffs): `accept all` | `change: <id and 
 
 ## How to use this brief
 
-Treat decisions in this document and the ARD board as defaults for Phase 0 unless a later ARD supersedes them. Implementation of the three-lane state partition ([ARD-0013](../ard/ARD-0013-state-partition.md)) is the local durability seam: remote rooms, org config, and audit export arrive later as adapters on the same log and `DriveHostPort` — not a rewrite.
+Treat decisions in this document and the ADR board as defaults for Phase 0 unless a later ADR supersedes them. Implementation of the three-lane state partition ([ADR-0013](../adr/ADR-0013-state-partition.md)) is the local durability seam: remote rooms, org config, and audit export arrive later as adapters on the same log and `DriveHostPort` — not a rewrite.
 
 For day-to-day sequencing, prefer feature docs under `features/` and the hub ops catalog ([ops/hub-drive-ops.md](../ops/hub-drive-ops.md)).
 
-1. Read [ARD-0000-status-board.md](../ard/ARD-0000-status-board.md).
+1. Read [ADR-0000-status-board.md](../adr/ADR-0000-status-board.md).
 2. Read [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) for the E2E product/systems map.
 3. Accept or amend the recommended package.
 4. Run [CHECKLIST-phase0-entry.md](CHECKLIST-phase0-entry.md).

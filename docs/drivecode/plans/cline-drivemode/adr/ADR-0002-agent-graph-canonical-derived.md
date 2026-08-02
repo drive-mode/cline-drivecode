@@ -1,4 +1,4 @@
-# ARD-0002: Canonical knowledge YAML; derived graph projection
+# ADR-0002: Canonical knowledge YAML; derived graph projection
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-25
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: PRD 6, ARD-0001
+- Related: PRD 6, ADR-0001
 - Inspired by: BRIEF canonical `BRIEF.md` vs `latest/*` artifacts; harrison-site content YAML → emitted site/graph views
 
 ## Context
@@ -46,7 +46,7 @@ Output: `.derived/graph.json` with `{ version, agentSlug, nodes[], edges[], comp
 
 Recruit ([DRV-RECRUIT](../features/DRV-RECRUIT.md)) reads compiled graphs only, never raw private notes.
 
-Inject into a turn (P3+) uses graduated retrieval: labels and short summaries by default; full node bodies only when selected. Inject audit records node ids ([ARD-0004](ARD-0004-gated-learn-privacy.md)).
+Inject into a turn (P3+) uses graduated retrieval: labels and short summaries by default; full node bodies only when selected. Inject audit records node ids ([ADR-0004](ADR-0004-gated-learn-privacy.md)).
 
 ## Consequences
 

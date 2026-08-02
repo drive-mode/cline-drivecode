@@ -1,7 +1,7 @@
 # Requirements · Status Hub accomplishment lens
 
 **DRV:** [DRV-STATUS-SESSIONS](../../features/DRV-STATUS-SESSIONS.md)  
-**Related:** ARD-0005, DRV-TASK-METRICS, PRD 10 R3, StatusSnapshotSource ports
+**Related:** ADR-0005, DRV-TASK-METRICS, PRD 10 R3, StatusSnapshotSource ports
 
 ## Problem
 
@@ -33,7 +33,7 @@ Open Status and see recent Drive sessions as accomplishment (tasks completed, cl
 
 ## Dependencies
 
-- Obs slices 1–2, ARD-0005 shell, DRV-TASK-BANK UI
+- Obs slices 1–2, ADR-0005 shell, DRV-TASK-BANK UI
 
 ## Risks
 

@@ -1,6 +1,6 @@
 # Drivecode PRDs (cline-drivemode)
 
-Product requirements for Drivecode features that sit on top of the existing drivemode plan set. Numbered for stable cross-reference from ARDs and feature specs.
+Product requirements for Drivecode features that sit on top of the existing drivemode plan set. Numbered for stable cross-reference from ADRs and feature specs.
 
 | # | File | Focus |
 |---|------|--------|
@@ -16,7 +16,7 @@ Session satisfaction research: [../research/15-task-satisfaction-observability.m
 
 Example agent home: [../examples/driveagent-pair-partner/](../examples/driveagent-pair-partner/).
 
-**ARD** here means Architecture Decision Record (same role as ADR in cursor-drive / harrison-site). See [../ard/](../ard/).
+**ADR** here means Architecture Decision Record (same role as ADR in cursor-drive / harrison-site). See [../adr/](../adr/).
 
 ## Lessons imported from `briefs`
 

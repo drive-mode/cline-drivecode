@@ -1,6 +1,6 @@
 # Task-bank Drive loop · overview
 
-Back to [README.md](README.md). Product: [PRD 9](../../prd/prd-task-bank-drive-loop.md). Decision: [ARD-0008](../../ard/ARD-0008-task-bank.md). Feature: [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md).
+Back to [README.md](README.md). Product: [PRD 9](../../prd/prd-task-bank-drive-loop.md). Decision: [ADR-0008](../../adr/ADR-0008-task-bank.md). Feature: [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md).
 
 ## Context
 
@@ -41,6 +41,6 @@ Hub writer, and wire the canonical mode pill.
 ## Implementation guidance
 
 - Run **how** before hub turn-loop changes.
-- **interrogate** ARD-0008 if layout is contested.
+- **interrogate** ADR-0008 if layout is contested.
 - `/deslop` before commit; **unslop** on prose.
 - **control-ui** for hub smoke; **babysit** after PRs.

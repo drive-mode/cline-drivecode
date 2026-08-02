@@ -64,7 +64,7 @@ Highest-leverage share-screen work in the hub webview. Hub *receive* side
 - [`docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/README.md`](../share-and-router/README.md) — index for the share-and-router plan cluster.
 - [`docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/11-spotlight-a2a.md`](../share-and-router/11-spotlight-a2a.md) — Spotlight biases show backlog / say / TTS voice; mute ⟂ deafen; A2A.
 - [`docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/09-demo-share.md`](../share-and-router/09-demo-share.md) — share modes `structured | demo | pixel`; `drive_demo_frame` artifacts.
-- [`docs/drivecode/plans/cline-drivemode/ard/ARD-0011-demo-share-track.md`](../../ard/ARD-0011-demo-share-track.md) — decision record for the demo-share track.
+- [`docs/drivecode/plans/cline-drivemode/adr/ADR-0011-demo-share-track.md`](../../adr/ADR-0011-demo-share-track.md) — decision record for the demo-share track.
 - [`docs/drivecode/plans/cline-drivemode/features/DRV-DEMO-SHARE.md`](../../features/DRV-DEMO-SHARE.md) — feature spec for demo-share artifact cards.
 - [`docs/drivecode/plans/cline-drivemode/features/DRV-CALL-STRIP.md`](../../features/DRV-CALL-STRIP.md) — call strip share/now-next/interrupt controls.
 - [`docs/drivecode/plans/cline-drivemode/features/DRV-NARRATION.md`](../../features/DRV-NARRATION.md) — narration policy (decisions, not keystrokes).
@@ -72,7 +72,7 @@ Highest-leverage share-screen work in the hub webview. Hub *receive* side
 - [`docs/drivecode/plans/cline-drivemode/features/DRV-PARTICIPANT-SHEET.md`](../../features/DRV-PARTICIPANT-SHEET.md) — participant roster sheet.
 - [`docs/drivecode/plans/cline-drivemode/features/DRV-DRIVE-TAB.md`](../../features/DRV-DRIVE-TAB.md) — Drive tab IA (Slice C primary mount).
 - [`docs/drivecode/plans/cline-drivemode/features/DRV-PIP.md`](../../features/DRV-PIP.md) — PiP partner companion (planned).
-- [`docs/drivecode/plans/cline-drivemode/ard/ARD-0006-pip-partner-companion.md`](../../ard/ARD-0006-pip-partner-companion.md) — decision record for the PiP companion.
+- [`docs/drivecode/plans/cline-drivemode/adr/ADR-0006-pip-partner-companion.md`](../../adr/ADR-0006-pip-partner-companion.md) — decision record for the PiP companion.
 - [`docs/drivecode/plans/cline-drivemode/foundation/01-architecture.md`](../../foundation/01-architecture.md) — hub single-writer boundary and client projections.
 - [`docs/drivecode/plans/cline-drivemode/research/02-research-streaming.md`](../../research/02-research-streaming.md) — streaming research; pixels are an anti-pattern for the agent stage.
 - [`docs/drivecode/plans/cline-drivemode/research/04-future-multi-user.md`](../../research/04-future-multi-user.md) — deferred multi-human / WebRTC media plane.

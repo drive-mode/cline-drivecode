@@ -1,4 +1,4 @@
-﻿# Drivecode handoff
+# Drivecode handoff
 
 ## Problem
 
@@ -42,6 +42,11 @@ Leadership planning wave entry. [cline-drivemode/LEADERSHIP-BRIEF.md](plans/clin
 
 Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session notes: [07-agent-handoff.md](plans/drivecode-sdk/delivery/07-agent-handoff.md) (superseded).
 
+### Terminology note (2026-08)
+
+- Architecture Decision Records were renamed from mistaken local **ARD** spelling to industry-standard **ADR** (`plans/cline-drivemode/adr/ADR-NNNN-*.md`). Leadership **DEC-*** files are unchanged.
+- Do not create a parallel `docs/adr/` at repo root — nest path only.
+
 ### Product and interaction plans
 
 - `docs/drivecode/plans/cline-drivemode/foundation/00-vision.md` defines the Drive tab, pair-call experience, and staged product direction.
@@ -53,10 +58,10 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
 - `docs/drivecode/plans/cline-drivemode/delivery/TASK-GRAPH.md` orders phases and acceptance gates.
 - `docs/drivecode/plans/cline-drivemode/delivery/AGENT-RUNBOOK.md` explains how the next agent should select, implement, and verify tasks.
 - `docs/drivecode/plans/cline-drivemode/prd/prd-driveagent-portfolio.md` defines Driveagent portfolios, knowledge graphs, and recruit.
-- `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ARD-0015](plans/cline-drivemode/ard/ARD-0015-task-session-observability.md) Proposed).
+- `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ADR-0015](plans/cline-drivemode/adr/ADR-0015-task-session-observability.md) Proposed).
 - `docs/drivecode/plans/cline-drivemode/initiatives/session-satisfaction-moments/` defines product moments on the call arc ([visual plan](plans/cline-drivemode/initiatives/session-satisfaction-moments/visual-plan.md), [canvas](design/canvases/session-satisfaction-moments-canvas.html)).
 - **Remaining implementation checklist:** [delivery/REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md) (satisfaction track landed; residuals in that file).
-- `docs/drivecode/plans/cline-drivemode/ard/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, and gated learning (see status board).
+- `docs/drivecode/plans/cline-drivemode/adr/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, and gated learning (see status board).
 - `docs/drivecode/plans/cline-drivemode/examples/driveagent-pair-partner/` is the concrete agent-home and graph fixture.
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
 - `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the end-to-end systems analysis (context, interfaces, NFRs, as-is/to-be, delivery slices) — **§13.0 is current as-is**.
@@ -95,7 +100,7 @@ CLI Status uses the live hub adapter; CLI Drive chrome is a **local toggle** (no
 
 ### Top gaps
 
-- Satisfaction residuals: W1.1 redirect/narration, host `.driveagent` skill compile, `privacy.debugRetention` UI + raised caps, durable `privacy.retention`, ARD-0015 still **Proposed** — [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md).
+- Satisfaction residuals: W1.1 redirect/narration, host `.driveagent` skill compile, `privacy.debugRetention` UI + raised caps, durable `privacy.retention`, ADR-0015 still **Proposed** — [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md).
 - `DRV-GATES` taxonomy landed (`gates.ts`); still needs expiry rules and an owner for the approval feed UI.
 - Hub reconnect needs acceptance criteria and degraded-state UX under `DRV-ROOM-MVP`.
 - Recruit product Add path + RosterPack library UI (kernel score + hub pack seat path already exist).
@@ -117,6 +122,6 @@ The implementation must also keep `AgentProfile` separate from agent behavior. P
 
 **Package location — Accepted.** See [cline-drivemode/decisions/DEC-package-location.md](plans/cline-drivemode/decisions/DEC-package-location.md).
 
-**ARD-0000…0013 + DEC bundle — Accepted** via human `accept all` (2026-07-29). ARD-0014 (Chat-fork lifecycle) later Accepted on main.
+**ADR-0000…0013 + DEC bundle — Accepted** via human `accept all` (2026-07-29). ADR-0014 (Chat-fork lifecycle) later Accepted on main.
 
-Board: [cline-drivemode/ard/ARD-0000-status-board.md](plans/cline-drivemode/ard/ARD-0000-status-board.md).
+Board: [cline-drivemode/adr/ADR-0000-status-board.md](plans/cline-drivemode/adr/ADR-0000-status-board.md).

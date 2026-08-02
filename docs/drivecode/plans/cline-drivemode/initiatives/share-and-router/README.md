@@ -8,9 +8,9 @@ Canonical architecture plan for **demo share** and **multi-agent router**.
 | [09-demo-share.md](09-demo-share.md) | Demo share track summary |
 | [10-agent-router.md](10-agent-router.md) | Agent router summary |
 | [11-spotlight-a2a.md](11-spotlight-a2a.md) | Spotlight, mute/deafen, A2A |
-| [../ard/ARD-0011-demo-share-track.md](../../ard/ARD-0011-demo-share-track.md) | ADR demo share |
-| [../ard/ARD-0012-agent-router.md](../../ard/ARD-0012-agent-router.md) | ADR agent router |
-| [../ard/ARD-0014-chat-fork-lifecycle.md](../../ard/ARD-0014-chat-fork-lifecycle.md) | ADR chat-fork lifecycle |
+| [ADR-0011-demo-share-track.md](../../adr/ADR-0011-demo-share-track.md) | ADR demo share |
+| [ADR-0012-agent-router.md](../../adr/ADR-0012-agent-router.md) | ADR agent router |
+| [ADR-0014-chat-fork-lifecycle.md](../../adr/ADR-0014-chat-fork-lifecycle.md) | ADR chat-fork lifecycle |
 | [../features/DRV-DEMO-SHARE.md](../../features/DRV-DEMO-SHARE.md) | Feature checklist |
 | [../features/DRV-AGENT-ROUTER.md](../../features/DRV-AGENT-ROUTER.md) | Feature checklist |
 | [../features/DRV-CHAT-FORK.md](../../features/DRV-CHAT-FORK.md) | Invisible auditable worker forks |
@@ -25,7 +25,7 @@ Canonical architecture plan for **demo share** and **multi-agent router**.
 
 Reconciled against `main` via [PR #39](https://github.com/hhalperin/cline-drivecode/pull/39) (`docs/reconcile-drive-plans`): phases 1–8 and 10 in [PLAN.md](PLAN.md#phases-revised) are partial; phase 9 is not started. Post-#58/#80, show-backlog director (phase cluster via #55) and several share/room slices are evidenced landed — see feature `Implementation status` banners and [REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md).
 
-**Landed (partial).** Schemas, pure ranking/routing policy, manual Hub Spotlight and audio-flag ops, Mermaid producer, sticky stage, fraction-routing API scaffolding. ChatForkLifecycle schemas + pure policy + hub `drive.fork.*` (claim/promote/cancel/audit/tick) + Workers audit UI + `?demoChatFork=1` demo ([ARD-0014](../../ard/ARD-0014-chat-fork-lifecycle.md)).
+**Landed (partial).** Schemas, pure ranking/routing policy, manual Hub Spotlight and audio-flag ops, Mermaid producer, sticky stage, fraction-routing API scaffolding. ChatForkLifecycle schemas + pure policy + hub `drive.fork.*` (claim/promote/cancel/audit/tick) + Workers audit UI + `?demoChatFork=1` demo ([ADR-0014](../../adr/ADR-0014-chat-fork-lifecycle.md)).
 
 **Show backlog director.** Slices 1–7 + S **Done on main** (merged #55). Treat [show-backlog-director/](../show-backlog-director/) as reference, not a greenfield backlog. Cline skills: `diagram-first` (nest), `diagram-show` (stage). See [overview.md](../show-backlog-director/overview.md).
 

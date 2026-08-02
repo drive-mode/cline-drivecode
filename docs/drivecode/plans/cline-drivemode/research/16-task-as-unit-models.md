@@ -1,6 +1,6 @@
 # 16 · Task-as-unit models (research)
 
-**Status.** Research — conceptual groundwork. Product truth remains [ARD-0008](../ard/ARD-0008-task-bank.md). Harness angle: [drivecode-sdk/delivery/09-next-task-proposer.md](../../drivecode-sdk/delivery/09-next-task-proposer.md).  
+**Status.** Research — conceptual groundwork. Product truth remains [ADR-0008](../adr/ADR-0008-task-bank.md). Harness angle: [drivecode-sdk/delivery/09-next-task-proposer.md](../../drivecode-sdk/delivery/09-next-task-proposer.md).  
 **Related.** [15-task-satisfaction-observability.md](15-task-satisfaction-observability.md).
 
 ## Thesis
@@ -36,7 +36,7 @@ Caption:
 
 - Deterministic cursor is always explainable from disk.
 - Host planning skills and any learned scorer only **propose**.
-- Accept gate (ARD-0004 pattern) is the only path into durable bank / knowledge.
+- Accept gate (ADR-0004 pattern) is the only path into durable bank / knowledge.
 
 ## Analogy (and its limits)
 
@@ -79,7 +79,7 @@ recordTaskFailure / stall pattern
   → accepted → durable skill or bank mutation via hub
 ```
 
-This reuses ARD-0004 governance. Auto-writing “better plans” from silent transcript analysis is rejected.
+This reuses ADR-0004 governance. Auto-writing “better plans” from silent transcript analysis is rejected.
 
 ## Risks of conflating metrics with training
 
@@ -99,6 +99,6 @@ This reuses ARD-0004 governance. Auto-writing “better plans” from silent tra
 
 ## References
 
-- [ARD-0008](../ard/ARD-0008-task-bank.md), [PRD 9](../prd/prd-task-bank-drive-loop.md)
+- [ADR-0008](../adr/ADR-0008-task-bank.md), [PRD 9](../prd/prd-task-bank-drive-loop.md)
 - [drivecode-sdk/00-discovery-omnigent.md](../../drivecode-sdk/foundation/00-discovery-omnigent.md)
 - [drivecode-sdk/09-next-task-proposer.md](../../drivecode-sdk/delivery/09-next-task-proposer.md)

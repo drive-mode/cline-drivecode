@@ -17,7 +17,7 @@ Drive mode off: Plan | Act again — no Drive chrome
 
 Activation lives on the mode control users already use. Chat remains the default place work happens. The hub Drive activity is optional room management under the same Cline Hub chrome—not a separate app.
 
-See [ARD-0007](../ard/ARD-0007-drive-as-cline-mode.md).
+See [ADR-0007](../adr/ADR-0007-drive-as-cline-mode.md).
 
 ## Goals
 
@@ -77,7 +77,7 @@ See [ARD-0007](../ard/ARD-0007-drive-as-cline-mode.md).
 
 ## References
 
-- [ARD-0007](../ard/ARD-0007-drive-as-cline-mode.md)
+- [ADR-0007](../adr/ADR-0007-drive-as-cline-mode.md)
 - [DRV-MODE-OVERLAY](../features/DRV-MODE-OVERLAY.md)
 - [DRV-TOGGLE](../features/DRV-TOGGLE.md)
 - [DRV-DRIVE-TAB](../features/DRV-DRIVE-TAB.md)

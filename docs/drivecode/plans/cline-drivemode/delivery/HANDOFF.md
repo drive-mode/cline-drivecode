@@ -2,6 +2,8 @@
 
 > **Historical (2026-07-25).** Do not use as cold-start. Prefer nest [HANDOFF.md](../../../HANDOFF.md) and [SYSTEMS-ANALYSIS.md](../leadership/SYSTEMS-ANALYSIS.md) §13.0. Kernel, hub rooms, harness, Show director, and satisfaction spine have since landed on `main`.
 
+**Terminology (2026-08).** ADRs live under [`adr/`](../adr/) as `ADR-NNNN-*.md` (formerly misspelled ARD). **DEC-*** under [`decisions/`](../decisions/) unchanged. Stale repo-root `docs/adr/` scaffolding is retired — nest path only.
+
 **Reader.** Archive for the early planning wave.
 **Repo.** `hhalperin/cline-drivecode` (local: `profiles/hhalperin/active/cline-drivecode`).
 **Date.** 2026-07-25.
@@ -14,7 +16,7 @@ Drivecode needs to feel like joining a call with recruitable agents who have rea
 
 Must stay true:
 
-- Hub `ws://127.0.0.1:25463` is the single writer of room state. No default second MCP on `:7891`.
+- Hub is the single writer of room state (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set). No default second MCP on `:7891`.
 - Bun only in this repo.
 - Privacy-strict. No transcript/audio persistence without an explicit debug flag. No auto-dump of calls into agent knowledge.
 - Drive is a Cline mode (Plan/Act-class). Chat is the default work surface; Drive hub activity is optional room IA.
@@ -34,12 +36,12 @@ Out of scope for the next “continue implementation” slice unless Harrison sa
 
 | Path | What |
 |---|---|
-| [`docs/drivecode/plans/cline-drivemode/README.md`](../../../design/wireframes/README.md) | Plan index, feature table |
+| [`docs/drivecode/plans/cline-drivemode/README.md`](../README.md) | Plan index, feature table |
 | [`00-vision.md`](../foundation/00-vision.md) … [`06-platform-config.md`](../foundation/06-platform-config.md) | Vision through platform facets |
 | [`05-workflows.md`](../foundation/05-workflows.md) | 39 workflows (incl. W-37 sheet, W-38 recruit, W-39 gated learn) |
 | [`TASK-GRAPH.md`](TASK-GRAPH.md) | Phases 0–5 gates |
 | [`prd/prd-driveagent-portfolio.md`](../prd/prd-driveagent-portfolio.md) | **PRD 6** portfolio / graph / recruit |
-| [`ard/`](../ard/) | **ARD-0000…0013** (all Status: Accepted; ARD-0014 (Chat-fork lifecycle) later Accepted on main) |
+| [`adr/`](../adr/) | **ADR-0000…0013** (all Status: Accepted; ADR-0014 (Chat-fork lifecycle) later Accepted on main) |
 | [`features/DRV-*.md`](../features/) | Feature specs including `DRV-PARTICIPANT-SHEET`, `DRV-DRIVEAGENT-HOME`, `DRV-AGENT-GRAPH`, `DRV-RECRUIT` |
 | [`examples/driveagent-pair-partner/`](../examples/driveagent-pair-partner/) | Example home + BRIEF.md + sample graph |
 | [`docs/drivecode/plans/drivecode-sdk/`](../../drivecode-sdk/) | Meta-harness discovery vs Omnigent (sibling plan set) |
@@ -69,12 +71,12 @@ At handoff time (2026-07-25) only early chrome existed. **On current `main` that
 - Canvas: `C:\Users\harri\.cursor\projects\c-Users-harri-Documents-dev-profiles-ai-secretagent-active-cursor-drive\canvases\cline-drivecode-overview.canvas.tsx` (Architecture, Workflows, Platform/Config, Drive-tab demos).
 - Sibling prior art: `ai-secretagent/active/{cursor-drive,claude-drive,briefs}`; personal graph pattern: `hhalperin/active/harrison-site`.
 
-### Key decisions already locked in docs (Accepted ARDs)
+### Key decisions already locked in docs (Accepted ADRs)
 
-1. **ARD-0001** — `.driveagent/<slug>/` is the agent home; compile into host runtime; not `.claude/`.
-2. **ARD-0002** — Canonical knowledge YAML; derived `.derived/graph.json`.
-3. **ARD-0003** — Recruit ranks; RosterPack stays curated; both under Add.
-4. **ARD-0004** — Gated learn; no transcript dump.
+1. **ADR-0001** — `.driveagent/<slug>/` is the agent home; compile into host runtime; not `.claude/`.
+2. **ADR-0002** — Canonical knowledge YAML; derived `.derived/graph.json`.
+3. **ADR-0003** — Recruit ranks; RosterPack stays curated; both under Add.
+4. **ADR-0004** — Gated learn; no transcript dump.
 
 Roster click = **Transcript | Profile** (W-37). Address-follows-focus only on Transcript.
 
@@ -84,9 +86,9 @@ Roster click = **Transcript | Profile** (W-37). Address-follows-focus only on Tr
 
 ## Decision (Accepted 2026-07-29)
 
-**Accepted.** Human `accept all` for ARD-0000…0013 and the leadership DEC bundle. ARD-0014 (Chat-fork lifecycle) later Accepted on main.
+**Accepted.** Human `accept all` for ADR-0000…0013 and the leadership DEC bundle. ADR-0014 (Chat-fork lifecycle) later Accepted on main.
 
-Board: [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md), [CHECKLIST-phase0-entry.md](../leadership/CHECKLIST-phase0-entry.md).
+Board: [adr/ADR-0000-status-board.md](../adr/ADR-0000-status-board.md), [CHECKLIST-phase0-entry.md](../leadership/CHECKLIST-phase0-entry.md).
 
 Agent SoT and package location are **Accepted** (compile-from-`.driveagent/`; `@cline/drive` in monorepo).
 
@@ -106,5 +108,5 @@ Historical planning list (do not execute as greenfield):
 ```text
 Read: docs/drivecode/HANDOFF.md
 Then:  leadership/SYSTEMS-ANALYSIS.md §13.0 → delivery/REMAINING-task-satisfaction.md
-Then:  ard/ARD-0000-status-board.md
+Then:  adr/ADR-0000-status-board.md
 ```

@@ -39,10 +39,10 @@ Caption:
 
 ## Principles
 
-- Tasks are the unit of measurement (ARD-0015 / research 16).
+- Tasks are the unit of measurement (ADR-0015 / research 16).
 - Deterministic Now/Next cursor stays product truth.
 - Post-success plan continuation is engagement, not failure churn.
-- Same privacy spine as ARD-0004.
+- Same privacy spine as ADR-0004.
 
 ## Slice order
 

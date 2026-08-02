@@ -1,5 +1,5 @@
 /**
- * Resolve `.driveagent/<slug>/` home directories (DRV-DRIVEAGENT-HOME / ARD-0001).
+ * Resolve `.driveagent/<slug>/` home directories (DRV-DRIVEAGENT-HOME / ADR-0001).
  *
  * First-match-by-slug: workspace tier, then optional user tier under `~/.driveagent/`.
  */

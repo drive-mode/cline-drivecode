@@ -70,7 +70,7 @@ function matchTtsManifest(
 }
 
 /**
- * Composition root for Drive voice adapters (ARD-0010).
+ * Composition root for Drive voice adapters (ADR-0010).
  * Builtins only for now; workspace plugins load in a later phase.
  * Memoized by topology fingerprint to avoid recreating TTS/STT ports per send.
  */

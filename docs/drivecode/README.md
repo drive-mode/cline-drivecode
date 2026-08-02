@@ -33,7 +33,7 @@ All Drive / drivecode docs live under this folder:
 
 ## Status Hub
 
-Design: [ARD-0005](./plans/cline-drivemode/ard/ARD-0005-status-hub.md) (Accepted — implemented).
+Design: [ADR-0005](./plans/cline-drivemode/adr/ADR-0005-status-hub.md) (Accepted — implemented).
 
 ### Storage
 
@@ -291,7 +291,8 @@ Runbook: [DEMO.md](design/wireframes/DEMO.md).
 ### The hub is the single writer
 
 Room state — roster, Spotlight sharer, pin, cards, mute flags, sub-mode, address
-set — is owned by the hub daemon on `ws://127.0.0.1:25463` and mutated only
+set — is owned by the hub daemon (preferred default port; discovery / free-port
+fallback unless `CLINE_HUB_PORT` is set) and mutated only
 through hub ops. Clients hold read-only projections. There is exactly one writer
 for the shared room object, so no lock and no CRDT is needed.
 

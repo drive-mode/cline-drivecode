@@ -1,6 +1,6 @@
 # 08 · Provider harness (BYOK) and Drive settings
 
-Back to [README](../../../design/wireframes/README.md). Decision: [ARD-0010](../ard/ARD-0010-provider-harness-byok.md). Topology: [07-runtime-topology.md](07-runtime-topology.md). Facets: [06-platform-config.md](06-platform-config.md).
+Back to [README](../../../design/wireframes/README.md). Decision: [ADR-0010](../adr/ADR-0010-provider-harness-byok.md). Topology: [07-runtime-topology.md](07-runtime-topology.md). Facets: [06-platform-config.md](06-platform-config.md).
 
 ## Product promise
 
@@ -98,7 +98,7 @@ Drive Settings
 
 Hub ops (illustrative): `drive_config_set`, `drive_providers_list`, `drive_providers_reload`.
 
-Incompatible providers appear disabled in the picker and are rejected on set with ARD-0009 reason codes.
+Incompatible providers appear disabled in the picker and are rejected on set with ADR-0009 reason codes.
 
 ## Trust (MVP)
 
@@ -116,6 +116,6 @@ Incompatible providers appear disabled in the picker and are rejected on set wit
 
 ## See also
 
-- [ARD-0010](../ard/ARD-0010-provider-harness-byok.md)
+- [ADR-0010](../adr/ADR-0010-provider-harness-byok.md)
 - [DRV-PLATFORM-CONFIG](../features/DRV-PLATFORM-CONFIG.md)
 - [DRV-MIC](../features/DRV-MIC.md), [DRV-TTS](../features/DRV-TTS.md)

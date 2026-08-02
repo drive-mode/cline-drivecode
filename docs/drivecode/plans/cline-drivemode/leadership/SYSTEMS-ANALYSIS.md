@@ -16,7 +16,7 @@ Companion docs: [HANDOFF.md](../../../HANDOFF.md), [REMAINING-task-satisfaction.
 
 | Dimension | Finding |
 |---|---|
-| Product maturity (docs) | High — vision, 45 workflows, facets, ARDs/DECs, gates |
+| Product maturity (docs) | High — vision, 45 workflows, facets, ADRs/DECs, gates |
 | Runtime maturity (code) | Medium–high — hub rooms, `@cline/drive` harness, Show director, Status Hub, task-satisfaction on main |
 | Critical path | Product gaps (GATES UI, recruit Add, pack library, reconnect) + satisfaction residuals |
 | Highest product risk | Stale plans claiming scaffold-only |
@@ -104,7 +104,7 @@ flowchart LR
 | Target developer | Call-shaped pair programming | Phase 1 smoke + M0 qualitative pass |
 | Less-experienced builder | Guidance without ceremony | W-40/W-45 work; “just build X” escapes |
 | Agent author | Portable homes + recruit | Compile fixture + lexical recruit |
-| Privacy-conscious user | No silent retention | M7/M8 CI + ARD-0004 |
+| Privacy-conscious user | No silent retention | M7/M8 CI + ADR-0004 |
 | Fork maintainer | Coherent package graph | `@cline/drive` in monorepo; no syncTypes |
 | Future second host | Portable harness | Host port + fail-closed conformance |
 
@@ -335,7 +335,7 @@ Still open for product freeze (not “missing package APIs”):
 | ID | Category | Requirement | Verification |
 |---|---|---|---|
 | NFR-P1 | Privacy | No durable transcript/audio by default | Schema + FS tests M7/M8 |
-| NFR-P2 | Privacy | Learn is propose→accept | ARD-0004 + UI/tests |
+| NFR-P2 | Privacy | Learn is propose→accept | ADR-0004 + UI/tests |
 | NFR-S1 | Safety | High-impact tools gated | DRV-GATES M12–M14 |
 | NFR-A1 | Architecture | Single writer hub | Port assert M5; code review |
 | NFR-A2 | Architecture | One runtime path via compile | No-prompt-in-facet M6 |
@@ -367,7 +367,7 @@ Still open for product freeze (not “missing package APIs”):
 | Recruit writes seats | Race / bypass caps | Op review | Query-only recruit |
 | Empty pack → everyone | Misdelivery | Address tests | Reject empty resolve |
 | teamOpt without isolation | Workspace corruption | Capability check | Fail closed |
-| Silent learn | Privacy breach | Audit / tests | ARD-0004 |
+| Silent learn | Privacy breach | Audit / tests | ADR-0004 |
 | Durable overwrites live | Mid-call surprise | Lane tests | Seed-only rule |
 | Approval fatigue | Users bypass | Metrics M13/M14 | Tight taxonomy; thresholds |
 | Guidance lecture blocks join | Churn | Product review | On-demand + escape hatch |
@@ -432,7 +432,7 @@ flowchart TB
 | Chat Join + persona string inject | Hub collaboration rooms — **landed** (`call_*` / `drive.*`) |
 | CLI `Ctrl+Shift+D` local flags | Drive tab / Status Hub — **landed** in hub webview |
 | Example `.driveagent` fixture (docs) | Home loader / compile / recruit — partial; see DRV features |
-| Plans, wireframes, ARDs/DECs | Shared drive schemas — **landed** in `@cline/shared` |
+| Plans, wireframes, ADRs/DECs | Shared drive schemas — **landed** in `@cline/shared` |
 | — | Show director dual backlog — **landed** (DRV-SHOW-BACKLOG on main) |
 
 ```mermaid
@@ -537,8 +537,8 @@ Close the open freeze list in §9.4 enough that Drive tab feels authoritative en
 
 | ID | Question | Default if silent |
 |---|---|---|
-| Q1 | Accept ARD-0001–0004 + DEC bundle? | **Closed — Accepted** |
-| Q2 | Accept ARD-0015 (task-session observability)? | **Proposed** — leadership accept still open; see [ARD-0015](../ard/ARD-0015-task-session-observability.md) |
+| Q1 | Accept ADR-0001–0004 + DEC bundle? | **Closed — Accepted** |
+| Q2 | Accept ADR-0015 (task-session observability)? | **Proposed** — leadership accept still open; see [ADR-0015](../adr/ADR-0015-task-session-observability.md) |
 | Q3 | Human participant id scheme across clients? | Stable per hub connection + workspace; document in ROOM-MVP |
 | Q4 | When do TextChannels appear in chrome? | Hidden until a PRD exists (domain may reserve the array) |
 | Q5 | Who owns GATES feed-card UI delivery? | [DRV-GATES](../features/DRV-GATES.md) — taxonomy landed; UI / hub projection still open |

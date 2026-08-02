@@ -22,7 +22,7 @@ import { resolveStatusDbPath } from "@cline/shared/storage";
 import { ensureStatusSchema } from "./status-schema";
 
 /**
- * Status Hub store backed by `status.db` (ARD-0005).
+ * Status Hub store backed by `status.db` (ADR-0005).
  *
  * Append-only: rows are never rewritten except to stamp `superseded_at`, so
  * the table doubles as a per-subject changelog and as a "current state of

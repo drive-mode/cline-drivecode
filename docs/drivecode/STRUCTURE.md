@@ -37,7 +37,7 @@ docs/drivecode/
 │   │   ├── leadership/       # briefs, systems analysis, gates
 │   │   ├── delivery/         # TASK-GRAPH, runbook, active handoff
 │   │   ├── decisions/        # DEC-*
-│   │   ├── ard/              # ARD-NNNN-*
+│   │   ├── adr/              # ADR-NNNN-*
 │   │   ├── prd/
 │   │   ├── features/         # DRV-*.md
 │   │   ├── initiatives/      # multi-file tracks (README each)
@@ -82,7 +82,7 @@ docs/drivecode/
 | Task graph, agent runbook, active track handoff | `plans/cline-drivemode/delivery/` |
 | Living satisfaction backlog (W0–W4) | `plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md` |
 | Decision (DEC) | `plans/cline-drivemode/decisions/` |
-| Architecture decision (ARD) | `plans/cline-drivemode/ard/` |
+| Architecture decision (ADR) | `plans/cline-drivemode/adr/` |
 | Product requirements | `plans/cline-drivemode/prd/` |
 | Single feature spec | `plans/cline-drivemode/features/DRV-*.md` |
 | Multi-slice delivery plan | `plans/cline-drivemode/initiatives/<slug>/` |
@@ -123,7 +123,7 @@ The checker (`sdk/scripts/check-drivecode-structure.ts`) fails on:
 - Initiative folders without `README.md`
 - Loose files in `assets/` or unknown asset/design buckets
 - Revived legacy paths (`design/drive-wireframes/`, nest `reviews/`, old initiative siblings)
-- `features/` / `ard/` naming violations
+- `features/` / `adr/` naming violations
 - Missing required role directories or migrated front-door files
 
 Unit tests (`sdk/scripts/check-drivecode-structure.test.ts`) cover valid/invalid fixtures

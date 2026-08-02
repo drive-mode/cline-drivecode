@@ -1,4 +1,4 @@
-# ARD-0008: Task bank is Drive’s execution primitive
+# ADR-0008: Task bank is Drive’s execution primitive
 
 ## Status
 

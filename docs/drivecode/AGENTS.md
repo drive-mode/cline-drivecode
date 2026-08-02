@@ -26,7 +26,7 @@ Fix failures before merging Drive doc changes.
 | `plans/cline-drivemode/leadership/` | SE/PM briefs, systems analysis, entry gates |
 | `plans/cline-drivemode/delivery/` | TASK-GRAPH, AGENT-RUNBOOK, active track handoff |
 | `plans/cline-drivemode/decisions/` | `DEC-*` |
-| `plans/cline-drivemode/ard/` | `ARD-NNNN-*` + status board |
+| `plans/cline-drivemode/adr/` | `ADR-NNNN-*` + status board |
 | `plans/cline-drivemode/prd/` | Product requirements |
 | `plans/cline-drivemode/features/` | `DRV-*.md` one-pagers only |
 | `plans/cline-drivemode/initiatives/<slug>/` | Multi-file delivery plans (README required) |
@@ -49,7 +49,7 @@ this nest. Brand source files under repo-root `assets/drive/` are not docs.
 ## Adding
 
 1. Open [STRUCTURE.md](STRUCTURE.md) placement matrix. Prefer an existing leaf over a new nest-root sibling.
-2. New product work: `features/DRV-*.md` and/or `initiatives/<slug>/` (plus ARD/PRD as needed). Update `delivery/TASK-GRAPH.md` when sequencing changes.
+2. New product work: `features/DRV-*.md` and/or `initiatives/<slug>/` (plus adr/PRD as needed). Update `delivery/TASK-GRAPH.md` when sequencing changes.
 3. New harness / host-port work: `plans/drivecode-sdk/`.
 4. New screenshots: `assets/{hub,tui,demos,logos}/` — never loose files in `assets/`.
 5. New wireframes: `design/wireframes/`; brand tokens → `design/brand/`; canvases → `design/canvases/`.
@@ -63,14 +63,14 @@ this nest. Brand source files under repo-root `assets/drive/` are not docs.
 - Prefer relative links inside the nest; use absolute `docs/drivecode/...` in handoffs and external callouts.
 - When renaming or moving a file, update absolute `docs/drivecode/...` strings and relative links that cross folder boundaries. Grep for the old path before finishing.
 - Do not leave stubs at old locations (`docs/plans/...`, `design/drive-wireframes/`, flat `reviews/`, etc.).
-- Structural docs (architecture, ARDs, ops topology, director DAGs): load Cline skill **`diagram-first`**; Show stage diagrams use **`diagram-show`**. Honor [`.claude/diagram-conventions.md`](../../.claude/diagram-conventions.md). See [AGENT-RUNBOOK](plans/cline-drivemode/delivery/AGENT-RUNBOOK.md) § Diagram-first.
+- Structural docs (architecture, ADRs, ops topology, director DAGs): load Cline skill **`diagram-first`**; Show stage diagrams use **`diagram-show`**. Honor [`.claude/diagram-conventions.md`](../../.claude/diagram-conventions.md). See [AGENT-RUNBOOK](plans/cline-drivemode/delivery/AGENT-RUNBOOK.md) § Diagram-first.
 
 ## Maintaining
 
 - After shared SDK edits that docs cite, rebuild with `bun run build:sdk` before claiming behavior in reference pages.
 - Screenshot refresh: write under `docs/drivecode/assets/{hub,tui,demos,logos}/` (see root `AGENTS.md` TUI / hub screenshot notes).
-- Decision status stays on the ARD board: `plans/cline-drivemode/ard/ARD-0000-status-board.md`.
-- Keep `HANDOFF.md` short; deep detail belongs in plans / ARDs / initiatives, not duplicated here.
+- Decision status stays on the ADR board: `plans/cline-drivemode/adr/ADR-0000-status-board.md`.
+- Keep `HANDOFF.md` short; deep detail belongs in plans / ADRs / initiatives, not duplicated here.
 - Structure drift is a CI failure — do not bypass `check:drivecode-docs`.
 
 ## Out of scope here

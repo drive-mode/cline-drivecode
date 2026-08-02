@@ -189,7 +189,7 @@ export const FetchWebContentInputSchema = z.object({
 });
 
 /**
- * Schema for report_status tool input (Status Hub, ARD-0005).
+ * Schema for report_status tool input (Status Hub, ADR-0005).
  *
  * The `describe` text is the contract the model actually reads, so quality
  * guidance lives here rather than only in the system prompt: it is what makes

@@ -1,5 +1,5 @@
 /**
- * Status Hub command handlers (ARD-0005).
+ * Status Hub command handlers (ADR-0005).
  *
  * Publishing goes through the hub so every connected client sees the update
  * immediately (`status.updated`), while the durable copy lands in status.db

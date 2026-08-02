@@ -3943,7 +3943,7 @@
       <div class="surface" id="surface-rooms">
         <div class="rooms-page">
           <h2>Rooms <span class="badge planned">planned</span></h2>
-          <p class="lead">Sessions persist their config and history — stop a room, come back later, everything is intact (ARD-0013 durable log).</p>
+          <p class="lead">Sessions persist their config and history — stop a room, come back later, everything is intact (ADR-0013 durable log).</p>
           <div class="sess-grid" id="sess-grid"></div>
         </div>
       </div>
@@ -4300,7 +4300,7 @@
     privacyDebug: false,
     artifacts: [],
     // Room sessions (Rooms surface). Stop ≠ lose: a stopped room keeps its
-    // config + history (ARD-0013 durable log) and can be started again.
+    // config + history (ADR-0013 durable log) and can be started again.
     rooms: [
       { id: "demo-polish", name: "demo-polish", status: "live", meta: "Cline + Riley · started 16:58" },
       { id: "voice-clips", name: "voice-clips", status: "paused", meta: "config + history kept" },

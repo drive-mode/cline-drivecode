@@ -128,7 +128,7 @@ While Drive is on, the user stays in one mode. Posture is derived from the task 
 
 ## Phasing
 
-- **Phase A.** Spec and layout (this PRD, ARD-0008, DRV-TASK-BANK).
+- **Phase A.** Spec and layout (this PRD, ADR-0008, DRV-TASK-BANK).
 - **Phase B.** Shared types, bank store, loop policy.
 - **Phase C.** Events, now/next, archive polish.
 - **Phase D.** Plan editor UX and MODE-OVERLAY wire.
@@ -142,7 +142,7 @@ While Drive is on, the user stays in one mode. Posture is derived from the task 
 
 ## References
 
-- [ARD-0008](../ard/ARD-0008-task-bank.md)
+- [ADR-0008](../adr/ADR-0008-task-bank.md)
 - [DRV-TASK-BANK](../features/DRV-TASK-BANK.md)
 - [PRD 8](prd-drive-as-cline-mode.md)
 - [DRV-MODE-OVERLAY](../features/DRV-MODE-OVERLAY.md)

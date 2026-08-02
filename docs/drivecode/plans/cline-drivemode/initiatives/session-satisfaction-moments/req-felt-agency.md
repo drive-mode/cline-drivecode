@@ -1,7 +1,7 @@
 # Requirements · Felt agency
 
 **DRV:** [DRV-FELT-AGENCY](../../features/DRV-FELT-AGENCY.md)  
-**Related:** DRV-STEER-QUEUE, DRV-INTERRUPT, DRV-NOWNEXT, PlanEditor, ARD-0015 §6
+**Related:** DRV-STEER-QUEUE, DRV-INTERRUPT, DRV-NOWNEXT, PlanEditor, ADR-0015 §6
 
 ## Problem
 

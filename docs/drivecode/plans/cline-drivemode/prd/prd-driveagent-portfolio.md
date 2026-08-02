@@ -175,15 +175,15 @@ recruit({
 
 ## Requirements traceability
 
-| Req | Feature / plan | ARD | Workflow |
+| Req | Feature / plan | ADR | Workflow |
 |---|---|---|---|
-| Home directory | [DRV-DRIVEAGENT-HOME](../features/DRV-DRIVEAGENT-HOME.md) | ARD-0001 | W-19, W-35 |
-| Graph + compile | [DRV-AGENT-GRAPH](../features/DRV-AGENT-GRAPH.md) | ARD-0002 | W-39 |
-| Recruit | [DRV-RECRUIT](../features/DRV-RECRUIT.md) | ARD-0003 | W-38 |
-| Learn / privacy | DRV-PRIVACY + gated learn | ARD-0004 | W-39, W-26 |
-| Profile click | [DRV-PARTICIPANT-SHEET](../features/DRV-PARTICIPANT-SHEET.md) | ARD-0001 | W-19, W-37 |
-| Appearance overlay | [DRV-AGENT-PROFILE](../features/DRV-AGENT-PROFILE.md) | ARD-0001 | W-35 |
-| Packs | [DRV-ROSTER-PACK](../features/DRV-ROSTER-PACK.md) | ARD-0003 | W-36 |
+| Home directory | [DRV-DRIVEAGENT-HOME](../features/DRV-DRIVEAGENT-HOME.md) | ADR-0001 | W-19, W-35 |
+| Graph + compile | [DRV-AGENT-GRAPH](../features/DRV-AGENT-GRAPH.md) | ADR-0002 | W-39 |
+| Recruit | [DRV-RECRUIT](../features/DRV-RECRUIT.md) | ADR-0003 | W-38 |
+| Learn / privacy | DRV-PRIVACY + gated learn | ADR-0004 | W-39, W-26 |
+| Profile click | [DRV-PARTICIPANT-SHEET](../features/DRV-PARTICIPANT-SHEET.md) | ADR-0001 | W-19, W-37 |
+| Appearance overlay | [DRV-AGENT-PROFILE](../features/DRV-AGENT-PROFILE.md) | ADR-0001 | W-35 |
+| Packs | [DRV-ROSTER-PACK](../features/DRV-ROSTER-PACK.md) | ADR-0003 | W-36 |
 
 ## Success metrics (qualitative MVP)
 
@@ -197,7 +197,7 @@ recruit({
 | Risk | Mitigation |
 |---|---|
 | Second agent registry vs Cline | Home compiles into Cline execution types; no parallel prompt store in Drive facets |
-| Privacy regression via “learning” | Propose/accept only; ARD-0004 |
+| Privacy regression via “learning” | Propose/accept only; ADR-0004 |
 | Scope creep into BRIEF territory | Portfolio/recruit only; BRIEF keeps repo context lifecycle |
 | Embeddings complexity | Deferred to P4; lexical recruit first |
 | Git secret leak | `env` secretRefs; `knowledge/private/` gitignored |

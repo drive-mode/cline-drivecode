@@ -30,7 +30,7 @@ export type HostCapabilities = {
 	/** Required — single-writer endpoint (Cline: ws://127.0.0.1:25463). */
 	readonly writerEndpoint: string;
 
-	/** Enterprise adapters (ARD-0013). Default false until implemented. */
+	/** Enterprise adapters (ADR-0013). Default false until implemented. */
 	readonly remoteBridge: boolean;
 	readonly orgConfig: boolean;
 	readonly auditExport: boolean;

@@ -1,6 +1,6 @@
 # 09 · Demo share track (Cursor-like proof on the stage)
 
-Back to [README](README.md). Decision: [ARD-0011](../../ard/ARD-0011-demo-share-track.md). Feature: [DRV-DEMO-SHARE](../../features/DRV-DEMO-SHARE.md). Full plan: [share-and-router/PLAN.md](PLAN.md).
+Back to [README](README.md). Decision: [ADR-0011](../../adr/ADR-0011-demo-share-track.md). Feature: [DRV-DEMO-SHARE](../../features/DRV-DEMO-SHARE.md). Full plan: [share-and-router/PLAN.md](PLAN.md).
 
 ## Why
 

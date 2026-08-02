@@ -68,4 +68,4 @@ Assembler: `sdk/packages/drive/src/handoff.ts` (pure). Carrier: `conversation.na
 
 1. Structured handoff object vs narration-only?
 2. Continue-plan CTA on End (room closing) vs Drive tab only?
-3. Catch-up copy owner (still open on ARD board)?
+3. Catch-up copy owner (still open on ADR board)?

@@ -1,6 +1,6 @@
 # DRV-PARTICIPANT-SHEET · Transcript vs profile on roster click
 
-Back to [README](../README.md). Phase 1–2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decisions: [ARD-0001](../ard/ARD-0001-driveagent-home.md).
+Back to [README](../README.md). Phase 1–2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decisions: [ADR-0001](../adr/ADR-0001-driveagent-home.md).
 
 ## Problem / user value
 
@@ -52,4 +52,4 @@ Main-chat demos treated a roster click as “open that agent’s stream and addr
 ## Risks
 
 - Click overload. Mitigation. Explicit two intents; double-click may default to Transcript (document the binding).
-- Sheet becomes a prompt editor. Mitigation. Definition edits go through home files / editor; facets stay appearance-only ([ARD-0001](../ard/ARD-0001-driveagent-home.md)).
+- Sheet becomes a prompt editor. Mitigation. Definition edits go through home files / editor; facets stay appearance-only ([ADR-0001](../adr/ADR-0001-driveagent-home.md)).

@@ -1,6 +1,6 @@
 # DRV-PIP · PiP Partner companion widget
 
-Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product requirements: [PRD 7](../prd/prd-pip-partner.md). Decision: [ARD-0006](../ard/ARD-0006-pip-partner-companion.md).
+Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product requirements: [PRD 7](../prd/prd-pip-partner.md). Decision: [ADR-0006](../adr/ADR-0006-pip-partner-companion.md).
 
 ## Problem / user value
 

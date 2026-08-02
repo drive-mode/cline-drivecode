@@ -25,7 +25,7 @@ Without a named feature, that behavior stays accidental persona prose. With it, 
 | Entry | Explicit phrases / mode (“let’s gather requirements”, “help me decide”) or partner offers **once** when the human is stuck without a problem statement |
 | Artifacts | Structured stage cards: Problem, Constraints, Requirements (MoSCoW), Options, Decision, Open questions, Phase entry checklist, Coverage gaps |
 | Tone | Teach while doing — explain tradeoffs in senior-engineer language; no jargon dump without a worked example |
-| Persistence | Session-tier by default; durable only via explicit export / handoff / accepted learn (ARD-0004) |
+| Persistence | Session-tier by default; durable only via explicit export / handoff / accepted learn (ADR-0004) |
 | Skill home | Drive-conditional skill(s) under DRV-SKILL-PORT family; capability nodes on tech-lead Driveagent homes optional |
 
 ## Acceptance criteria
@@ -45,7 +45,7 @@ Without a named feature, that behavior stays accidental persona prose. With it, 
 
 - DRV-SKILL-PORT (persona + phrase tables), DRV-NARRATION, DRV-STAGE, DRV-EVENTS, DRV-KERNEL (sub-mode / revise), DRV-PRIVACY.
 - Soft: DRV-DRIVEAGENT-HOME / graph capability `sdlc-guidance` for recruitable tech-lead agents (Phase 2).
-- Related docs: [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md).
+- Related docs: [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [adr/ADR-0000-status-board.md](../adr/ADR-0000-status-board.md).
 
 ## Surfaces touched
 

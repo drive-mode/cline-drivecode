@@ -19,7 +19,7 @@ export interface DriveSettingsProviderOption {
 }
 
 /**
- * Pure model for Drive Settings provider pickers (ARD-0010).
+ * Pure model for Drive Settings provider pickers (ADR-0010).
  * UI renders this list; hub still validates on set.
  */
 export function listDriveSettingsProviders(input: {

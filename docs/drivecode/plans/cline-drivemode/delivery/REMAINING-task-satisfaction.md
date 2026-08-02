@@ -2,7 +2,7 @@
 
 **Status.** Living backlog (update as slices land)  
 **Branch context.** Observability W0–W3 + Slice 2/P2 + Slice 3/W4 + **§2.5 retention caps** landed. Residual gaps below (moments chrome, host skill compile, privacy UI).  
-**Related.** [task-satisfaction-observability](../initiatives/task-satisfaction-observability/) · [session-satisfaction-moments](../initiatives/session-satisfaction-moments/) · [PRD 10](../prd/prd-task-satisfaction-observability.md) · [ARD-0015](../ard/ARD-0015-task-session-observability.md) (Proposed)
+**Related.** [task-satisfaction-observability](../initiatives/task-satisfaction-observability/) · [session-satisfaction-moments](../initiatives/session-satisfaction-moments/) · [PRD 10](../prd/prd-task-satisfaction-observability.md) · [ADR-0015](../adr/ADR-0015-task-session-observability.md) (Proposed)
 
 This document is the **implementation checklist** for everything still open after the planning wave and the W0 instrumentation commit. Prefer amending this file over inventing parallel backlogs.
 
@@ -14,7 +14,7 @@ This document is the **implementation checklist** for everything still open afte
 |---|---|---|
 | Doctrine | [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md) | Why task = unit; mid-plan churn vs post-success engagement |
 | Product | [PRD 10](../prd/prd-task-satisfaction-observability.md) | Metrics S*/E*/P*, privacy, non-goals |
-| Decision | [ARD-0015](../ard/ARD-0015-task-session-observability.md) (**Proposed**) | Local-first session observability + gated improve |
+| Decision | [ADR-0015](../adr/ADR-0015-task-session-observability.md) (**Proposed**) | Local-first session observability + gated improve |
 | Leadership | [BRIEF-task-satisfaction](../leadership/BRIEF-task-satisfaction.md) | Dual-proxy defaults; open forks |
 | Observability slices | [task-satisfaction-observability/](../initiatives/task-satisfaction-observability/) | Slice 1 emit · Slice 2 rollup · Slice 3 diagnose/propose |
 | Product moments | [session-satisfaction-moments/](../initiatives/session-satisfaction-moments/) | Nine `req-*.md` + [visual-plan](../initiatives/session-satisfaction-moments/visual-plan.md) |
@@ -85,7 +85,7 @@ Caption:
 - SDLC bankable (W3.3) landed — `sdlcBankable.ts` + `drive_bank_accept_sdlc_freeze` + Plan-posture accept chip; **stage freeze cards still stubbed**.
 - **Slice 3 + W4.1/W4.2 landed:** pure `classifyStall` / `diagnoseAndPropose`; auto stall opens same gated `StuckRecoveryFork` (deduped with manual lastFailure); post-session `PlanImproveGate` (`kind: planning`) with accept→`.drive/plan-improve/` only (host `.driveagent` skill compile still out of band).
 - **§2.5 retention caps landed:** room `events.jsonl` default max **2048** records; bank `events.jsonl` default max **4096**; trim-oldest on append. Catalog has live `privacy.debugRetention` (default `false`); call-strip indicator + raised debug caps wiring still open. Durable `privacy.retention` facet still not in live catalog.
-- ARD-0015 remains **Proposed** (leadership accept still open).
+- ADR-0015 remains **Proposed** (leadership accept still open).
 ---
 
 ## 1. Shipped (do not re-implement)
@@ -180,7 +180,7 @@ See [slice-3](../initiatives/task-satisfaction-observability/slice-3-diagnose-pr
 **Residual gaps (honest):**
 
 - Host planning-skill **compile into `.driveagent/`** is still out of band — accept enqueues `planning_skill` under `.drive/plan-improve/queue/` for the host; no second agent runtime in `@cline/drive`.
-- Unified learn-queue UI with knowledge-graph learn (ARD-0004 W-39) not merged — parallel `kind: planning` gate shipped instead.
+- Unified learn-queue UI with knowledge-graph learn (ADR-0004 W-39) not merged — parallel `kind: planning` gate shipped instead.
 - Stall policy thresholds are constants (`DEFAULT_STALL_POLICY`); facet `privacy` / stall facets not in live catalog yet.
 - Feed narration of recovery / plan-improve proposals still open (W1.3 residual).
 - Mid-call auto fork uses session counters + open `lastFailure`, not a full JSONL re-rollup each tick.
@@ -212,7 +212,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 
 1. Stuck fork: manual-only vs auto — **shipped both (deduped)**; leadership may still prefer manual-only.  
 2. Pause-plan semantics (default: Ask override, no new status).  
-3. Must every in-band fix-up gate? (tension ARD-0008 “may propose” vs ARD-0015 accept).
+3. Must every in-band fix-up gate? (tension ADR-0008 “may propose” vs ADR-0015 accept).
 4. Host `.driveagent` compile on plan-improve accept vs enqueue-only (enqueue shipped).
 5. Unify planning gate with gated-learn knowledge queue?
 
@@ -253,7 +253,7 @@ Requirements already exist under [session-satisfaction-moments/](../initiatives/
 
 | Item | Status | Action |
 |---|---|---|
-| ARD-0015 leadership accept | Proposed | Accept or amend on status board |
+| ADR-0015 leadership accept | Proposed | Accept or amend on status board |
 | Dual proxy default (S3+E1) | Leadership default in brief | Confirm or elevate S1 |
 | Accept-queue unification (`kind`: learn / planning / recovery) | Default: reuse | **Partial:** `kind: planning` + `kind: recovery` shipped as parallel gates; knowledge learn queue unify still open |
 | TASK-GRAPH indexing | Satisfaction DRVs not in phase gates yet | Add Phase 2+ optional gate note when W1 starts |
@@ -295,7 +295,7 @@ No calendar estimates — order is dependency-only.
 | After 2.3 | ~~P2 via `drive_task_failed`; PRD 10 / DRV-TASK-METRICS~~ ✅ |
 | After 2.4 / W4 | ~~Mark slice-3 + W4.1/W4.2; note host skill / unified queue residuals~~ ✅ |
 | Before W1 freeze | Resolve §3 W1 forks in BRIEF or DEC |
-| On ARD-0015 accept | Flip status board Proposed → Accepted |
+| On ADR-0015 accept | Flip status board Proposed → Accepted |
 | After each DRV lands | Check off ACs on feature file; update this remaining list |
 | Wireframe | Amend `DRIVE-TAB.md` / HTML when Plan-reentry row ships |
 

@@ -1,4 +1,4 @@
-# ARD-0013: Three-lane Drive state partition
+# ADR-0013: Three-lane Drive state partition
 
 ## Status
 
@@ -26,7 +26,7 @@ Drive state is partitioned into three lanes:
 
 **Locks:**
 
-- Hub `ws://127.0.0.1:25463` remains the only writer of room state for local MVP.
+- Hub remains the only writer of room state for local MVP (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set).
 - `reduceRoom` stays pure in `@cline/drive`. IO lives in `@cline/core` hub.
 - Privacy-strict: no raw audio or full transcripts on the log.
 - Do not port cursor-drive MCP `:7891`.
@@ -48,7 +48,7 @@ Drive state is partitioned into three lanes:
 
 - Keep RAM-only rooms until remote lands → rejected; forces a later rewrite.
 - CRDT multi-writer → rejected (D2 / D4).
-- Reuse status-hub SQLite changelog for room events → rejected; different domain (ARD-0005).
+- Reuse status-hub SQLite changelog for room events → rejected; different domain (ADR-0005).
 
 ## Links
 

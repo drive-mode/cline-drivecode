@@ -3,7 +3,7 @@
 **Status:** active track (opened 2026-08-02)
 **Goal:** anyone can clone `hhalperin/cline-drivecode`, run it, and pair with an
 agent on a voice call with a shared Spotlight.
-**Decisions that shape it:** [ARD-0016](../ard/ARD-0016-distribution-and-positioning.md)
+**Decisions that shape it:** [ADR-0016](../adr/ADR-0016-distribution-and-positioning.md)
 (Route B fork; public self-hosted beta) · voice is in scope · multi-human rooms
 and hosted infrastructure remain non-goals.
 
@@ -54,7 +54,7 @@ backend) · Rooms (durable start/stop) · self-hosted packaging.
 | Artifacts gallery · Tasks as a page | Engines already ship (director backlog; dependency-map lens); a tester reaches the same information via Spotlight and Status Hub. Promote on feedback. |
 | Inbox | Existed in the demo only to demonstrate rail add/remove. |
 | Customizable rail | Polish. The fold (S5) delivers most of the value. |
-| S9 `walkthrough.animation` | Blocked on [ARD-0017](../ard/ARD-0017-narration-bound-presentation-cues.md) (deferred). Best demo moment, not required for the loop. |
+| S9 `walkthrough.animation` | Blocked on [ADR-0017](../adr/ADR-0017-narration-bound-presentation-cues.md) (deferred). Best demo moment, not required for the loop. |
 
 ## Phases
 
@@ -63,11 +63,11 @@ project — **built first, synced second**.
 
 | # | Phase | Work | Gate |
 |---|---|---|---|
-| 0 | Decisions | ARD-0016 accepted; ARD-0017 deferred; no speculative schema changes | this document |
+| 0 | Decisions | ADR-0016 accepted; ADR-0017 deferred; no speculative schema changes | this document |
 | 1 | The call looks like the demo | S1 → S2, then S4 + S5 in parallel. Webview recomposition of `Chat.tsx`, `Spotlight.tsx`, `DriveCallChrome.tsx`, `App.tsx` nav. No wire changes. | visual parity vs the canvas at 1280×640 light+dark |
 | 2 | Spotlight presents real work | S3 → S6 → S7. Reuse `ai-elements/plan.tsx` and the streamdown mermaid plugin. | present each artifact kind on a live room |
 | 3 | Voice | drive-audio 1–5 on `browser-speechSynthesis`; narrator gated by `advance: auto_after_say`; wire `speech-input.tsx` into the Drive composer. `tts.enabled` stays default-off (DRV-TTS) with a first-call enable prompt. | narration speaks; mute cancels in-flight speech |
-| 4 | Rooms | New `View` entry + `components/views/rooms-view.tsx` over ARD-0013's durable facets. | stop a room, restart it, config + history survive |
+| 4 | Rooms | New `View` entry + `components/views/rooms-view.tsx` over ADR-0013's durable facets. | stop a room, restart it, config + history survive |
 | 5 | Self-hosted packaging | Tagged release + workflow, install docs, preflight, support path, plain-language privacy note (events carry metadata only). | a clean clone on a second machine reaches a working call using only the README |
 
 ## Verification

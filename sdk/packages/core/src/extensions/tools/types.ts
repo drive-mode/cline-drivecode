@@ -98,7 +98,7 @@ export type WebFetchExecutor = (
 ) => Promise<string>;
 
 /**
- * Executor for publishing a Status Hub update (ARD-0005).
+ * Executor for publishing a Status Hub update (ADR-0005).
  *
  * @param input - Status fields supplied by the agent
  * @param context - Tool execution context

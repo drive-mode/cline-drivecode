@@ -26,7 +26,7 @@
 3. `Team` string must not appear as a Drive type identifier (`RosterPack` only).
 4. Unknown facet `schemaVersion` major → refuse load.
 5. Derived graph files are not inputs to compile.
-6. `learned_from` evidence is ids/paths/hashes — not utterance text by default (ARD-0004).
+6. `learned_from` evidence is ids/paths/hashes — not utterance text by default (ADR-0004).
 7. `env.yaml` `values` must not contain plaintext secret keys; use `secretRefs` (`DRIVE_ENV_FORBIDDEN_SECRET_KEYS`).
 
 ## Migration
@@ -47,7 +47,7 @@ Phase 0 stub: `compileDriveagentHome` projects identity/tools/skills/prompt into
 ## Reading order for implementers
 
 1. [DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md)  
-2. [ARD-0001](../ard/ARD-0001-driveagent-home.md) / [ARD-0002](../ard/ARD-0002-agent-graph-canonical-derived.md)  
+2. [ADR-0001](../adr/ADR-0001-driveagent-home.md) / [ADR-0002](../adr/ADR-0002-agent-graph-canonical-derived.md)  
 3. [DRV-EVENTS](../features/DRV-EVENTS.md) / [DRV-PLATFORM-CONFIG](../features/DRV-PLATFORM-CONFIG.md)  
 4. Example fixture `examples/driveagent-pair-partner/`  
 5. This index

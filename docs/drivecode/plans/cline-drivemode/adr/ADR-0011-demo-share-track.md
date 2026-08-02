@@ -1,4 +1,4 @@
-# ARD-0011: Demo share track (Cursor-like proof on the stage)
+# ADR-0011: Demo share track (Cursor-like proof on the stage)
 
 ## Status
 

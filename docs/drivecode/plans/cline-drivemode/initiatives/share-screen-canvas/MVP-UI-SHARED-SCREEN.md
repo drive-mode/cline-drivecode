@@ -103,4 +103,4 @@ Acceptance criteria remain those in DRV-STAGE and DRV-SHARE. Do not invent a par
 
 User share = structured only is already closed in `DEC-open-product-forks.md`. Remaining work is implementation sequencing, not product fork.
 
-If leadership still needs ARD accept for other Phase 0 items, that does not block Slice A’s Chat Stage proof on session events.
+If leadership still needs ADR accept for other Phase 0 items, that does not block Slice A’s Chat Stage proof on session events.

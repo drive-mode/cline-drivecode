@@ -4,7 +4,7 @@
 **Living backlog (source of truth for open work):** [delivery/REMAINING-task-satisfaction.md](../../delivery/REMAINING-task-satisfaction.md)
 **DRV:** [DRV-CALL-SESSION](../../features/DRV-CALL-SESSION.md) · [DRV-TASK-METRICS](../../features/DRV-TASK-METRICS.md) · [DRV-PLAN-IMPROVE](../../features/DRV-PLAN-IMPROVE.md)
 **PRD:** [prd-task-satisfaction-observability](../../prd/prd-task-satisfaction-observability.md) (PRD 10)
-**ARD:** [ARD-0015](../../ard/ARD-0015-task-session-observability.md) (Proposed — impl ahead of accept)
+**ADR:** [ADR-0015](../../adr/ADR-0015-task-session-observability.md) (Proposed — impl ahead of accept)
 **Research:** [15](../../research/15-task-satisfaction-observability.md) · [16](../../research/16-task-as-unit-models.md)
 **Depends on:** [task-bank-drive-loop](../task-bank-drive-loop/) (event emit / hub complete — largely landed)
 

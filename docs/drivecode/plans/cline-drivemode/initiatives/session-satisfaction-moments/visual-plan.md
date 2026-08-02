@@ -174,7 +174,7 @@ flowchart LR
 
 Caption:
 
-- Same rails as ARD-0004 / ARD-0015.
+- Same rails as ADR-0004 / ADR-0015.
 - Digest is the only user-triggered export path in MVP.
 
 ---

@@ -57,7 +57,7 @@ Honor [`.claude/diagram-conventions.md`](../../../../../.claude/diagram-conventi
 
 | Skill | When |
 |---|---|
-| **`diagram-first`** | Structural nest docs: ARDs, [architecture.md](../../../reference/architecture.md), share-and-router, ops topology, show-backlog DAGs |
+| **`diagram-first`** | Structural nest docs: ADRs, [architecture.md](../../../reference/architecture.md), share-and-router, ops topology, show-backlog DAGs |
 | **`diagram-show`** | Enqueue/present `diagram.*` Show items via `SHOW_TEMPLATE_KIT` + `drive.show.*` |
 
 **Do not** use diagram-first as the default for feature checklists or PR implementation plans — use visual-plan / the DRV checklist. Do not replace [TASK-GRAPH.md](TASK-GRAPH.md) with date `gantt` charts.
@@ -71,7 +71,7 @@ When shipping structural nest Mermaid:
 
 ## Hard constraints (repeat offenders)
 
-- No second daemon. Nothing listens on `:7891`. The hub on `:25463` is the only server.
+- No second daemon. Nothing listens on `:7891`. The hub is the only server (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set).
 - No Cursor or VS Code chrome DOM hacks.
 - Privacy-strict defaults. No transcript or audio persistence, ever, without the explicit debug flag.
 - No timeframes in any plan or status doc.

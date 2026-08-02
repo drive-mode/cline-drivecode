@@ -2,7 +2,7 @@
 
 **Cline runs agents; Drive is a Cline mode that makes running them feel like being on a call.**
 
-This page is a value comparison: what upstream Cline already ships versus what Drive mode adds. Every Drivecode row carries a maturity label so the claim stays honest. Integration goal: almost seamless—Drive enables features inside Cline, it is not a separate product ([PRD 8](../plans/cline-drivemode/prd/prd-drive-as-cline-mode.md), [ARD-0007](../plans/cline-drivemode/ard/ARD-0007-drive-as-cline-mode.md)).
+This page is a value comparison: what upstream Cline already ships versus what Drive mode adds. Every Drivecode row carries a maturity label so the claim stays honest. Integration goal: almost seamless—Drive enables features inside Cline, it is not a separate product ([PRD 8](../plans/cline-drivemode/prd/prd-drive-as-cline-mode.md), [ADR-0007](../plans/cline-drivemode/adr/ADR-0007-drive-as-cline-mode.md)).
 
 Planning north star: [cline-drivemode](../plans/cline-drivemode/). Harness layer: [drivecode-sdk](../plans/drivecode-sdk/).
 
@@ -13,7 +13,7 @@ Drive sits on Cline. It does not replace the agent loop, open a second daemon, o
 ```mermaid
 flowchart TB
   apps["Apps: Drive tab / Spotlight / Status Hub / Chat Join / CLI"]
-  hub["Hub ws://127.0.0.1:25463 single writer"]
+  hub["Hub single writer (discovery / preferred default port)"]
   drive["@cline/drive: propose policies reduceRoom projectStage"]
   core["@cline/core + agents: turns tools hooks ConfiguredAgent Team"]
 
@@ -40,10 +40,10 @@ Three verbs: **the harness proposes, the host commits, apps project.** See [04-r
 | Interaction model | Turn chat: prompt → wait → transcript | Call room: join, roster, stay in the call | `shipped` | [00-vision.md](../plans/cline-drivemode/foundation/00-vision.md); [DriveCallChrome.tsx](../../../apps/cline-hub/src/webview/src/drive/DriveCallChrome.tsx) |
 | WIP visibility | Transcript wall of tool output | Spotlight / stage cards (edit, command, test, plan, decision) | `shipped` | [DRV-STAGE](../plans/cline-drivemode/features/DRV-STAGE.md); hub `Spotlight.tsx`, `stageReducer.ts` |
 | Multi-agent | Team tools / mailbox (runtime groups) | Room roster, address set; RosterPack hub seat path + recruit scoring | `shipped` (library/Add UI open) | [DRV-ROSTER-PACK](../plans/cline-drivemode/features/DRV-ROSTER-PACK.md); [DRV-RECRUIT](../plans/cline-drivemode/features/DRV-RECRUIT.md) |
-| Cross-agent status | Transient hub events; session lifecycle column | Durable Status Hub (`status.db`, Board + Changelog + Sessions, `seq` cursor) | `shipped` | Hub status views; ARD-0005 |
+| Cross-agent status | Transient hub events; session lifecycle column | Durable Status Hub (`status.db`, Board + Changelog + Sessions, `seq` cursor) | `shipped` | Hub status views; ADR-0005 |
 | Interruptibility | Cancel / pending-prompt queue | Raise-hand pause-after-tool; mid-turn steer queue | `shipped` | [DRV-INTERRUPT](../plans/cline-drivemode/features/DRV-INTERRUPT.md); [DRV-STEER-QUEUE](../plans/cline-drivemode/features/DRV-STEER-QUEUE.md) |
 | Mode UX | Plan / Act | Drive mode on the same control family; postures Plan/Agent/Ask/Debug while Drive is on | `shipped` | [DRV-MODE-OVERLAY](../plans/cline-drivemode/features/DRV-MODE-OVERLAY.md); [PRD 8](../plans/cline-drivemode/prd/prd-drive-as-cline-mode.md); [Chat.tsx](../../../apps/cline-hub/src/webview/src/Chat.tsx) |
-| Agent identity | `.cline/agents/*.yaml` (ConfiguredAgent) | `.driveagent/<slug>/` home + AgentProfile overlay + recruit scoring | `shipped` (full editor UI open) | [ARD-0001](../plans/cline-drivemode/ard/ARD-0001-driveagent-home.md); compile fixture landed |
+| Agent identity | `.cline/agents/*.yaml` (ConfiguredAgent) | `.driveagent/<slug>/` home + AgentProfile overlay + recruit scoring | `shipped` (full editor UI open) | [ADR-0001](../plans/cline-drivemode/adr/ADR-0001-driveagent-home.md); compile fixture landed |
 | Privacy | Session storage norms | Privacy-strict: no transcript/audio persist without explicit debug flag | `shipped` | [DRV-PRIVACY](../plans/cline-drivemode/features/DRV-PRIVACY.md); retention caps landed; debugRetention UI residual |
 | Collaboration primitive | Session | Room: participants, stage sharer, addressSet | `shipped` | [01-architecture.md](../plans/cline-drivemode/foundation/01-architecture.md) D3; hub `call_*` / `drive.*` |
 | Host portability | Cline SDK only | `@cline/drive` host port + capability descriptor + conformance kit | `shipped` | [02-architecture.md](../plans/drivecode-sdk/foundation/02-architecture.md); [DRV-KERNEL](../plans/cline-drivemode/features/DRV-KERNEL.md); `sdk/packages/drive` |

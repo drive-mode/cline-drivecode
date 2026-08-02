@@ -137,7 +137,7 @@ looks the same from every surface you open — Hub tab, TUI, a client that
 reconnects late. Drive today is one developer driving many agents; multi-human
 rooms are an explicit non-goal for now.
 
-Room truth is partitioned into three lanes ([ARD-0013](docs/drivecode/plans/cline-drivemode/ard/ARD-0013-state-partition.md)):
+Room truth is partitioned into three lanes ([ADR-0013](docs/drivecode/plans/cline-drivemode/adr/ADR-0013-state-partition.md)):
 an append-only event log (survives hub restart), one live `RoomSnapshot` in
 memory, and durable Drive facets on disk. Clients reconnect with a snapshot plus
 gap events by sequence cursor. There is still no WebRTC or pixel capture —
@@ -409,11 +409,11 @@ repo publishes — rather than beside it.
   Status Hub / Drive protocol planes
 - [docs/drivecode/reference/skills-inventory.md](docs/drivecode/reference/skills-inventory.md) —
   in-repo skills vs candidates for `cline/skills`
-- [ARD-0005](docs/drivecode/plans/cline-drivemode/ard/ARD-0005-status-hub.md) — Status Hub
+- [ADR-0005](docs/drivecode/plans/cline-drivemode/adr/ADR-0005-status-hub.md) — Status Hub
   design and the alternatives rejected
-- [ARD-0010](docs/drivecode/plans/cline-drivemode/ard/ARD-0010-provider-harness-byok.md) —
+- [ADR-0010](docs/drivecode/plans/cline-drivemode/adr/ADR-0010-provider-harness-byok.md) —
   BYOK provider harness and runtime topology
-- [ARD-0013](docs/drivecode/plans/cline-drivemode/ard/ARD-0013-state-partition.md) —
+- [ADR-0013](docs/drivecode/plans/cline-drivemode/adr/ADR-0013-state-partition.md) —
   three-lane state partition (event log / live room / facets)
 - [docs/drivecode/plans/cline-drivemode/](docs/drivecode/plans/cline-drivemode/) — the full Drive
   plan set, vision through architecture

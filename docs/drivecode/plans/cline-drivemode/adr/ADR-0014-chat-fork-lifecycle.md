@@ -1,4 +1,4 @@
-# ARD-0014: Chat-fork lifecycle (invisible auditable workers)
+# ADR-0014: Chat-fork lifecycle (invisible auditable workers)
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-29
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md), [DRV-TRANSCRIPT](../features/DRV-TRANSCRIPT.md), [DRV-PARALLEL-WAVES](../features/DRV-PARALLEL-WAVES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md), [ARD-0011](ARD-0011-demo-share-track.md), W-33 in [05-workflows.md](../foundation/05-workflows.md)
+- Related: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md), [DRV-TRANSCRIPT](../features/DRV-TRANSCRIPT.md), [DRV-PARALLEL-WAVES](../features/DRV-PARALLEL-WAVES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md), [ADR-0011](ADR-0011-demo-share-track.md), W-33 in [05-workflows.md](../foundation/05-workflows.md)
 
 ## Context
 

@@ -1,11 +1,11 @@
 # 05 · Alignment with Driveagent homes
 
 Back to [README](../../../design/wireframes/README.md).  
-**Purpose.** Reconcile the meta-harness (`drivecode-sdk` role = `@cline/drive`) with ARD-0001 / DEC-agent-source-of-truth so implementers do not treat “no Drive-owned agent definition” as blocking homes.
+**Purpose.** Reconcile the meta-harness (`drivecode-sdk` role = `@cline/drive`) with ADR-0001 / DEC-agent-source-of-truth so implementers do not treat “no Drive-owned agent definition” as blocking homes.
 
 ## The apparent conflict
 
-`01-problem-and-scope.md` listed Drive-owned agent definitions as out of scope, echoing an older vision non-goal. PRD 6 and ARD-0001 then introduced `.driveagent/<slug>/` as the authoring home.
+`01-problem-and-scope.md` listed Drive-owned agent definitions as out of scope, echoing an older vision non-goal. PRD 6 and ADR-0001 then introduced `.driveagent/<slug>/` as the authoring home.
 
 ## Resolution
 
@@ -39,7 +39,7 @@ Update checklists and conformance:
 ## Reading order
 
 1. DEC-agent-source-of-truth  
-2. ARD-0001 / ARD-0002  
+2. ADR-0001 / ADR-0002  
 3. `02-architecture.md` host port  
 4. This file  
 5. `cline-drivemode/schemas/README.md`

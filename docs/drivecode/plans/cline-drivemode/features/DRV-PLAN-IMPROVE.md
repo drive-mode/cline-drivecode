@@ -1,6 +1,6 @@
 # DRV-PLAN-IMPROVE · Gated planning improvement from session diagnosis
 
-Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Privacy: [ARD-0004](../ard/ARD-0004-gated-learn-privacy.md). Companion research: [16](../research/16-task-as-unit-models.md).
+Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Privacy: [ADR-0004](../adr/ADR-0004-gated-learn-privacy.md). Companion research: [16](../research/16-task-as-unit-models.md).
 
 ## Implementation status
 
@@ -17,12 +17,12 @@ When users cannot complete tasks in Drive, the system should help **next** sessi
 - Output is a **proposal** in the gated-learn family: planning skill patch, plan template, and/or draft sibling tasks.
 - Accept | reject | mute required before durable write to `.driveagent/` knowledge or skill sources; bank mutations go through hub ops after accept.
 - Reject/mute must not retry the same silent proposal without new user intent (align with M13 spirit).
-- Partner may still propose in-band fix-up tasks under ARD-0008; this feature covers **post-session / cross-session** improvement skills.
+- Partner may still propose in-band fix-up tasks under ADR-0008; this feature covers **post-session / cross-session** improvement skills.
 - No second agent runtime inside `@cline/drive`; analysis may run as a host agent turn or offline job that only emits proposals.
 
 ## Dependencies
 
-- DRV-TASK-METRICS, DRV-CALL-SESSION, DRV-TASK-BANK, DRV-PRIVACY, DRV-SKILL-PORT / Driveagent home (durable skill target), ARD-0004.
+- DRV-TASK-METRICS, DRV-CALL-SESSION, DRV-TASK-BANK, DRV-PRIVACY, DRV-SKILL-PORT / Driveagent home (durable skill target), ADR-0004.
 
 ## Surfaces touched
 
@@ -51,4 +51,4 @@ When users cannot complete tasks in Drive, the system should help **next** sessi
 ## Risks
 
 - Lore poison via aggressive auto-propose. Mitigation: mute + evidence ids only; human accept.
-- Scope creep into training a task model in-process. Mitigation: ARD-0015 §8; research stays proposer-only.
+- Scope creep into training a task model in-process. Mitigation: ADR-0015 §8; research stays proposer-only.

@@ -1,6 +1,6 @@
 # 01 · Architecture
 
-Back to [README](../../../design/wireframes/README.md).
+Back to [README](../README.md).
 
 ## Shape
 
@@ -13,7 +13,7 @@ apps/cline-hub
 apps/cli (TUI parity)      apps/vscode (later surface)
         │  render typed events
         ▼
-sdk/packages/core/src/hub  ── single writer of room state, ws://127.0.0.1:25463
+sdk/packages/core/src/hub  ── single writer of room state (discovery / preferred default port)
         │  room ops (join/leave/mute/stage/address), broadcast events
         ▼
 sdk/packages/drive (@cline/drive) ── Drive kernel: active mode + posture machine, narration, interrupt
@@ -39,15 +39,15 @@ Drive logic lives in a new SDK package, `sdk/packages/drive`. It is a pure layer
 
 Dependency direction stays legal per `sdk/AGENTS.md`. `shared → llms → agents → core → apps`. The kernel depends on `@cline/shared` for schemas and exposes interfaces `@cline/core` consumes. It never reaches into apps.
 
-### D2. Hub is the single writer, port 25463
+### D2. Hub is the single writer
 
-The existing hub daemon (`sdk/packages/core/src/hub/`, `ws://127.0.0.1:25463`) is the signaling plane. Room state (roster, stage sharer, mute flags, mode, address delivery) is owned by the hub and mutated only through hub ops. Clients and agents publish facts and receive broadcasts. This applies Separate Before Serializing Shared State. There is exactly one writer for the shared room object, and everything else is a derived projection.
+The existing hub daemon (`sdk/packages/core/src/hub/`) is the signaling plane. Clients discover it (preferred default port; free-port fallback unless `CLINE_HUB_PORT` is set). Room state (roster, stage sharer, mute flags, mode, address delivery) is owned by the hub and mutated only through hub ops. Clients and agents publish facts and receive broadcasts. This applies Separate Before Serializing Shared State. There is exactly one writer for the shared room object, and everything else is a derived projection.
 
 No second daemon. The cursor-drive MCP server on `:7891` is not ported. Nothing defaults to `:7891`. Its responsibilities collapse into hub ops and kernel calls. Bun only for repo tooling.
 
 ### D3. Room-first, Drive mode primary activation, Chat default surface
 
-The core primitive remains a `Room` with `Participant` members (human or agent), even in the MVP. **Drive is a Cline mode** (peer activation to Plan/Act): turning Drive on attaches or creates the room and enables Drive affordances; turning it off returns native Plan | Act ([ARD-0007](../ard/ARD-0007-drive-as-cline-mode.md), [PRD 8](../prd/prd-drive-as-cline-mode.md)).
+The core primitive remains a `Room` with `Participant` members (human or agent), even in the MVP. **Drive is a Cline mode** (peer activation to Plan/Act): turning Drive on attaches or creates the room and enables Drive affordances; turning it off returns native Plan | Act ([ADR-0007](../adr/ADR-0007-drive-as-cline-mode.md), [PRD 8](../prd/prd-drive-as-cline-mode.md)).
 
 **Chat is the default work surface** while Drive is on (feed, composer, optional stage split). `joinCall()` / Drive on remain a thin façade over `room.createOrAttach()` (one human plus one `pair_partner` by default). The hub **Drive activity** lists and manages rooms (DRV-DRIVE-TAB) but is optional navigation—not a separate product home. Chat Join is synonymous with entering Drive mode and focusing the active room.
 
@@ -77,11 +77,11 @@ Drive **overlays** Cline's `ConfiguredAgent` rather than forking it. `AgentProfi
 
 ### D8. Runtime topology (local / cloud / hybrid)
 
-A Drive session declares a `DeploymentProfile` (`local` | `cloud` | `hybrid`) that constrains LLM egress facts and voice backends together. `TopologyPolicy` in `@cline/drive` is pure and fail-closed. Local is airgap for LLM and voice (no Web Speech). Audio never enters hub events. Details: [07-runtime-topology.md](07-runtime-topology.md), [ARD-0009](../ard/ARD-0009-runtime-topology-local-cloud.md).
+A Drive session declares a `DeploymentProfile` (`local` | `cloud` | `hybrid`) that constrains LLM egress facts and voice backends together. `TopologyPolicy` in `@cline/drive` is pure and fail-closed. Local is airgap for LLM and voice (no Web Speech). Audio never enters hub events. Details: [07-runtime-topology.md](07-runtime-topology.md), [ADR-0009](../adr/ADR-0009-runtime-topology-local-cloud.md).
 
 ### D9. Provider harness (BYOK) with OOTB packs
 
-STT and TTS are pluggable via `DriveProviderManifest` + registry. LLM BYOK stays in Cline / `@cline/llms`. Drive Settings are facet-backed selections (`providers.sttId` / `ttsId`), not a second settings bag and not a Drive-owned key vault. Default packs seed facets for Local and Cloud so first run works. Details: [08-provider-harness.md](08-provider-harness.md), [ARD-0010](../ard/ARD-0010-provider-harness-byok.md).
+STT and TTS are pluggable via `DriveProviderManifest` + registry. LLM BYOK stays in Cline / `@cline/llms`. Drive Settings are facet-backed selections (`providers.sttId` / `ttsId`), not a second settings bag and not a Drive-owned key vault. Default packs seed facets for Local and Cloud so first run works. Details: [08-provider-harness.md](08-provider-harness.md), [ADR-0010](../adr/ADR-0010-provider-harness-byok.md).
 
 ### D10. Three-lane state partition
 
@@ -91,11 +91,11 @@ Room and Drive config state are partitioned so local MVP and later enterprise ad
 2. **Ephemeral live room** — one hub-owned `RoomSnapshot` folded from the log; rebuildable on restart; dual live Maps forbidden.
 3. **Durable facets** — `.cline/drive` disk contract; seeds live at room create; never overwrites live mid-call.
 
-Remote multi-human rooms, org-managed config, and audit/replay bind as adapters on the log and `DriveHostPort`. Details: [ARD-0013](../ard/ARD-0013-state-partition.md).
+Remote multi-human rooms, org-managed config, and audit/replay bind as adapters on the log and `DriveHostPort`. Details: [ADR-0013](../adr/ADR-0013-state-partition.md).
 
 ## Alternatives considered
 
-- **A separate Cline Drive product shell.** Rejected. Conflicts with seamless integration; Drive is a mode of Cline ([ARD-0007](../ard/ARD-0007-drive-as-cline-mode.md)).
+- **A separate Cline Drive product shell.** Rejected. Conflicts with seamless integration; Drive is a mode of Cline ([ADR-0007](../adr/ADR-0007-drive-as-cline-mode.md)).
 - **Drive tab as the only entry / product home.** Superseded for activation. Room IA remains; mode-first Chat is the default work surface.
 - **A Drive-owned agent registry holding prompts, tools, and models alongside colors.** Rejected. It forks `.cline/agents/`, drifts from it immediately, duplicates the loader and its search-path precedence, and puts prompt text into a file users may commit. Drive owns appearance in a call and nothing else.
 - **One flat settings document with no lane.** Rejected. It makes "the user changed the sub-mode" and "the user changed the default sub-mode" the same write, which breaks D2 the first time someone edits config during a live call.

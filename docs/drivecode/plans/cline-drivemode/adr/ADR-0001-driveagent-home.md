@@ -1,4 +1,4 @@
-# ARD-0001: `.driveagent/` is the agent home
+# ADR-0001: `.driveagent/` is the agent home
 
 ## Status
 

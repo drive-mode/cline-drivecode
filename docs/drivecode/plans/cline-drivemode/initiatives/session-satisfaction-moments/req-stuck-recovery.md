@@ -1,7 +1,7 @@
 # Requirements · In-call stuck recovery
 
 **DRV:** [DRV-STUCK-RECOVERY](../../features/DRV-STUCK-RECOVERY.md)  
-**Related:** ARD-0008 §7, DRV-PLAN-IMPROVE (post-session), DRV-INTERRUPT, DRV-GATES, DRV-NOWNEXT, DRV-RECRUIT-STALL
+**Related:** ADR-0008 §7, DRV-PLAN-IMPROVE (post-session), DRV-INTERRUPT, DRV-GATES, DRV-NOWNEXT, DRV-RECRUIT-STALL
 
 ## Problem
 

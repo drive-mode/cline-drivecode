@@ -1,7 +1,7 @@
 # PRD 10 · Task-centric session satisfaction & closed-loop improvement
 
 **Status.** Draft for leadership acceptance  
-**Related.** [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md), [ARD-0015](../ard/ARD-0015-task-session-observability.md), [ARD-0008](../ard/ARD-0008-task-bank.md), [ARD-0004](../ard/ARD-0004-gated-learn-privacy.md), [prd-success-metrics](prd-success-metrics.md), initiative [task-satisfaction-observability](../initiatives/task-satisfaction-observability/)  
+**Related.** [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md), [ADR-0015](../adr/ADR-0015-task-session-observability.md), [ADR-0008](../adr/ADR-0008-task-bank.md), [ADR-0004](../adr/ADR-0004-gated-learn-privacy.md), [prd-success-metrics](prd-success-metrics.md), initiative [task-satisfaction-observability](../initiatives/task-satisfaction-observability/)  
 **Rule.** Metrics are verifiable signals, not timelines. Tasks are the unit of measurement.
 
 ## Problem
@@ -86,7 +86,7 @@ Observe → Diagnose → Propose → Gate → Improve. Proposals may be planning
 1. Detect stall patterns (e.g. low S2 + high P1/P2, or open tasks with `lastFailure` past threshold events — threshold is a facet, not a calendar).
 2. Run structured log analysis (event ids, artifact paths, skill ids).
 3. Emit gated proposal: planning skill patch and/or plan/task drafts.
-4. Human accept | reject | mute (ARD-0004).
+4. Human accept | reject | mute (ADR-0004).
 5. Never auto-mutate durable knowledge or silently rewrite the active plan from a model.
 
 ### R5 · Task-as-unit doctrine
@@ -104,7 +104,7 @@ Lived satisfaction components are specified under [session-satisfaction-moments]
 - [ ] Documented metric definitions S1–S3, E1–E3, P1–P2, A1–A2 with derivation from existing or newly specified events.
 - [ ] Instrumentation checklist (R1) mapped to DRV-CALL-SESSION / DRV-TASK-METRICS / DRV-TASK-BANK gaps.
 - [ ] Privacy review: no new forbidden payload keys; no phone-home default.
-- [ ] Closed-loop path specified against ARD-0004 (DRV-PLAN-IMPROVE).
+- [ ] Closed-loop path specified against ADR-0004 (DRV-PLAN-IMPROVE).
 - [ ] Leadership can answer the north-star question with evidence from a local smoke session.
 
 ## North-star question
@@ -113,9 +113,9 @@ Lived satisfaction components are specified under [session-satisfaction-moments]
 
 ## Dependencies
 
-- DRV-TASK-BANK / ARD-0008 (primitive)
+- DRV-TASK-BANK / ADR-0008 (primitive)
 - DRV-EVENTS / bank events
-- DRV-PRIVACY / ARD-0004
+- DRV-PRIVACY / ADR-0004
 - DRV-LEAVE-END (session boundary)
 - DRV-CALL-SESSION, DRV-TASK-METRICS, DRV-PLAN-IMPROVE (this PRD)
 

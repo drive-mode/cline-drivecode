@@ -8,7 +8,7 @@ Short definitions for terms that show up in PRs #1 and #2. Pair with [PR-1-2-dri
 | **Drive tab** | The home screen for rooms | Primary IA: sidebar of channels/call rooms (Discord-in-Slack chrome) |
 | **Chat Join call** | Shortcut button | Opens/focuses the active Drive room; not the product home |
 | **Room** | The call you are in | Typed object with participants, transcripts, stage, address set |
-| **Hub** | The referee | Daemon on `ws://127.0.0.1:25463`; only writer of room state |
+| **Hub** | The referee | Daemon discovered via hub file / preferred default port (not a hard-coded bind); only writer of room state |
 | **Stage** | Shared whiteboard of work | Last-event-wins projection of edits/tests/decisions (not pixel capture in MVP) |
 | **Address set** | Who you are talking to | Recipients for the next send: everyone, selected agents, or a pack |
 | **Roster** | Who is in the call | Participants (human or agent), each with seating sources |
@@ -23,7 +23,7 @@ Short definitions for terms that show up in PRs #1 and #2. Pair with [PR-1-2-dri
 | **Gated learn** | Ask before remembering | Propose → accept/reject/mute; no auto transcript → knowledge |
 | **`@cline/drive` / drivecode-sdk** | Rulebook for call mode | Same package role: pure Drive kernel + host port + conformance; not a second runtime |
 | **Events-first** | Tell the story as cards | Surfaces render versioned events; WebRTC pixels are later |
-| **ARD** | Written decision | Architecture Decision Record; 0001–0004 are Proposed until accepted |
+| **ADR** | Written decision | Architecture Decision Record; 0001–0004 are Proposed until accepted |
 | **PRD 6** | Product requirements for portfolios | Driveagent portfolio / graph / recruit requirements doc |
 | **DRV-\*** | Feature tickets as docs | Checklistable feature specs under `features/` |
 | **Persona / narration** | How the partner talks | Senior-engineer tone; narrate decisions, not every keystroke |

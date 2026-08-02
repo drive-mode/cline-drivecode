@@ -305,7 +305,7 @@ export type WebviewInboundMessage =
 			agent: { id: string; displayName: string };
 			activateDrive?: boolean;
 			sessionId?: string;
-			/** Attach ARD-0013 durable JSONL log under this workspace. */
+			/** Attach ADR-0013 durable JSONL log under this workspace. */
 			workspaceRoot?: string;
 	  }
 	| {

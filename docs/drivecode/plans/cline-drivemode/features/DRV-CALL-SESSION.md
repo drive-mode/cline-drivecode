@@ -1,6 +1,6 @@
 # DRV-CALL-SESSION · Call session binding for metrics
 
-Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Decision: [ARD-0015](../ard/ARD-0015-task-session-observability.md). Depends on [DRV-LEAVE-END](DRV-LEAVE-END.md), [DRV-EVENTS](DRV-EVENTS.md), [DRV-PRIVACY](DRV-PRIVACY.md).
+Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Decision: [ADR-0015](../adr/ADR-0015-task-session-observability.md). Depends on [DRV-LEAVE-END](DRV-LEAVE-END.md), [DRV-EVENTS](DRV-EVENTS.md), [DRV-PRIVACY](DRV-PRIVACY.md).
 
 ## Implementation status
 

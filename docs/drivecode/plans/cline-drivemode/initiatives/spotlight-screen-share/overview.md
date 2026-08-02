@@ -123,7 +123,7 @@ should absorb these decisions:
   (a voiced beat holds until its audio ends). The Narrator slice in the
   drive-audio initiative (PR #93) should reuse that gate.
 - **New surfaces demoed** (all `planned`): customizable rail (resize / reorder /
-  add-remove), Rooms (durable sessions via ARD-0013), Agents & teams
+  add-remove), Rooms (durable sessions via ADR-0013), Agents & teams
   ("call a team once"), Tasks (first-class dependency map), Artifacts gallery,
   member-status sidebar in the drawer, CC transcript. None are in S1–S9. The
   CC transcript already has its slice —

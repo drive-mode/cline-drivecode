@@ -93,10 +93,10 @@ PiP Partner               → glanceable controls while elsewhere in hub
 
 ## Decision record
 
-Architecture decision: [ARD-0006](../ard/ARD-0006-pip-partner-companion.md). Prior rejection in [00-vision.md](../foundation/00-vision.md) and wireframe notes is superseded by this PRD: PiP is in scope as a **companion**, not as primary IA.
+Architecture decision: [ADR-0006](../adr/ADR-0006-pip-partner-companion.md). Prior rejection in [00-vision.md](../foundation/00-vision.md) and wireframe notes is superseded by this PRD: PiP is in scope as a **companion**, not as primary IA.
 
 ## References
 
-- Wireframe: [drive-wireframes/index.html](../../../design/wireframes/index.html) variant C · [variant-c.png](../../../design/wireframes/variants/variant-c.png)
+- Wireframe: [design/wireframes/index.html](../../../design/wireframes/index.html) variant C · [variant-c.png](../../../design/wireframes/variants/variant-c.png)
 - Related features: [DRV-TOGGLE](../features/DRV-TOGGLE.md), [DRV-CALL-STRIP](../features/DRV-CALL-STRIP.md), [DRV-STAGE](../features/DRV-STAGE.md), [DRV-PERSONA-CHIP](../features/DRV-PERSONA-CHIP.md), [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-LEAVE-END](../features/DRV-LEAVE-END.md), [DRV-INTERRUPT](../features/DRV-INTERRUPT.md)
 - Constraints: [cline-drivemode README](../README.md) (no DOM hacks, hub single writer)

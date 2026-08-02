@@ -1,6 +1,6 @@
 # 10 · Agent router (multi-agent room delivery)
 
-Back to [README](README.md). Decision: [ARD-0012](../../ard/ARD-0012-agent-router.md). Feature: [DRV-AGENT-ROUTER](../../features/DRV-AGENT-ROUTER.md). Full plan: [share-and-router/PLAN.md](PLAN.md).
+Back to [README](README.md). Decision: [ADR-0012](../../adr/ADR-0012-agent-router.md). Feature: [DRV-AGENT-ROUTER](../../features/DRV-AGENT-ROUTER.md). Full plan: [share-and-router/PLAN.md](PLAN.md).
 
 ## Why
 

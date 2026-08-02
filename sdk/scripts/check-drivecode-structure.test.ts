@@ -67,7 +67,7 @@ async function seedValidNest(nest: string): Promise<void> {
 		join(nest, "plans", "cline-drivemode", "features", "DRV-KERNEL.md"),
 	);
 	await touch(
-		join(nest, "plans", "cline-drivemode", "ard", "ARD-0000-status-board.md"),
+		join(nest, "plans", "cline-drivemode", "adr", "ADR-0000-status-board.md"),
 	);
 	await touch(
 		join(
@@ -194,14 +194,14 @@ describe("checkDrivecodeStructure", () => {
 		).toBe(true);
 	});
 
-	test("rejects bad DRV and ARD filenames", async () => {
+	test("rejects bad DRV and ADR filenames", async () => {
 		const nest = await makeTempNest();
 		await seedValidNest(nest);
 		await touch(
 			join(nest, "plans", "cline-drivemode", "features", "kernel.md"),
 		);
 		await touch(
-			join(nest, "plans", "cline-drivemode", "ard", "ARD-1-bad.md"),
+			join(nest, "plans", "cline-drivemode", "adr", "ADR-1-bad.md"),
 		);
 
 		const issues = await checkDrivecodeStructure({
@@ -211,7 +211,7 @@ describe("checkDrivecodeStructure", () => {
 		expect(issues.some((i) => i.path.endsWith("features/kernel.md"))).toBe(
 			true,
 		);
-		expect(issues.some((i) => i.path.endsWith("ard/ARD-1-bad.md"))).toBe(true);
+		expect(issues.some((i) => i.path.endsWith("adr/ADR-1-bad.md"))).toBe(true);
 	});
 
 	test("rejects unknown nest-root siblings", async () => {

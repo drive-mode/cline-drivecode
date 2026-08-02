@@ -1,10 +1,10 @@
 # 07 · Runtime topology (local and cloud)
 
-Back to [README](../../../design/wireframes/README.md). Decisions: [ARD-0009](../ard/ARD-0009-runtime-topology-local-cloud.md), D8 in [01-architecture.md](01-architecture.md). Provider swap: [08-provider-harness.md](08-provider-harness.md).
+Back to [README](../../../design/wireframes/README.md). Decisions: [ADR-0009](../adr/ADR-0009-runtime-topology-local-cloud.md), D8 in [01-architecture.md](01-architecture.md). Provider swap: [08-provider-harness.md](08-provider-harness.md).
 
 ## Why this exists
 
-Drive signaling is already local (hub on `ws://127.0.0.1:25463`). Agent turns already route through `@cline/llms` (Ollama and cloud vendors). Voice STT/TTS were underspecified: a Web Speech default would upload audio on Chromium and break local-only trust.
+Drive signaling is already local (hub discovery / preferred default port). Agent turns already route through `@cline/llms` (Ollama and cloud vendors). Voice STT/TTS were underspecified: a Web Speech default would upload audio on Chromium and break local-only trust.
 
 This document names the **planes**, the **DeploymentProfile**, and the **validation matrix** so Settings, MuteGate, and adapters share one story.
 

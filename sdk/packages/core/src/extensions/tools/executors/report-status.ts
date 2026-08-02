@@ -8,7 +8,7 @@ import { getStatusService, type StatusService } from "../../../status";
 import type { StatusReportExecutor } from "../types";
 
 /**
- * Binds the `report_status` tool to the Status Hub (ARD-0005).
+ * Binds the `report_status` tool to the Status Hub (ADR-0005).
  *
  * Attribution (session, agent, workspace) is filled from the tool context
  * rather than trusted from the model — an agent should not be able to file a

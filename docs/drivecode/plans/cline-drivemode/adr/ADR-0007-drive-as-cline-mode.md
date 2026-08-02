@@ -1,4 +1,4 @@
-# ARD-0007: Drive is a Cline mode, not a separate product
+# ADR-0007: Drive is a Cline mode, not a separate product
 
 ## Status
 

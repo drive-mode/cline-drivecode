@@ -4,7 +4,7 @@
 Drive **mode** for Cline (cline-drivecode). The user switches into Drive like Plan/Act; that enables pair-call features inside Cline Hub Chat—room, roster, stage, addressing—without a second product shell. The hub Drive activity remains optional room management. This folder is the complete plan set. Plans only, no implementation here.
 **Drive** is the product; **drive coding** is the practice it names, the way "vibe coding" names one. The user opens the **Drive tab**, joins a call room, and pair-programs with a senior-engineer agent that holds the **Spotlight**. Chat Join call is a shortcut into the active room. This folder is the complete plan set. Plans only, no implementation here. Terminology is fixed in [00-vision.md](foundation/00-vision.md#naming).
 
-Mode-first integration. [ARD-0007](ard/ARD-0007-drive-as-cline-mode.md), [PRD 8](prd/prd-drive-as-cline-mode.md). Room IA wireframes. [DRIVE-TAB.md](../../design/wireframes/DRIVE-TAB.md).
+Mode-first integration. [ADR-0007](adr/ADR-0007-drive-as-cline-mode.md), [PRD 8](prd/prd-drive-as-cline-mode.md). Room IA wireframes. [DRIVE-TAB.md](../../design/wireframes/DRIVE-TAB.md).
 
 Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 
@@ -44,9 +44,10 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [task-bank-drive-loop/](initiatives/task-bank-drive-loop/) | Multi-phase plan for the task-bank Drive loop |
 | [task-satisfaction-observability/](initiatives/task-satisfaction-observability/) | Task-centric session metrics + gated plan improve |
 | [session-satisfaction-moments/](initiatives/session-satisfaction-moments/) | Product moments + [visual plan](initiatives/session-satisfaction-moments/visual-plan.md) / [canvas](../../design/canvases/session-satisfaction-moments-canvas.html) |
+| [drive-product-demo/](initiatives/drive-product-demo/) | Full-system product demo scene-player ([canvas](../../design/canvases/drive-product-demo.html)) |
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
-| [ard/](ard/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
+| [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
 | [00-vision.md](foundation/00-vision.md) | Drive-tab north star and staged delivery (tab + room, stage/share/address, voice) |
 | [01-architecture.md](foundation/01-architecture.md) | Kernel `@cline/drive`, hub `:25463` as single writer, room-first model, Drive tab primary, events-first stage, decisions D1 through D7 |
 | [02-research-streaming.md](research/02-research-streaming.md) | Call-architecture research synthesis (Discord, Zoom, Meet, Teams, Webex, Huddles, Twitch) with adopted anti-patterns |
@@ -62,7 +63,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [ops/hub-drive-ops.md](ops/hub-drive-ops.md) | Hub op catalog and failure modes |
 | [schemas/README.md](schemas/README.md) | Phase 0 schema index |
 | [prd/](prd/) | Product requirements. PRD 6 Driveagent portfolio / knowledge graph / recruit; success metrics |
-| [ard/](ard/) | Architecture decision records for Driveagent home, graph, recruit, gated learn (+ status board) |
+| [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn (+ status board) |
 | [examples/driveagent-pair-partner/](examples/driveagent-pair-partner/) | Example `.driveagent` home + BRIEF + sample graph |
 | [TASK-GRAPH.md](delivery/TASK-GRAPH.md) | Phases 0 through 5 with verifiable gates |
 | [AGENT-RUNBOOK.md](delivery/AGENT-RUNBOOK.md) | How agents pick tasks, spawn, verify, and report |
@@ -151,19 +152,19 @@ Each principle below drove a concrete choice you can see in the files.
 
 - **Experience First.** Drive is a Cline mode like Plan/Act so call features feel built-in; Chat stays the default work surface. Drive hub activity is optional room IA. Phase order still ships a complete feel per phase.
 - **Model the Domain.** `DriveMode → Room(participants, transcripts, stage, addressSet)` is the typed shape schemas and UI project. Addressing is a send parameter, not an afterthought mention.
-- **Redesign from First Principles.** Mode-first integration ([ARD-0007](ard/ARD-0007-drive-as-cline-mode.md)) amends Drive-tab-as-sole-home while keeping the room primitive.
+- **Redesign from First Principles.** Mode-first integration ([ADR-0007](adr/ADR-0007-drive-as-cline-mode.md)) amends Drive-tab-as-sole-home while keeping the room primitive.
 - **Sequence Work into Verifiable Units.** Every checklist task ends in a named verify command, every phase ends in a gate, and read-and-map tasks precede write tasks so risky assumptions fail first.
 - **Foundational Thinking.** Schemas (DRV-EVENTS) and the kernel (DRV-KERNEL) are phase 0 because every later phase consumes them. The event union is the data shape that makes the stage, the TUI, and remote clients cheap.
 - **Subtract Before You Add.** The plan wires bundled ai-elements instead of writing components, collapses cursor-drive's `:7891` daemon into existing hub ops instead of porting it, and reserves the media track with zero members instead of speculating schema.
 - **Boundary Discipline.** Validation lives at hub ops, the kernel is pure with no transport, and surfaces render typed events without re-validating. Ask-mode enforcement sits at the tool-policy layer, not in UI affordances.
 - **Separate Before Serializing Shared State.** The hub is the single writer of room state, clients hold read-only projections, and the stage is a derived reducer, so no lock or CRDT is needed anywhere in the MVP.
-- **Never Block on the Human.** Preference forks (stream model, user share, accent, focus policy, pause vs cancel) ship with leadership defaults in [decisions/DEC-open-product-forks.md](decisions/DEC-open-product-forks.md) rather than blocking implementation. ARDs stay on the [status board](ard/ARD-0000-status-board.md) until formally Accepted.
+- **Never Block on the Human.** Preference forks (stream model, user share, accent, focus policy, pause vs cancel) ship with leadership defaults in [decisions/DEC-open-product-forks.md](decisions/DEC-open-product-forks.md) rather than blocking implementation. ADRs stay on the [status board](adr/ADR-0000-status-board.md) until formally Accepted.
 
 ## Constraints (binding on all work)
 
 - Bun only. No npm, yarn, or pnpm anywhere in this repo.
 - No Cursor or VS Code chrome DOM hacks.
-- No second MCP daemon. Nothing defaults to `:7891`. The hub on `:25463` is the only server.
+- No second MCP daemon. Nothing defaults to `:7891`. The hub is the only server (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set).
 - Privacy-strict defaults. No audio or transcript persistence without an explicit, visible debug flag.
 - No timeframes in plans or status docs.
 - Drive is a Cline mode (Plan/Act-class). Chat is the default work surface; Drive hub activity is optional room IA.

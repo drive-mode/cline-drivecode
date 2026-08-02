@@ -1,5 +1,5 @@
 /**
- * Bank family log envelope (ARD-0013 phase 6).
+ * Bank family log envelope (ADR-0013 phase 6).
  */
 
 import { mkdtempSync, rmSync } from "node:fs";

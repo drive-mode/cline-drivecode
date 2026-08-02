@@ -1,4 +1,4 @@
-# ARD-0017: Narration-bound presentation cues
+# ADR-0017: Narration-bound presentation cues
 
 ## Status
 
@@ -9,7 +9,7 @@ optional. Decision owner: Harrison.
 
 - Date: 2026-08-01
 - Deciders: Harrison (owner); drafted from the demo canvas reference implementation
-- Related: ARD-0013 (state partition), [spotlight-screen-share](../initiatives/spotlight-screen-share/overview.md) (S2/S6/S9), [drive-audio](../initiatives/drive-audio/overview.md) (narrator, dead-air), [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-TTS](../features/DRV-TTS.md)
+- Related: ADR-0013 (state partition), [spotlight-screen-share](../initiatives/spotlight-screen-share/overview.md) (S2/S6/S9), [drive-audio](../initiatives/drive-audio/overview.md) (narrator, dead-air), [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-TTS](../features/DRV-TTS.md)
 
 ## Context
 
@@ -125,4 +125,4 @@ muted-clock path. Treat the canvas as the executable spec when building S9.
 - `sdk/packages/shared/src/drive/director.ts:89-114` — `ScriptBeatSchema`, `DirectorScriptSchema`
 - [spotlight-screen-share/overview.md](../initiatives/spotlight-screen-share/overview.md) — S9 renderer, Addendum
 - [drive-audio/overview.md](../initiatives/drive-audio/overview.md) — narrator + dead-air slices
-- [ARD-0016](ARD-0016-distribution-and-positioning.md) — protocol-as-asset argument this strengthens
+- [ADR-0016](ADR-0016-distribution-and-positioning.md) — protocol-as-asset argument this strengthens

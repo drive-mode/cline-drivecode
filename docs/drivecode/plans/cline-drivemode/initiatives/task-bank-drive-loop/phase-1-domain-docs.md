@@ -8,7 +8,7 @@ Spec is source of truth. No code.
 
 ## Changes
 
-PRD 9, ARD-0008, DRV-TASK-BANK, README indexes, TASK-GRAPH, MODE-OVERLAY, EVENTS, NOWNEXT, W-13.
+PRD 9, ADR-0008, DRV-TASK-BANK, README indexes, TASK-GRAPH, MODE-OVERLAY, EVENTS, NOWNEXT, W-13.
 
 ## Data structures
 
@@ -16,4 +16,4 @@ PRD 9, ARD-0008, DRV-TASK-BANK, README indexes, TASK-GRAPH, MODE-OVERLAY, EVENTS
 
 ## Verification
 
-Cross-links resolve. ARD status Proposed. Feature acceptance listed.
+Cross-links resolve. ADR status Proposed. Feature acceptance listed.

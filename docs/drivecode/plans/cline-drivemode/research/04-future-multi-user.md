@@ -38,7 +38,7 @@ The MVP Drive tab already ships this IA for one workspace and one partner (see [
 - Participant and role fields exist in the roster even when the roster is always two entries.
 - Mute is enforced hub-side, so server-enforced moderation carries into multi-user unchanged.
 - The stage reducer takes an event stream as input, not a session object, so a remote stream is a drop-in.
-- Three-lane state partition ([ARD-0013](../ard/ARD-0013-state-partition.md)): durable event log, single live room store, durable facets. Remote/org/audit plug in as adapters — not a second room model.
+- Three-lane state partition ([ADR-0013](../adr/ADR-0013-state-partition.md)): durable event log, single live room store, durable facets. Remote/org/audit plug in as adapters — not a second room model.
 
 ## Enterprise adapters (stubs — not implemented)
 

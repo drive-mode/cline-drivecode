@@ -1,7 +1,7 @@
 # Requirements · Recruit-on-stall
 
 **DRV:** [DRV-RECRUIT-STALL](../../features/DRV-RECRUIT-STALL.md)  
-**Related:** DRV-RECRUIT, ARD-0003, DRV-STUCK-RECOVERY, DRV-TASK-BANK, DRV-AGENT-ROUTER (not a seater)
+**Related:** DRV-RECRUIT, ADR-0003, DRV-STUCK-RECOVERY, DRV-TASK-BANK, DRV-AGENT-ROUTER (not a seater)
 
 ## Problem
 
@@ -26,7 +26,7 @@ stuck DriveTask
 
 - Recruit never writes `participants[]` or plan order.
 - `nowTaskId` stays deterministic; “rebind” = bind execution to current now + seat agent.
-- Newly seated agents do not auto-join address set (ARD-0003).
+- Newly seated agents do not auto-join address set (ADR-0003).
 - Router delivers utterances among seated — orthogonal.
 
 ## Attribution (pack postmortem)

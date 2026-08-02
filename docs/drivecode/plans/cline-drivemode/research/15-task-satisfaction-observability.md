@@ -1,6 +1,6 @@
 # 15 · Task-centric session satisfaction (research)
 
-**Status.** Research / exploration — feeds [PRD 10](../prd/prd-task-satisfaction-observability.md), [ARD-0015](../ard/ARD-0015-task-session-observability.md), initiative [task-satisfaction-observability](../initiatives/task-satisfaction-observability/).  
+**Status.** Research / exploration — feeds [PRD 10](../prd/prd-task-satisfaction-observability.md), [ADR-0015](../adr/ADR-0015-task-session-observability.md), initiative [task-satisfaction-observability](../initiatives/task-satisfaction-observability/).  
 **Companion.** [16-task-as-unit-models.md](16-task-as-unit-models.md) (task-as-unit metaphor + next-task proposers).  
 **Does not replace.** [prd-success-metrics.md](../prd/prd-success-metrics.md) (phase gates / privacy CI).
 
@@ -25,7 +25,7 @@ flowchart LR
     Dash["local dashboard"]
     Diag["diagnose patterns"]
     Prop["propose planning skill"]
-    Gate["ARD-0004 accept"]
+    Gate["ADR-0004 accept"]
   end
   JoinLeave -->|"CallSessionId"| Rollup
   BankEv -->|"DriveTask ids"| Rollup
@@ -40,18 +40,18 @@ Caption:
 
 - Inputs are typed events and bank ops — never utterances or audio.
 - Rollups are local aggregates keyed by call session.
-- Improvement writes only after gated accept (same privacy spine as ARD-0004).
+- Improvement writes only after gated accept (same privacy spine as ADR-0004).
 
 ## What already exists
 
 | Primitive | Role for satisfaction | Gap |
 |---|---|---|
 | `control.join` / `control.leave` (`at`) | Call duration | No `callSessionId`; no `durationMs` on leave/end |
-| `DriveTask` / `DrivePlan` (ARD-0008) | Unit of work + sequencer | Hub complete/bind path incomplete |
+| `DriveTask` / `DrivePlan` (ADR-0008) | Unit of work + sequencer | Hub complete/bind path incomplete |
 | Bank events (`drive_task_*`, `drive_plan_*`) | Lifecycle stream | Store emits subset; hub bank handlers omit `onBankEvent` |
 | `work.*` room events | Tool proxies | Not bank tasks; useful as secondary signal |
 | [prd-success-metrics](../prd/prd-success-metrics.md) | Phase / CI gates | Explicitly not session satisfaction |
-| ARD-0004 gated learn | Safe improve path | Not wired to stall diagnosis |
+| ADR-0004 gated learn | Safe improve path | Not wired to stall diagnosis |
 
 ## Metric families (product)
 
@@ -112,7 +112,7 @@ Before any dashboard can be trustworthy:
 
 - No phone-home Drive telemetry in MVP (DRV-PRIVACY, prd-success-metrics non-goal).
 - No transcript / audio in rollups; no utterance text to “compute satisfaction.”
-- Evidence for learn proposals = event ids, artifact paths, skill ids (ARD-0004).
+- Evidence for learn proposals = event ids, artifact paths, skill ids (ADR-0004).
 - Local aggregation / opt-in export / visible debug only.
 
 ## Closed loop
@@ -139,6 +139,6 @@ Stuck sessions (low S2, high P1/P2) trigger diagnose → propose. Successful ses
 
 - [prd-task-satisfaction-observability.md](../prd/prd-task-satisfaction-observability.md)
 - [prd-task-bank-drive-loop.md](../prd/prd-task-bank-drive-loop.md)
-- [ARD-0008](../ard/ARD-0008-task-bank.md), [ARD-0004](../ard/ARD-0004-gated-learn-privacy.md)
+- [ADR-0008](../adr/ADR-0008-task-bank.md), [ADR-0004](../adr/ADR-0004-gated-learn-privacy.md)
 - [DRV-LEAVE-END](../features/DRV-LEAVE-END.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md)
 - Code: `sdk/packages/shared/src/drive/{events,bankEvents,bank,logEnvelope}.ts`, `sdk/packages/drive/src/bankStore.ts`, hub `drive-bank-handlers.ts`

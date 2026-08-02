@@ -1,6 +1,6 @@
 # DRV-AGENT-GRAPH · Per-agent portfolio knowledge graph
 
-Back to [README](../README.md). Phase 2+ in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0002](../ard/ARD-0002-agent-graph-canonical-derived.md).
+Back to [README](../README.md). Phase 2+ in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ADR-0002](../adr/ADR-0002-agent-graph-canonical-derived.md).
 
 ## Problem / user value
 
@@ -19,11 +19,11 @@ Recruitment and profile “what does this agent know?” need a typed portfolio,
 - Lint fails on unknown kinds, dangling refs, or `learned_from` payloads that embed raw transcript text.
 - Profile Knowledge section lists capabilities and cases (`applied_in`) from compiled graph; optional mini lens later.
 - Empty graph is valid. Agent remains seatable.
-- Not the claude-drive thread graphify store. Portfolio ≠ thread routing ([ARD-0002](../ard/ARD-0002-agent-graph-canonical-derived.md)).
+- Not the claude-drive thread graphify store. Portfolio ≠ thread routing ([ADR-0002](../adr/ADR-0002-agent-graph-canonical-derived.md)).
 
 ## Dependencies
 
-- [DRV-DRIVEAGENT-HOME](DRV-DRIVEAGENT-HOME.md), [DRV-PARTICIPANT-SHEET](DRV-PARTICIPANT-SHEET.md). [DRV-RECRUIT](DRV-RECRUIT.md) consumes the compile. Gated learn: [ARD-0004](../ard/ARD-0004-gated-learn-privacy.md).
+- [DRV-DRIVEAGENT-HOME](DRV-DRIVEAGENT-HOME.md), [DRV-PARTICIPANT-SHEET](DRV-PARTICIPANT-SHEET.md). [DRV-RECRUIT](DRV-RECRUIT.md) consumes the compile. Gated learn: [ADR-0004](../adr/ADR-0004-gated-learn-privacy.md).
 
 ## Surfaces touched
 
@@ -45,4 +45,4 @@ Recruitment and profile “what does this agent know?” need a typed portfolio,
 ## Risks
 
 - Authors skip schema and paste prose. Mitigation. Lint in CI / on save; catalog required for capability labels used in edges.
-- Accidental retention. Mitigation. ARD-0004; lint blocks transcript bodies on edges.
+- Accidental retention. Mitigation. ADR-0004; lint blocks transcript bodies on edges.

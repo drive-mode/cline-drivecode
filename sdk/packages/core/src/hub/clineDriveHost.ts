@@ -1,5 +1,5 @@
 /**
- * Local Cline DriveHostPort adapter (ARD-0013).
+ * Local Cline DriveHostPort adapter (ADR-0013).
  * Hub command handlers remain the primary entry; this adapter is the
  * commit/broadcast/facets boundary for conformance and future remote hosts.
  * Prefer createDriveHarness({ host }) from @cline/drive for room composition.

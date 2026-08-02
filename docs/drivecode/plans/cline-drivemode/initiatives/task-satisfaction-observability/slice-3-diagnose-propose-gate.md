@@ -2,7 +2,7 @@
 
 **DRV:** [DRV-PLAN-IMPROVE](../../features/DRV-PLAN-IMPROVE.md)  
 **Requires:** [slice 2](slice-2-local-session-rollup.md)  
-**Privacy:** [ARD-0004](../../ard/ARD-0004-gated-learn-privacy.md)
+**Privacy:** [ADR-0004](../../adr/ADR-0004-gated-learn-privacy.md)
 
 ## Outcome
 

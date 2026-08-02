@@ -289,7 +289,7 @@ Privacy unchanged: metadata in events; media bytes ephemeral unless exported.
 
 ## ChatForkLifecycle (invisible auditable workers)
 
-Decision record: [ARD-0014](../../ard/ARD-0014-chat-fork-lifecycle.md). Feature: [DRV-CHAT-FORK](../../features/DRV-CHAT-FORK.md). Related GAP: W-33 one-shot side-question fork (not this loop).
+Decision record: [ADR-0014](../../adr/ADR-0014-chat-fork-lifecycle.md). Feature: [DRV-CHAT-FORK](../../features/DRV-CHAT-FORK.md). Related GAP: W-33 one-shot side-question fork (not this loop).
 
 Worker forks are the **execution substrate** for Do items while the director keeps ranking Show. They are invisible by default and auditable on demand. “Merge” is structured promote, never raw transcript concatenation.
 
@@ -552,7 +552,7 @@ New center of gravity: **StageDirectorState** (dual backlog) owned as pure polic
 | Live WebRTC agent desktop | Rejected for agent path |
 | Single monolithic “share agent” does all | Rejected — mix routing, planning, capture |
 | **Dual backlog + specialized roles on SDK agents** | **Chosen** |
-| Invisible auditable worker forks + PromotePacket | **Chosen** ([ARD-0014](../../ard/ARD-0014-chat-fork-lifecycle.md)) |
+| Invisible auditable worker forks + PromotePacket | **Chosen** ([ADR-0014](../../adr/ADR-0014-chat-fork-lifecycle.md)) |
 | Only human-planned demos | Rejected — too slow; planner must continuous-rerank |
 | Replace SDK Team with Drive execution | Rejected — reuse Team where mailbox/outcomes needed |
 | Spotlight = mute | Rejected — orthogonal; mute is speak/hear, spotlight is priority |
@@ -674,7 +674,7 @@ License: `bun`/CI grep that new SDK files include Apache-2.0 header where requir
 7. **Per-agent voices** via `voiceSlotId`; shared slots allowed.
 8. **Router** suggest-default for multi-seat.
 9. **Upstream** general `@cline/shared` schemas when not Drive-UI-specific.
-10. **Chat forks** invisible+auditable; promote-not-merge; path-disjoint or worktree-isolated for parallel edits ([ARD-0014](../../ard/ARD-0014-chat-fork-lifecycle.md)).
+10. **Chat forks** invisible+auditable; promote-not-merge; path-disjoint or worktree-isolated for parallel edits ([ADR-0014](../../adr/ADR-0014-chat-fork-lifecycle.md)).
 
 ---
 
@@ -684,7 +684,7 @@ License: `bun`/CI grep that new SDK files include Apache-2.0 header where requir
 
 **Share.** Dual backlog + explanatory artifacts (stills/animations/demos) + DirectorScript sticky presentation — appear live, not WebRTC.
 
-**Chat forks.** SeedPacket → worker → PromotePacket; audit on demand; never raw merge ([ARD-0014](../../ard/ARD-0014-chat-fork-lifecycle.md), [DRV-CHAT-FORK](../../features/DRV-CHAT-FORK.md)).
+**Chat forks.** SeedPacket → worker → PromotePacket; audit on demand; never raw merge ([ADR-0014](../../adr/ADR-0014-chat-fork-lifecycle.md), [DRV-CHAT-FORK](../../features/DRV-CHAT-FORK.md)).
 
 **Spotlight.** Prioritizes on-screen, spoken content, and speaker voice; human control + director/router may reassign under policy.
 

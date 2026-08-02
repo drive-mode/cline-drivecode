@@ -43,7 +43,7 @@ Both siblings are read-only prior art. Nothing in them is ported wholesale. [01-
 
 Repeated because workflow design is exactly where these get quietly violated.
 
-- The hub on `:25463` is the single writer of room state. Nothing defaults to `:7891` ([01-architecture.md](01-architecture.md) D2).
+- The hub is the single writer of room state (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set). Nothing defaults to `:7891` ([01-architecture.md](01-architecture.md) D2).
 - Operators are not teams. The MVP roster is one human and one `pair_partner` ([03-research-inventory.md](../research/03-research-inventory.md)).
 - The Drive tab is primary. Chat **Join call** is a shortcut into the active room ([00-vision.md](00-vision.md)).
 - Privacy-strict. No transcript or audio persistence without an explicit visible debug flag ([DRV-PRIVACY](../features/DRV-PRIVACY.md)).
@@ -371,7 +371,7 @@ Repeated because workflow design is exactly where these get quietly violated.
 **Surfaces.** Narration, room feed, stage.
 **Tier.** MVP.
 **Features.** [DRV-NARRATION](../features/DRV-NARRATION.md), [DRV-EVENTS](../features/DRV-EVENTS.md).
-**Sources.** Decision events already exist as a first-class MCP tool in both siblings, `agent_screen_decision` (`cursor-drive:docs/architecture/adr/ADR-0016-drive-terminology-and-hierarchy.md` rename table; `claude-drive:.claude/CLAUDE.md` MCP tool table). Narration density fork is in [`drive-wireframes/README.md`](../../../design/wireframes/README.md).
+**Sources.** Decision events already exist as a first-class MCP tool in both siblings, `agent_screen_decision` (`cursor-drive:docs/architecture/adr/ADR-0016-drive-terminology-and-hierarchy.md` rename table; `claude-drive:.claude/CLAUDE.md` MCP tool table). Narration density fork is in [`design/wireframes/README.md`](../../../design/wireframes/README.md).
 **Pattern worth stealing.** claude-drive's `/why` prints the decision, the stage, the confidence, and the reasoning, and never the prompt text that produced it. A decision record can be fully auditable without retaining a word of what the human said. That resolves the apparent tension between W-17 and W-26, so a decision event should carry a reference and a rationale, not a transcript excerpt.
 
 ---
@@ -469,7 +469,7 @@ Repeated because workflow design is exactly where these get quietly violated.
 **Surfaces.** Drive tab Add menu, recruit picker, roster, hub ops.
 **Tier.** Phase 2 (after graph authoring). Lexical only until semantic P4.
 **Features.** [DRV-RECRUIT](../features/DRV-RECRUIT.md), [DRV-AGENT-GRAPH](../features/DRV-AGENT-GRAPH.md), [DRV-ROSTER-PACK](../features/DRV-ROSTER-PACK.md), [DRV-ROOM-MVP](../features/DRV-ROOM-MVP.md).
-**Sources.** [ARD-0003](../ard/ARD-0003-recruit-and-roster-pack.md); harrison-site skills/projects filter pattern; [PRD 6](../prd/prd-driveagent-portfolio.md).
+**Sources.** [ADR-0003](../adr/ADR-0003-recruit-and-roster-pack.md); harrison-site skills/projects filter pattern; [PRD 6](../prd/prd-driveagent-portfolio.md).
 
 ### W-39 · Accept or reject proposed agent knowledge
 
@@ -482,12 +482,12 @@ Repeated because workflow design is exactly where these get quietly violated.
 3. Accept writes canonical YAML under `.driveagent/<slug>/knowledge/`, then compile refreshes `.derived/graph.json`.
 4. Reject/mute leave disk unchanged aside from an optional mute list.
 
-**Failure and interrupt.** A proposal that embeds utterance text fails validation and never reaches the accept queue ([ARD-0004](../ard/ARD-0004-gated-learn-privacy.md)). Hub down means proposals stay ephemeral and are dropped on leave unless the human exported them.
+**Failure and interrupt.** A proposal that embeds utterance text fails validation and never reaches the accept queue ([ADR-0004](../adr/ADR-0004-gated-learn-privacy.md)). Hub down means proposals stay ephemeral and are dropped on leave unless the human exported them.
 
 **Surfaces.** Participant sheet Knowledge tab, post-call prompt, home files.
 **Tier.** Phase 2 mechanism optional behind flag; full UX with DRV-AGENT-GRAPH.
 **Features.** [DRV-AGENT-GRAPH](../features/DRV-AGENT-GRAPH.md), [DRV-DRIVEAGENT-HOME](../features/DRV-DRIVEAGENT-HOME.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md).
-**Sources.** [ARD-0004](../ard/ARD-0004-gated-learn-privacy.md); BRIEF lifecycle privacy; harrison-site Constellation confirm/reject/mute.
+**Sources.** [ADR-0004](../adr/ADR-0004-gated-learn-privacy.md); BRIEF lifecycle privacy; harrison-site Constellation confirm/reject/mute.
 
 ---
 
@@ -842,15 +842,15 @@ Senior engineering leadership on the call. Drive is not only “write the code f
 1. The partner names the decision in one line and refuses a false binary when a third option exists.
 2. Stage shows ≥2 **Option** cards with consequences (positive / negative / verification).
 3. The partner gives a **Recommendation** with rationale tied to constraints, then asks the human to accept, amend, or defer.
-4. On accept, a **Decision** card is pinned (session-tier). Durable ARD/DEC files are written only when the human asks to record them in the repo (and gates apply if the write is high-impact).
+4. On accept, a **Decision** card is pinned (session-tier). Durable adr/DEC files are written only when the human asks to record them in the repo (and gates apply if the write is high-impact).
 5. The partner states what is now *not* open, so implementers do not re-litigate it mid-PR.
 
 **Failure and interrupt.** “It depends” without a default is a failure for MVP guidance. Every facilitation ends with a recommended default plus an escape hatch. If the human defers, the open question stays on stage and blocks only the slices that truly require it (see W-44).
 
 **Surfaces.** Stage, feed, optional repo write via gated tools.
-**Tier.** MVP for facilitation + stage cards. Phase 2 for one-click “write DEC/ARD from stage.”
+**Tier.** MVP for facilitation + stage cards. Phase 2 for one-click “write DEC/ADR from stage.”
 **Features.** [DRV-SDLC-GUIDE](../features/DRV-SDLC-GUIDE.md), [DRV-STAGE](../features/DRV-STAGE.md), [DRV-GATES](../features/DRV-GATES.md) when recording to disk, [DRV-ADR](../features/DRV-ADR.md) as the doc pattern.
-**Sources.** [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md); [decisions/](../decisions/); arena-style optioning from `drivecode-sdk/decisions.tsv`.
+**Sources.** [adr/ADR-0000-status-board.md](../adr/ADR-0000-status-board.md); [decisions/](../decisions/); arena-style optioning from `drivecode-sdk/decisions.tsv`.
 
 ### W-43 · Map workflows and find coverage gaps
 

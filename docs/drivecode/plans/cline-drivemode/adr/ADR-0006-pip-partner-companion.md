@@ -1,4 +1,4 @@
-# ARD-0006: PiP Partner is a companion surface, not primary IA
+# ADR-0006: PiP Partner is a companion surface, not primary IA
 
 ## Status
 

@@ -1,7 +1,7 @@
 /**
  * In-memory Drive room store. Mutations append DriveEvents and fold via
  * @cline/drive reduceRoom. Hub handlers own broadcast; this module stays pure
- * except for the Map of rooms + optional durable event log (ARD-0013).
+ * except for the Map of rooms + optional durable event log (ADR-0013).
  *
  * Single live Map: director/spotlight UI state lives here — not a second
  * module-local Map in drive-handlers.

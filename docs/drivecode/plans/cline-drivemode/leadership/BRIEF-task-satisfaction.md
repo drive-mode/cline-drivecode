@@ -2,7 +2,7 @@
 
 **Audience.** SE lead / PM  
 **Status.** Planning wave input (2026-07-30)  
-**Decisions pending.** [ARD-0015](../ard/ARD-0015-task-session-observability.md) (Proposed)  
+**Decisions pending.** [ADR-0015](../adr/ADR-0015-task-session-observability.md) (Proposed)  
 **Depth.** [PRD 10](../prd/prd-task-satisfaction-observability.md), [research/15](../research/15-task-satisfaction-observability.md), [research/16](../research/16-task-as-unit-models.md)  
 **Remaining implementation:** [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md)
 
@@ -10,7 +10,7 @@
 
 ### 1. Problem statement
 
-Drive mode succeeds only when **tasks complete**. Plans sequence tasks (ARD-0008); there is no first-class Goal — `plan.title` is the session’s intent. If tasks stall, churn, or never drain, users leave mid-session and do not return. That is a **retention risk**, not a polish issue.
+Drive mode succeeds only when **tasks complete**. Plans sequence tasks (ADR-0008); there is no first-class Goal — `plan.title` is the session’s intent. If tasks stall, churn, or never drain, users leave mid-session and do not return. That is a **retention risk**, not a polish issue.
 
 Existing `prd-success-metrics.md` covers phase gates and privacy CI. It does **not** measure whether a Drive session felt successful to the user. We need product metrics that answer: *did this session get work done, and did the user stay in the loop?*
 
@@ -49,7 +49,7 @@ flowchart LR
 Caption:
 
 - Observe uses typed events (ids), not utterances.
-- Gate is the same governance family as ARD-0004.
+- Gate is the same governance family as ADR-0004.
 - Improve updates skills/templates only on accept.
 
 ### 5. Phased delivery (capability order)
@@ -67,7 +67,7 @@ Caption:
 - Absorbing session satisfaction into the phase-gate PRD as a substitute.
 - Transcript retention or utterance-level analytics for MVP learning.
 
-**Privacy rails (ARD-0004 / DRV-PRIVACY)**
+**Privacy rails (ADR-0004 / DRV-PRIVACY)**
 
 - No phone-home Drive telemetry in MVP.
 - No transcript retention.

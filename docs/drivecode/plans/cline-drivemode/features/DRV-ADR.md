@@ -8,7 +8,8 @@ The Drive effort makes several decisions that future contributors will want to r
 
 ## Acceptance criteria
 
-- One ADR drafted covering, at minimum: `@cline/drive` kernel placement, hub `:25463` as the single writer and only daemon, room-first domain model with Drive tab as primary UX and `joinCall` / Chat Join as façade/shortcut, events-first agent stage (bidirectional sharer pointer; WebRTC later), phased media strategy with buy-not-build SFU, no default second MCP on `:7891`.
+- ADR nest exists at [`plans/cline-drivemode/adr/`](../adr/) with `ADR-NNNN-slug.md` naming and the living board [`ADR-0000-status-board.md`](../adr/ADR-0000-status-board.md).
+- Decisions covering, at minimum: `@cline/drive` kernel placement, hub as the single writer (preferred default port with discovery / free-port fallback unless `CLINE_HUB_PORT` is set), room-first domain model with Drive tab as primary UX and `joinCall` / Chat Join as façade/shortcut, events-first agent stage (bidirectional sharer pointer; WebRTC later), phased media strategy with buy-not-build SFU, no default second MCP on `:7891`.
 - Each decision names the alternatives rejected and the evidence file that grounds it (include [DRIVE-TAB.md](../../../design/wireframes/DRIVE-TAB.md) for UX IA).
 - ADR status is `proposed` until the human accepts it. Plans do not block on acceptance (work proceeds, the ADR records).
 
@@ -18,20 +19,20 @@ None. Drafts alongside DRV-EVENTS.
 
 ## Surfaces touched
 
-- `docs/adr/` or the repo's existing decision-record location (create `docs/adr/` if absent)
+- `docs/drivecode/plans/cline-drivemode/adr/` (canonical nest; do **not** create repo-root `docs/adr/`)
 
 ## Agent tasks
 
-- [ ] Locate or create the ADR directory and copy the numbering convention from any existing records.
+- [x] Locate or create the ADR directory and copy the numbering convention from any existing records.
   - Owner package: repo docs
-  - Files likely: `docs/adr/`
-  - Verify: file renders in markdown preview without broken links
+  - Files: `docs/drivecode/plans/cline-drivemode/adr/ADR-NNNN-slug.md`
+  - Verify: `bun run check:drivecode-docs` accepts the nest
   - Done when: directory and naming convention are settled.
-- [ ] Draft the ADR from [01-architecture.md](../foundation/01-architecture.md) decisions D1 through D6, citing [02-research-streaming.md](../research/02-research-streaming.md) and [04-future-multi-user.md](../research/04-future-multi-user.md).
+- [x] Draft ADRs from [01-architecture.md](../foundation/01-architecture.md) decisions and related forks; index on [ADR-0000](../adr/ADR-0000-status-board.md).
   - Owner package: repo docs
-  - Files likely: `docs/adr/NNNN-drive-mode-architecture.md`
+  - Files likely: `docs/drivecode/plans/cline-drivemode/adr/ADR-*.md`
   - Verify: every decision has a named alternative and a grounding link
-  - Done when: ADR exists with status `proposed` and README links it.
+  - Done when: board links Accepted / Proposed records and nest README indexes them.
 
 ## Risks
 

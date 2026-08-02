@@ -21,7 +21,7 @@ Seating a specialist beside the pair partner without isolation invites two agent
 
 - With `teamOpt` on and isolation available, seating a specialist creates an isolated work area and binds the agent’s file tools to it.
 - Specialist completion produces a reviewable proposal (diff / file list) in the room stage or feed — not a silent merge.
-- Accept applies; reject discards; neither dumps transcripts into `.driveagent` knowledge (ARD-0004).
+- Accept applies; reject discards; neither dumps transcripts into `.driveagent` knowledge (ADR-0004).
 - With isolation unavailable, attempting a second agent seat fails with a typed error; pair-partner MVP remains usable.
 - Cascade dismiss of a spawned specialist does not evict a participant still claimed by a RosterPack seatSource.
 - Unit tests cover bind path, fail-closed without isolation, and cascade dismiss vs pack refcount.

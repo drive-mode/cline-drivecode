@@ -1,7 +1,7 @@
 # Hub Drive ops catalog
 
 **Purpose.** Canonical list of hub operations and failure modes for Drive rooms, config, and agent homes.
-**Constraint.** Hub `ws://127.0.0.1:25463` is the single writer. Clients hold read-only projections.
+**Constraint.** Hub is the single writer (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set). Clients hold read-only projections.
 **Status.** Planning catalog — shapes may tighten in Phase 0 schemas without changing ownership.
 
 ## Principles
@@ -39,7 +39,7 @@
 | `drive_recruit` | **Query only** — returns ranked agents/pack suggestions; does not seat | 2 |
 | `room_seat_from_recruit` | UI convenience: seat chosen slug(s) after recruit | 2 |
 
-Recruit never writes participants by itself (ARD-0003).
+Recruit never writes participants by itself (ADR-0003).
 
 ## Config / profile ops
 
@@ -130,7 +130,7 @@ Clients rebuild projection via `@cline/drive` reducers — they do not merge ad 
 | `orgConfig` | Org-managed facet / policy overlay |
 | `auditExport` | Audit bundle export from the event log |
 
-See [04-future-multi-user.md](../research/04-future-multi-user.md) Phase 2 and [ARD-0013](../ard/ARD-0013-state-partition.md).
+See [04-future-multi-user.md](../research/04-future-multi-user.md) Phase 2 and [ADR-0013](../adr/ADR-0013-state-partition.md).
 
 ## Out of scope here
 

@@ -1,4 +1,4 @@
-# ARD-0010: Drive provider harness (BYOK) with OOTB default packs
+# ADR-0010: Drive provider harness (BYOK) with OOTB default packs
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-27
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: D9 in [01-architecture.md](../foundation/01-architecture.md), [08-provider-harness.md](../foundation/08-provider-harness.md), [ARD-0009](ARD-0009-runtime-topology-local-cloud.md), [06-platform-config.md](../foundation/06-platform-config.md), DRV-PLATFORM-CONFIG
+- Related: D9 in [01-architecture.md](../foundation/01-architecture.md), [08-provider-harness.md](../foundation/08-provider-harness.md), [ADR-0009](ADR-0009-runtime-topology-local-cloud.md), [06-platform-config.md](../foundation/06-platform-config.md), DRV-PLATFORM-CONFIG
 
 ## Context
 
@@ -28,7 +28,7 @@ Users need Drive to work out of the box for local-only and cloud setups, and to 
 7. **First-install default profile is `cloud`.** If loopback Ollama is detected, Settings suggests Local (checklist, not a wizard).
 8. **Plugin trust (MVP):** load manifests only from `<workspace>/.cline/drive/providers/` and `~/.cline/drive/providers/`, plus compiled builtins. No URL install.
 9. **Composition root** `createVoiceStack` in `apps/cline-hub` maps selection + registry → `SttPort` / `TtsPort`. UI never imports concrete engine APIs outside adapter modules.
-10. **TopologyPolicy** still fail-closes incompatible provider selections under the active profile (ARD-0009).
+10. **TopologyPolicy** still fail-closes incompatible provider selections under the active profile (ADR-0009).
 
 ## Consequences
 

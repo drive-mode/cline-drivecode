@@ -1,6 +1,6 @@
 # DRV-TASK-BANK · Task bank and Drive loop
 
-Back to [README](../README.md). Spans phase 1 (posture) and phase 2 (now/next) in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 9](../prd/prd-task-bank-drive-loop.md). Decision: [ARD-0008](../ard/ARD-0008-task-bank.md).
+Back to [README](../README.md). Spans phase 1 (posture) and phase 2 (now/next) in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 9](../prd/prd-task-bank-drive-loop.md). Decision: [ADR-0008](../adr/ADR-0008-task-bank.md).
 
 ## Implementation status
 
@@ -36,10 +36,10 @@ Drive needs a steady bank of work. Tasks are durable and implementable. Plans ar
 
 ## Agent tasks
 
-- [ ] Land PRD 9, ARD-0008, this feature file, and cross-links.
+- [ ] Land PRD 9, ADR-0008, this feature file, and cross-links.
   - Owner package: repo docs
-  - Verify: cross-links resolve from prd/ard/README and TASK-GRAPH
-  - Done when: PRD 9 and ARD-0008 are indexed.
+  - Verify: cross-links resolve from prd/adr/README and TASK-GRAPH
+  - Done when: PRD 9 and ADR-0008 are indexed.
 - [ ] Add `DriveTask` / `DrivePlan` schemas and bank lifecycle events in `@cline/shared`.
   - Owner package: `@cline/shared`
   - Verify: `bun -F @cline/shared test`

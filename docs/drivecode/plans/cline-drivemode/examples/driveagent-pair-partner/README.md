@@ -2,7 +2,7 @@
 
 Throwaway fixture for docs and future tests. Not a live workspace agent until copied under a real `<workspace>/.driveagent/`.
 
-See [PRD 6](../../prd/prd-driveagent-portfolio.md), [ARD-0001](../../ard/ARD-0001-driveagent-home.md), [ARD-0002](../../ard/ARD-0002-agent-graph-canonical-derived.md).
+See [PRD 6](../../prd/prd-driveagent-portfolio.md), [ADR-0001](../../adr/ADR-0001-driveagent-home.md), [ADR-0002](../../adr/ADR-0002-agent-graph-canonical-derived.md).
 
 ## Layout
 

@@ -1,4 +1,4 @@
-# ARD-0004: Gated learn; no transcript dump into agent knowledge
+# ADR-0004: Gated learn; no transcript dump into agent knowledge
 
 ## Status
 
@@ -24,7 +24,7 @@ If we auto-write call content into `.driveagent/**/knowledge/`, we:
 
 1. **No automatic transcript → knowledge.** Room events are not durable agent memory.
 2. **Learning is propose → accept | reject | mute.** Agents (or a post-call summarizer) may propose nodes/edges with evidence pointers (`learned_from` to artifact paths, skill ids, or event *ids*), never embedded raw utterance text by default.
-3. **Accept is a human (or explicit policy) write** into canonical YAML under `knowledge/`, then compile (ARD-0002).
+3. **Accept is a human (or explicit policy) write** into canonical YAML under `knowledge/`, then compile (ADR-0002).
 4. **Tiers:** ephemeral (RAM) / session (wiped on leave) / durable (home, opt-in). Only durable crosses the accept gate into canonical files.
 5. **Turn injection** of portfolio context uses graduated retrieval (BRIEF read-mode spirit): prefer labels + short summaries; full node bodies only when selected or required by policy.
 6. **Inject audit** records node ids (and optionally hashes), not prose, under privacy-tiered retention.

@@ -1,5 +1,5 @@
 /**
- * Shared log envelope for room + bank families (ARD-0013 phase 6).
+ * Shared log envelope for room + bank families (ADR-0013 phase 6).
  * Keeps unions separate while one cursorable stream can carry both.
  */
 

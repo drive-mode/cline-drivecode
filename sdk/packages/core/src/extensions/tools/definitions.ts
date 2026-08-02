@@ -514,7 +514,7 @@ export function createShellTool(
 }
 
 /**
- * Create the report_status tool (Status Hub, ARD-0005).
+ * Create the report_status tool (Status Hub, ADR-0005).
  *
  * Lets an agent publish where it is to a shared, queryable log so humans and
  * other agents can see project state without reading a transcript. Cheap and

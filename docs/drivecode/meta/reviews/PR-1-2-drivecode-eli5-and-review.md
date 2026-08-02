@@ -41,7 +41,7 @@ Mostly **plans and pictures**, plus a **tiny pretend call UI**.
 | Layer | Status in the PRs |
 |---|---|
 | Product vision / workflows / features | Written |
-| Agent home + knowledge graph (PRD/ARDs) | Written, decisions still **Proposed** |
+| Agent home + knowledge graph (PRD/ADRs) | Written, decisions still **Proposed** |
 | Interactive HTML wireframes | Written |
 | Hub “Join call” chrome + CLI hotkey | Scaffold only |
 | Real room server / `@cline/drive` kernel / recruit | **Not built** |
@@ -73,7 +73,7 @@ The call does **not** secretly keep a diary.
 
 - No auto-saving voice or chat into agent memory.
 - If the agent wants to “learn” something, it must **ask**, and a human must **accept**.
-- That rule is ARD-0004.
+- That rule is ADR-0004.
 
 ### ELI5 of PR #1 vs PR #2
 
@@ -89,7 +89,7 @@ If you only open one: open **PR #2**.
 | | [#1](https://github.com/hhalperin/cline-drivecode/pull/1) | [#2](https://github.com/hhalperin/cline-drivecode/pull/2) |
 |---|---|---|
 | Branch | `docs/drivecode-drivemode-portfolio-handoff` | `docs/drivecode-handoff` |
-| Title | drivemode plans, Driveagent portfolio PRD/ARDs, handoff | handoff plans, wireframes, and Drive UI scaffold |
+| Title | drivemode plans, Driveagent portfolio PRD/ADRs, handoff | handoff plans, wireframes, and Drive UI scaffold |
 | Base | `main` | `main` |
 | State | Draft | Draft |
 | Rough size | ~8.1k additions / 90 files | Same base + 1 new handoff file + small README/decision edits |
@@ -112,7 +112,7 @@ If you only open one: open **PR #2**.
 | Vision → platform | `00-vision.md` … `06-platform-config.md` | North star, architecture D1–D7, research, 39 workflows, 34-facet config |
 | Feature specs | `features/DRV-*.md` (~35) | One checklistable unit per capability |
 | PRD 6 | `prd/prd-driveagent-portfolio.md` | Portfolio / graph / recruit product requirements |
-| ARDs | `ard/ARD-0001` … `0004` | Proposed architecture decisions |
+| ADRs | `adr/ADR-0001` … `0004` | Proposed architecture decisions |
 | Example home | `examples/driveagent-pair-partner/` | Concrete `.driveagent` fixture + sample graph |
 
 **Phases (from TASK-GRAPH).**
@@ -192,7 +192,7 @@ Config (peer of room, not nested under it)
 | `.driveagent/<slug>/` | `.claude/` home | Wrong host metaphor under Cline |
 | Spoken “team” | Type named Team | Means pack displayName or recruit query text |
 
-### ARD-0001 … 0004 (all Status: Proposed)
+### ADR-0001 … 0004 (all Status: Proposed)
 
 | ID | One-line decision |
 |---|---|
@@ -231,7 +231,7 @@ The early UI is intentionally local-state only. That is fine for a demo chrome, 
 
 - Webview Drive state living only in Chat React state will **diverge** from any future hub room authority. Phase 1 must replace this with hub projections.
 - “Join call” in Chat is still the loudest entry in the scaffold, while plans say Drive tab is primary. Wireframes exist; the route does not.
-- Persona / partner name in UI must not become a second prompt home when Driveagent lands (ARD-0001 invariant).
+- Persona / partner name in UI must not become a second prompt home when Driveagent lands (ADR-0001 invariant).
 - Concurrent commit history already mixed planning docs and app source; keep later PRs thinner if possible.
 
 ---
@@ -242,7 +242,7 @@ The early UI is intentionally local-state only. That is fine for a demo chrome, 
 
 1. `docs/drivecode/HANDOFF.md` (PR #2 only) or `docs/drivecode/plans/cline-drivemode/delivery/HANDOFF.md`
 2. `00-vision.md` → `01-architecture.md`
-3. `prd/prd-driveagent-portfolio.md` → `ard/README.md`
+3. `prd/prd-driveagent-portfolio.md` → `adr/README.md`
 4. Open `docs/drivecode/design/wireframes/drive-tab-discord-slack.html` in a browser
 5. Skim `apps/cline-hub/.../drive/` for what code actually exists
 
@@ -257,14 +257,14 @@ The early UI is intentionally local-state only. That is fine for a demo chrome, 
 
 - [ ] Handoff open decision is clear cold
 - [ ] Wireframe HTML loads; layout/accent switchers work
-- [ ] RosterPack vs Team naming consistent in PRD/ARDs
+- [ ] RosterPack vs Team naming consistent in PRD/ADRs
 - [ ] Optional: hub `drive/types.test.ts` via `bun -F @cline/cline-hub test`
 
 ---
 
 ## Suggested next moves after merge
 
-1. **Decide ARDs** — `accept all` or `change: <id + new default>`.
+1. **Decide ADRs** — `accept all` or `change: <id + new default>`.
 2. **Close the duplicate** — if #2 merges, close #1 as superseded.
 3. **Phase 0 slice** — shared Drive event + home/graph schemas; no-prompt-in-facet tests.
 4. **Phase 1 slice** — hub room ops stub + Drive tab shell; retire webview-only room state.
@@ -278,7 +278,7 @@ The early UI is intentionally local-state only. That is fine for a demo chrome, 
 | Risk | Severity | Notes |
 |---|---|---|
 | Duplicate open PRs | Medium process | Same story twice; prefer #2 |
-| Proposed ARDs treated as shipped law | High | Status is Proposed until Harrison accepts |
+| Proposed ADRs treated as shipped law | High | Status is Proposed until Harrison accepts |
 | Scaffold mistaken for hub authority | High | Local Chat state ≠ room single-writer |
 | Overlay vs home tension | High | Must compile homes into Cline path only |
 | Absolute Windows paths in handoffs | Low docs | Local canvas / prior-art paths won’t exist in cloud clones |
@@ -288,4 +288,4 @@ The early UI is intentionally local-state only. That is fine for a demo chrome, 
 
 ## One-paragraph summary
 
-These drafts define **Drive**: a Discord-style call room inside Cline (Slack-like chrome, Cline brand), where agents are roster participants with recruitable portfolios under `.driveagent/`, rooms are owned only by the hub on `:25463`, the stage is typed events not pixels, and learning never silently retains transcripts. PR #2 is the one to review and merge; the code inside is early chrome only — the kernel, homes, recruit, and real Drive tab still sit ahead of phase 0/1 work once the four ARDs are accepted or amended.
+These drafts define **Drive**: a Discord-style call room inside Cline (Slack-like chrome, Cline brand), where agents are roster participants with recruitable portfolios under `.driveagent/`, rooms are owned only by the hub on `:25463`, the stage is typed events not pixels, and learning never silently retains transcripts. PR #2 is the one to review and merge; the code inside is early chrome only — the kernel, homes, recruit, and real Drive tab still sit ahead of phase 0/1 work once the four ADRs are accepted or amended.

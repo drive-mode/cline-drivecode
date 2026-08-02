@@ -35,7 +35,7 @@ export const REQUIRED_DIRS = [
 	"plans/cline-drivemode/leadership",
 	"plans/cline-drivemode/delivery",
 	"plans/cline-drivemode/decisions",
-	"plans/cline-drivemode/ard",
+	"plans/cline-drivemode/adr",
 	"plans/cline-drivemode/prd",
 	"plans/cline-drivemode/features",
 	"plans/cline-drivemode/initiatives",
@@ -82,7 +82,7 @@ export const PRODUCT_ROLE_DIRS = new Set([
 	"leadership",
 	"delivery",
 	"decisions",
-	"ard",
+	"adr",
 	"prd",
 	"features",
 	"initiatives",
@@ -309,19 +309,19 @@ export async function checkDrivecodeStructure(
 		}
 	}
 
-	for (const entry of await list(join(nest, "plans", "cline-drivemode", "ard"))) {
+	for (const entry of await list(join(nest, "plans", "cline-drivemode", "adr"))) {
 		if (entry.isDir) {
 			fail(
-				report(`plans/cline-drivemode/ard/${entry.name}`),
-				"ard/ holds ARD-*.md files only",
+				report(`plans/cline-drivemode/adr/${entry.name}`),
+				"adr/ holds ADR-*.md files only",
 			);
 			continue;
 		}
 		if (entry.name === "README.md") continue;
-		if (!/^ARD-\d{4}-[a-z0-9-]+\.md$/.test(entry.name)) {
+		if (!/^ADR-\d{4}-[a-z0-9-]+\.md$/.test(entry.name)) {
 			fail(
-				report(`plans/cline-drivemode/ard/${entry.name}`),
-				"ARD files must match ARD-NNNN-slug.md",
+				report(`plans/cline-drivemode/adr/${entry.name}`),
+				"ADR files must match ADR-NNNN-slug.md",
 			);
 		}
 	}

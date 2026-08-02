@@ -42,7 +42,7 @@ Sample / dev path already exists: hub Settings “Present sample diagram” (`sa
 
 ## Not this skill
 
-- Nest ARD / architecture doc authoring → **diagram-first**
+- Nest ADR / architecture doc authoring → **diagram-first**
 - Feature implementation plans → visual-plan / DRV checklist
 - Status Hub Dependency map → product UI (`buildDependencyMap`), not Show
 

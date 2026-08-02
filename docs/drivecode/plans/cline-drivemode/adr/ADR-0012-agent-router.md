@@ -1,4 +1,4 @@
-# ARD-0012: Agent router for multi-agent rooms
+# ADR-0012: Agent router for multi-agent rooms
 
 ## Status
 

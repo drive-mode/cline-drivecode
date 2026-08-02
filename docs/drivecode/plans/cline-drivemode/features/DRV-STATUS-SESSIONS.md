@@ -20,7 +20,7 @@ Rollups are framed as eng/debug. Users and leads need a product lens: did sessio
 
 ## Dependencies
 
-- Obs slices / [DRV-TASK-METRICS](DRV-TASK-METRICS.md), [DRV-CALL-SESSION](DRV-CALL-SESSION.md), ARD-0005 Status shell, DRV-TASK-BANK UI. Soft: [DRV-SHIPPED-DIGEST](DRV-SHIPPED-DIGEST.md) as export launch point.
+- Obs slices / [DRV-TASK-METRICS](DRV-TASK-METRICS.md), [DRV-CALL-SESSION](DRV-CALL-SESSION.md), ADR-0005 Status shell, DRV-TASK-BANK UI. Soft: [DRV-SHIPPED-DIGEST](DRV-SHIPPED-DIGEST.md) as export launch point.
 
 ## Surfaces touched
 

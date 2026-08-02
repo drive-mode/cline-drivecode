@@ -1,6 +1,6 @@
 # DRV-AGENT-ROUTER · Route utterances among seated agents
 
-Back to [README](../README.md). Design: [10-agent-router.md](../initiatives/share-and-router/10-agent-router.md), [ARD-0012](../ard/ARD-0012-agent-router.md). Plan: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
+Back to [README](../README.md). Design: [10-agent-router.md](../initiatives/share-and-router/10-agent-router.md), [ADR-0012](../adr/ADR-0012-agent-router.md). Plan: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
 
 ## Problem / user value
 

@@ -1,8 +1,8 @@
 # Drivecode architecture: Status Hub, Drive UI, and protocol planes
 
-Companion to [README](../design/wireframes/README.md) and [ARD-0005](../plans/cline-drivemode/ard/ARD-0005-status-hub.md).
+Companion to [README](../design/wireframes/README.md) and [ADR-0005](../plans/cline-drivemode/adr/ADR-0005-status-hub.md).
 This page is the diagram-first view of how the pieces fit. Schemas and op lists
-live in the reference README; decisions live in the ARD.
+live in the reference README; decisions live in the ADR.
 
 ## What this is (and is not)
 
@@ -29,7 +29,7 @@ flowchart TB
     Agents["Agent model + tools"]
   end
 
-  subgraph HubDaemon["Hub daemon ws://127.0.0.1:25463"]
+  subgraph HubDaemon["Hub daemon (discovery / preferred default port)"]
     Transport["HubServerTransport"]
     StatusHandlers["status-handlers"]
     CallHandlers["call_* / drive.* handlers"]
@@ -248,6 +248,6 @@ Retention: `prune` is explicit; default is keep-everything. Search: indexed
 
 - [drivecode README](../design/wireframes/README.md) — schema and op detail
 - [skills inventory](skills-inventory.md) — in-repo skills vs `cline/skills`
-- [ARD-0005](../plans/cline-drivemode/ard/ARD-0005-status-hub.md) — decisions D1–D10
-- [ARD-0010](../plans/cline-drivemode/ard/ARD-0010-provider-harness-byok.md) — BYOK / topology
+- [ADR-0005](../plans/cline-drivemode/adr/ADR-0005-status-hub.md) — decisions D1–D10
+- [ADR-0010](../plans/cline-drivemode/adr/ADR-0010-provider-harness-byok.md) — BYOK / topology
 - [01-architecture.md](../plans/cline-drivemode/foundation/01-architecture.md) — hub as single writer

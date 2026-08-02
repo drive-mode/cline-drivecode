@@ -1,5 +1,5 @@
 /**
- * Default status-reporting behavior for agents (ARD-0005).
+ * Default status-reporting behavior for agents (ADR-0005).
  *
  * The `report_status` tool description and its per-field `describe` text carry
  * the contract the model reads at call time. This fragment is the *proactive*

@@ -2,12 +2,12 @@
 
 **Purpose.** Planning gate before anyone freezes Drive event / home / graph / facet schemas.  
 **Rule.** Do not open competing schema PRs for both “ConfiguredAgent-only” and “Driveagent home” worlds.  
-**Related.** [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [ard/ARD-0000-status-board.md](../ard/ARD-0000-status-board.md).
+**Related.** [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [adr/ADR-0000-status-board.md](../adr/ADR-0000-status-board.md).
 
 ## Must be true
 
-- [x] Harrison reply recorded: `accept all` (2026-07-29) for ARD-0000…0013 + DEC bundle. Accept recorded on [ARD-0000](../ard/ARD-0000-status-board.md). ARD-0014 (Chat-fork lifecycle) later landed Accepted on `main` and is indexed on the board.
-- [x] Leadership defaults adopted for schema drafts; formal accept flipped to **Accepted** on the status board and each ARD/DEC header.
+- [x] Harrison reply recorded: `accept all` (2026-07-29) for ADR-0000…0013 + DEC bundle. Accept recorded on [ADR-0000](../adr/ADR-0000-status-board.md). ADR-0014 (Chat-fork lifecycle) later landed Accepted on `main` and is indexed on the board.
+- [x] Leadership defaults adopted for schema drafts; formal accept flipped to **Accepted** on the status board and each adr/DEC header.
 - [x] [DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md) applied: vision non-goal amended; `AgentRef` union locked. **Accepted.**
 - [x] [DEC-package-location](../decisions/DEC-package-location.md) applied: HANDOFF open package question closed. **Accepted.**
 - [x] [DEC-open-product-forks](../decisions/DEC-open-product-forks.md) applied: focus, stream, share, accent closed in `DRIVE-TAB.md`. **Accepted.**
@@ -22,7 +22,7 @@
 ## Exit criteria
 
 When every box above is checked, the Phase 0 planning/schema-freeze gate is
-green. ARD-0000…0013 and the DEC bundle are **Accepted**; remaining unchecked
+green. ADR-0000…0013 and the DEC bundle are **Accepted**; remaining unchecked
 items are reconciliation blockers before the schema surface is declared frozen.
 
 The implementation slices are:
@@ -32,7 +32,7 @@ The implementation slices are:
 3. `@cline/drive` package scaffold + policies  
 4. Home/graph schema stubs + compile fixture from `examples/driveagent-pair-partner/`
 
-**Current on `main` (post-#58 / #80).** Slices (1)–(4) landed: locked `AgentRef`, home/graph schemas + `compileDriveagentHome` fixture, schemas README index, facet no-prompt targets, gates taxonomy enums, hub `call_join` → snapshot + Spotlight, harness leverage, Show director, and task-satisfaction spine. Formal accept of ARD-0000…0013 + DEC bundle recorded 2026-07-29. Still open for freeze checklist: TASK-GRAPH phase placement sign-off (box above). Hub snapshots remain the room authority — do not treat Chat-local Drive React state as truth.
+**Current on `main` (post-#58 / #80).** Slices (1)–(4) landed: locked `AgentRef`, home/graph schemas + `compileDriveagentHome` fixture, schemas README index, facet no-prompt targets, gates taxonomy enums, hub `call_join` → snapshot + Spotlight, harness leverage, Show director, and task-satisfaction spine. Formal accept of ADR-0000…0013 + DEC bundle recorded 2026-07-29. Still open for freeze checklist: TASK-GRAPH phase placement sign-off (box above). Hub snapshots remain the room authority — do not treat Chat-local Drive React state as truth.
 
 ## Anti-patterns
 

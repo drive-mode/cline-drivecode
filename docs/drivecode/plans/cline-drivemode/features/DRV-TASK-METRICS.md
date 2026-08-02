@@ -1,6 +1,6 @@
 # DRV-TASK-METRICS · Session rollups from task + call events
 
-Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Research: [15](../research/15-task-satisfaction-observability.md). Decision: [ARD-0015](../ard/ARD-0015-task-session-observability.md).
+Back to [README](../README.md). Product: [PRD 10](../prd/prd-task-satisfaction-observability.md). Research: [15](../research/15-task-satisfaction-observability.md). Decision: [ADR-0015](../adr/ADR-0015-task-session-observability.md).
 
 ## Implementation status
 
@@ -55,5 +55,5 @@ Drive needs local, privacy-safe rollups: tasks completed per session, plan clean
 
 ## Risks
 
-- Dashboard before instrumentation → false confidence. Mitigation: ARD-0015 / leadership default: no satisfaction claims until emit path green.
+- Dashboard before instrumentation → false confidence. Mitigation: ADR-0015 / leadership default: no satisfaction claims until emit path green.
 - Counting work.* tools as tasks. Mitigation: primary metrics use bank events only; work.* secondary.

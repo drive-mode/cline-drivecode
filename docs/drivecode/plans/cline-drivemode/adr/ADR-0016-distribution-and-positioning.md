@@ -1,4 +1,4 @@
-# ARD-0016: Drive mode distribution & positioning
+# ADR-0016: Drive mode distribution & positioning
 
 ## Status
 
@@ -26,12 +26,12 @@ knowingly for the beta window.
 
 - Date: 2026-08-01
 - Deciders: Harrison (owner); drafted by Drivecode planning
-- Related: ARD-0005, ARD-0007, ARD-0011, ARD-0013, DEC-package-location, DEC-open-product-forks, [spotlight-screen-share](../initiatives/spotlight-screen-share/overview.md), [drive-audio](../initiatives/drive-audio/overview.md)
+- Related: ADR-0005, ADR-0007, ADR-0011, ADR-0013, DEC-package-location, DEC-open-product-forks, [spotlight-screen-share](../initiatives/spotlight-screen-share/overview.md), [drive-audio](../initiatives/drive-audio/overview.md)
 
 ## Context
 
 Nothing in the plan set states who installs Drive or why this work is a fork of
-`cline/cline` rather than a PR into it. ARD-0007 settled in-product IA — Drive
+`cline/cline` rather than a PR into it. ADR-0007 settled in-product IA — Drive
 is a Cline mode, not a separate product — but is silent on distribution: it
 answers "what is Drive inside the app," not "how does Drive reach anyone."
 Distribution today is `git clone` of this fork; the public face is the demo
@@ -92,7 +92,7 @@ re-orders the spotlight S1–S9 / drive-audio slice priorities.
 
 - **Shape.** Upstream the wire-schema / protocol pieces — room + drive event
   schemas, director/show schemas, the conformance kit; the Status Hub is
-  already SDK-scope (ARD-0005). Keep the hub composition and the Drive
+  already SDK-scope (ADR-0005). Keep the hub composition and the Drive
   surfaces as the product.
 - **Target user.** Cline users who add the Drive hub on top of stock Cline.
 - **Install path.** Fork hub app consuming upstream SDK packages: the protocol
@@ -157,7 +157,7 @@ are:
 
 ## References
 
-- [ARD-0005](ARD-0005-status-hub.md), [ARD-0007](ARD-0007-drive-as-cline-mode.md), [ARD-0011](ARD-0011-demo-share-track.md), [ARD-0013](ARD-0013-state-partition.md)
+- [ADR-0005](ADR-0005-status-hub.md), [ADR-0007](ADR-0007-drive-as-cline-mode.md), [ADR-0011](ADR-0011-demo-share-track.md), [ADR-0013](ADR-0013-state-partition.md)
 - [DEC-package-location](../decisions/DEC-package-location.md), [DEC-open-product-forks](../decisions/DEC-open-product-forks.md)
 - [spotlight-screen-share/overview.md](../initiatives/spotlight-screen-share/overview.md), [drive-audio/overview.md](../initiatives/drive-audio/overview.md)
 - `sdk/packages/shared/src/drive/director.ts` (typed show artifacts), `sdk/packages/shared/src/drive/room.ts` (room schemas)

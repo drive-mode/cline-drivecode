@@ -34,7 +34,7 @@ const FACET_IDS = [
 	"drive.defaults.pairAgent",
 ] as const satisfies ReadonlyArray<keyof DriveFacetValues>;
 
-/** Flat runtime values → on-disk envelope (ARD-0013 / D7). */
+/** Flat runtime values → on-disk envelope (ADR-0013 / D7). */
 export function facetValuesToDiskFile(
 	facets: DriveFacetValues,
 ): DriveFacetDiskFile {

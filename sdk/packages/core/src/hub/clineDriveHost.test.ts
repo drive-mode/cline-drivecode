@@ -1,5 +1,5 @@
 /**
- * Local DriveHostPort adapter tests (ARD-0013 phase 5).
+ * Local DriveHostPort adapter tests (ADR-0013 phase 5).
  */
 
 import { mkdtempSync, rmSync } from "node:fs";

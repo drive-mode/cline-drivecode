@@ -4,7 +4,7 @@
 **Date.** 2026-07-25  
 **Deciders.** Drivecode leadership planning wave  
 **Supersedes.** Literal reading of `00-vision.md` MVP non-goal “no Drive-owned agent definition format”  
-**Related.** ARD-0001, PRD 6, `06-platform-config.md`, `DRV-AGENT-PROFILE`, `DRV-DRIVEAGENT-HOME`
+**Related.** ADR-0001, PRD 6, `06-platform-config.md`, `DRV-AGENT-PROFILE`, `DRV-DRIVEAGENT-HOME`
 
 ## Context
 

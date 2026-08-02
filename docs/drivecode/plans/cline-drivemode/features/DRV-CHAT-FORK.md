@@ -1,6 +1,6 @@
 # DRV-CHAT-FORK · Invisible auditable worker forks
 
-Back to [README](../README.md). Decision: [ARD-0014](../ard/ARD-0014-chat-fork-lifecycle.md). Architecture: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
+Back to [README](../README.md). Decision: [ADR-0014](../adr/ADR-0014-chat-fork-lifecycle.md). Architecture: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
 
 ## Problem / user value
 
@@ -67,7 +67,7 @@ Resource admission reuses guardrails from [PR #32](https://github.com/hhalperin/
 
 ## Agent tasks
 
-- [x] ARD-0014 locks hybrid invisible+auditable + promote-not-merge.
+- [x] ADR-0014 locks hybrid invisible+auditable + promote-not-merge.
 - [x] Schemas: `SeedPacket`, `PromotePacket`, lifecycle states.
 - [x] Pure policy: `assertForkLegal`, `buildSeedPacket`, `applyPromotePacket`.
 - [x] Hub ops + UI audit affordances.
@@ -75,7 +75,7 @@ Resource admission reuses guardrails from [PR #32](https://github.com/hhalperin/
 
 ## Risks
 
-- Overloading CLI `/fork` or checkpoint restore. Mitigation: ARD forbids them as substrate.
+- Overloading CLI `/fork` or checkpoint restore. Mitigation: ADR forbids them as substrate.
 - Shared-cwd races. Mitigation: `assertForkLegal` + path contracts / worktree isolation.
 - Audit retention vs privacy. Mitigation: default drop; retain opt-in; no raw bytes on event log.
 - Related W-33 one-shot fork confusion. Mitigation: document as related GAP, separate product loop.

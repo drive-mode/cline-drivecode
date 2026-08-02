@@ -1,6 +1,6 @@
 # DRV-DEMO-SHARE · Demo artifact share on the Call Stage
 
-Back to [README](../README.md). Design: [09-demo-share.md](../initiatives/share-and-router/09-demo-share.md), [ARD-0011](../ard/ARD-0011-demo-share-track.md). Plan: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
+Back to [README](../README.md). Design: [09-demo-share.md](../initiatives/share-and-router/09-demo-share.md), [ADR-0011](../adr/ADR-0011-demo-share-track.md). Plan: [share-and-router/PLAN.md](../initiatives/share-and-router/PLAN.md).
 
 ## Problem / user value
 

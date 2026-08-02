@@ -1,6 +1,6 @@
 # DRV-RECRUIT · Rank agents (and suggest packs) for a need
 
-Back to [README](../README.md). Phase 2–4 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ARD-0003](../ard/ARD-0003-recruit-and-roster-pack.md).
+Back to [README](../README.md). Phase 2–4 in [TASK-GRAPH](../delivery/TASK-GRAPH.md). Product: [PRD 6](../prd/prd-driveagent-portfolio.md). Decision: [ADR-0003](../adr/ADR-0003-recruit-and-roster-pack.md).
 
 ## Implementation status
 
@@ -28,7 +28,7 @@ recruit({
 - UI: Drive tab **Add → Recruit** (and optional composer `/recruit <need>`). Selecting a result calls existing seat ops; recruit never appends `participants[]` itself.
 - Pack suggestions use [DRV-ROSTER-PACK](DRV-ROSTER-PACK.md) seat path (`room_add_roster_pack`). Multi-agent still gated by `teamOpt` / `seatCap`.
 - Agents with empty graphs remain manually seatable; they rank at the bottom unless the need is empty (then stable slug order).
-- Spoken “team” never creates a Drive type named Team ([ARD-0003](../ard/ARD-0003-recruit-and-roster-pack.md)).
+- Spoken “team” never creates a Drive type named Team ([ADR-0003](../adr/ADR-0003-recruit-and-roster-pack.md)).
 
 ## Dependencies
 

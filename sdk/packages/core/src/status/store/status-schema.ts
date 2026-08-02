@@ -1,7 +1,7 @@
 import type { SqliteDb } from "@cline/shared/db";
 
 /**
- * Bootstrap the dedicated status.db schema (ARD-0005).
+ * Bootstrap the dedicated status.db schema (ADR-0005).
  *
  * Owned by @cline/core for the same reason cron's schema is: status lifecycle
  * and retention are core concerns and should not couple to session storage.

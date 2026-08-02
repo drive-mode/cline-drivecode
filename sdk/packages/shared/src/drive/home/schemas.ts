@@ -1,5 +1,5 @@
 /**
- * Driveagent home + derived graph schemas (DRV-DRIVEAGENT-HOME, ARD-0001/0002).
+ * Driveagent home + derived graph schemas (DRV-DRIVEAGENT-HOME, ADR-0001/0002).
  *
  * Canonical YAML under `.driveagent/<slug>/`; `.derived/graph.json` is output only.
  */

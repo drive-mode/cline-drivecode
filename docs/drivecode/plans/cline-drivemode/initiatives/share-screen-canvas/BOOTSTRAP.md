@@ -42,10 +42,10 @@ credential.
 - `docs/drivecode/plans/cline-drivemode/initiatives/share-screen-canvas/MVP-UI-SHARED-SCREEN.md` — Slice A (`stageReducer`+`Stage.tsx`), Slice B (`call_set_stage`), Slice C (Drive tab mount). Lists have/missing.
 - `docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/PLAN.md` — canonical architecture: dual backlog (Do + Show), DirectorScript, Spotlight priority, per-agent media bags, mute ⟂ deafen, A2A. Phases 1–10.
 - `docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/README.md` — index.
-- `docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/09-demo-share.md` + `ard/ARD-0011-demo-share-track.md` — share modes `structured | demo | pixel`; `drive_demo_frame`.
+- `docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/09-demo-share.md` + `adr/ADR-0011-demo-share-track.md` — share modes `structured | demo | pixel`; `drive_demo_frame`.
 - `docs/drivecode/plans/cline-drivemode/initiatives/share-and-router/11-spotlight-a2a.md` — spotlight participant biases show backlog / say / TTS; mute vs deafen; A2A.
-- `docs/drivecode/plans/cline-drivemode/ard/ARD-0005-status-hub.md` — Status Hub (accepted + implemented).
-- `docs/drivecode/plans/cline-drivemode/ard/ARD-0006-pip-partner-companion.md` + `features/DRV-PIP.md` — PiP companion (planned).
+- `docs/drivecode/plans/cline-drivemode/adr/ADR-0005-status-hub.md` — Status Hub (accepted + implemented).
+- `docs/drivecode/plans/cline-drivemode/adr/ADR-0006-pip-partner-companion.md` + `features/DRV-PIP.md` — PiP companion (planned).
 - Feature specs cluster: `features/DRV-STAGE.md`, `DRV-SHARE.md`, `DRV-DEMO-SHARE.md`, `DRV-CALL-STRIP.md`, `DRV-NARRATION.md`, `DRV-CAPTIONS.md`, `DRV-PARTICIPANT-SHEET.md`, `DRV-DRIVE-TAB.md`.
 - Architecture context: `docs/drivecode/plans/cline-drivemode/foundation/01-architecture.md`, `02-research-streaming.md`, `04-future-multi-user.md`.
 

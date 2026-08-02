@@ -6,7 +6,7 @@
  * "what is happening right now" without replaying a transcript.
  *
  * Ordering is by `seq`, a monotonic cursor assigned by the store. Consumers
- * page and resume with `seq`, never with a wall clock — see ARD-0005 D5.
+ * page and resume with `seq`, never with a wall clock — see ADR-0005 D5.
  */
 
 import { z } from "zod";

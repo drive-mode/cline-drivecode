@@ -1,5 +1,5 @@
 /**
- * Gated planning-improvement proposals (DRV-PLAN-IMPROVE / ARD-0004).
+ * Gated planning-improvement proposals (DRV-PLAN-IMPROVE / ADR-0004).
  *
  * Evidence = event ids / artifact paths / skill ids / task+plan ids only.
  * Never utterances, transcripts, or audio.

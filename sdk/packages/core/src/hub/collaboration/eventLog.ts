@@ -1,5 +1,5 @@
 /**
- * Append-only room event log (ARD-0013 lane 1).
+ * Append-only room event log (ADR-0013 lane 1).
  * JSONL under `.cline/drive/rooms/<roomId>/events.jsonl` + `meta.json`.
  */
 

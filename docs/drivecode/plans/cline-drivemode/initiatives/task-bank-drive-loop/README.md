@@ -1,7 +1,7 @@
 # task-bank-drive-loop · Initiative index
 
 **Status:** reference (partial on main).  
-**DRV:** [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md) · **PRD:** [prd-task-bank-drive-loop](../../prd/prd-task-bank-drive-loop.md) · **ARD:** [ARD-0008](../../ard/ARD-0008-task-bank.md)
+**DRV:** [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md) · **PRD:** [prd-task-bank-drive-loop](../../prd/prd-task-bank-drive-loop.md) · **ADR:** [ADR-0008](../../adr/ADR-0008-task-bank.md)
 
 Durable task bank + Drive loop (ordered plan refs, posture from bank state).
 

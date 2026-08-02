@@ -1,4 +1,4 @@
-# ARD-0009: Runtime topology for local and cloud Drive
+# ADR-0009: Runtime topology for local and cloud Drive
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-27
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: D8 in [01-architecture.md](../foundation/01-architecture.md), [07-runtime-topology.md](../foundation/07-runtime-topology.md), [ARD-0010](ARD-0010-provider-harness-byok.md), DRV-MIC, DRV-TTS, DRV-PRIVACY
+- Related: D8 in [01-architecture.md](../foundation/01-architecture.md), [07-runtime-topology.md](../foundation/07-runtime-topology.md), [ADR-0010](ADR-0010-provider-harness-byok.md), DRV-MIC, DRV-TTS, DRV-PRIVACY
 
 ## Context
 
@@ -19,7 +19,7 @@ Signaling stays on the hub loopback. LLM routing already exists in `@cline/llms`
 ## Decision
 
 1. **A session has a `DeploymentProfile`:** `local` | `cloud` | `hybrid`, stored as durable facet `runtime.profile`.
-2. **`RuntimeTopology` is an immutable value** composed of profile, `ResolvedLlmEgress` facts, selected STT/TTS backends (via provider ids — see ARD-0010), and an egress ceiling.
+2. **`RuntimeTopology` is an immutable value** composed of profile, `ResolvedLlmEgress` facts, selected STT/TTS backends (via provider ids — see ADR-0010), and an egress ceiling.
 3. **`TopologyPolicy.assertLegal` is pure** in `@cline/drive`. It never imports `@cline/llms` and never opens sockets. Core injects `ResolvedLlmEgress` resolved from the seated `ConfiguredAgent`.
 4. **Local profile is airgap for LLM and voice.** STT must be `local-worker`. TTS must be browser `speechSynthesis` or local-worker. Web Speech (`platform-cloud` egress) is forbidden. Cloud `ConfiguredAgent` base URLs are forbidden.
 5. **Cloud profile** allows cloud LLMs and may use Web Speech or cloud STT/TTS APIs. Default first-install profile is `cloud`.
@@ -33,7 +33,7 @@ Signaling stays on the hub loopback. LLM routing already exists in `@cline/llms`
 
 - Local and cloud users get a clear privacy story.
 - Illegal combos fail at the hub boundary with stable reason codes.
-- Voice engines stay swappable without rewriting the kernel (ARD-0010).
+- Voice engines stay swappable without rewriting the kernel (ADR-0010).
 
 **Negative**
 

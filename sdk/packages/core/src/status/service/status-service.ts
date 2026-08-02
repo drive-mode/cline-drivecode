@@ -11,7 +11,7 @@ import {
 import { SqliteStatusStore } from "../store/sqlite-status-store";
 
 /**
- * Status Hub service (ARD-0005).
+ * Status Hub service (ADR-0005).
  *
  * Owns the store plus in-process fan-out. The hub wraps this to broadcast
  * `status.updated` to connected clients; in-process SDK consumers can

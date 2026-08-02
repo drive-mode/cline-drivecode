@@ -1,4 +1,4 @@
-# ARD-0003: Recruit ranks agents; RosterPack remains curated seating
+# ADR-0003: Recruit ranks agents; RosterPack remains curated seating
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted
 
 - Date: 2026-07-25
 - Deciders: Drivecode planning (cline-drivemode)
-- Related: PRD 6, ARD-0001, ARD-0002, DRV-ROSTER-PACK, DRV-TEAM-OPT
+- Related: PRD 6, ADR-0001, ADR-0002, DRV-ROSTER-PACK, DRV-TEAM-OPT
 
 ## Context
 

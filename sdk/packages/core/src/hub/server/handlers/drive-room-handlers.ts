@@ -72,7 +72,7 @@ const CallJoinPayloadSchema = z
 		activateDrive: z.boolean().optional(),
 		/** Optional agent session for tool → stage.cards bridge. */
 		sessionId: z.string().min(1).optional(),
-		/** Workspace root for durable room event log (ARD-0013). */
+		/** Workspace root for durable room event log (ADR-0013). */
 		workspaceRoot: z.string().min(1).optional(),
 		/** Optional raw participant join without createOrAttach façade. */
 		participant: ParticipantSchema.optional(),
