@@ -639,6 +639,7 @@ export function resolveBaseUrl(providerId: string, config: ApiConfiguration): st
 		gemini: "geminiBaseUrl",
 		requesty: "requestyBaseUrl",
 		litellm: "liteLlmBaseUrl",
+		asksage: "asksageApiUrl",
 		oca: "ocaBaseUrl",
 		aihubmix: "aihubmixBaseUrl",
 		dify: "difyBaseUrl",
