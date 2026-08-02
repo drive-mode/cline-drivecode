@@ -2,7 +2,7 @@
 
 > **Historical (2026-07-25).** Do not use as cold-start. Prefer nest [HANDOFF.md](../../../HANDOFF.md) and [SYSTEMS-ANALYSIS.md](../leadership/SYSTEMS-ANALYSIS.md) §13.0. Kernel, hub rooms, harness, Show director, and satisfaction spine have since landed on `main`.
 
-**Terminology (2026-08).** ADRs live under [`adr/`](../adr/) as `ADR-NNNN-*.md` (formerly misspelled ARD). **DEC-*** under [`decisions/`](../decisions/) unchanged. Stale repo-root `docs/adr/` scaffolding is retired — nest path only.
+**Terminology (2026-08).** ADRs live under [`adr/`](../adr/) as `ADR-NNNN-*.md` (formerly misspelled ARD). **DEC-*** under [`decisions/`](../decisions/) unchanged. Execution backlog for Phase 0–4 is in drivekanban (`~/.cline/kanban/…`); [TASK-GRAPH.md](TASK-GRAPH.md) remains the phase contract. Re-seed: `bun scripts/seed-drive-kanban.mjs`.
 
 **Reader.** Archive for the early planning wave.
 **Repo.** `hhalperin/cline-drivecode` (local: `profiles/hhalperin/active/cline-drivecode`).

@@ -58,3 +58,18 @@ A Tauri v2 (Rust) shell + Next.js webview + a Bun "sidecar" backend. Rust and th
 - **Rust version caveat:** the crate graph needs Cargo's `edition2024` feature, so **Rust ≥1.85** is required (the VM's base 1.83 fails with "feature `edition2024` is required"). The toolchain here was updated via `rustup default stable` (currently 1.97). First `cargo` build downloads/compiles the full Tauri crate graph (a few minutes); subsequent builds are cached.
 - **System libs (already installed):** `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`, `libssl-dev`, `build-essential`.
 - **Test/typecheck:** `bun run typecheck`, `bun run test:chat-ui` (Vitest). Both trigger `build:ui` first.
+
+## Learned User Preferences
+
+- Use **ADR** (Architecture Decision Record) naming — never **ARD**; files live under `docs/drivecode/plans/cline-drivemode/adr/` as `ADR-NNNN-*`.
+- Prefer shipping Drive agent capabilities as **Cline skills** in this repo (`.agents` / `.cline` / package skills) rather than Claude-only skills when the feature belongs here.
+- In public docs and PRs, link with repo-relative `docs/drivecode/...` paths — not machine-absolute Windows paths.
+- Prefer feature-branch + PR for local WIP instead of leaving work only in stashes.
+- Do not open multiple Cursor workspaces for one task; plan ahead and stay in the current workspace.
+- This fork does not require linked GitHub Issues on PRs — lead with a synopsis or feature summary instead.
+
+## Learned Workspace Facts
+
+- Remote is the `hhalperin/cline-drivecode` fork of upstream Cline: sync upstream commits into the fork via PR; do not push Drive fork code upstream to `cline/cline`.
+- Drive planning backlog is often tracked in sibling `drivekanban` (forked Kanban) alongside `docs/drivecode/plans/` (e.g. TASK-GRAPH phase cards).
+- Design canvases and visual explainers for Drive live under `docs/drivecode/design/canvases/` (e.g. product demo, drivemode explainer, architecture explorer).

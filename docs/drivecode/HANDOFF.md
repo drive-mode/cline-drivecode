@@ -42,6 +42,12 @@ Leadership planning wave entry. [cline-drivemode/LEADERSHIP-BRIEF.md](plans/clin
 
 Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session notes: [07-agent-handoff.md](plans/drivecode-sdk/delivery/07-agent-handoff.md) (superseded).
 
+### Execution backlog (Kanban)
+
+- **Phase contract** stays in [TASK-GRAPH.md](plans/cline-drivemode/delivery/TASK-GRAPH.md) (phases, gates, DRV lists).
+- **Agent execution backlog** for this workspace lives in drivekanban / `npx kanban` under `~/.cline/kanban/workspaces/cline-drivecode/` (not committed to git). Phase 0–4 DRV + gate cards are linked; meta ARD→ADR rename + nest hygiene cards are Done.
+- Re-seed if needed: `bun scripts/seed-drive-kanban.mjs` from the repo root.
+
 ### Terminology note (2026-08)
 
 - Architecture Decision Records were renamed from mistaken local **ARD** spelling to industry-standard **ADR** (`plans/cline-drivemode/adr/ADR-NNNN-*.md`). Leadership **DEC-*** files are unchanged.
