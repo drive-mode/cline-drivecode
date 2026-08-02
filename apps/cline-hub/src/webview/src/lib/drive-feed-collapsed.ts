@@ -1,3 +1,5 @@
+import { readStoredValue, writeStoredValue } from "./safe-storage";
+
 export const DRIVE_FEED_COLLAPSED_STORAGE_KEY = "cline.drive.feed-collapsed.v1";
 
 /** roomId → folded. Per room so folding one call does not fold the others. */
@@ -26,17 +28,9 @@ export function parseDriveFeedCollapsedStorage(
 }
 
 function readStorage(): DriveFeedCollapsedStorage {
-	if (typeof window === "undefined") {
-		return {};
-	}
-	try {
-		return parseDriveFeedCollapsedStorage(
-			window.localStorage.getItem(DRIVE_FEED_COLLAPSED_STORAGE_KEY),
-		);
-	} catch {
-		// Webview persistence is best-effort.
-		return {};
-	}
+	return parseDriveFeedCollapsedStorage(
+		readStoredValue(DRIVE_FEED_COLLAPSED_STORAGE_KEY),
+	);
 }
 
 export function readDriveFeedCollapsed(roomId: string): boolean {
@@ -47,15 +41,8 @@ export function writeDriveFeedCollapsed(
 	roomId: string,
 	collapsed: boolean,
 ): void {
-	if (typeof window === "undefined") {
-		return;
-	}
-	try {
-		window.localStorage.setItem(
-			DRIVE_FEED_COLLAPSED_STORAGE_KEY,
-			JSON.stringify({ ...readStorage(), [roomId]: collapsed }),
-		);
-	} catch {
-		// Webview persistence is best-effort.
-	}
+	writeStoredValue(
+		DRIVE_FEED_COLLAPSED_STORAGE_KEY,
+		JSON.stringify({ ...readStorage(), [roomId]: collapsed }),
+	);
 }

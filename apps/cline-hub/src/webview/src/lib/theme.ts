@@ -1,9 +1,11 @@
+import { readStoredValue, writeStoredValue } from "./safe-storage";
+
 export const HUB_THEME_STORAGE_KEY = "cline-hub-theme";
 
 export type HubTheme = "light" | "dark";
 
 export function readStoredHubTheme(): HubTheme | null {
-	const stored = window.localStorage.getItem(HUB_THEME_STORAGE_KEY);
+	const stored = readStoredValue(HUB_THEME_STORAGE_KEY);
 	return stored === "light" || stored === "dark" ? stored : null;
 }
 
@@ -25,6 +27,6 @@ export function syncHubTheme(): HubTheme {
 }
 
 export function setStoredHubTheme(theme: HubTheme): HubTheme {
-	window.localStorage.setItem(HUB_THEME_STORAGE_KEY, theme);
+	writeStoredValue(HUB_THEME_STORAGE_KEY, theme);
 	return applyHubTheme(theme);
 }

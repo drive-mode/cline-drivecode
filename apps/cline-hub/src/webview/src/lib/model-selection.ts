@@ -1,3 +1,5 @@
+import { readStoredValue, writeStoredValue } from "./safe-storage";
+
 export const MODEL_SELECTION_STORAGE_KEY = "cline.code.model-selection.v1";
 
 export type ModelSelectionStorage = {
@@ -61,25 +63,13 @@ export function parseModelSelectionStorage(
 }
 
 export function readModelSelectionStorageFromWindow(): ModelSelectionStorage {
-	if (typeof window === "undefined") {
-		return {
-			lastProvider: "",
-			lastModelByProvider: {},
-		};
-	}
 	return parseModelSelectionStorage(
-		window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY),
+		readStoredValue(MODEL_SELECTION_STORAGE_KEY),
 	);
 }
 
 export function writeModelSelectionStorageToWindow(
 	value: ModelSelectionStorage,
 ): void {
-	if (typeof window === "undefined") {
-		return;
-	}
-	window.localStorage.setItem(
-		MODEL_SELECTION_STORAGE_KEY,
-		JSON.stringify(value),
-	);
+	writeStoredValue(MODEL_SELECTION_STORAGE_KEY, JSON.stringify(value));
 }
