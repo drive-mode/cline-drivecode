@@ -37,6 +37,12 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+	projectShowRail,
+	type ShowRailEntry,
+	type ShowRailSource,
+	type ShowRailStatus,
+} from "./showRail";
 
 export type SpotlightHumanPin = Pick<StagePin, "kind" | "label"> & {
 	ref?: string;
@@ -74,6 +80,13 @@ export type SpotlightViewProps = {
 	 * (even as null) reserves the slot so arriving text never shifts layout.
 	 */
 	narration?: string | null;
+	/**
+	 * Director's show backlog (`room.director.showBacklog`) as the queue rail
+	 * under the frame. Read-only; an empty queue hides the rail.
+	 */
+	backlog?: readonly ShowRailSource[];
+	/** Show bound to the frame — its chip is the one that reads `showing`. */
+	activeShowId?: string | null;
 	nowLabel?: string;
 	nextLabel?: string;
 	emptyHint?: string;
@@ -460,9 +473,74 @@ export function ScreenFrame({
 }
 
 /**
- * Full spotlight column: the shared screen, the work deck beneath it, and the
- * plan cursor. Prefer this over DriveStagePanel + DriveStageCards for live
- * projection.
+ * Every state carries a cue that survives without hue — dashed rule (planned),
+ * solid rule (ready), filled with a live dot (showing), struck through
+ * (shown) — so the queue reads for colour-blind viewers too.
+ */
+const RAIL_CHIP_STYLE: Record<ShowRailStatus, string> = {
+	planned: "border-dashed text-muted-foreground",
+	ready: "text-foreground",
+	showing:
+		"border-amber-600/60 bg-amber-500/10 font-medium text-amber-800 dark:border-amber-400/60 dark:text-amber-200",
+	shown: "text-muted-foreground line-through opacity-60",
+};
+
+/**
+ * The director's queue, made visible: one chip per show under the frame. The
+ * row scrolls rather than wraps — a wrapping rail would steal frame height as
+ * the backlog grows.
+ */
+function ShowBacklogRail({
+	dimmed,
+	entries,
+}: {
+	/** A human pin holds the screen, so the director's queue is on hold. */
+	dimmed: boolean;
+	entries: readonly ShowRailEntry[];
+}) {
+	return (
+		<section
+			aria-label="Show backlog"
+			className={cn(
+				"flex shrink-0 items-center gap-2 motion-safe:transition-opacity",
+				dimmed && "opacity-40 saturate-50",
+			)}
+		>
+			{/* Quieter than the Now/Next eyebrow, as in the canvas: the queue is
+			    reference, the plan cursor is the live line. */}
+			<span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+				show backlog
+			</span>
+			{/* Only the chips scroll, so the rail keeps its label at any width. */}
+			<ol className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
+				{entries.map((entry) => (
+					<li
+						className={cn(
+							"flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[10px] leading-4",
+							RAIL_CHIP_STYLE[entry.status],
+						)}
+						key={entry.id}
+						title={entry.title}
+					>
+						{entry.status === "showing" ? (
+							<span
+								aria-hidden
+								className="size-[5px] shrink-0 rounded-full bg-amber-600 motion-safe:animate-pulse dark:bg-amber-400"
+							/>
+						) : null}
+						{entry.label}
+						<span className="sr-only">status: {entry.status}</span>
+					</li>
+				))}
+			</ol>
+		</section>
+	);
+}
+
+/**
+ * Full spotlight column: the shared screen, the show-backlog rail, the work
+ * deck beneath it, and the plan cursor. Prefer this over DriveStagePanel +
+ * DriveStageCards for live projection.
  */
 export function Spotlight({
 	cards,
@@ -472,6 +550,8 @@ export function Spotlight({
 	humanSharing,
 	artifact,
 	narration,
+	backlog,
+	activeShowId,
 	nowLabel,
 	nextLabel,
 	emptyHint = "Waiting for partner tool activity on this session.",
@@ -484,6 +564,7 @@ export function Spotlight({
 	const suppressAgentCards = Boolean(humanPin) && humanSharing !== false;
 	const feedToggleLabel = feedCollapsed ? "Show chat feed" : "Hide chat feed";
 	const staged = Boolean(artifact?.uri || artifact?.title);
+	const railEntries = projectShowRail(backlog, activeShowId);
 	const artifactKind = showHumanPrimary
 		? "structured share"
 		: staged
@@ -560,6 +641,9 @@ export function Spotlight({
 					/>
 				)}
 			</ScreenFrame>
+			{railEntries.length > 0 ? (
+				<ShowBacklogRail dimmed={showHumanPrimary} entries={railEntries} />
+			) : null}
 			{cards.length > 0 ? (
 				<section
 					aria-label="Agent work deck"

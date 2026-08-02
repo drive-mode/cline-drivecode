@@ -1788,6 +1788,9 @@ export default function Chat({
 				>
 					{stageLayout ? (
 						<Spotlight
+							// The frame, not the backlog `status`, decides which chip
+							// reads `showing` — a room sync can land after the present.
+							activeShowId={presentedShow?.showItemId ?? null}
 							artifact={
 								presentedShow
 									? {
@@ -1799,6 +1802,7 @@ export default function Chat({
 										}
 									: null
 							}
+							backlog={showBacklog}
 							cards={drive.stageCards}
 							className="min-h-0 min-w-0 flex-1"
 							demo={drive.demo}
