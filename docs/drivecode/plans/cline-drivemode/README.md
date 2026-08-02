@@ -36,6 +36,8 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [14-primitives-audit.md](research/14-primitives-audit.md) | Primitives misuse / dead-code audit (P0) |
 | [15-task-satisfaction-observability.md](research/15-task-satisfaction-observability.md) | Session satisfaction via tasks; local rollups; closed loop |
 | [16-task-as-unit-models.md](research/16-task-as-unit-models.md) | Task-as-unit doctrine; next-task proposers vs deterministic cursor |
+| [17-implementation-backlog-audit.md](research/17-implementation-backlog-audit.md) | Evidence-led reconciliation of shipped Drive work, active backlog, and branch-only candidates |
+| [18-task-as-execution-unit.md](research/18-task-as-execution-unit.md) | Product and implementation direction for `DriveTask` as the durable, verifiable execution unit |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | Archive: remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
 | [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
@@ -65,6 +67,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [TASK-GRAPH.md](delivery/TASK-GRAPH.md) | Phases 0 through 5 with verifiable gates |
 | [AGENT-RUNBOOK.md](delivery/AGENT-RUNBOOK.md) | How agents pick tasks, spawn, verify, and report |
 | [REMAINING-task-satisfaction.md](delivery/REMAINING-task-satisfaction.md) | Living backlog: residuals after #80 land |
+| [PLAN-backlog-reconciliation.md](delivery/PLAN-backlog-reconciliation.md) | Proposed staged cleanup to make the Drive backlog trustworthy again |
 
 ## SDK layer
 
