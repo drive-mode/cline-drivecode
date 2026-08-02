@@ -24,7 +24,7 @@ surfaces as they become real components.
 
 | Demo surface | Reality |
 |---|---|
-| Spotlight, StickyStagePane, call chrome, roster | Shipped — `apps/cline-hub/src/webview/src/drive/` |
+| Spotlight, call chrome, roster | Shipped — `apps/cline-hub/src/webview/src/drive/`. The presented artifact now renders inside the Spotlight `ScreenFrame` (S2); `StickyStagePane` survives only in `ChatForkDemo` and is no longer the live surface |
 | Status Hub + 4 lenses | Shipped — `components/views/status-view.tsx`, `dependency-map.tsx` |
 | Director engine (backlog, script, sticky, artifact kinds) | Shipped — `shared/src/drive/director.ts`, `drive/src/director/`, `core/src/hub/driveShowRuntime.ts` |
 | Handoff packet, stall classifier, chat-fork | Shipped — `drive/src/handoff.ts`, `stallClassifier.ts`, `drive/StuckRecoveryFork.tsx` |
@@ -33,8 +33,8 @@ surfaces as they become real components.
 | Customizable rail | Absent — nav is three hardcoded arrays (`App.tsx:393–441`) |
 | Member-status sidebar | Absent; needs a `ParticipantStatusSchema` rev (`shared/src/drive/room.ts:26–31`) |
 | TTS narration | **Wired** (drive-audio 1–2) — `say` beats and `conversation.narration` speak through `driveNarrator.ts` behind `shouldSpeakDriveTts`. `tts.enabled` stays default-off. Mic mute and output deafen are now separate: deafen silences playback, mic mute does not |
-| STT | Component exists (`components/ai-elements/speech-input.tsx`), not wired to the Drive composer |
-| CC transcript, chimes | Absent — drive-audio slices |
+| STT | **Wired, and already was** — `Chat.tsx` → `DriveVoiceBar` → `DriveMicBar` → `SpeechInput` has existed since #23/#42, so this row was simply wrong. #120 made it honour the now-default-muted mic (a partial utterance was still transcribed after mute), fixed a Firefox crash under the default topology, and surfaced capture errors that rendered hidden |
+| CC transcript, chimes | **Shipped** (drive-audio 3, 5) — synthesized earcons through `playAudioUrlOnSink()`; ephemeral 40-line CC panel (`voice/driveTranscript.ts`). Neither persists: `DRIVE_FORBIDDEN_PERSIST_KEYS` hard-deletes caption keys on the way out |
 | `walkthrough.animation` renderer | Schema ships, no renderer — spotlight S9 |
 
 **Headline: the engine is ahead of the UI.** What's missing is mostly surfaces
@@ -61,14 +61,22 @@ backend) · Rooms (durable start/stop) · self-hosted packaging.
 Each phase ends by syncing the components it created into the Drivemode design
 project — **built first, synced second**.
 
-| # | Phase | Work | Gate |
-|---|---|---|---|
-| 0 | Decisions | ADR-0016 accepted; ADR-0017 deferred; no speculative schema changes | this document |
-| 1 | The call looks like the demo | S1 → S2, then S4 + S5 in parallel. Webview recomposition of `Chat.tsx`, `Spotlight.tsx`, `DriveCallChrome.tsx`, `App.tsx` nav. No wire changes. | visual parity vs the canvas at 1280×640 light+dark |
-| 2 | Spotlight presents real work | S3 → S6 → S7. Reuse `ai-elements/plan.tsx` and the streamdown mermaid plugin. | present each artifact kind on a live room |
-| 3 | Voice | drive-audio 1–5 on `browser-speechSynthesis`; narrator gated by `advance: auto_after_say`; wire `speech-input.tsx` into the Drive composer. `tts.enabled` stays default-off (DRV-TTS) with a first-call enable prompt. | narration speaks; **deafen** cancels in-flight speech, and mic mute does not |
-| 4 | Rooms | New `View` entry + `components/views/rooms-view.tsx` over ADR-0013's durable facets. | stop a room, restart it, config + history survive |
-| 5 | Self-hosted packaging | Tagged release + workflow, install docs, preflight, support path, plain-language privacy note (events carry metadata only). | a clean clone on a second machine reaches a working call using only the README |
+| # | Phase | Status | Work | Gate |
+|---|---|---|---|---|
+| 0 | Decisions | **done** | ADR-0016 accepted; ADR-0017 deferred; no speculative schema changes | this document |
+| 1 | The call looks like the demo | **done** (#107 #108 #110 #114) | S1 → S2, then S4 + S5 in parallel. Webview recomposition of `Chat.tsx`, `Spotlight.tsx`, `DriveCallChrome.tsx`, `App.tsx` nav. No wire changes. | visual parity vs the canvas at 1280×640 light+dark |
+| 2 | Spotlight presents real work | **done** (#115 #116 #117) | S3 → S6 → S7. Reuse `ai-elements/plan.tsx` and the streamdown mermaid plugin. | present each artifact kind on a live room — **not yet exercised on a live room**; renderers verified against real produced artifacts |
+| 3 | Voice | **done** (#118 #119 #120 #121) | drive-audio 1–5 on `browser-speechSynthesis`; narrator gated by `advance: auto_after_say`; wire `speech-input.tsx` into the Drive composer. `tts.enabled` stays default-off (DRV-TTS). | narration speaks; **deafen** cancels in-flight speech, and mic mute does not — verified by instrumented playback, **not yet by ear** |
+| 4 | Rooms | next | New `View` entry + `components/views/rooms-view.tsx` over ADR-0013's durable facets. | stop a room, restart it, config + history survive |
+| 5 | Self-hosted packaging | | Tagged release + workflow, install docs, preflight, support path, plain-language privacy note (events carry metadata only). | a clean clone on a second machine reaches a working call using only the README |
+
+**Deferred out of Phase 3, not dropped:** the first-call `tts.enabled` prompt
+(the facet ships default-off with no in-product path to turn it on yet), and
+per-agent `voiceSlot` (drive-audio 6). Both are additive.
+
+**Two gates are asserted but not yet demonstrated** — presenting each artifact
+kind on a live room, and hearing narration. Both need a human pass on a real
+hub session; neither is blocked by code.
 
 ## Verification
 
