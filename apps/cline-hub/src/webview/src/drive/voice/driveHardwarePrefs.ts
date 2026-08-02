@@ -16,7 +16,10 @@ export type DriveHardwarePrefs = {
 export const DEFAULT_DRIVE_HARDWARE_PREFS: DriveHardwarePrefs = {
 	micDeviceId: undefined,
 	speakerDeviceId: undefined,
-	outputVolume: 1,
+	// Narration starts at half volume when TTS is switched on: it is ambient
+	// company while you read, not the main channel. The settings slider stays
+	// the single source of truth for anyone who wants it louder.
+	outputVolume: 0.5,
 };
 
 export function clampOutputVolume(value: number): number {

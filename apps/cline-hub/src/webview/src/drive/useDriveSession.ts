@@ -1,8 +1,9 @@
-import type {
-	ChatForkRecord,
-	DriveEvent,
-	RoomSnapshot,
-	ShowBacklogItem,
+import {
+	type ChatForkRecord,
+	type DriveEvent,
+	type RoomSnapshot,
+	type ShowBacklogItem,
+	topologyCacheKey,
 } from "@cline/shared";
 import {
 	type Dispatch,
@@ -33,6 +34,7 @@ import {
 	isDrivePartnerId,
 	toggleDriveSpotlightId,
 } from "./participantIds";
+import { resolveNarratorParticipantId } from "./rosterHelpers";
 import {
 	applyBankSnapshot,
 	applyRoomSnapshot,
@@ -48,6 +50,7 @@ import {
 	toSharedDriveSubMode,
 } from "./types";
 import { createVoiceStack } from "./voice/createVoiceStack";
+import { createDriveNarrator, type DriveNarrator } from "./voice/driveNarrator";
 import { normalizeDriveHardwarePrefs } from "./voice/driveHardwarePrefs";
 import {
 	applyHardwarePrefsPatch,
@@ -55,6 +58,7 @@ import {
 	applyVoiceProfile,
 	createDefaultDriveVoiceUi,
 	type DriveVoiceUi,
+	isSpokenDriveJoinNote,
 	resolveDriveVoiceTopology,
 	shouldSpeakDriveTts,
 } from "./voice/driveVoiceUi";
@@ -72,6 +76,7 @@ function readPersistedDriveUi(): DriveUiState {
 				bankSnapshot:
 					state.driveUi.bankSnapshot ?? DEFAULT_DRIVE_UI.bankSnapshot,
 				postureOverride: state.driveUi.postureOverride ?? null,
+				deafened: state.driveUi.deafened ?? DEFAULT_DRIVE_UI.deafened,
 				spotlightParticipantId:
 					state.driveUi.spotlightParticipantId ??
 					DEFAULT_DRIVE_UI.spotlightParticipantId,
@@ -96,6 +101,8 @@ function readPersistedDriveUi(): DriveUiState {
 					state.driveUi.partnerNameInk ?? DEFAULT_DRIVE_UI.partnerNameInk,
 				callSessionId:
 					state.driveUi.callSessionId ?? DEFAULT_DRIVE_UI.callSessionId,
+				// Transient playback state — a reload is never mid-utterance.
+				speakingParticipantId: null,
 				// One-shot banners should not survive reload.
 				agencyBanner: null,
 				cleanDrainInvite: null,
@@ -603,6 +610,12 @@ export type UseDriveSessionResult = {
 	>;
 	bankSessionRef: React.RefObject<DriveBankSession>;
 	driveVoiceResolved: ReturnType<typeof resolveDriveVoiceTopology>;
+	/**
+	 * Narration playback for the resolved topology. Null until a topology
+	 * resolves. Every spoken line goes through this so the queue and speaking
+	 * presence stay authoritative.
+	 */
+	narrator: DriveNarrator | null;
 	/** Workspace root for durable bank / agent-home hub ops. */
 	workspaceRoot?: string;
 	joinDrive: (roomId?: string) => boolean;
@@ -624,6 +637,7 @@ export type UseDriveSessionResult = {
 	setForkRetain: (workerSessionId: string, retain: boolean) => void;
 	stripHandlers: {
 		onClearOverride: () => void;
+		onDeafenToggle: () => void;
 		onHandToggle: () => void;
 		onMuteToggle: () => void;
 		onOpenSettings: () => void;
@@ -647,6 +661,27 @@ export function useDriveSession(
 		readPersistedDriveVoice,
 	);
 	const [voiceCaption, setVoiceCaption] = useState("");
+	/**
+	 * Last line the partner should say (DRV-NARRATION). React state only —
+	 * spoken text never reaches the persisted `driveUi` blob (DRV-PRIVACY),
+	 * and `seq` distinguishes a repeated line from a re-render.
+	 */
+	const [narrationLine, setNarrationLine] = useState<{
+		seq: number;
+		text: string;
+	} | null>(null);
+	const narrationSeqRef = useRef(0);
+	const spokenNarrationSeqRef = useRef(0);
+	const queueNarration = useCallback((text: string) => {
+		const trimmed = text.trim();
+		// The join effect owns greeting / catch-up copy; speaking it here too
+		// would double it up.
+		if (!trimmed || isSpokenDriveJoinNote(trimmed)) {
+			return;
+		}
+		narrationSeqRef.current += 1;
+		setNarrationLine({ seq: narrationSeqRef.current, text: trimmed });
+	}, []);
 	const [presentedShow, setPresentedShow] = useState<PresentedShow | null>(
 		null,
 	);
@@ -1019,6 +1054,9 @@ export function useDriveSession(
 									caption: say,
 								},
 					);
+					// Caption and speech are the same line: the Spotlight subtitle
+					// is what a deafened viewer reads instead of hearing it.
+					queueNarration(say);
 				}
 				return;
 			}
@@ -1212,7 +1250,9 @@ export function useDriveSession(
 					message.event?.type === "conversation.narration" &&
 					message.event.text.trim()
 				) {
-					setDriveJoinNote(message.event.text.trim());
+					const narration = message.event.text.trim();
+					setDriveJoinNote(narration);
+					queueNarration(narration);
 				}
 				return;
 			}
@@ -1274,7 +1314,12 @@ export function useDriveSession(
 			guard: isDriveSessionHostMessage,
 			onMessage,
 		});
-	}, [refreshDriveRoom, resetDriveConnection, seedBankAfterJoin]);
+	}, [
+		queueNarration,
+		refreshDriveRoom,
+		resetDriveConnection,
+		seedBankAfterJoin,
+	]);
 
 	useEffect(() => {
 		// Attachment refs do not render; the revision intentionally re-evaluates
@@ -1312,16 +1357,61 @@ export function useDriveSession(
 		[driveVoice, args.providerId],
 	);
 
-	/** Mute (human or partner) immediately cancels in-flight TTS (DRV-TTS). */
-	useEffect(() => {
-		if (!drive.muted && !drive.partnerMuted) {
-			return;
-		}
+	/**
+	 * Narration playback for this topology: queue, drop-oldest, and the
+	 * speaking-presence edges the roster ring reads (DRV-TTS).
+	 *
+	 * Keyed by topology fingerprint, not by `driveVoiceResolved` identity —
+	 * that object is rebuilt whenever anything on `driveVoice` changes,
+	 * including opening the settings panel. Minting a narrator there would
+	 * orphan an in-flight utterance and silently drop its queue.
+	 */
+	const narratorParticipantIdRef = useRef(DRIVE_PARTICIPANT_PARTNER);
+	narratorParticipantIdRef.current = resolveNarratorParticipantId(drive);
+	const narratorRef = useRef<{ key: string; narrator: DriveNarrator } | null>(
+		null,
+	);
+	const narrator = useMemo(() => {
 		if (!driveVoiceResolved.ok) {
+			return null;
+		}
+		const key = topologyCacheKey(driveVoiceResolved.topology);
+		const cached = narratorRef.current;
+		if (cached?.key === key) {
+			return cached.narrator;
+		}
+		// The topology really moved, so the old port is being retired — cut
+		// whatever it was still saying rather than leaving it running.
+		cached?.narrator.cancel();
+		const next = createDriveNarrator({
+			sink: createVoiceStack(driveVoiceResolved.topology).tts,
+			onSpeakingChange: (speaking) => {
+				setDrive((current) => ({
+					...current,
+					speakingParticipantId: speaking
+						? narratorParticipantIdRef.current
+						: null,
+				}));
+			},
+		});
+		narratorRef.current = { key, narrator: next };
+		return next;
+	}, [driveVoiceResolved]);
+
+	/**
+	 * Silencing immediately cancels in-flight TTS and drops the queue (DRV-TTS).
+	 *
+	 * Same instant-cut behaviour as before, on the toggles that actually govern
+	 * output: self-deafen and partner mute. Mic mute is no longer an input here
+	 * — cutting the partner off mid-sentence because you muted your own mic was
+	 * the conflation this separation removes.
+	 */
+	useEffect(() => {
+		if (!drive.deafened && !drive.partnerMuted) {
 			return;
 		}
-		createVoiceStack(driveVoiceResolved.topology).tts.cancel();
-	}, [drive.muted, drive.partnerMuted, driveVoiceResolved]);
+		narrator?.cancel();
+	}, [drive.deafened, drive.partnerMuted, narrator]);
 
 	/** Speak partner join note once when TTS is enabled and unmuted. */
 	const spokenJoinNoteRef = useRef<string | null>(null);
@@ -1330,51 +1420,88 @@ export function useDriveSession(
 			return;
 		}
 		// Speak post-join greeting and while-away catch-up; ack / error stay display-only.
-		if (
-			!driveJoinNote.startsWith("On the call.") &&
-			!driveJoinNote.startsWith("Since you left:")
-		) {
+		if (!isSpokenDriveJoinNote(driveJoinNote)) {
 			return;
 		}
 		if (spokenJoinNoteRef.current === driveJoinNote) {
 			return;
 		}
-		if (!driveVoiceResolved.ok) {
+		if (!narrator) {
 			return;
 		}
 		if (
 			!shouldSpeakDriveTts({
 				facets: driveVoice.facets,
-				muted: drive.muted,
+				deafened: drive.deafened,
 				partnerMuted: drive.partnerMuted,
 			})
 		) {
 			return;
 		}
 		spokenJoinNoteRef.current = driveJoinNote;
-		void createVoiceStack(driveVoiceResolved.topology).tts.speak(
-			driveJoinNote,
-			{
-				volume: driveVoice.hardware.outputVolume,
-				sinkId: driveVoice.hardware.speakerDeviceId,
-			},
-		);
+		narrator.speak(driveJoinNote, {
+			volume: driveVoice.hardware.outputVolume,
+			sinkId: driveVoice.hardware.speakerDeviceId,
+		});
 	}, [
 		drive.active,
-		drive.muted,
+		drive.deafened,
 		drive.partnerMuted,
 		driveJoinNote,
 		driveVoice.facets,
 		driveVoice.hardware.outputVolume,
 		driveVoice.hardware.speakerDeviceId,
-		driveVoiceResolved,
+		narrator,
+	]);
+
+	/**
+	 * Speak DirectorScript `say` beats and `conversation.narration` behind the
+	 * same gate as every other line (DRV-NARRATION). The narrator queue absorbs
+	 * beats arriving faster than speech.
+	 */
+	useEffect(() => {
+		if (!narrationLine || !drive.active || !narrator) {
+			return;
+		}
+		if (spokenNarrationSeqRef.current >= narrationLine.seq) {
+			return;
+		}
+		// Consumed either way: a line the user was deafened for is gone, not
+		// queued up to blurt out when they un-deafen. The caption carried it.
+		spokenNarrationSeqRef.current = narrationLine.seq;
+		if (
+			!shouldSpeakDriveTts({
+				facets: driveVoice.facets,
+				deafened: drive.deafened,
+				partnerMuted: drive.partnerMuted,
+			})
+		) {
+			return;
+		}
+		narrator.speak(narrationLine.text, {
+			volume: driveVoice.hardware.outputVolume,
+			sinkId: driveVoice.hardware.speakerDeviceId,
+		});
+	}, [
+		drive.active,
+		drive.deafened,
+		drive.partnerMuted,
+		driveVoice.facets,
+		driveVoice.hardware.outputVolume,
+		driveVoice.hardware.speakerDeviceId,
+		narrationLine,
+		narrator,
 	]);
 
 	useEffect(() => {
 		if (!drive.active) {
 			spokenJoinNoteRef.current = null;
+			// Leaving cuts audio and drops the spoken line; nothing about
+			// narration outlives the call (DRV-PRIVACY).
+			narrator?.cancel();
+			setNarrationLine(null);
 		}
-	}, [drive.active]);
+	}, [drive.active, narrator]);
 
 	const toggleStage = useCallback(() => {
 		setDrive((current) => {
@@ -1479,6 +1606,11 @@ export function useDriveSession(
 					// remains authoritative via applyRoomSnapshot.
 					return { ...current, handRaised: raised };
 				});
+			},
+			onDeafenToggle: () => {
+				// Purely local: nobody else's experience changes, so there is no
+				// hub op and no wire field to keep in sync.
+				setDrive((current) => ({ ...current, deafened: !current.deafened }));
 			},
 			onMuteToggle: () => {
 				setDrive((current) => {
@@ -1596,6 +1728,7 @@ export function useDriveSession(
 		setPlanEditorTasks,
 		bankSessionRef,
 		driveVoiceResolved,
+		narrator,
 		workspaceRoot: args.workspaceRoot,
 		joinDrive,
 		leaveDrive,

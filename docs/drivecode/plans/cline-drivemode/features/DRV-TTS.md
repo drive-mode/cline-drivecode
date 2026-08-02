@@ -9,7 +9,7 @@ The partner speaks its narration. The user can look at the code while hearing "t
 ## Acceptance criteria
 
 - Narration messages (and only narration messages) can play as speech via the bundled `voice-selector.tsx` and `audio-player.tsx`.
-- TTS is off by default and toggles from the call strip. Mute silences it immediately.
+- TTS is off by default and toggles from the call strip. **Deafen** — the human's own output mute — silences it immediately. Mic mute deliberately does not: muting your microphone must not cut the partner off mid-sentence.
 - Voice selection persists as config.
 - Playback state emits speaking presence, so the persona chip animates while the partner talks.
 - Speech never blocks work. Synthesis and playback are fire-and-forget relative to the turn loop.
@@ -17,7 +17,7 @@ The partner speaks its narration. The user can look at the code while hearing "t
 
 ## Dependencies
 
-- DRV-NARRATION (the content), DRV-MIC (shared audio plumbing and mute), DRV-CALL-STRIP (toggle home).
+- DRV-NARRATION (the content), DRV-MIC (shared audio plumbing and **mic** mute — a separate concern from deafen), DRV-CALL-STRIP (toggle home).
 
 ## Surfaces touched
 
@@ -31,11 +31,11 @@ The partner speaks its narration. The user can look at the code while hearing "t
   - Files likely: `voice-selector.tsx`, `audio-player.tsx`
   - Verify: written finding with the privacy check (local synthesis preferred)
   - Done when: the synthesis path is chosen.
-- [ ] Implement narration playback gated on the TTS toggle and mute state.
+- [ ] Implement narration playback gated on the TTS toggle and deafen state.
   - Owner package: `@cline/cline-hub`
   - Files likely: narration render path in `Chat.tsx`, `CallStrip.tsx`
-  - Verify: `bun -F @cline/cline-hub test`, live smoke hearing narration during a task and muting mid-sentence
-  - Done when: mute cuts audio immediately on the live surface.
+  - Verify: `bun -F @cline/cline-hub test`, live smoke hearing narration during a task and deafening mid-sentence
+  - Done when: deafen cuts audio immediately on the live surface, and mic mute leaves it playing.
 - [ ] Emit speaking presence during playback.
   - Owner package: `@cline/cline-hub`
   - Files likely: playback hook

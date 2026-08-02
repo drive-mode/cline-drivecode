@@ -32,7 +32,7 @@ surfaces as they become real components.
 | Tasks as a first-class page | Lens only (`dependency-map.tsx` inside Status Hub) |
 | Customizable rail | Absent — nav is three hardcoded arrays (`App.tsx:393–441`) |
 | Member-status sidebar | Absent; needs a `ParticipantStatusSchema` rev (`shared/src/drive/room.ts:26–31`) |
-| TTS narration | **Configured, unwired** — `tts` slots + `browser-speechSynthesis` manifest + `tts.enabled:false` facets in `drive/src/topology/resolveTopologyFromFacets.ts`; nothing calls speak |
+| TTS narration | **Wired** (drive-audio 1–2) — `say` beats and `conversation.narration` speak through `driveNarrator.ts` behind `shouldSpeakDriveTts`. `tts.enabled` stays default-off. Mic mute and output deafen are now separate: deafen silences playback, mic mute does not |
 | STT | Component exists (`components/ai-elements/speech-input.tsx`), not wired to the Drive composer |
 | CC transcript, chimes | Absent — drive-audio slices |
 | `walkthrough.animation` renderer | Schema ships, no renderer — spotlight S9 |
@@ -66,7 +66,7 @@ project — **built first, synced second**.
 | 0 | Decisions | ADR-0016 accepted; ADR-0017 deferred; no speculative schema changes | this document |
 | 1 | The call looks like the demo | S1 → S2, then S4 + S5 in parallel. Webview recomposition of `Chat.tsx`, `Spotlight.tsx`, `DriveCallChrome.tsx`, `App.tsx` nav. No wire changes. | visual parity vs the canvas at 1280×640 light+dark |
 | 2 | Spotlight presents real work | S3 → S6 → S7. Reuse `ai-elements/plan.tsx` and the streamdown mermaid plugin. | present each artifact kind on a live room |
-| 3 | Voice | drive-audio 1–5 on `browser-speechSynthesis`; narrator gated by `advance: auto_after_say`; wire `speech-input.tsx` into the Drive composer. `tts.enabled` stays default-off (DRV-TTS) with a first-call enable prompt. | narration speaks; mute cancels in-flight speech |
+| 3 | Voice | drive-audio 1–5 on `browser-speechSynthesis`; narrator gated by `advance: auto_after_say`; wire `speech-input.tsx` into the Drive composer. `tts.enabled` stays default-off (DRV-TTS) with a first-call enable prompt. | narration speaks; **deafen** cancels in-flight speech, and mic mute does not |
 | 4 | Rooms | New `View` entry + `components/views/rooms-view.tsx` over ADR-0013's durable facets. | stop a room, restart it, config + history survive |
 | 5 | Self-hosted packaging | Tagged release + workflow, install docs, preflight, support path, plain-language privacy note (events carry metadata only). | a clean clone on a second machine reaches a working call using only the README |
 

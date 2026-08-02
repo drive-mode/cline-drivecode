@@ -213,9 +213,23 @@ export function reduceRoom(
 					p.id === event.participantId ? { ...p, status: event.status } : p,
 				),
 			};
+		case "presence.speaking":
+			return {
+				...base,
+				participants: base.participants.map((p) => {
+					if (p.id !== event.participantId) {
+						return p;
+					}
+					if (event.speaking) {
+						return { ...p, status: "speaking" };
+					}
+					// Only ever retire our own status. A `working` or `away` status
+					// set while the utterance played is newer truth than "idle".
+					return p.status === "speaking" ? { ...p, status: "idle" } : p;
+				}),
+			};
 		case "conversation.message":
 		case "conversation.narration":
-		case "presence.speaking":
 		case "presence.typing":
 			return base;
 		default: {

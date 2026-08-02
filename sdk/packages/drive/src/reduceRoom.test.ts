@@ -92,6 +92,86 @@ describe("reduceRoom", () => {
 		expect(projectRoster(room)[0]?.displayName).toBe("Nova");
 	});
 
+	it("tracks speaking presence on and off", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e1",
+			roomId: "room_1",
+			at,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "adam",
+				kind: "agent",
+				displayName: "Adam",
+				role: "partner",
+				status: "idle",
+				seatSources: [],
+			},
+		});
+		// Distinct ids: reduceRoom dedupes by appliedEventIds.
+		const speaking = (eventId: string, on: boolean): DriveEvent => ({
+			schemaVersion: 1,
+			id: eventId,
+			roomId: "room_1",
+			at,
+			type: "presence.speaking",
+			track: "presence",
+			participantId: "adam",
+			speaking: on,
+		});
+
+		room = reduceRoom(room, speaking("e2", true));
+		expect(projectRoster(room)[0]?.status).toBe("speaking");
+
+		room = reduceRoom(room, speaking("e3", false));
+		expect(projectRoster(room)[0]?.status).toBe("idle");
+	});
+
+	it("speaking off never clobbers a status set during playback", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e1",
+			roomId: "room_1",
+			at,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "adam",
+				kind: "agent",
+				displayName: "Adam",
+				role: "partner",
+				status: "idle",
+				seatSources: [],
+			},
+		});
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e2",
+			roomId: "room_1",
+			at,
+			type: "presence.status",
+			track: "presence",
+			participantId: "adam",
+			status: "working",
+		});
+		// The agent started working while the utterance was still playing;
+		// clearing speaking must not rewrite that to idle.
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e3",
+			roomId: "room_1",
+			at,
+			type: "presence.speaking",
+			track: "presence",
+			participantId: "adam",
+			speaking: false,
+		});
+		expect(projectRoster(room)[0]?.status).toBe("working");
+	});
+
 	it("ignores events for other rooms", () => {
 		const room = createEmptyRoomSnapshot({
 			roomId: "room_1",

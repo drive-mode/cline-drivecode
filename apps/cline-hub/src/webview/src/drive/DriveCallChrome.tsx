@@ -1,7 +1,9 @@
 import type { StageCard } from "@cline/shared";
 import {
 	ApertureIcon,
+	EarIcon,
 	HandIcon,
+	HeadphoneOffIcon,
 	HeadphonesIcon,
 	Loader2Icon,
 	MicIcon,
@@ -85,12 +87,12 @@ export function DriveHeaderControls({
 						title={`Drive · ${drive.partnerName}`}
 						variant="outline"
 					>
+						{/* Call-live indicator. It used to key off mic state, which
+						    stops pulsing entirely now that the mic defaults to muted —
+						    and mic state already has its own button on the strip. */}
 						<span
 							aria-hidden
-							className={cn(
-								"inline-block size-2 rounded-full bg-amber-500",
-								!drive.muted && "animate-pulse",
-							)}
+							className="inline-block size-2 animate-pulse rounded-full bg-amber-500"
 						/>
 						<span className="max-w-40 truncate">
 							Drive · {drive.partnerName}
@@ -274,6 +276,7 @@ export function DriveCallStrip({
 	workersOpen = false,
 	turnInFlight = false,
 	onMuteToggle,
+	onDeafenToggle,
 	onHandToggle,
 	onSubModeChange,
 	onClearOverride,
@@ -291,6 +294,8 @@ export function DriveCallStrip({
 	/** True while an agent turn is running — raise-hand → finishing chrome. */
 	turnInFlight?: boolean;
 	onMuteToggle: () => void;
+	/** Self output mute — stops this browser speaking agent audio. */
+	onDeafenToggle?: () => void;
 	onHandToggle: () => void;
 	onSubModeChange: (mode: DriveSubMode) => void;
 	onClearOverride?: () => void;
@@ -322,6 +327,10 @@ export function DriveCallStrip({
 	// aria-atomic) so a single toggle announces itself, not the whole strip.
 	const statusFacts: Array<{ id: string; text: string }> = [
 		{ id: "mic", text: drive.muted ? "You are muted" : "Your mic is live" },
+		{
+			id: "deafen",
+			text: drive.deafened ? "You are deafened" : "",
+		},
 		{ id: "spotlight", text: `Spotlight on ${spotlightLabel}` },
 		{
 			id: "partner-audio",
@@ -358,6 +367,21 @@ export function DriveCallStrip({
 				tone={drive.muted ? "danger" : "neutral"}
 			>
 				{drive.muted ? <MicOffIcon /> : <MicIcon />}
+			</StripButton>
+			{/* Output mute, paired with the mic the way every call app pairs them.
+			    Mic governs what the room hears; this governs what you hear. */}
+			<StripButton
+				disabled={disabled}
+				label={
+					drive.deafened
+						? "Undeafen (hear the partner again)"
+						: "Deafen (stop partner audio here)"
+				}
+				onClick={() => onDeafenToggle?.()}
+				pressed={drive.deafened}
+				tone={drive.deafened ? "danger" : "neutral"}
+			>
+				{drive.deafened ? <HeadphoneOffIcon /> : <HeadphonesIcon />}
 			</StripButton>
 			<StripButton
 				disabled={disabled}
@@ -399,7 +423,9 @@ export function DriveCallStrip({
 				pressed={drive.partnerDeafened}
 				tone={drive.partnerDeafened ? "live" : "neutral"}
 			>
-				<HeadphonesIcon />
+				{/* Their hearing, not yours — the headphones glyph now belongs to
+				    the self-deafen control two buttons back. */}
+				<EarIcon />
 			</StripButton>
 			<DriveModePill
 				disabled={disabled}

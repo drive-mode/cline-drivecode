@@ -39,8 +39,14 @@ export type DriveUiState = {
 	 * Durable hub facet upsert is TODO when drive_config_upsert_profile lands.
 	 */
 	partnerNameInk: number | null;
-	/** Human mic mute (DRV-MIC). */
+	/** Human mic mute — input only (DRV-MIC). Never gates playback. */
 	muted: boolean;
+	/**
+	 * Human output mute (DRV-TTS). Governs whether this browser speaks agent
+	 * audio; orthogonal to {@link muted}. Client-local — no hub op, no wire
+	 * field, because it only ever affects this listener.
+	 */
+	deafened: boolean;
 	handRaised: boolean;
 	bankSnapshot: BankSnapshot;
 	/**
@@ -49,6 +55,12 @@ export type DriveUiState = {
 	 * full roster ids are wired from the hub.
 	 */
 	spotlightParticipantId: string;
+	/**
+	 * Participant whose narration is playing right now (DRV-TTS speaking
+	 * presence). Transient playback state — set from local TTS, never
+	 * persisted, never sent to the hub.
+	 */
+	speakingParticipantId: string | null;
 	/** Partner agent cannot speak (TTS/narration). */
 	partnerMuted: boolean;
 	/** Partner agent cannot hear (inbound context). */
@@ -141,10 +153,14 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	postureOverride: null,
 	partnerName: "Adam",
 	partnerNameInk: null,
-	muted: false,
+	// Joining a call with a hot mic is the wrong privacy default (spotlight S4).
+	// Safe only because `deafened` — not this — gates playback.
+	muted: true,
+	deafened: false,
 	handRaised: false,
 	bankSnapshot: EMPTY_BANK_SNAPSHOT,
 	spotlightParticipantId: DRIVE_PARTICIPANT_PARTNER,
+	speakingParticipantId: null,
 	partnerMuted: false,
 	partnerDeafened: false,
 	demo: true,

@@ -100,7 +100,6 @@ import {
 	toSharedDriveSubMode,
 } from "./drive/types";
 import { useDriveSession } from "./drive/useDriveSession";
-import { createVoiceStack } from "./drive/voice/createVoiceStack";
 import { shouldSpeakDriveTts } from "./drive/voice/driveVoiceUi";
 import { clearVoiceCaptionAfterSend } from "./drive/voice/voiceCaptionState";
 import {
@@ -265,7 +264,7 @@ export default function Chat({
 		setPlanEditorTasks,
 		bankSessionRef,
 		connectionPhase,
-		driveVoiceResolved,
+		narrator,
 		joinDrive,
 		leaveDrive,
 		endDrive,
@@ -1428,10 +1427,10 @@ export default function Chat({
 			}
 
 			if (
-				driveVoiceResolved.ok &&
+				narrator &&
 				shouldSpeakDriveTts({
 					facets: driveVoice.facets,
-					muted: drive.muted,
+					deafened: drive.deafened,
 					partnerMuted: drive.partnerMuted,
 				})
 			) {
@@ -1441,7 +1440,7 @@ export default function Chat({
 					utterance: trimmed,
 				});
 				setDriveJoinNote(ack.text);
-				void createVoiceStack(driveVoiceResolved.topology).tts.speak(ack.text, {
+				narrator.speak(ack.text, {
 					volume: driveVoice.hardware.outputVolume,
 					sinkId: driveVoice.hardware.speakerDeviceId,
 				});
@@ -1513,7 +1512,7 @@ export default function Chat({
 			driveVoice.hardware.outputVolume,
 			driveVoice.hardware.speakerDeviceId,
 			driveVoice.profile,
-			driveVoiceResolved,
+			narrator,
 			effectiveReasonLevel,
 			enableSpawn,
 			enableTeams,

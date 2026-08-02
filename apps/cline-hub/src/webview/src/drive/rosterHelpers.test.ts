@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Participant } from "@cline/shared";
 import {
+	applySpeakingPresence,
 	applyTranscriptFocus,
 	isRosterParticipantHandRaised,
 	isRosterParticipantMuted,
 	participantStatusLabel,
 	resolveAgentHomeSlug,
+	resolveNarratorParticipantId,
 	resolveRosterParticipants,
 } from "./rosterHelpers";
 import {
@@ -30,6 +32,57 @@ const partner: Participant = {
 	status: "speaking",
 	seatSources: [],
 };
+
+describe("applySpeakingPresence", () => {
+	const idlePartner: Participant = { ...partner, status: "idle" };
+
+	it("rings only the speaking participant", () => {
+		const rows = applySpeakingPresence(
+			[human, idlePartner],
+			DRIVE_PARTICIPANT_PARTNER,
+		);
+		expect(rows[0]?.status).toBe("idle");
+		expect(rows[1]?.status).toBe("speaking");
+	});
+
+	it("keeps identity when nothing is speaking", () => {
+		const rows = [human, idlePartner];
+		expect(applySpeakingPresence(rows, null)).toBe(rows);
+		// An id nobody in the room owns must not churn the array either.
+		expect(applySpeakingPresence(rows, "ghost")).toBe(rows);
+	});
+
+	it("survives a snapshot that reports the partner idle mid-utterance", () => {
+		// Hub roster is authoritative for everything except playback, which is
+		// a local fact — the ring must outlive an inbound room_snapshot.
+		const rows = resolveRosterParticipants({
+			...DEFAULT_DRIVE_UI,
+			participants: [human, idlePartner],
+			speakingParticipantId: DRIVE_PARTICIPANT_PARTNER,
+		});
+		expect(rows[1]?.status).toBe("speaking");
+	});
+});
+
+describe("resolveNarratorParticipantId", () => {
+	it("picks the seated agent", () => {
+		expect(
+			resolveNarratorParticipantId({
+				...DEFAULT_DRIVE_UI,
+				participants: [human, { ...partner, id: "adam" }],
+			}),
+		).toBe("adam");
+	});
+
+	it("falls back to the default partner before a snapshot lands", () => {
+		expect(
+			resolveNarratorParticipantId({
+				...DEFAULT_DRIVE_UI,
+				participants: [],
+			}),
+		).toBe(DRIVE_PARTICIPANT_PARTNER);
+	});
+});
 
 describe("resolveRosterParticipants", () => {
 	it("returns hub participants when present", () => {

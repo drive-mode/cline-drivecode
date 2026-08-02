@@ -14,26 +14,66 @@ import {
 export function resolveRosterParticipants(
 	drive: DriveUiState,
 ): Participant[] {
-	if (drive.participants.length > 0) {
-		return drive.participants;
+	const seated =
+		drive.participants.length > 0
+			? drive.participants
+			: [
+					{
+						id: DRIVE_PARTICIPANT_HUMAN,
+						kind: "human" as const,
+						displayName: "You",
+						role: "host" as const,
+						status: "idle" as const,
+					},
+					{
+						id: DRIVE_PARTICIPANT_PARTNER,
+						kind: "agent" as const,
+						displayName: drive.partnerName,
+						role: "partner" as const,
+						status: "idle" as const,
+						seatSources: [],
+					},
+				];
+	return applySpeakingPresence(seated, drive.speakingParticipantId);
+}
+
+/**
+ * Overlay local TTS playback onto the roster (DRV-TTS speaking presence).
+ *
+ * Playback is a client-side fact, so it is layered over the hub projection
+ * rather than folded into it — a room snapshot arriving mid-utterance must
+ * not wipe the ring.
+ */
+export function applySpeakingPresence(
+	participants: Participant[],
+	speakingParticipantId: string | null,
+): Participant[] {
+	if (!speakingParticipantId) {
+		return participants;
 	}
-	return [
-		{
-			id: DRIVE_PARTICIPANT_HUMAN,
-			kind: "human",
-			displayName: "You",
-			role: "host",
-			status: "idle",
-		},
-		{
-			id: DRIVE_PARTICIPANT_PARTNER,
-			kind: "agent",
-			displayName: drive.partnerName,
-			role: "partner",
-			status: "idle",
-			seatSources: [],
-		},
-	];
+	let changed = false;
+	const next = participants.map((participant) => {
+		if (
+			participant.id !== speakingParticipantId ||
+			participant.status === "speaking"
+		) {
+			return participant;
+		}
+		changed = true;
+		return { ...participant, status: "speaking" as const };
+	});
+	return changed ? next : participants;
+}
+
+/**
+ * Whose voice narration belongs to. MVP speaks with one agent voice, so this
+ * is the seated agent — per-agent `voiceSlot` selection is a later slice.
+ */
+export function resolveNarratorParticipantId(drive: DriveUiState): string {
+	const agent = drive.participants.find(
+		(participant) => participant.kind === "agent",
+	);
+	return agent?.id ?? DRIVE_PARTICIPANT_PARTNER;
 }
 
 /**

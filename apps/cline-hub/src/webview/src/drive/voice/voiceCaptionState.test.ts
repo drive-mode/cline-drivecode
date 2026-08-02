@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_DRIVE_UI } from "../types";
+import { createDefaultDriveVoiceUi } from "./driveVoiceUi";
 import {
 	buildDrivePersistPayload,
 	clearVoiceCaptionAfterSend,
 	clearVoiceCaptionDraft,
+	DRIVE_PERSIST_KEYS,
 	persistPayloadHasCaptionKeys,
 } from "./voiceCaptionState";
 
@@ -33,5 +36,17 @@ describe("voiceCaptionState", () => {
 		expect(payload).not.toHaveProperty("voiceCaption");
 		expect(payload).not.toHaveProperty("caption");
 		expect(payload).not.toHaveProperty("transcript");
+	});
+
+	it("narration never reaches the persisted blob", () => {
+		// Spoken lines live in `narrationLine` React state, outside `driveUi`.
+		// Persisting the whole UI slice must not carry them (DRV-PRIVACY:
+		// spoken narration is ambient, not archival).
+		const payload = buildDrivePersistPayload({
+			driveUi: { ...DEFAULT_DRIVE_UI, active: true },
+			driveVoice: createDefaultDriveVoiceUi("cloud"),
+		});
+		expect(JSON.stringify(payload)).not.toContain("narration");
+		expect(Object.keys(payload)).toEqual(DRIVE_PERSIST_KEYS.slice());
 	});
 });

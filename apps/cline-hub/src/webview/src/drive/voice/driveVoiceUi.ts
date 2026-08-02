@@ -116,19 +116,31 @@ export function resolveDriveVoiceTopology(input: {
 }
 
 /**
- * Gate for narration TTS (DRV-TTS): off by default via tts.enabled;
- * human mute and partner mute both silence playback.
+ * Gate for narration TTS (DRV-TTS): off by default via tts.enabled.
+ *
+ * Input and output are separate. `deafened` is the human's own output mute —
+ * the only human toggle that silences playback. Mic mute (`DriveUiState.muted`)
+ * is deliberately absent: muting yourself must not stop the partner narrating.
+ * `partnerMuted` stays in the gate because a muted partner has nothing to say.
  */
 export function shouldSpeakDriveTts(input: {
 	facets: DriveFacetValues;
-	muted: boolean;
+	deafened: boolean;
 	partnerMuted: boolean;
 }): boolean {
 	return (
 		input.facets["tts.enabled"] === true &&
-		!input.muted &&
+		!input.deafened &&
 		!input.partnerMuted
 	);
+}
+
+/**
+ * Join greeting / while-away catch-up. These arrive as `driveJoinNote` and are
+ * spoken by the join effect, so the narration queue must not speak them twice.
+ */
+export function isSpokenDriveJoinNote(note: string): boolean {
+	return note.startsWith("On the call.") || note.startsWith("Since you left:");
 }
 
 export function voiceDefaultsForSmoke(profile: "local" | "cloud"): {
