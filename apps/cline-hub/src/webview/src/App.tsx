@@ -17,6 +17,7 @@ import {
 	LinkIcon,
 	MessageSquareIcon,
 	MoreHorizontal,
+	PanelLeftIcon,
 	PencilIcon,
 	PlugIcon,
 	RotateCcwIcon,
@@ -80,6 +81,10 @@ import type {
 import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
 import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import { subscribeToHostMessages } from "./lib/host-message-gateway";
+import {
+	readStoredNavRailCollapsed,
+	setStoredNavRailCollapsed,
+} from "./lib/nav-rail";
 import { syncHubTheme } from "./lib/theme";
 import { HubStatusSessionRollupSource } from "./status/hub-status-session-rollup-source";
 import { HubStatusTeamsSource } from "./status/hub-status-teams-source";
@@ -390,6 +395,16 @@ function Shell({
 	version?: string;
 	view: View;
 }) {
+	const [railCollapsed, setRailCollapsed] = useState(
+		readStoredNavRailCollapsed,
+	);
+
+	const toggleRail = () => {
+		const next = !railCollapsed;
+		setRailCollapsed(next);
+		setStoredNavRailCollapsed(next);
+	};
+
 	const navItems = [
 		{ view: "home", label: "Home", icon: HomeIcon },
 		{ view: "sessions", label: "Sessions", icon: MessageSquareIcon },
@@ -454,63 +469,126 @@ function Shell({
 			view === item.view || (item.view === "sessions" && view === "chat");
 		return (
 			<button
+				aria-current={active ? "page" : undefined}
+				aria-label={railCollapsed ? item.label : undefined}
 				className={`flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left text-[15px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+					railCollapsed ? "justify-center" : ""
+				} ${
 					active
 						? "bg-sidebar-accent text-sidebar-accent-foreground"
 						: "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
 				}`}
 				key={item.view}
 				onClick={() => onNavigate(item.view)}
+				title={railCollapsed ? item.label : undefined}
 				type="button"
 			>
 				<Icon className="size-4 shrink-0" />
-				<span className="truncate">{item.label}</span>
+				{railCollapsed ? null : <span className="truncate">{item.label}</span>}
 			</button>
 		);
 	};
 
+	// Collapsed swaps each group heading for a hairline — vertical once the rail
+	// becomes a strip below 720px — and keeps the heading for screen readers.
+	const renderNavGroupLabel = (label: string) =>
+		railCollapsed ? (
+			<div className="mx-2 mt-4 h-px bg-sidebar-border max-[720px]:mt-0 max-[720px]:h-5 max-[720px]:w-px max-[720px]:self-center">
+				<span className="sr-only">{label}</span>
+			</div>
+		) : (
+			<div className="mt-4 px-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground max-[720px]:mt-0 max-[720px]:self-center">
+				{label}
+			</div>
+		);
+
 	return (
-		<div className="grid h-screen min-h-screen grid-cols-[14.5rem_minmax(0,1fr)] bg-background text-foreground max-[720px]:grid-cols-1 max-[720px]:grid-rows-[auto_minmax(0,1fr)]">
-			<aside className="flex min-h-0 flex-col border-r bg-sidebar p-4 text-sidebar-foreground max-[720px]:border-b max-[720px]:border-r-0 max-[720px]:p-3">
-				<button
-					className="mb-5 flex min-w-0 items-center gap-2 rounded-md px-0 py-1 text-left text-lg font-semibold outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar max-[720px]:mb-2"
-					onClick={() => onNavigate("home")}
-					type="button"
+		<div
+			className={`grid h-screen min-h-screen bg-background text-foreground transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none max-[720px]:grid-cols-1 max-[720px]:grid-rows-[auto_minmax(0,1fr)] ${
+				railCollapsed
+					? "grid-cols-[3.5rem_minmax(0,1fr)]"
+					: "grid-cols-[14.5rem_minmax(0,1fr)]"
+			}`}
+		>
+			<aside
+				className={`flex min-h-0 flex-col border-r bg-sidebar text-sidebar-foreground max-[720px]:border-b max-[720px]:border-r-0 max-[720px]:p-3 ${
+					railCollapsed ? "p-2" : "p-4"
+				}`}
+			>
+				{/* Collapsed stacks the mark over the toggle; below 720px the rail
+					is a strip, so they stay side by side. */}
+				<div
+					className={`mb-5 flex items-center gap-2 max-[720px]:mb-2 ${
+						railCollapsed ? "flex-col max-[720px]:flex-row" : ""
+					}`}
 				>
-					<img
-						alt=""
-						className="size-6 shrink-0 dark:invert"
-						src="/cline-logo-filled.svg"
-					/>
-					<span className="truncate">Cline</span>
-				</button>
+					<button
+						aria-label={railCollapsed ? "Cline home" : undefined}
+						className={`flex min-w-0 items-center gap-2 rounded-md px-0 py-1 text-left text-lg font-semibold outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+							railCollapsed ? "justify-center" : "flex-1"
+						}`}
+						onClick={() => onNavigate("home")}
+						title={railCollapsed ? "Cline home" : undefined}
+						type="button"
+					>
+						<img
+							alt=""
+							className="size-6 shrink-0 dark:invert"
+							src="/cline-logo-filled.svg"
+						/>
+						{railCollapsed ? null : <span className="truncate">Cline</span>}
+					</button>
+					<button
+						aria-controls="hub-nav"
+						aria-expanded={!railCollapsed}
+						aria-label={
+							railCollapsed ? "Expand navigation" : "Collapse navigation"
+						}
+						className={`grid size-8 shrink-0 place-items-center rounded-md outline-none transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+							railCollapsed
+								? "bg-sidebar-accent text-sidebar-accent-foreground"
+								: "text-muted-foreground"
+						}`}
+						onClick={toggleRail}
+						title={railCollapsed ? "Expand navigation" : "Collapse navigation"}
+						type="button"
+					>
+						<PanelLeftIcon className="size-4" />
+					</button>
+				</div>
 				<nav
 					className="grid gap-1 overflow-y-auto max-[720px]:grid-flow-col max-[720px]:auto-cols-max max-[720px]:overflow-x-auto max-[720px]:[scrollbar-width:none] max-[720px]:[&::-webkit-scrollbar]:hidden"
 					aria-label="Hub views"
+					id="hub-nav"
 				>
 					{navItems.map(renderNavButton)}
-					<div className="mt-4 px-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground max-[720px]:mt-0 max-[720px]:self-center">
-						Drive
-					</div>
+					{renderNavGroupLabel("Drive")}
 					{driveNavItems.map(renderNavButton)}
-					<div className="mt-4 px-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground max-[720px]:mt-0 max-[720px]:self-center">
-						Customizations
-					</div>
+					{renderNavGroupLabel("Customizations")}
 					{customizationNavItems.map(renderNavButton)}
 				</nav>
 				<div className="mt-auto pt-6 max-[720px]:mt-2 max-[720px]:pt-0">
-					<div className="flex min-w-0 items-center gap-2 px-2 text-xs text-muted-foreground">
-						<span className="shrink-0">{version ? `v${version}` : "v-"}</span>
-						<span className="shrink-0 text-border">|</span>
-						<a
-							className="truncate underline-offset-2 transition-colors hover:text-foreground hover:underline"
-							href="https://github.com/cline/cline/issues/new"
-							rel="noopener noreferrer"
-							target="_blank"
+					{railCollapsed ? (
+						<div
+							className="truncate text-center text-xs text-muted-foreground"
+							title={version ? `Cline v${version}` : "Cline version unknown"}
 						>
-							Report issue
-						</a>
-					</div>
+							{version ? `v${version}` : "v-"}
+						</div>
+					) : (
+						<div className="flex min-w-0 items-center gap-2 px-2 text-xs text-muted-foreground">
+							<span className="shrink-0">{version ? `v${version}` : "v-"}</span>
+							<span className="shrink-0 text-border">|</span>
+							<a
+								className="truncate underline-offset-2 transition-colors hover:text-foreground hover:underline"
+								href="https://github.com/cline/cline/issues/new"
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								Report issue
+							</a>
+						</div>
+					)}
 				</div>
 			</aside>
 			<main className="min-h-0 overflow-hidden bg-background [&>.h-screen]:h-full">
