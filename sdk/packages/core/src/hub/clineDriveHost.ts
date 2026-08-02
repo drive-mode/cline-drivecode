@@ -18,7 +18,7 @@ import { parseDriveFacetValues } from "@cline/shared";
 import {
 	type DriveRoomStore,
 	getDriveRoomStore,
-	JsonlRoomEventLog,
+	rebindJsonlRoomEventLog,
 } from "./collaboration";
 import {
 	advanceScriptOnStore,
@@ -34,8 +34,15 @@ import {
 } from "./drive-config/driveFacetsStore";
 
 export type ClineDriveHostOptions = {
-	/** Workspace / config parent for facets + room event log. */
-	configParent: string;
+	/**
+	 * Workspace / config parent for facets + room event log. Omit while no
+	 * workspace root is known yet — a durable room is owned by the workspace
+	 * whose log holds it (ADR-0013), so there must be no log until there is a
+	 * workspace. Binding one under a fallback (e.g. tmpdir()) would make the
+	 * process durable to a shared, uncontrolled directory that a later real
+	 * workspace's first join could mistake for its own history.
+	 */
+	configParent?: string;
 	store?: DriveRoomStore;
 	broadcastFn?: (event: DriveEvent) => void;
 	promptRewriteFn?: (decision: PromptRewriteDecision) => Promise<void>;
@@ -45,8 +52,11 @@ export function createClineDriveHost(
 	options: ClineDriveHostOptions,
 ): DriveHostPort {
 	const store = options.store ?? getDriveRoomStore();
-	if (!store.getEventLog()) {
-		store.attachEventLog(new JsonlRoomEventLog(options.configParent));
+	if (options.configParent) {
+		// Idempotent and migration-aware: replays whatever the store was
+		// durable to before (the in-memory pre-bind buffer, or a prior real
+		// log) into this configParent, and no-ops if already bound to it.
+		rebindJsonlRoomEventLog(store, options.configParent);
 	}
 
 	const subscribers = new Set<(event: DriveEvent) => void>();

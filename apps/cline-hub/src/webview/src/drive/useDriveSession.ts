@@ -164,7 +164,72 @@ export type UseDriveSessionArgs = {
 	sessionId?: string | null;
 	/** Workspace root for hub durable bank seed (drive_bank_seed). */
 	workspaceRoot?: string;
+	/**
+	 * True once the host's first `defaults` reply has resolved (even if it
+	 * resolved to no workspace). Until then, `workspaceRoot` cannot be told
+	 * apart from "not answered yet" — sending call_join in that window omits
+	 * workspaceRoot, and the hub never binds a durable log for the room
+	 * (ensureEventLog no-ops without one), so a live call can end up with
+	 * nothing on disk. Defaults to false so a caller that forgets to wire
+	 * this up fails safe (join deferred) instead of silently reintroducing
+	 * the race.
+	 */
+	workspaceRootReady?: boolean;
 };
+
+export type DriveJoinPayload = {
+	type: "call_join";
+	roomId: string;
+	human: { id: string; displayName: string };
+	agent: { id: string; displayName: string };
+	activateDrive: boolean;
+	sessionId?: string;
+	workspaceRoot?: string;
+};
+
+/**
+ * Builds the call_join payload, or null when it must be deferred.
+ *
+ * `workspaceRoot` and "workspace root not resolved yet" are both the empty
+ * string from the caller's point of view, so `workspaceRootReady` carries
+ * that distinction explicitly. Sending call_join before it is true risks
+ * shipping a payload with no workspaceRoot purely because the host's
+ * `defaults` reply had not landed yet — not because there truly is none —
+ * which leaves the room the hub creates without a durable log.
+ */
+export function buildDriveJoinPayload(input: {
+	roomId: string;
+	partnerName: string;
+	sessionId?: string | null;
+	workspaceRoot?: string;
+	workspaceRootReady: boolean;
+}): DriveJoinPayload | null {
+	if (!input.workspaceRootReady) {
+		return null;
+	}
+	const payload: DriveJoinPayload = {
+		type: "call_join",
+		roomId: input.roomId,
+		human: {
+			id: DRIVE_PARTICIPANT_HUMAN,
+			displayName: "You",
+		},
+		agent: {
+			id: DRIVE_PARTICIPANT_PARTNER,
+			displayName: input.partnerName,
+		},
+		activateDrive: true,
+	};
+	const normalizedSessionId = input.sessionId?.trim();
+	if (normalizedSessionId) {
+		payload.sessionId = normalizedSessionId;
+	}
+	const workspaceRoot = input.workspaceRoot?.trim();
+	if (workspaceRoot) {
+		payload.workspaceRoot = workspaceRoot;
+	}
+	return payload;
+}
 
 export type DriveConnectionPhase = "off" | "joining" | "on" | "error";
 
@@ -773,11 +838,15 @@ export function useDriveSession(
 	const failedAttachedSessionIdRef = useRef<string | null>(null);
 	const [attachmentRevision, setAttachmentRevision] = useState(0);
 	const workspaceRootRef = useRef(args.workspaceRoot);
+	const workspaceRootReadyRef = useRef(args.workspaceRootReady ?? false);
+	/** A join asked for before workspaceRoot resolved — replayed once ready. */
+	const deferredJoinRef = useRef(false);
 	const onModeChangeRef = useRef(args.onModeChange);
 	const driveRef = useRef(drive);
 	const connectionPhaseRef = useRef(connectionPhase);
 	sessionIdRef.current = args.sessionId;
 	workspaceRootRef.current = args.workspaceRoot;
+	workspaceRootReadyRef.current = args.workspaceRootReady ?? false;
 	onModeChangeRef.current = args.onModeChange;
 	driveRef.current = drive;
 	connectionPhaseRef.current = connectionPhase;
@@ -877,40 +946,43 @@ export function useDriveSession(
 				roomSnapshotRef.current = null;
 				roomSeqRef.current = 0;
 			}
-			const payload: {
-				type: "call_join";
-				roomId: string;
-				human: { id: string; displayName: string };
-				agent: { id: string; displayName: string };
-				activateDrive: boolean;
-				sessionId?: string;
-				workspaceRoot?: string;
-			} = {
-				type: "call_join",
+			const payload = buildDriveJoinPayload({
 				roomId,
-				human: {
-					id: DRIVE_PARTICIPANT_HUMAN,
-					displayName: "You",
-				},
-				agent: {
-					id: DRIVE_PARTICIPANT_PARTNER,
-					displayName: current.partnerName,
-				},
-				activateDrive: true,
-			};
-			const normalizedSessionId = sessionId?.trim();
-			if (normalizedSessionId) {
-				payload.sessionId = normalizedSessionId;
-				pendingAttachedSessionIdRef.current = normalizedSessionId;
+				partnerName: current.partnerName,
+				sessionId,
+				workspaceRoot: workspaceRootRef.current,
+				workspaceRootReady: workspaceRootReadyRef.current,
+			});
+			if (!payload) {
+				// workspaceRoot has not resolved yet — replayed by the ready
+				// effect below once the host's `defaults` reply lands, so the
+				// hub is never asked to bind a room's durable log blind.
+				deferredJoinRef.current = true;
+				return;
 			}
-			const workspaceRoot = workspaceRootRef.current?.trim();
-			if (workspaceRoot) {
-				payload.workspaceRoot = workspaceRoot;
+			if (payload.sessionId) {
+				pendingAttachedSessionIdRef.current = payload.sessionId;
 			}
 			postToHost(payload);
 		},
 		[],
 	);
+
+	/** Replays a join deferred because workspaceRoot had not resolved yet. */
+	useEffect(() => {
+		if (!args.workspaceRootReady || !deferredJoinRef.current) {
+			return;
+		}
+		deferredJoinRef.current = false;
+		if (!driveIntentRef.current) {
+			return;
+		}
+		sendDriveJoin(
+			driveRef.current,
+			sessionIdRef.current,
+			expectedRoomIdRef.current,
+		);
+	}, [args.workspaceRootReady, sendDriveJoin]);
 
 	const joinDrive = useCallback(
 		(targetRoomId?: string) => {

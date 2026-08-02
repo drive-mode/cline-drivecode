@@ -333,17 +333,23 @@ function sameWorkspaceRoot(a: string, b: string): boolean {
 	return normalize(a) === normalize(b);
 }
 
+/**
+ * Bind (or repoint) the store's durable log to `workspaceRoot`, scoped to
+ * `roomId` — the one room this command concerns. Scoping matters: the store
+ * is a single process-wide map, so an unrelated room this process happens to
+ * have resident (e.g. another room still on the pre-bind buffer, never
+ * having seen a workspace root at all) must not ride along and surface as
+ * this workspace's history. See rebindJsonlRoomEventLog's docstring.
+ */
 function ensureEventLog(
 	store: ReturnType<typeof getDriveRoomStore>,
 	workspaceRoot: string | undefined,
+	roomId: string,
 ): void {
 	if (!workspaceRoot) {
 		return;
 	}
-	// Prefer the explicit workspace root. An earlier harness bind may have
-	// attached under tmpdir() before workspaceRoot was known; rebind migrates
-	// prior durable records so seq stays monotonic.
-	rebindJsonlRoomEventLog(store, workspaceRoot);
+	rebindJsonlRoomEventLog(store, workspaceRoot, [roomId]);
 }
 
 function emptyBankSnapshot(): BankSnapshot {
@@ -362,11 +368,10 @@ function readRoomEvents(
 	store: ReturnType<typeof getDriveRoomStore>,
 	roomId: string,
 ): DriveEvent[] {
-	const log = store.getEventLog();
-	if (!log) {
-		return [];
-	}
-	return log.readSinceSync(roomId, 0).map((record) => record.event);
+	return store
+		.getEventLog()
+		.readSinceSync(roomId, 0)
+		.map((record) => record.event);
 }
 
 async function loadBankSnapshot(
@@ -450,8 +455,8 @@ export async function handleDriveRoomCommand(
 		switch (envelope.command) {
 			case "call_join": {
 				const payload = CallJoinPayloadSchema.parse(envelope.payload ?? {});
-				ensureEventLog(store, payload.workspaceRoot);
-				if (!store.get(payload.roomId) && store.getEventLog()) {
+				ensureEventLog(store, payload.workspaceRoot, payload.roomId);
+				if (!store.get(payload.roomId)) {
 					store.hydrateFromLogSync(payload.roomId);
 				}
 				const priorEvents = readRoomEvents(store, payload.roomId);
@@ -563,8 +568,8 @@ export async function handleDriveRoomCommand(
 			}
 			case "call_end": {
 				const payload = CallEndPayloadSchema.parse(envelope.payload ?? {});
-				ensureEventLog(store, payload.workspaceRoot);
-				if (!store.get(payload.roomId) && store.getEventLog()) {
+				ensureEventLog(store, payload.workspaceRoot, payload.roomId);
+				if (!store.get(payload.roomId)) {
 					store.hydrateFromLogSync(payload.roomId);
 				}
 				if (!store.get(payload.roomId) && !store.isEnded(payload.roomId)) {
@@ -967,7 +972,7 @@ export async function handleDriveRoomCommand(
 				const payload = CallAddRosterPackPayloadSchema.parse(
 					envelope.payload ?? {},
 				);
-				ensureEventLog(store, payload.workspaceRoot);
+				ensureEventLog(store, payload.workspaceRoot, payload.roomId);
 				store.create(payload.roomId);
 				const configParent = payload.workspaceRoot;
 				const beforeIds = new Set(
@@ -1011,7 +1016,7 @@ export async function handleDriveRoomCommand(
 				const payload = CallRemoveRosterPackPayloadSchema.parse(
 					envelope.payload ?? {},
 				);
-				ensureEventLog(store, payload.workspaceRoot);
+				ensureEventLog(store, payload.workspaceRoot, payload.roomId);
 				store.create(payload.roomId);
 				const configParent = payload.workspaceRoot;
 				const { harness } = getHubDriveHarness({
@@ -1043,9 +1048,18 @@ export async function handleDriveRoomCommand(
 				// Deliberately not ensureEventLog(): rebinding *migrates* records
 				// between config parents, so listing one workspace would copy
 				// another's room logs into it. A read must not move anyone's data.
+				//
+				// `bound` is never undefined (DriveRoomStore always has at least
+				// its in-memory pre-bind buffer) but that buffer is not a
+				// workspace's durable directory — only a real JsonlRoomEventLog
+				// may answer "which rooms does this workspace have"; falling
+				// through to the buffer here would list ephemeral, not-yet-owned
+				// rooms as if they belonged to whatever workspace asked.
 				const log = payload.workspaceRoot
 					? new JsonlRoomEventLog(payload.workspaceRoot)
-					: bound;
+					: bound instanceof JsonlRoomEventLog
+						? bound
+						: undefined;
 				const boundRoot =
 					bound instanceof JsonlRoomEventLog ? bound.configParent : undefined;
 				// The live snapshot is only newer truth for the workspace the hub
@@ -1073,16 +1087,16 @@ export async function handleDriveRoomCommand(
 			}
 			case "call_get_room": {
 				const payload = CallGetRoomPayloadSchema.parse(envelope.payload ?? {});
-				ensureEventLog(store, payload.workspaceRoot);
 				const roomId = resolveRoomId(store, payload.roomId, payload.sessionId);
-				if (!store.get(roomId) && store.getEventLog()) {
+				ensureEventLog(store, payload.workspaceRoot, roomId);
+				if (!store.get(roomId)) {
 					store.hydrateFromLogSync(roomId);
 				}
 				const snapshot = store.getOrThrow(roomId);
 				const seq = store.lastSeq(roomId);
 				const log = store.getEventLog();
 				const gaps =
-					log && payload.afterSeq !== undefined
+					payload.afterSeq !== undefined
 						? log.readSinceSync(roomId, payload.afterSeq).map((r) => ({
 								seq: r.seq,
 								event: r.event,

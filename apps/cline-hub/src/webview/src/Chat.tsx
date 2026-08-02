@@ -200,6 +200,12 @@ export default function Chat({
 		workspaceRoot: "",
 		cwd: "",
 	});
+	/**
+	 * True once the host's `defaults` reply has landed at least once. Until
+	 * then `defaults.workspaceRoot` is indistinguishable from "genuinely no
+	 * workspace" — see useDriveSession's workspaceRootReady.
+	 */
+	const [defaultsReady, setDefaultsReady] = useState(false);
 	const [sessions, setSessions] = useState<WebviewSessionSummary[]>([]);
 	const [sessionTitleDraft, setSessionTitleDraft] = useState("");
 	const [lastSelection, setLastSelection] =
@@ -255,6 +261,7 @@ export default function Chat({
 		onStatus: setStatus,
 		sessionId: sessionId ?? null,
 		workspaceRoot: defaults.workspaceRoot,
+		workspaceRootReady: defaultsReady,
 	});
 	const {
 		drive,
@@ -986,6 +993,7 @@ export default function Chat({
 					return;
 				case "defaults":
 					setDefaults(message.defaults);
+					setDefaultsReady(true);
 					if (message.defaults.provider) {
 						setProvider(message.defaults.provider);
 					}

@@ -91,6 +91,31 @@ function listJsonlRoomIds(configParent: string): string[] {
 		.map((entry) => entry.name);
 }
 
+/**
+ * Migrate `roomIds` from whatever log is currently attached (the in-memory
+ * pre-bind buffer, or a prior durable log) into a freshly bound durable log.
+ * Jsonl→Jsonl reuses the fast file-copy path; anything else (the memory
+ * buffer) replays each room's records in order via appendSync so the new
+ * log sees the room's full buffered history, not just what happens after it
+ * attaches — otherwise events committed before a workspace root was known
+ * would be durably lost the moment a real log finally binds.
+ */
+function migrateRoomEventLog(
+	from: RoomEventLog,
+	to: JsonlRoomEventLog,
+	roomIds: Iterable<string>,
+): void {
+	if (from instanceof JsonlRoomEventLog) {
+		migrateJsonlRoomEventLog(from, to, roomIds);
+		return;
+	}
+	for (const roomId of roomIds) {
+		for (const record of from.readSinceSync(roomId, 0)) {
+			to.appendSync(roomId, record.event);
+		}
+	}
+}
+
 function migrateJsonlRoomEventLog(
 	from: JsonlRoomEventLog,
 	to: JsonlRoomEventLog,
@@ -229,13 +254,29 @@ export class JsonlRoomEventLog implements RoomEventLog {
 }
 
 /**
- * Attach a JsonlRoomEventLog under `configParent`, migrating any prior durable
- * records when the parent changes (e.g. tmpdir → workspaceRoot) so seq stays
- * monotonic and earlier room ops are not orphaned.
+ * Attach a JsonlRoomEventLog under `configParent`, migrating whatever the
+ * store was durable to before — a prior JsonlRoomEventLog (e.g. a workspace
+ * switch) or the in-memory pre-bind buffer every store starts with (see
+ * DriveRoomStore) — so seq stays monotonic and earlier room ops are not
+ * orphaned.
+ *
+ * `roomIds`, when given, scopes the migration to exactly those rooms — the
+ * one(s) the caller's own operation concerns. This matters because the
+ * store is a single process-wide map: an unrelated room this process
+ * happened to touch earlier (before *any* workspace root was known, so it
+ * too lived on the pre-bind buffer) is still resident and would otherwise
+ * migrate along for free, handing a foreign or ephemeral room's history to
+ * whichever workspace binds next. Every hub handler that knows which room
+ * it is acting on passes it explicitly; only the harness-level rebind on a
+ * workspace switch (which has no single room in view) falls back to
+ * `store.rooms.keys()` — the pre-existing, ADR-worthy limitation that a
+ * long-lived process switching workspaces mid-session shares one room map
+ * across both (see PR #123).
  */
 export function rebindJsonlRoomEventLog(
 	store: RoomEventLogStore,
 	configParent: string,
+	roomIds?: Iterable<string>,
 ): void {
 	const nextParent = configParent.trim();
 	if (!nextParent) {
@@ -250,16 +291,20 @@ export function rebindJsonlRoomEventLog(
 	}
 
 	const next = new JsonlRoomEventLog(nextParent);
-	const roomIds = new Set<string>(store.rooms.keys());
-	if (existing instanceof JsonlRoomEventLog) {
-		for (const roomId of listJsonlRoomIds(existing.configParent)) {
-			roomIds.add(roomId);
-		}
-		migrateJsonlRoomEventLog(existing, next, roomIds);
+	// Only the scoped rooms migrate — never everything the old config parent
+	// happens to contain on disk, and never every room this store's process
+	// has resident in memory when the caller knows exactly which room its
+	// operation concerns. The old parent can be a shared or stale directory
+	// (a prior run's tmpdir, another workspace's root) that holds rooms this
+	// process never created — e.g. leftover test fixtures — and those must
+	// never surface as this workspace's rooms.
+	const scopedRoomIds = new Set<string>(roomIds ?? store.rooms.keys());
+	if (existing) {
+		migrateRoomEventLog(existing, next, scopedRoomIds);
 	}
 
 	// In-memory commits may already have published higher seq than an empty dest.
-	for (const roomId of roomIds) {
+	for (const roomId of scopedRoomIds) {
 		const seq = store.lastSeq(roomId);
 		if (seq > 0) {
 			next.ensureNextSeqAtLeast(roomId, seq + 1);
@@ -269,7 +314,16 @@ export function rebindJsonlRoomEventLog(
 	store.attachEventLog(next);
 }
 
-/** In-memory log for unit tests (no disk). Honors the same retention cap. */
+/**
+ * In-memory log (no disk). Used directly by unit tests, and as
+ * `DriveRoomStore`'s default pre-bind buffer — every store starts with one so
+ * commits before a workspace root is known are never silently un-durable;
+ * `rebindJsonlRoomEventLog` replays it into the first real log that attaches.
+ * Honors the same retention cap as `JsonlRoomEventLog` (oldest-trimmed), so
+ * the buffer cannot grow unbounded on a store that never gets a workspace
+ * root — it is a bounded window, not a guarantee every pre-bind event
+ * survives forever.
+ */
 export class MemoryRoomEventLog implements RoomEventLog {
 	private readonly byRoom = new Map<string, RoomLogRecord[]>();
 	private readonly maxRecords: number;

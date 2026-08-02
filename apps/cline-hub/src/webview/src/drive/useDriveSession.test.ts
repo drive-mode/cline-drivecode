@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DRIVE_DEFAULT_ROOM_ID } from "./types";
 import {
+	buildDriveJoinPayload,
 	hasPendingDriveJoinRequest,
 	isDriveRoomSnapshotForTarget,
 	isDriveSessionHostMessage,
@@ -174,6 +175,52 @@ describe("Drive session reattachment", () => {
 				pendingAttachedSessionId: "session-2",
 			}),
 		).toBe(true);
+	});
+});
+
+describe("Drive join workspace-root gating", () => {
+	// Regression: a join fired before the host's `defaults` reply resolved
+	// workspaceRoot used to send call_join with no workspaceRoot at all —
+	// indistinguishable, on the hub, from "this workspace truly has none" —
+	// so ensureEventLog never bound a durable log. A live call could then
+	// have nothing on disk to survive a crash.
+	it("defers the join until workspaceRoot has resolved", () => {
+		expect(
+			buildDriveJoinPayload({
+				roomId: DRIVE_DEFAULT_ROOM_ID,
+				partnerName: "Cline",
+				sessionId: "session-1",
+				workspaceRoot: "/workspace",
+				workspaceRootReady: false,
+			}),
+		).toBeNull();
+	});
+
+	it("sends once resolved, carrying the real workspaceRoot", () => {
+		const payload = buildDriveJoinPayload({
+			roomId: DRIVE_DEFAULT_ROOM_ID,
+			partnerName: "Cline",
+			sessionId: "session-1",
+			workspaceRoot: "/workspace",
+			workspaceRootReady: true,
+		});
+		expect(payload).toMatchObject({
+			type: "call_join",
+			roomId: DRIVE_DEFAULT_ROOM_ID,
+			sessionId: "session-1",
+			workspaceRoot: "/workspace",
+		});
+	});
+
+	it("sends once resolved even when there truly is no workspace", () => {
+		const payload = buildDriveJoinPayload({
+			roomId: DRIVE_DEFAULT_ROOM_ID,
+			partnerName: "Cline",
+			workspaceRoot: "",
+			workspaceRootReady: true,
+		});
+		expect(payload).not.toBeNull();
+		expect(payload?.workspaceRoot).toBeUndefined();
 	});
 });
 

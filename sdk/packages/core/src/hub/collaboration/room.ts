@@ -1,7 +1,7 @@
 /**
  * In-memory Drive room store. Mutations append DriveEvents and fold via
  * @cline/drive reduceRoom. Hub handlers own broadcast; this module stays pure
- * except for the Map of rooms + optional durable event log (ADR-0013).
+ * except for the Map of rooms + durable event log (ADR-0013).
  *
  * Single live Map: director/spotlight UI state lives here — not a second
  * module-local Map in drive-handlers.
@@ -25,13 +25,13 @@ import {
 	mintCallSessionId,
 } from "@cline/shared";
 import { resetDrivePauseAfterToolForTests } from "./drivePauseAfterTool";
-import type { RoomEventLog } from "./eventLog";
+import { MemoryRoomEventLog, type RoomEventLog } from "./eventLog";
 import type { WorkRecordPayload } from "./work-from-tool";
 
 export type RoomCommitResult = {
 	snapshot: RoomSnapshot;
 	event: DriveEvent;
-	/** Monotonic per-room sequence when an event log is attached; else 0. */
+	/** Monotonic per-room sequence. */
 	seq: number;
 };
 
@@ -51,7 +51,13 @@ export class DriveRoomStore {
 	readonly sessionToRoom = new Map<string, string>();
 	readonly roomToSessions = new Map<string, Set<string>>();
 
-	private eventLog: RoomEventLog | undefined;
+	/**
+	 * Always set — starts as an in-memory pre-bind buffer (bounded, same
+	 * retention cap as the durable log) so commits before a workspace root
+	 * is known are never silently un-durable. `rebindJsonlRoomEventLog`
+	 * replays the buffer into the first real JsonlRoomEventLog that attaches.
+	 */
+	private eventLog: RoomEventLog = new MemoryRoomEventLog();
 	private readonly seqByRoom = new Map<string, number>();
 	/**
 	 * Active call session per room (DRV-CALL-SESSION).
@@ -71,7 +77,7 @@ export class DriveRoomStore {
 		this.eventLog = log;
 	}
 
-	getEventLog(): RoomEventLog | undefined {
+	getEventLog(): RoomEventLog {
 		return this.eventLog;
 	}
 
@@ -80,7 +86,7 @@ export class DriveRoomStore {
 		if (cached !== undefined) {
 			return cached;
 		}
-		return this.eventLog?.latestSeq(roomId) ?? 0;
+		return this.eventLog.latestSeq(roomId);
 	}
 
 	get(roomId: string): RoomSnapshot | undefined {
@@ -165,9 +171,10 @@ export class DriveRoomStore {
 	}
 
 	/**
-	 * Append to durable log (when attached), then fold into live snapshot.
-	 * Idempotent on event.id within this process. Does not create rooms —
-	 * callers must create/join first.
+	 * Append to the event log (durable once bound, the in-memory pre-bind
+	 * buffer until then), then fold into live snapshot. Idempotent on
+	 * event.id within this process. Does not create rooms — callers must
+	 * create/join first.
 	 */
 	commit(event: DriveEvent): RoomCommitResult {
 		const session = this.callSessions.get(event.roomId);
@@ -182,12 +189,9 @@ export class DriveRoomStore {
 				seq: this.lastSeq(stamped.roomId),
 			};
 		}
-		let seq = 0;
-		if (this.eventLog) {
-			const record = this.eventLog.appendSync(stamped.roomId, stamped);
-			seq = record.seq;
-			this.seqByRoom.set(stamped.roomId, seq);
-		}
+		const record = this.eventLog.appendSync(stamped.roomId, stamped);
+		const seq = record.seq;
+		this.seqByRoom.set(stamped.roomId, seq);
 		const current = this.getOrThrow(stamped.roomId);
 		const next = reduceRoom(current, stamped);
 		this.rooms.set(stamped.roomId, next);
@@ -202,9 +206,6 @@ export class DriveRoomStore {
 	 */
 	async hydrateFromLog(roomId: string): Promise<RoomSnapshot | undefined> {
 		const log = this.eventLog;
-		if (!log) {
-			return undefined;
-		}
 		const records = await log.readSince(roomId, 0);
 		if (records.length === 0) {
 			return undefined;
@@ -243,9 +244,6 @@ export class DriveRoomStore {
 	/** Sync hydrate for command handlers (JSONL / memory are sync). */
 	hydrateFromLogSync(roomId: string): RoomSnapshot | undefined {
 		const log = this.eventLog;
-		if (!log) {
-			return undefined;
-		}
 		const records = log.readSinceSync(roomId, 0);
 		if (records.length === 0) {
 			return undefined;

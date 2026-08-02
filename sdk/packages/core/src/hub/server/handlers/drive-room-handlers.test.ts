@@ -1274,4 +1274,61 @@ describe("handleDriveRoomCommand", () => {
 		expect(reply.ok).toBe(true);
 		expect(reply.payload?.rooms).toEqual([]);
 	});
+
+	/**
+	 * Regression for the room-binding leak: commands issued before any
+	 * workspace root is known (exactly what the test suite itself does when a
+	 * call_join payload omits workspaceRoot) used to durably bind under
+	 * tmpdir() — a directory every process on the machine shares. A later
+	 * real join's rebind then folded in *everything* it found there, so
+	 * fixture rooms from unrelated test runs surfaced as the user's own live,
+	 * resumable sessions. Neither must happen: no disk writes without a
+	 * workspace root, and a real workspace's room list must never include
+	 * anything this process did not create under that root.
+	 */
+	it("does not let workspace-less commands leak into a later real workspace's rooms", async () => {
+		resetDriveRoomStoreForTests();
+		const ctx = makeCtx();
+
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "no_root_join",
+			payload: {
+				roomId: "room_no_workspace",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Cline" },
+			},
+		});
+		expect(
+			existsSync(join(tmpdir(), ".cline", "drive", "rooms", "room_no_workspace")),
+		).toBe(false);
+
+		const workspaceRoot = mkdtempSync(join(tmpdir(), "drive-rooms-defect1-"));
+		try {
+			const joined = await handleDriveRoomCommand(ctx, {
+				version: "v1",
+				command: "call_join",
+				requestId: "real_join",
+				payload: {
+					roomId: "default",
+					human: { id: "you", displayName: "You" },
+					agent: { id: "adam", displayName: "Cline" },
+					workspaceRoot,
+				},
+			});
+			expect(joined.ok).toBe(true);
+
+			const listed = await handleDriveRoomCommand(ctx, {
+				version: "v1",
+				command: "call_list_rooms",
+				requestId: "real_list",
+				payload: { workspaceRoot },
+			});
+			const rooms = (listed.payload?.rooms ?? []) as Array<{ roomId: string }>;
+			expect(rooms.map((room) => room.roomId)).toEqual(["default"]);
+		} finally {
+			rmSync(workspaceRoot, { recursive: true, force: true });
+		}
+	});
 });

@@ -8,7 +8,11 @@ import { join } from "node:path";
 import { CLINE_HOST_CAPABILITIES, createDriveHarness, runHostConformance } from "@cline/drive";
 import { afterEach, describe, expect, it } from "vitest";
 import { createClineDriveHost } from "./clineDriveHost";
-import { DriveRoomStore } from "./collaboration";
+import {
+	DriveRoomStore,
+	JsonlRoomEventLog,
+	rebindJsonlRoomEventLog,
+} from "./collaboration";
 
 describe("createClineDriveHost", () => {
 	const dirs: string[] = [];
@@ -161,6 +165,78 @@ describe("createClineDriveHost", () => {
 		expect(live.director.showBacklog.some((item) => item.id === "show-1")).toBe(
 			true,
 		);
+	});
+
+	it("does not bind a durable event log when no workspace root is known", () => {
+		// Regression: createClineDriveHost used to fall back to tmpdir() and
+		// eagerly attach a JsonlRoomEventLog there whenever a command reached
+		// the harness before any workspaceRoot was known. Every process on the
+		// machine shares tmpdir(), so that made any command issued pre-join
+		// (or the test suite's own no-workspaceRoot commands) durably write
+		// under a path a later real workspace's first join would read from.
+		// The store always has *a* log (its in-memory pre-bind buffer, so
+		// commits are never silently un-durable), but it must not be a
+		// JsonlRoomEventLog until a real configParent is given.
+		const store = new DriveRoomStore();
+		createClineDriveHost({ store });
+		expect(store.getEventLog()).not.toBeInstanceOf(JsonlRoomEventLog);
+	});
+
+	it("attaches the durable log once configParent is provided, not before", () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const store = new DriveRoomStore();
+		// First touch with no workspace root known yet: stays on the buffer.
+		createClineDriveHost({ store });
+		expect(store.getEventLog()).not.toBeInstanceOf(JsonlRoomEventLog);
+		// Workspace root arrives: now it binds, under the real root only.
+		createClineDriveHost({ configParent: dir, store });
+		expect(store.getEventLog()).toBeInstanceOf(JsonlRoomEventLog);
+	});
+
+	it("flushes events committed before the workspace root was known into the durable log", () => {
+		// Regression (Bugbot on #132): removing the eager tmpdir() bind means
+		// commits before a workspace root is known land only on the in-memory
+		// buffer. If the first real bind doesn't replay that buffer, those
+		// events are durably lost the moment the log finally attaches — the
+		// room hydrates later from a log that never saw its start. Only the
+		// bound room may flush; an unrelated room resident in the same store
+		// (e.g. another buffered, never-bound room) must not ride along.
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const store = new DriveRoomStore();
+		createClineDriveHost({ store });
+		store.create("r1");
+		store.join({
+			roomId: "r1",
+			participant: {
+				id: "h1",
+				kind: "human",
+				displayName: "H",
+				role: "host",
+				status: "idle",
+			},
+		});
+		store.create("unrelated");
+		store.join({
+			roomId: "unrelated",
+			participant: {
+				id: "h2",
+				kind: "human",
+				displayName: "H2",
+				role: "host",
+				status: "idle",
+			},
+		});
+		expect(store.getEventLog()).not.toBeInstanceOf(JsonlRoomEventLog);
+
+		rebindJsonlRoomEventLog(store, dir, ["r1"]);
+
+		const log = store.getEventLog();
+		expect(log).toBeInstanceOf(JsonlRoomEventLog);
+		expect(log?.readSinceSync("r1", 0)).toHaveLength(1);
+		expect((log as JsonlRoomEventLog).listRoomIds()).toEqual(["r1"]);
+		expect(log?.readSinceSync("unrelated", 0)).toHaveLength(0);
 	});
 
 	it("createDriveHarness scripts.attach commits via DirectorOp", async () => {
