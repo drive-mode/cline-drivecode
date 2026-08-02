@@ -503,7 +503,10 @@ export function resolveDriveTargetRoomId({
 		expectedRoomId,
 		DRIVE_DEFAULT_ROOM_ID,
 	]) {
-		const normalized = candidate?.trim();
+		// typeof, not just optional-chaining: these ids reach us from React
+		// handlers and persisted storage, where a non-string can slip in.
+		const normalized =
+			typeof candidate === "string" ? candidate.trim() : undefined;
 		if (normalized) {
 			return normalized;
 		}

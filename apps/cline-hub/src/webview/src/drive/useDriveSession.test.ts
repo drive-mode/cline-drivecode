@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DRIVE_DEFAULT_ROOM_ID } from "./types";
 import {
 	hasPendingDriveJoinRequest,
 	isDriveRoomSnapshotForTarget,
@@ -221,6 +222,23 @@ describe("Drive room targeting", () => {
 				expectedRoomId: "expected-room",
 			}),
 		).toBe("expected-room");
+	});
+
+	it("falls back when the requested room is not a string", () => {
+		// Regression: DriveHeaderControls wired joinDrive straight into onClick,
+		// so React passed the MouseEvent in as requestedRoomId and this threw
+		// `candidate?.trim is not a function` — Join call was dead on arrival.
+		expect(
+			resolveDriveTargetRoomId({
+				requestedRoomId: { type: "click" } as unknown as string,
+				currentRoomId: "current-room",
+			}),
+		).toBe("current-room");
+		expect(
+			resolveDriveTargetRoomId({
+				requestedRoomId: { type: "click" } as unknown as string,
+			}),
+		).toBe(DRIVE_DEFAULT_ROOM_ID);
 	});
 });
 

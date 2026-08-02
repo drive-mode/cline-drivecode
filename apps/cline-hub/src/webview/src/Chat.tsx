@@ -1744,7 +1744,9 @@ export default function Chat({
 							disabled={isHydrating}
 							drive={drive}
 							onEndDrive={endDrive}
-							onJoinDrive={joinDrive}
+							// Wrapped, not by reference: joinDrive takes an optional
+							// roomId, so onClick would pass the MouseEvent as one.
+							onJoinDrive={() => joinDrive()}
 							onLeaveDrive={leaveDrive}
 							onToggleSpotlight={toggleStage}
 						/>
