@@ -7,6 +7,7 @@ import {
 	clearVoiceCaptionDraft,
 	DRIVE_PERSIST_KEYS,
 	persistPayloadHasCaptionKeys,
+	shouldClearVoiceCaption,
 } from "./voiceCaptionState";
 
 describe("voiceCaptionState", () => {
@@ -16,6 +17,27 @@ describe("voiceCaptionState", () => {
 
 	it("clears caption residue after send", () => {
 		expect(clearVoiceCaptionAfterSend()).toBe("");
+	});
+
+	it("holds a draft only while the call is live and the mic is open", () => {
+		expect(shouldClearVoiceCaption({ muted: false, active: true })).toBe(false);
+	});
+
+	it("drops the draft on mute or hang-up", () => {
+		// Mic mute is the microphone and only the microphone: a partial
+		// utterance must not survive it, nor reappear on unmute.
+		expect(shouldClearVoiceCaption({ muted: true, active: true })).toBe(true);
+		expect(shouldClearVoiceCaption({ muted: false, active: false })).toBe(true);
+		expect(shouldClearVoiceCaption({ muted: true, active: false })).toBe(true);
+	});
+
+	it("clears by default, since the mic now joins muted", () => {
+		expect(
+			shouldClearVoiceCaption({
+				muted: DEFAULT_DRIVE_UI.muted,
+				active: DEFAULT_DRIVE_UI.active,
+			}),
+		).toBe(true);
 	});
 
 	it("persist payload includes only driveUi/driveVoice and strips caption keys", () => {

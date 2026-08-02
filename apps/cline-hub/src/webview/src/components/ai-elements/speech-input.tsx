@@ -6,6 +6,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import {
+	describeSpeechInputError,
+	readSpeechInputCapabilities,
+	resolveSpeechInputMode,
+	type SpeechInputMode,
+} from "./speechInputSupport";
 
 interface SpeechRecognition extends EventTarget {
 	continuous: boolean;
@@ -57,8 +63,6 @@ declare global {
 	}
 }
 
-type SpeechInputMode = "speech-recognition" | "media-recorder" | "none";
-
 export type SpeechInputProps = ComponentProps<typeof Button> & {
 	onTranscriptionChange?: (text: string) => void;
 	/**
@@ -79,22 +83,11 @@ export type SpeechInputProps = ComponentProps<typeof Button> & {
 	 * Web Speech recognition still uses the browser default mic.
 	 */
 	deviceId?: string;
-};
-
-const detectSpeechInputMode = (): SpeechInputMode => {
-	if (typeof window === "undefined") {
-		return "none";
-	}
-
-	if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
-		return "speech-recognition";
-	}
-
-	if ("MediaRecorder" in window && "mediaDevices" in navigator) {
-		return "media-recorder";
-	}
-
-	return "none";
+	/**
+	 * Honest failure copy for a denied/absent mic. Without a handler the
+	 * button simply goes idle, which reads as a dead UI.
+	 */
+	onCaptureError?: (message: string) => void;
 };
 
 export const SpeechInput = ({
@@ -104,28 +97,38 @@ export const SpeechInput = ({
 	lang = "en-US",
 	forceMode,
 	deviceId,
+	onCaptureError,
+	disabled,
 	...props
 }: SpeechInputProps) => {
 	const [isListening, setIsListening] = useState(false);
 	const [isProcessing, setIsProcessing] = useState(false);
-	const [mode] = useState<SpeechInputMode>(
-		() => forceMode ?? detectSpeechInputMode(),
+	const [mode] = useState<SpeechInputMode>(() =>
+		resolveSpeechInputMode({
+			requested: forceMode,
+			capabilities: readSpeechInputCapabilities(),
+		}),
 	);
 	const [isRecognitionReady, setIsRecognitionReady] = useState(false);
 	const recognitionRef = useRef<SpeechRecognition | null>(null);
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 	const streamRef = useRef<MediaStream | null>(null);
 	const audioChunksRef = useRef<Blob[]>([]);
+	/** Set when teardown stops capture, so a partial utterance is dropped. */
+	const abortedRef = useRef(false);
 	const deviceIdRef = useRef(deviceId);
 	const onTranscriptionChangeRef = useRef<
 		SpeechInputProps["onTranscriptionChange"]
 	>(onTranscriptionChange);
 	const onAudioRecordedRef =
 		useRef<SpeechInputProps["onAudioRecorded"]>(onAudioRecorded);
+	const onCaptureErrorRef =
+		useRef<SpeechInputProps["onCaptureError"]>(onCaptureError);
 
 	// Keep refs in sync
 	onTranscriptionChangeRef.current = onTranscriptionChange;
 	onAudioRecordedRef.current = onAudioRecorded;
+	onCaptureErrorRef.current = onCaptureError;
 	deviceIdRef.current = deviceId;
 
 	// Initialize Speech Recognition when mode is speech-recognition
@@ -136,6 +139,11 @@ export const SpeechInput = ({
 
 		const SpeechRecognition =
 			window.SpeechRecognition || window.webkitSpeechRecognition;
+		// resolveSpeechInputMode already rules this out; the guard keeps a stale
+		// `forceMode` from throwing out of an effect and blanking the webview.
+		if (!SpeechRecognition) {
+			return;
+		}
 		const speechRecognition = new SpeechRecognition();
 
 		speechRecognition.continuous = true;
@@ -170,8 +178,15 @@ export const SpeechInput = ({
 			}
 		};
 
-		const handleError = () => {
+		const handleError = (event: Event) => {
 			setIsListening(false);
+			const message = describeSpeechInputError({
+				mode: "speech-recognition",
+				code: (event as SpeechRecognitionErrorEvent).error,
+			});
+			if (message) {
+				onCaptureErrorRef.current?.(message);
+			}
 		};
 
 		speechRecognition.addEventListener("start", handleStart);
@@ -193,12 +208,16 @@ export const SpeechInput = ({
 		};
 	}, [mode, lang]);
 
-	// Cleanup MediaRecorder and stream on unmount
+	// Cleanup MediaRecorder and stream on unmount. Unmount is how callers revoke
+	// capture (Drive unmounts the mic bar on mute), so anything already recorded
+	// is abandoned rather than transcribed after the fact.
 	useEffect(
 		() => () => {
+			abortedRef.current = true;
 			if (mediaRecorderRef.current?.state === "recording") {
 				mediaRecorderRef.current.stop();
 			}
+			audioChunksRef.current = [];
 			if (streamRef.current) {
 				for (const track of streamRef.current.getTracks()) {
 					track.stop();
@@ -214,12 +233,21 @@ export const SpeechInput = ({
 			return;
 		}
 
+		abortedRef.current = false;
 		try {
 			const preferredDeviceId = deviceIdRef.current;
 			const audio: MediaTrackConstraints | boolean = preferredDeviceId
 				? { deviceId: { ideal: preferredDeviceId } }
 				: true;
 			const stream = await navigator.mediaDevices.getUserMedia({ audio });
+			// Teardown can land while the permission prompt is open; never keep a
+			// stream that was granted after capture was revoked.
+			if (abortedRef.current) {
+				for (const track of stream.getTracks()) {
+					track.stop();
+				}
+				return;
+			}
 			streamRef.current = stream;
 			const mediaRecorder = new MediaRecorder(stream);
 			audioChunksRef.current = [];
@@ -236,9 +264,16 @@ export const SpeechInput = ({
 				}
 				streamRef.current = null;
 
+				if (abortedRef.current) {
+					// Revoked mid-utterance: drop the audio, transcribe nothing.
+					audioChunksRef.current = [];
+					return;
+				}
+
 				const audioBlob = new Blob(audioChunksRef.current, {
 					type: "audio/webm",
 				});
+				audioChunksRef.current = [];
 
 				if (audioBlob.size > 0 && onAudioRecordedRef.current) {
 					setIsProcessing(true);
@@ -257,10 +292,15 @@ export const SpeechInput = ({
 
 			const handleError = () => {
 				setIsListening(false);
+				audioChunksRef.current = [];
 				for (const track of stream.getTracks()) {
 					track.stop();
 				}
 				streamRef.current = null;
+				const message = describeSpeechInputError({ mode: "media-recorder" });
+				if (message) {
+					onCaptureErrorRef.current?.(message);
+				}
 			};
 
 			mediaRecorder.addEventListener("dataavailable", handleDataAvailable);
@@ -270,8 +310,15 @@ export const SpeechInput = ({
 			mediaRecorderRef.current = mediaRecorder;
 			mediaRecorder.start();
 			setIsListening(true);
-		} catch {
+		} catch (error) {
 			setIsListening(false);
+			const message = describeSpeechInputError({
+				mode: "media-recorder",
+				error,
+			});
+			if (message) {
+				onCaptureErrorRef.current?.(message);
+			}
 		}
 	}, []);
 
@@ -287,20 +334,34 @@ export const SpeechInput = ({
 		if (mode === "speech-recognition" && recognitionRef.current) {
 			if (isListening) {
 				recognitionRef.current.stop();
-			} else {
+				return;
+			}
+			try {
 				recognitionRef.current.start();
+			} catch (error) {
+				// start() throws InvalidStateError when a session is already open.
+				const message = describeSpeechInputError({
+					mode: "speech-recognition",
+					error,
+				});
+				if (message) {
+					onCaptureErrorRef.current?.(message);
+				}
 			}
 		} else if (mode === "media-recorder") {
 			if (isListening) {
 				stopMediaRecorder();
 			} else {
-				startMediaRecorder();
+				void startMediaRecorder();
 			}
 		}
 	}, [mode, isListening, startMediaRecorder, stopMediaRecorder]);
 
-	// Determine if button should be disabled
+	// Determine if button should be disabled. `disabled` is pulled out of the
+	// spread so a caller passing `disabled={false}` cannot re-enable a button
+	// that has no working capture behind it.
 	const isDisabled =
+		disabled ||
 		mode === "none" ||
 		(mode === "speech-recognition" && !isRecognitionReady) ||
 		(mode === "media-recorder" && !onAudioRecorded) ||

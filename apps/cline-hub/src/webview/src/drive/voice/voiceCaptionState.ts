@@ -14,6 +14,19 @@ export function clearVoiceCaptionAfterSend(): string {
 }
 
 /**
+ * Mic mute means the microphone and only the microphone: while muted — or once
+ * the call ends — there is no spoken draft to hold. Used both to clear on the
+ * mute transition and to refuse a transcript that lands after it, so a partial
+ * utterance can never reappear on unmute.
+ */
+export function shouldClearVoiceCaption(input: {
+	muted: boolean;
+	active: boolean;
+}): boolean {
+	return input.muted || !input.active;
+}
+
+/**
  * Keys allowed in hub webview persistence for Drive.
  * Explicitly excludes caption / transcript fields.
  */

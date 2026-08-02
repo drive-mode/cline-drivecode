@@ -1,6 +1,7 @@
 import type { SttBackend } from "@cline/shared";
+import type { SpeechInputMode } from "@/components/ai-elements/speechInputSupport";
 
-export type SpeechInputMode = "speech-recognition" | "media-recorder" | "none";
+export type { SpeechInputMode };
 
 /**
  * Map topology STT backend to SpeechInput capture mode.

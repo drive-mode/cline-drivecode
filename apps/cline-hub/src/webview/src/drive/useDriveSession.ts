@@ -50,8 +50,8 @@ import {
 	toSharedDriveSubMode,
 } from "./types";
 import { createVoiceStack } from "./voice/createVoiceStack";
-import { createDriveNarrator, type DriveNarrator } from "./voice/driveNarrator";
 import { normalizeDriveHardwarePrefs } from "./voice/driveHardwarePrefs";
+import { createDriveNarrator, type DriveNarrator } from "./voice/driveNarrator";
 import {
 	applyHardwarePrefsPatch,
 	applyVoiceFacetPatch,
@@ -62,7 +62,11 @@ import {
 	resolveDriveVoiceTopology,
 	shouldSpeakDriveTts,
 } from "./voice/driveVoiceUi";
-import { buildDrivePersistPayload } from "./voice/voiceCaptionState";
+import {
+	buildDrivePersistPayload,
+	clearVoiceCaptionDraft,
+	shouldClearVoiceCaption,
+} from "./voice/voiceCaptionState";
 
 function readPersistedDriveUi(): DriveUiState {
 	try {
@@ -660,7 +664,7 @@ export function useDriveSession(
 	const [driveVoice, setDriveVoice] = useState<DriveVoiceUi>(
 		readPersistedDriveVoice,
 	);
-	const [voiceCaption, setVoiceCaption] = useState("");
+	const [voiceCaption, setVoiceCaptionState] = useState("");
 	/**
 	 * Last line the partner should say (DRV-NARRATION). React state only —
 	 * spoken text never reaches the persisted `driveUi` blob (DRV-PRIVACY),
@@ -728,6 +732,35 @@ export function useDriveSession(
 	onModeChangeRef.current = args.onModeChange;
 	driveRef.current = drive;
 	connectionPhaseRef.current = connectionPhase;
+
+	/**
+	 * Single choke point for spoken text (DRV-CAPTIONS). A transcript that
+	 * resolves after the mic went quiet — a whisper round-trip still in flight,
+	 * say — is dropped instead of surfacing when the user unmutes.
+	 */
+	const setVoiceCaption = useCallback<Dispatch<SetStateAction<string>>>(
+		(value) => {
+			setVoiceCaptionState((current) => {
+				if (
+					shouldClearVoiceCaption({
+						muted: driveRef.current.muted,
+						active: driveRef.current.active,
+					})
+				) {
+					return clearVoiceCaptionDraft();
+				}
+				return typeof value === "function" ? value(current) : value;
+			});
+		},
+		[],
+	);
+
+	/** Mute or hang up: discard the draft and any partial mid-utterance. */
+	useEffect(() => {
+		if (shouldClearVoiceCaption({ muted: drive.muted, active: drive.active })) {
+			setVoiceCaptionState(clearVoiceCaptionDraft());
+		}
+	}, [drive.muted, drive.active]);
 
 	useEffect(() => {
 		try {

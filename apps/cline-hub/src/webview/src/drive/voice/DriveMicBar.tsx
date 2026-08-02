@@ -1,10 +1,13 @@
-import { SpeechInput } from "@/components/ai-elements/speech-input";
 import type { SttBackend } from "@cline/shared";
-import type { SpeechInputMode } from "./speechInputModeForBackend";
+import { useEffect, useState } from "react";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
 import {
-	LocalSttError,
-	transcribeAudioBlob,
-} from "./transcribeAudioBlob";
+	describeSpeechInputUnavailable,
+	readSpeechInputCapabilities,
+	resolveSpeechInputMode,
+} from "@/components/ai-elements/speechInputSupport";
+import type { SpeechInputMode } from "./speechInputModeForBackend";
+import { LocalSttError, transcribeAudioBlob } from "./transcribeAudioBlob";
 
 export function DriveMicBar({
 	disabled,
@@ -29,6 +32,26 @@ export function DriveMicBar({
 	onTranscription: (text: string) => void;
 	onSttError?: (message: string) => void;
 }) {
+	/**
+	 * Capture failures surface here, beside the button the user just pressed.
+	 * The chat status line they would otherwise land in is rendered hidden, so
+	 * a denied mic would read as a dead button.
+	 */
+	const [captureError, setCaptureError] = useState<string | null>(null);
+	const reportCaptureError = (message: string) => {
+		setCaptureError(message);
+		onSttError?.(message);
+	};
+
+	// A revoked mic is not worth explaining once the mic is off anyway.
+	useEffect(() => {
+		if (muted) {
+			setCaptureError(null);
+		}
+	}, [muted]);
+
+	// Unmounting the SpeechInput is what revokes capture: its teardown stops the
+	// recogniser / recorder and drops any partial utterance.
 	if (muted) {
 		return (
 			<div className="border-t bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
@@ -37,12 +60,23 @@ export function DriveMicBar({
 		);
 	}
 
+	const capabilities = readSpeechInputCapabilities();
+	const resolvedMode = resolveSpeechInputMode({
+		requested: forceMode,
+		capabilities,
+	});
+	const unavailable = describeSpeechInputUnavailable({
+		requested: forceMode,
+		capabilities,
+	});
+
 	return (
 		<div className="flex items-start gap-3 border-t bg-background px-3 py-2">
 			<SpeechInput
 				deviceId={micDeviceId}
 				disabled={disabled}
-				forceMode={forceMode}
+				forceMode={resolvedMode}
+				onCaptureError={reportCaptureError}
 				onAudioRecorded={async (blob) => {
 					try {
 						const text = await transcribeAudioBlob({
@@ -51,6 +85,7 @@ export function DriveMicBar({
 							config: sttConfig,
 						});
 						if (text) {
+							setCaptureError(null);
 							onCaptionChange(text);
 							onTranscription(text);
 						}
@@ -60,11 +95,12 @@ export function DriveMicBar({
 							error instanceof LocalSttError
 								? error.message
 								: `STT failed: ${String(error)}`;
-						onSttError?.(message);
+						reportCaptureError(message);
 						return "";
 					}
 				}}
 				onTranscriptionChange={(text) => {
+					setCaptureError(null);
 					onCaptionChange(text);
 					onTranscription(text);
 				}}
@@ -82,10 +118,21 @@ export function DriveMicBar({
 					/>
 				) : (
 					<p className="text-xs text-muted-foreground">
-						Speak a task. Local STT uses a loopback whisper server when
-						MediaRecorder is active.
+						{unavailable ??
+							(resolvedMode === "media-recorder"
+								? "Speak a task. Local STT posts the utterance to a loopback whisper server."
+								: "Speak a task. The browser transcribes it; nothing is recorded to disk.")}
 					</p>
 				)}
+				{captureError ? (
+					<p
+						aria-live="polite"
+						className="mt-1 text-xs text-destructive"
+						role="status"
+					>
+						{captureError}
+					</p>
+				) : null}
 			</div>
 		</div>
 	);
