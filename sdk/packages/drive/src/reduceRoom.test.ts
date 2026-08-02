@@ -92,6 +92,85 @@ describe("reduceRoom", () => {
 		expect(projectRoster(room)[0]?.displayName).toBe("Nova");
 	});
 
+	it("defaults a newly joining human to muted (hot-mic-on-join is unsafe)", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e1",
+			roomId: "room_1",
+			at,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "u1",
+				kind: "human",
+				displayName: "Ada",
+				role: "host",
+				status: "idle",
+			},
+		});
+		expect(room.muteByParticipantId.u1).toBe(true);
+	});
+
+	it("does not default an agent join to muted", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e1",
+			roomId: "room_1",
+			at,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "adam",
+				kind: "agent",
+				displayName: "Adam",
+				role: "partner",
+				status: "idle",
+				seatSources: [],
+			},
+		});
+		expect(room.muteByParticipantId.adam).toBeUndefined();
+	});
+
+	it("never overwrites an explicit mute state on rejoin", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		const join = (eventId: string): DriveEvent => ({
+			schemaVersion: 1,
+			id: eventId,
+			roomId: "room_1",
+			at,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "u1",
+				kind: "human",
+				displayName: "Ada",
+				role: "host",
+				status: "idle",
+			},
+		});
+		room = reduceRoom(room, join("e1"));
+		expect(room.muteByParticipantId.u1).toBe(true);
+
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "e2",
+			roomId: "room_1",
+			at,
+			type: "control.mute",
+			track: "control",
+			participantId: "u1",
+			muted: false,
+		});
+		expect(room.muteByParticipantId.u1).toBe(false);
+
+		// Rejoin (e.g. reconnect after a hub restart) must not re-mute a human
+		// who explicitly unmuted earlier this room.
+		room = reduceRoom(room, join("e3"));
+		expect(room.muteByParticipantId.u1).toBe(false);
+	});
+
 	it("tracks speaking presence on and off", () => {
 		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
 		room = reduceRoom(room, {

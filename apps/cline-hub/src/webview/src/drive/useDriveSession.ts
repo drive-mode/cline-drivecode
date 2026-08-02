@@ -21,6 +21,7 @@ import {
 	subscribeToHostMessages,
 } from "../lib/host-message-gateway";
 import { getVsCodeApi, postToHost } from "../vscode";
+import { shouldSeedBankOnSeat } from "./bankHydrationGate";
 import {
 	createDriveBankSession,
 	type DriveBankSession,
@@ -735,6 +736,22 @@ export function useDriveSession(
 	>([]);
 	/** True between call_join and the first successful room_snapshot. */
 	const pendingJoinRef = useRef(false);
+	/**
+	 * Room id this hook instance has fetched the durable task bank for
+	 * (DRV-BANK-REHYDRATE), or null before the first fetch. Persisted
+	 * `driveUi.active` can restore `connectionPhase` as "on" from a prior
+	 * process (e.g. after a hub restart), which routes reconnect through
+	 * `call_get_room` (refresh) instead of `call_join` — that path never sets
+	 * `pendingJoinRef`. This ref is never persisted, so it always starts null
+	 * on a fresh mount and guarantees at least one real `drive_bank_seed`
+	 * round trip to the hub before treating a seated snapshot as fully
+	 * hydrated. Scoped by room id (not a plain boolean) so `refreshDriveRoom`
+	 * targeting a different room — which, like the restart case, never sets
+	 * `pendingJoinRef` — still re-seeds rather than trusting a previous
+	 * room's hydration. It never caches bank content itself — only which
+	 * room the hub has been asked about.
+	 */
+	const bankHydratedRoomIdRef = useRef<string | null>(null);
 	/** Last hub room seq for afterSeq gap fill on reconnect / get_room. */
 	const roomSeqRef = useRef(0);
 	/** Local RoomSnapshot for reduceRoom fold (same kernel as hub). */
@@ -823,6 +840,7 @@ export function useDriveSession(
 		}) => {
 			const current = driveRef.current;
 			pendingJoinRef.current = false;
+			bankHydratedRoomIdRef.current = null;
 			driveIntentRef.current = false;
 			roomSnapshotRef.current = null;
 			roomSeqRef.current = 0;
@@ -1289,7 +1307,19 @@ export function useDriveSession(
 						toNativeMode(fromSharedDriveSubMode(snapshot.subMode)),
 					);
 				}
-				if (wasPendingJoin && seatedOnCall) {
+				// See bankHydrationGate.ts: wasPendingJoin alone misses the case
+				// where a hub restart leaves persisted driveUi.active stuck "on",
+				// which routes reconnect through refreshDriveRoom (call_get_room)
+				// instead of joinDrive (call_join) — the only path that sets
+				// wasPendingJoin.
+				if (
+					shouldSeedBankOnSeat({
+						wasPendingJoin,
+						bankHydrated: bankHydratedRoomIdRef.current === snapshot.roomId,
+						seatedOnCall,
+					})
+				) {
+					bankHydratedRoomIdRef.current = snapshot.roomId;
 					const partner =
 						snapshot.participants.find((p) => p.kind === "agent")
 							?.displayName ?? "partner";

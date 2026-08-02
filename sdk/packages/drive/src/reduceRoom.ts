@@ -114,6 +114,17 @@ export function reduceRoom(
 			const exists = base.participants.some(
 				(p) => p.id === event.participant.id,
 			);
+			// A joining human defaults to muted (hot-mic-on-join is the wrong
+			// privacy default — mic audio streams to the STT vendor). This is the
+			// wire's own default, not a client preference, so it holds regardless
+			// of which client joins: a webview that already renders muted first
+			// just confirms what the hub already recorded; any other client gets
+			// the safe default too. A prior explicit control.mute (e.g. a rejoin
+			// of a participant id that unmuted earlier this room) is never
+			// overwritten — this only fills a genuinely absent entry.
+			const needsMuteDefault =
+				event.participant.kind === "human" &&
+				!(event.participant.id in base.muteByParticipantId);
 			return {
 				...base,
 				participants: exists
@@ -121,6 +132,14 @@ export function reduceRoom(
 							p.id === event.participant.id ? event.participant : p,
 						)
 					: [...base.participants, event.participant],
+				...(needsMuteDefault
+					? {
+							muteByParticipantId: {
+								...base.muteByParticipantId,
+								[event.participant.id]: true,
+							},
+						}
+					: {}),
 			};
 		}
 		case "control.leave":
