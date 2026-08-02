@@ -29,6 +29,8 @@
 | ADR-0019 | DrivePlan–Kanban Interop wire | Reserved (see ADR-0018) | — |
 | [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | [DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md), [DRV-ISOLATION](../features/DRV-ISOLATION.md) |
 | [ADR-0021](ADR-0021-drive-credential-onboarding.md) | Drive credential onboarding (device-code first) | **Proposed** | [DRV-PLATFORM-CONFIG](../features/DRV-PLATFORM-CONFIG.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md) |
+| [ADR-0022](ADR-0022-agent-economics.md) | Agent economics — context, model, spend per agent | **Proposed** | [DRV-PLATFORM-CONFIG](../features/DRV-PLATFORM-CONFIG.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md) |
+| [ADR-0023](ADR-0023-agent-spawn-governance.md) | Agent spawn governance (consult vs delegate) | **Proposed** | [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md), [DRV-GATES](../features/DRV-GATES.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 
