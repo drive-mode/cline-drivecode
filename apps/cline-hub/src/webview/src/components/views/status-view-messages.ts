@@ -5,7 +5,11 @@
  * that are only rendered as React text stay unchecked because they are inert.
  */
 
-import type { StatusSummary, StatusUpdate } from "@cline/shared";
+import type {
+	StatusSummary,
+	StatusTagCount,
+	StatusUpdate,
+} from "@cline/shared";
 import {
 	type HostMessage,
 	isOptionalString,
@@ -29,6 +33,13 @@ export type StatusViewHostMessage = HostMessage &
 				updates: StatusUpdate[];
 				nextCursor?: number | null;
 				hasMore?: boolean;
+				/**
+				 * Unnarrowed on purpose. The guard admits the frame regardless of
+				 * these, so the view has to run them through `statusTagCountsOf`
+				 * and a finite check before rendering either as a number.
+				 */
+				total?: unknown;
+				tagFacets?: unknown;
 		  }
 		| {
 				type: "status_summary_result";
@@ -66,6 +77,40 @@ export function isStatusSummaryPayload(value: unknown): value is StatusSummary {
 	);
 }
 
+/**
+ * Facet counts are rendered as numbers the user acts on — a chip count is a
+ * promise about what clicking it returns — so a malformed entry has to be
+ * dropped rather than coerced into a chip labelled `undefined`.
+ */
+export function isStatusTagCountPayload(
+	value: unknown,
+): value is StatusTagCount {
+	return (
+		isRecord(value) &&
+		typeof value.tag === "string" &&
+		value.tag !== "" &&
+		typeof value.count === "number" &&
+		Number.isFinite(value.count)
+	);
+}
+
+/**
+ * The usable facet entries of a page, junk discarded.
+ *
+ * Filtered rather than validated as a precondition on the whole frame: the
+ * chips are decoration next to the rows, so one bad entry must cost its own
+ * chip and nothing else. Rejecting the frame would drop a perfectly good page
+ * of updates and — because the view clears `loading` only on a frame it
+ * accepts — leave the list empty with the spinner stuck on.
+ */
+export function statusTagCountsOf(
+	value: unknown,
+): StatusTagCount[] | undefined {
+	return Array.isArray(value)
+		? value.filter(isStatusTagCountPayload)
+		: undefined;
+}
+
 /** Shallow: checks the fields dedupe, filters, and board sections key on. */
 export function isStatusUpdatePayload(value: unknown): value is StatusUpdate {
 	return (
@@ -82,6 +127,9 @@ export function isStatusViewHostMessage(
 ): message is StatusViewHostMessage {
 	switch (message.type) {
 		case "status_page":
+			// `total` and `tagFacets` are deliberately not checked here: the view
+			// narrows them at the point of use, so a bad count costs its own chip
+			// instead of sinking a whole page of rows.
 			return (
 				typeof message.requestId === "string" &&
 				Array.isArray(message.updates) &&

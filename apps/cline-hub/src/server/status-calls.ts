@@ -1,4 +1,8 @@
-import type { HubCommandName, StatusUpdate } from "@cline/shared";
+import type {
+	HubCommandName,
+	StatusTagCount,
+	StatusUpdate,
+} from "@cline/shared";
 import type { HubContext } from "./state";
 import type { BrowserPeer } from "./types";
 
@@ -12,6 +16,21 @@ import type { BrowserPeer } from "./types";
 
 function asStatusUpdates(value: unknown): StatusUpdate[] {
 	return Array.isArray(value) ? (value as StatusUpdate[]) : [];
+}
+
+/**
+ * Drops anything malformed rather than letting a junk chip render a count.
+ *
+ * Deliberately the same test the view's own guard applies to these entries: if
+ * this pass were looser, an entry it forwarded and the view rejected would sink
+ * the whole `status_page` frame rather than one chip.
+ */
+function asStatusTagCounts(value: readonly unknown[]): StatusTagCount[] {
+	return value.filter((entry): entry is StatusTagCount => {
+		if (typeof entry !== "object" || entry === null) return false;
+		const { tag, count } = entry as StatusTagCount;
+		return typeof tag === "string" && tag !== "" && Number.isFinite(count);
+	});
 }
 
 export async function handleStatusCommand(
@@ -96,6 +115,16 @@ export async function handleStatusCommand(
 					: null,
 			hasMore: reply.payload?.hasMore === true,
 			ftsAvailable: reply.payload?.ftsAvailable === true,
+			// Forwarded only when the hub actually sent them — a query that did
+			// not ask for facets gets none. Omitting beats defaulting to 0: the
+			// view draws chip counts and a result count from these, and a
+			// fabricated zero would read as "nothing matches".
+			...(Number.isFinite(reply.payload?.total)
+				? { total: reply.payload?.total as number }
+				: {}),
+			...(Array.isArray(reply.payload?.tagFacets)
+				? { tagFacets: asStatusTagCounts(reply.payload.tagFacets) }
+				: {}),
 		});
 	} catch (error) {
 		ctx.send(peer, {

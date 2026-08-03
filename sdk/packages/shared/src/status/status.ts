@@ -146,6 +146,16 @@ export const StatusQuerySchema = z
 		subjectPrefix: z.string().min(1).max(512).optional(),
 		state: z.array(StatusStateSchema).nonempty().optional(),
 		priority: z.array(StatusPrioritySchema).nonempty().optional(),
+		/**
+		 * Rows carrying *every* one of these tags.
+		 *
+		 * AND rather than the IN semantics `state` and `priority` use, because a
+		 * tag chip row is a narrowing facet: each chip's count comes from
+		 * `tagFacets` over the set this very query matched, so clicking one has
+		 * to shrink that set to the number the chip promised. OR would grow it
+		 * instead and make every count a lie.
+		 */
+		tags: z.array(z.string().min(1)).nonempty().optional(),
 		sessionId: z.string().min(1).optional(),
 		agentId: z.string().min(1).optional(),
 		workspaceRoot: z.string().min(1).optional(),
@@ -171,6 +181,17 @@ export const StatusQuerySchema = z
 		 * per row, so it is opt-in rather than paid for on every changelog page.
 		 */
 		includeHistoryCount: z.boolean().default(false),
+		/**
+		 * Include `total` and `tagFacets` — counts over the whole set this query
+		 * matches, ignoring `cursor` and `limit`.
+		 *
+		 * Two extra aggregates over the filtered set, so it is opt-in like
+		 * `includeHistoryCount` rather than paid for by every caller. The chip
+		 * row in the Status Hub is the reason it exists: a facet count is a
+		 * promise about what clicking it returns, and a click re-queries the
+		 * table rather than re-filtering the page it is drawn from.
+		 */
+		includeFacets: z.boolean().default(false),
 		limit: z
 			.number()
 			.int()
@@ -182,12 +203,44 @@ export const StatusQuerySchema = z
 export type StatusQuery = z.input<typeof StatusQuerySchema>;
 export type ResolvedStatusQuery = z.infer<typeof StatusQuerySchema>;
 
+/** How many rows in a result set carry one tag. */
+export const StatusTagCountSchema = z
+	.object({
+		tag: z.string().min(1),
+		count: z.number().int().positive(),
+	})
+	.strict();
+export type StatusTagCount = z.infer<typeof StatusTagCountSchema>;
+
+/**
+ * Ceiling on how many tag facets one page carries, mirroring the cap
+ * `summary()` puts on `byAgent`. A store with thousands of distinct tags must
+ * not turn every page into an unbounded response.
+ *
+ * Facets come back by descending count, so truncation drops the rarest chips.
+ * Tags named in `tags` are exempt and always come back: the cap breaks count
+ * ties alphabetically, so a selected tag really can tie with 50 earlier ones
+ * and fall off the end — and its chip would then render at zero next to a
+ * non-zero result count, which is the contradiction facets exist to prevent.
+ */
+export const STATUS_TAG_FACET_LIMIT = 50;
+
 export const StatusPageSchema = z
 	.object({
 		updates: z.array(StatusUpdateSchema),
 		/** Pass back as `cursor` to fetch the next page. Null when exhausted. */
 		nextCursor: z.number().int().nonnegative().nullable(),
 		hasMore: z.boolean(),
+		/**
+		 * Rows matching this query in total, ignoring `cursor` and `limit`.
+		 * Present only when `includeFacets` asked for it.
+		 */
+		total: z.number().int().nonnegative().optional(),
+		/**
+		 * Per-tag counts over that same whole set, descending, capped at
+		 * `STATUS_TAG_FACET_LIMIT`. Present only when `includeFacets` asked.
+		 */
+		tagFacets: z.array(StatusTagCountSchema).optional(),
 	})
 	.strict();
 export type StatusPage = z.infer<typeof StatusPageSchema>;

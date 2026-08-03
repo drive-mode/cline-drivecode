@@ -25,6 +25,7 @@
 import type {
 	StatusState,
 	StatusSummary,
+	StatusTagCount,
 	StatusUpdate,
 	TeamRuntimeState,
 } from "@cline/shared";
@@ -43,11 +44,14 @@ import {
 	hasActiveFilters,
 	matchesStatusFilters,
 	sectionHeadingCount,
+	statusTagFacets,
+	toggleTagFilter,
 } from "./status-filters";
 import { relativeTime, STATE_STYLES, StatusRow } from "./status-row";
 import {
 	isStatusViewHostMessage,
 	STATUS_VIEW_MESSAGE_TYPES,
+	statusTagCountsOf,
 } from "./status-view-messages";
 
 const PAGE_LIMIT = 50;
@@ -144,12 +148,21 @@ export function StatusView(props: {
 	const [mode, setMode] = useState<StatusViewMode>(initialMode);
 	const [updates, setUpdates] = useState<StatusUpdate[]>([]);
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
+	/**
+	 * Server-side counts over the whole set the current query matches, not over
+	 * the page it returned. `resultTotal` stays null until a reply carries one:
+	 * mid-request, and on any reply whose counts did not survive validation, the
+	 * view renders no number at all rather than a confident zero.
+	 */
+	const [tagCounts, setTagCounts] = useState<StatusTagCount[]>([]);
+	const [resultTotal, setResultTotal] = useState<number | null>(null);
 	const [nextCursor, setNextCursor] = useState<number | null>(null);
 	const [hasMore, setHasMore] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [stateFilter, setStateFilter] = useState<StatusState[]>([]);
 	const [agentFilter, setAgentFilter] = useState<string | null>(null);
+	const [tagFilter, setTagFilter] = useState<string[]>([]);
 	const [searchDraft, setSearchDraft] = useState("");
 	const [search, setSearch] = useState("");
 	const [teams, setTeams] = useState<TeamRuntimeState[]>([]);
@@ -170,29 +183,52 @@ export function StatusView(props: {
 	 */
 	const replaceRequestRef = useRef(false);
 
-	const filtersActive = hasActiveFilters({ stateFilter, agentFilter, search });
+	const filtersActive = hasActiveFilters({
+		stateFilter,
+		agentFilter,
+		tagFilter,
+		search,
+	});
 
 	const request = useCallback(
-		(cursor: number | null, replace: boolean) => {
+		(
+			cursor: number | null,
+			replace: boolean,
+			/**
+			 * Refresh in place: keep the rows and counts on screen until the
+			 * reply lands. For a live broadcast, where blanking a list the user
+			 * is reading would be worse than the staleness being corrected.
+			 */
+			quiet = false,
+		) => {
 			const requestId = `status-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 			activeRequestRef.current = requestId;
 			replaceRequestRef.current = replace;
 			setLoading(true);
 			setError(null);
-			if (replace) {
+			if (replace && !quiet) {
 				setUpdates([]);
+				// Counts describe the previous filter set; keeping them while the
+				// new one loads would put the old numbers under the new chips.
+				setTagCounts([]);
+				setResultTotal(null);
 			}
 			postToHost({
 				type: mode === "board" ? "status_board" : "status_query",
 				requestId,
 				limit: PAGE_LIMIT,
+				// Only on a page-one request. Facets ignore the cursor, so every
+				// page of one query carries identical counts — asking again while
+				// paging buys nothing and costs two aggregates over the whole set.
+				...(cursor == null ? { includeFacets: true } : {}),
 				...(cursor != null ? { cursor } : {}),
 				...(stateFilter.length ? { state: stateFilter } : {}),
 				...(agentFilter ? { agentId: agentFilter } : {}),
+				...(tagFilter.length ? { tags: tagFilter } : {}),
 				...(search ? { text: search } : {}),
 			});
 		},
-		[mode, stateFilter, agentFilter, search],
+		[mode, stateFilter, agentFilter, tagFilter, search],
 	);
 
 	const requestSummary = useCallback(() => {
@@ -235,6 +271,14 @@ export function StatusView(props: {
 					const page = message.updates;
 					const replace = replaceRequestRef.current;
 					setUpdates((current) => (replace ? page : [...current, ...page]));
+					// Only page-one replies carry facets; a cursor page leaves the
+					// counts alone rather than blanking them, since they describe
+					// the whole set and have not changed.
+					const facets = statusTagCountsOf(message.tagFacets);
+					if (facets) setTagCounts(facets);
+					if (Number.isFinite(message.total)) {
+						setResultTotal(message.total as number);
+					}
 					setNextCursor(message.nextCursor ?? null);
 					setHasMore(message.hasMore === true);
 					setLoading(false);
@@ -268,6 +312,7 @@ export function StatusView(props: {
 					const matches = matchesStatusFilters(live, {
 						stateFilter,
 						agentFilter,
+						tagFilter,
 						search,
 					});
 					setUpdates((current) => {
@@ -283,10 +328,28 @@ export function StatusView(props: {
 						return [live, ...current];
 					});
 					requestSummary();
+					// The prepend above changed the rows on screen, which leaves
+					// the chip counts and the result count describing a set that no
+					// longer matches the list under them. They cannot be patched
+					// locally — in board mode the live row supersedes a subject that
+					// may sit outside the loaded page, so the client cannot tell
+					// whether the set grew or only changed shape — so re-ask.
+					// Quietly, and only when the view actually changed: blanking a
+					// list someone is reading would be worse than the staleness.
+					if (matches || mode === "board") request(null, true, true);
 				}
 			},
 		});
-	}, [mode, requestSummary, requestTasks, stateFilter, agentFilter, search]);
+	}, [
+		mode,
+		request,
+		requestSummary,
+		requestTasks,
+		stateFilter,
+		agentFilter,
+		tagFilter,
+		search,
+	]);
 
 	const toggleState = useCallback((value: StatusState) => {
 		setStateFilter((current) =>
@@ -295,6 +358,21 @@ export function StatusView(props: {
 				: [...current, value],
 		);
 	}, []);
+
+	const toggleTag = useCallback((value: string) => {
+		setTagFilter((current) => toggleTagFilter(current, value));
+	}, []);
+
+	/**
+	 * Chips carry the server's counts over the whole matching set, so a chip's
+	 * number is exactly what clicking it returns. The counts already reflect
+	 * `tagFilter` — the query they were computed for includes it — which is what
+	 * makes a second chip narrow rather than reset.
+	 */
+	const tagFacets = useMemo(
+		() => statusTagFacets(tagCounts, tagFilter),
+		[tagCounts, tagFilter],
+	);
 
 	const sections = useMemo(() => {
 		if (mode !== "board") return null;
@@ -447,12 +525,13 @@ export function StatusView(props: {
 					</div>
 				) : null}
 
-				{stateFilter.length > 0 || agentFilter || search ? (
+				{filtersActive ? (
 					<Button
 						className="h-7 px-2 text-xs"
 						onClick={() => {
 							setStateFilter([]);
 							setAgentFilter(null);
+							setTagFilter([]);
 							setSearch("");
 							setSearchDraft("");
 						}}
@@ -464,6 +543,58 @@ export function StatusView(props: {
 					</Button>
 				) : null}
 			</div>
+
+			{mode !== "dependency-map" && tagFacets.length > 0 ? (
+				<div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+					<div className="flex gap-1.5 overflow-x-auto pb-1">
+						{tagFacets.map((facet) => (
+							<Button
+								aria-pressed={facet.selected}
+								className="h-7 shrink-0 px-2 text-xs"
+								key={facet.tag}
+								onClick={() => toggleTag(facet.tag)}
+								size="sm"
+								type="button"
+								variant={facet.selected ? "default" : "outline"}
+							>
+								<span className="truncate">{facet.tag}</span>
+								{/* No number until the server has sent one. Mid-reload
+								    the only chips left are the selected ones, seeded at
+								    zero to keep them clickable — and a chip reading 0
+								    above rows that are about to arrive is a lie. */}
+								{resultTotal != null ? (
+									<span className="ml-1 rounded bg-background/30 px-1 tabular-nums opacity-70">
+										{facet.count}
+									</span>
+								) : null}
+							</Button>
+						))}
+					</div>
+					<div className="flex min-h-7 shrink-0 items-center gap-2 text-xs text-muted-foreground">
+						{resultTotal != null ? (
+							<>
+								{/* The same server count the chips are drawn from, so
+								    clicking a chip lands on the number it promised. */}
+								<span className="font-medium text-foreground tabular-nums">
+									{resultTotal}
+								</span>
+								<span>{resultTotal === 1 ? "result" : "results"}</span>
+							</>
+						) : null}
+						{tagFilter.length > 0 ? (
+							<Button
+								className="h-7 px-2 text-xs"
+								onClick={() => setTagFilter([])}
+								size="sm"
+								type="button"
+								variant="ghost"
+							>
+								Clear filters
+							</Button>
+						) : null}
+					</div>
+				</div>
+			) : null}
 
 			{activeAgent ? (
 				<p className="mb-3 text-xs text-muted-foreground">
@@ -516,7 +647,12 @@ export function StatusView(props: {
 							<div className="rounded-lg border bg-card">
 								<ul>
 									{section.rows.map((update) => (
-										<StatusRow key={update.updateId} update={update} />
+										<StatusRow
+											activeTags={tagFilter}
+											key={update.updateId}
+											onTagClick={toggleTag}
+											update={update}
+										/>
 									))}
 								</ul>
 							</div>
@@ -527,7 +663,13 @@ export function StatusView(props: {
 				<div className="rounded-lg border bg-card">
 					<ul>
 						{updates.map((update) => (
-							<StatusRow key={update.updateId} showTransition update={update} />
+							<StatusRow
+								activeTags={tagFilter}
+								key={update.updateId}
+								onTagClick={toggleTag}
+								showTransition
+								update={update}
+							/>
 						))}
 					</ul>
 				</div>

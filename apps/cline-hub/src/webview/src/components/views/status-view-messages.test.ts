@@ -3,6 +3,7 @@ import {
 	isStatusSummaryPayload,
 	isStatusUpdatePayload,
 	isStatusViewHostMessage,
+	statusTagCountsOf,
 } from "./status-view-messages";
 
 const validSummary = {
@@ -71,6 +72,62 @@ describe("isStatusViewHostMessage", () => {
 				nextCursor: null,
 			}),
 		).toBe(true);
+	});
+
+	it("accepts a status_page carrying facet counts", () => {
+		expect(
+			isStatusViewHostMessage({
+				type: "status_page",
+				requestId: "req-1",
+				updates: [validUpdate],
+				nextCursor: null,
+				hasMore: false,
+				total: 51,
+				tagFacets: [
+					{ tag: "fix", count: 51 },
+					{ tag: "feat", count: 36 },
+				],
+			}),
+		).toBe(true);
+	});
+
+	it("still accepts a status_page whose facet counts are junk", () => {
+		// The chips are decoration beside the rows. Rejecting the frame would
+		// throw away a good page of updates — and because the view only clears
+		// `loading` on a frame it accepts, leave the list empty and spinning.
+		expect(
+			isStatusViewHostMessage({
+				type: "status_page",
+				requestId: "req-1",
+				updates: [validUpdate],
+				tagFacets: [{ tag: "fix" }, "nonsense"],
+				total: "51",
+			}),
+		).toBe(true);
+	});
+
+	it("drops only the malformed facet counts", () => {
+		expect(
+			statusTagCountsOf([
+				{ tag: "fix", count: 51 },
+				{ tag: "fix" },
+				{ tag: "", count: 3 },
+				{ tag: "feat", count: Number.NaN },
+				"nonsense",
+				null,
+				{ tag: "feat", count: 36 },
+			]),
+		).toEqual([
+			{ tag: "fix", count: 51 },
+			{ tag: "feat", count: 36 },
+		]);
+	});
+
+	it("reports absent facet counts as absent, not as an empty chip row", () => {
+		// `undefined` leaves the previous counts standing; `[]` would blank them.
+		expect(statusTagCountsOf(undefined)).toBeUndefined();
+		expect(statusTagCountsOf("nope")).toBeUndefined();
+		expect(statusTagCountsOf([])).toEqual([]);
 	});
 
 	it("rejects status_page with a missing requestId or bad rows", () => {

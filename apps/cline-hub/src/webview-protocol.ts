@@ -513,11 +513,15 @@ export type WebviewInboundMessage =
 				"queued" | "running" | "blocked" | "done" | "failed" | "cancelled"
 			>;
 			priority?: Array<"low" | "normal" | "high" | "critical">;
+			/** Rows carrying every one of these tags. */
+			tags?: string[];
 			sessionId?: string;
 			agentId?: string;
 			text?: string;
 			cursor?: number;
 			limit?: number;
+			/** Ask for `total` and `tagFacets` over the whole matching set. */
+			includeFacets?: boolean;
 	  }
 	| {
 			/** Current status per subject — the "where is everything" board. */
@@ -526,11 +530,15 @@ export type WebviewInboundMessage =
 			state?: Array<
 				"queued" | "running" | "blocked" | "done" | "failed" | "cancelled"
 			>;
+			/** Rows carrying every one of these tags. */
+			tags?: string[];
 			sessionId?: string;
 			agentId?: string;
 			text?: string;
 			cursor?: number;
 			limit?: number;
+			/** Ask for `total` and `tagFacets` over the whole matching set. */
+			includeFacets?: boolean;
 	  }
 	| { type: "status_subjects"; requestId: string; limit?: number }
 	| { type: "status_summary"; requestId: string }
@@ -813,6 +821,14 @@ export type WebviewOutboundMessage =
 			nextCursor: number | null;
 			hasMore: boolean;
 			ftsAvailable: boolean;
+			/**
+			 * Rows matching the query in total, and per-tag counts over that same
+			 * set — both ignoring `cursor` and `limit`, so a chip's number is what
+			 * clicking it returns rather than what this page happened to hold.
+			 * Present only when the request set `includeFacets`.
+			 */
+			total?: number;
+			tagFacets?: import("@cline/shared").StatusTagCount[];
 	  }
 	| { type: "status_subjects_result"; requestId: string; subjects: string[] }
 	| {

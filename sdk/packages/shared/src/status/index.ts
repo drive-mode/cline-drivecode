@@ -1,4 +1,12 @@
 export {
+	buildDependencyMap,
+	type DependencyEdge,
+	type DependencyMap,
+	type DependencyMapAnnotations,
+	type DependencyNode,
+	type DependencyPlan,
+} from "./dependency-map";
+export {
 	isTerminalStatusState,
 	parseStatusQuery,
 	parseStatusUpdate,
@@ -6,6 +14,7 @@ export {
 	STATUS_PAGE_DEFAULT_LIMIT,
 	STATUS_PAGE_MAX_LIMIT,
 	STATUS_SCHEMA_VERSION,
+	STATUS_TAG_FACET_LIMIT,
 	type StatusPage,
 	StatusPageSchema,
 	type StatusPriority,
@@ -21,16 +30,10 @@ export {
 	StatusSubjectSchema,
 	type StatusSummary,
 	StatusSummarySchema,
+	type StatusTagCount,
+	StatusTagCountSchema,
 	type StatusUpdate,
 	StatusUpdateSchema,
 	shouldPushToUser,
 	TERMINAL_STATUS_STATES,
 } from "./status";
-export {
-	buildDependencyMap,
-	type DependencyEdge,
-	type DependencyMap,
-	type DependencyMapAnnotations,
-	type DependencyNode,
-	type DependencyPlan,
-} from "./dependency-map";

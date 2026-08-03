@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
 	type ResolvedStatusQuery,
 	STATUS_SCHEMA_VERSION,
+	STATUS_TAG_FACET_LIMIT,
 	type StatusPage,
 	type StatusPriority,
 	type StatusPrunePayload,
@@ -9,6 +10,7 @@ import {
 	StatusPublishInputSchema,
 	type StatusState,
 	type StatusSummary,
+	type StatusTagCount,
 	type StatusUpdate,
 } from "@cline/shared";
 import {
@@ -251,10 +253,17 @@ export class SqliteStatusStore {
 	}
 
 	/**
-	 * Keyset-paginated query. One extra row is fetched to decide `hasMore`
-	 * without a second COUNT over the whole table.
+	 * Everything in a query that selects rows, with the keyset cursor left out.
+	 *
+	 * Split out because facets have to describe the whole set the filters match,
+	 * not the page the cursor lands on — a count that shifted as you paged would
+	 * be describing "the rest of the log from here", which is not what a chip
+	 * above the list claims.
 	 */
-	query(query: ResolvedStatusQuery): StatusPage {
+	private filterClauses(query: ResolvedStatusQuery): {
+		where: string[];
+		params: unknown[];
+	} {
 		const where: string[] = [];
 		const params: unknown[] = [];
 
@@ -276,6 +285,18 @@ export class SqliteStatusStore {
 		if (query.priority?.length) {
 			where.push(`s.priority IN (${query.priority.map(() => "?").join(", ")})`);
 			params.push(...query.priority);
+		}
+		if (query.tags?.length) {
+			// One EXISTS per tag, so several tags narrow (AND) rather than widen.
+			// `tags_json` is nullable and predates any writer that always fills it,
+			// so a legacy NULL has to read as "no tags" instead of raising
+			// "malformed JSON" out of json_each and failing the whole query.
+			for (const tag of query.tags) {
+				where.push(
+					`EXISTS (SELECT 1 FROM json_each(IFNULL(s.tags_json, '[]')) WHERE json_each.value = ?)`,
+				);
+				params.push(tag);
+			}
 		}
 		if (query.sessionId) {
 			where.push("s.session_id = ?");
@@ -305,6 +326,18 @@ export class SqliteStatusStore {
 				params.push(pattern, pattern);
 			}
 		}
+
+		return { where, params };
+	}
+
+	/**
+	 * Keyset-paginated query. One extra row is fetched to decide `hasMore`
+	 * without a second COUNT over the whole table.
+	 */
+	query(query: ResolvedStatusQuery): StatusPage {
+		const { where, params } = this.filterClauses(query);
+		const filterWhere = [...where];
+		const filterParams = [...params];
 
 		const newer = query.direction === "newer";
 		const byAttention = query.orderBy === "attention";
@@ -365,7 +398,70 @@ export class SqliteStatusStore {
 			updates,
 			hasMore,
 			nextCursor: hasMore ? (updates.at(-1)?.seq ?? null) : null,
+			...(query.includeFacets
+				? this.facets(filterWhere, filterParams, query.tags ?? [])
+				: {}),
 		};
+	}
+
+	/**
+	 * `total` and `tagFacets` over the rows `filterWhere` selects.
+	 *
+	 * The cursor is deliberately absent from these clauses: both numbers are
+	 * rendered next to the chip row as claims about the result set, and a click
+	 * re-queries the table from the top rather than continuing the page.
+	 */
+	private facets(
+		filterWhere: readonly string[],
+		filterParams: readonly unknown[],
+		selected: readonly string[],
+	): { total: number; tagFacets: StatusTagCount[] } {
+		const whereSql = filterWhere.length
+			? `WHERE ${filterWhere.join(" AND ")}`
+			: "";
+
+		const totalRow = this.db
+			.prepare(`SELECT COUNT(*) AS n FROM status_updates s ${whereSql};`)
+			.get(...filterParams);
+		const total = Number(totalRow?.n ?? 0);
+
+		// Aliased `je` so the correlated `json_each` inside each tag EXISTS
+		// clause keeps resolving to its own subquery table rather than to this
+		// one. COUNT(DISTINCT) because a row whose `tags_json` repeats a tag
+		// must still count once — the chip promises rows, not tag occurrences.
+		// `json_valid` rather than `IFNULL`: this now runs on every page, not
+		// only tag-filtered ones, so a legacy row holding '' or any non-JSON
+		// text would otherwise raise and take each page load down with it.
+		const tagFacets = this.db
+			.prepare(
+				`SELECT je.value AS tag, COUNT(DISTINCT s.update_id) AS n
+				 FROM status_updates s,
+					json_each(CASE WHEN json_valid(s.tags_json)
+						THEN s.tags_json ELSE '[]' END) je
+				 ${whereSql}
+				 GROUP BY je.value
+				 ORDER BY n DESC, tag ASC
+				 LIMIT ?;`,
+			)
+			.all(...filterParams, STATUS_TAG_FACET_LIMIT)
+			.map((row) => ({ tag: asString(row.tag), count: Number(row.n ?? 0) }))
+			.filter((facet) => facet.tag !== "" && facet.count > 0);
+
+		// A selected tag must always come back, whatever the cap did. Every row
+		// the query matched carries every selected tag — that is what `tags`
+		// filters on — so its count is exactly `total`. Restoring it by that
+		// identity rather than trusting sort position: the cap orders by count
+		// and breaks ties on `tag ASC`, so a selected tag tying with 50
+		// alphabetically earlier ones really can fall off the end, and the view
+		// would then draw its chip at zero beside a non-zero result count.
+		if (total > 0) {
+			const present = new Set(tagFacets.map((facet) => facet.tag));
+			for (const tag of selected) {
+				if (!present.has(tag)) tagFacets.push({ tag, count: total });
+			}
+		}
+
+		return { total, tagFacets };
 	}
 
 	/**

@@ -61,13 +61,58 @@ function workspaceLabel(root?: string): string | undefined {
 	return parts?.length ? parts[parts.length - 1] : undefined;
 }
 
+/**
+ * One tag on a row. Clickable only when the surrounding view has a tag filter
+ * to drive — otherwise it stays a plain badge rather than a button that does
+ * nothing when pressed.
+ */
+function TagBadge({
+	active,
+	onClick,
+	tag,
+}: {
+	active: boolean;
+	onClick?: (tag: string) => void;
+	tag: string;
+}) {
+	const badge = (
+		<Badge
+			className={cn("text-[10px]", active && "border-primary text-primary")}
+			variant="outline"
+		>
+			{tag}
+		</Badge>
+	);
+	if (!onClick) return badge;
+	return (
+		<button
+			aria-pressed={active}
+			className="rounded-full transition-opacity hover:opacity-80"
+			onClick={() => onClick(tag)}
+			title={active ? `Stop filtering by ${tag}` : `Filter by ${tag}`}
+			type="button"
+		>
+			{badge}
+		</button>
+	);
+}
+
 export function StatusRow({
 	update,
 	showTransition,
+	activeTags,
+	onTagClick,
 }: {
 	update: StatusUpdate;
 	/** Changelog mode reads better as `queued -> running` than a bare state. */
 	showTransition?: boolean;
+	/** Tags currently filtering the view, so this row can show which are on. */
+	activeTags?: readonly string[];
+	/**
+	 * Toggle a tag filter from the row. Omitted where there is no filter to
+	 * drive, which keeps the badges plain text rather than dead buttons.
+	 */
+	onTagClick?: (tag: string) => void;
 }) {
 	const [expanded, setExpanded] = useState(false);
 	const who = update.agentName ?? update.agentId;
@@ -155,9 +200,12 @@ export function StatusRow({
 							<span>· {Math.round(update.progress * 100)}%</span>
 						) : null}
 						{update.tags.map((tag) => (
-							<Badge className="text-[10px]" key={tag} variant="outline">
-								{tag}
-							</Badge>
+							<TagBadge
+								active={activeTags?.includes(tag) === true}
+								key={tag}
+								onClick={onTagClick}
+								tag={tag}
+							/>
 						))}
 					</div>
 
