@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import {
+	ensureMicPermission,
+	noteMicPermissionFailure,
+	noteMicPermissionGranted,
+} from "./micPermissionGate";
+import {
 	describeSpeechInputError,
+	MIC_PERMISSION_DENIED_MESSAGE,
 	readSpeechInputCapabilities,
 	resolveSpeechInputMode,
 	type SpeechInputMode,
@@ -151,6 +157,10 @@ export const SpeechInput = ({
 		speechRecognition.lang = lang;
 
 		const handleStart = () => {
+			// The service only listens once the browser has handed over the mic,
+			// so this is the recognition path's equivalent of a resolved
+			// `getUserMedia` — it clears a stale refusal without a reload.
+			noteMicPermissionGranted();
 			setIsListening(true);
 		};
 
@@ -180,9 +190,14 @@ export const SpeechInput = ({
 
 		const handleError = (event: Event) => {
 			setIsListening(false);
+			const code = (event as SpeechRecognitionErrorEvent).error;
+			// Web Speech asks for the same microphone permission `getUserMedia`
+			// does, so a refusal here has to reach the shared gate — otherwise
+			// the next press re-raises the host surface's blocked-mic banner.
+			noteMicPermissionFailure({ code });
 			const message = describeSpeechInputError({
 				mode: "speech-recognition",
-				code: (event as SpeechRecognitionErrorEvent).error,
+				code,
 			});
 			if (message) {
 				onCaptureErrorRef.current?.(message);
@@ -234,12 +249,29 @@ export const SpeechInput = ({
 		}
 
 		abortedRef.current = false;
+		/**
+		 * Set the moment the mic is actually ours. Everything after it —
+		 * `new MediaRecorder`, `start()` — can throw `SecurityError` for reasons
+		 * that are not a refusal, and recording one as a denial would strand a
+		 * mic that demonstrably works.
+		 */
+		let captured = false;
 		try {
+			// Asking again after a refusal re-raises the host surface's own blocked-
+			// mic banner, so a remembered denial is answered here. The button stays
+			// live: the copy still points at the keyboard, and Drive's retry
+			// affordance re-arms this without a reload.
+			if ((await ensureMicPermission()) === "denied") {
+				onCaptureErrorRef.current?.(MIC_PERMISSION_DENIED_MESSAGE);
+				return;
+			}
 			const preferredDeviceId = deviceIdRef.current;
 			const audio: MediaTrackConstraints | boolean = preferredDeviceId
 				? { deviceId: { ideal: preferredDeviceId } }
 				: true;
 			const stream = await navigator.mediaDevices.getUserMedia({ audio });
+			captured = true;
+			noteMicPermissionGranted();
 			// Teardown can land while the permission prompt is open; never keep a
 			// stream that was granted after capture was revoked.
 			if (abortedRef.current) {
@@ -312,6 +344,9 @@ export const SpeechInput = ({
 			setIsListening(true);
 		} catch (error) {
 			setIsListening(false);
+			if (!captured) {
+				noteMicPermissionFailure({ error });
+			}
 			const message = describeSpeechInputError({
 				mode: "media-recorder",
 				error,
@@ -330,24 +365,44 @@ export const SpeechInput = ({
 		setIsListening(false);
 	}, []);
 
+	// Start Web Speech recognition
+	const startRecognition = useCallback(async () => {
+		// `SpeechRecognition.start()` is a microphone request: the browser gates
+		// it on the same permission as `getUserMedia`, so a blocked surface
+		// re-raises its banner on every press. A remembered refusal is answered
+		// here instead — the button stays live, the copy still points at the
+		// keyboard, and Drive's retry affordance re-arms it without a reload.
+		if ((await ensureMicPermission()) === "denied") {
+			onCaptureErrorRef.current?.(MIC_PERMISSION_DENIED_MESSAGE);
+			return;
+		}
+		// Teardown can land while the gate is being consulted; the effect nulls
+		// this on unmount, so re-read it rather than starting a dead session.
+		const recognition = recognitionRef.current;
+		if (!recognition) {
+			return;
+		}
+		try {
+			recognition.start();
+		} catch (error) {
+			// start() throws InvalidStateError when a session is already open.
+			const message = describeSpeechInputError({
+				mode: "speech-recognition",
+				error,
+			});
+			if (message) {
+				onCaptureErrorRef.current?.(message);
+			}
+		}
+	}, []);
+
 	const toggleListening = useCallback(() => {
 		if (mode === "speech-recognition" && recognitionRef.current) {
 			if (isListening) {
 				recognitionRef.current.stop();
 				return;
 			}
-			try {
-				recognitionRef.current.start();
-			} catch (error) {
-				// start() throws InvalidStateError when a session is already open.
-				const message = describeSpeechInputError({
-					mode: "speech-recognition",
-					error,
-				});
-				if (message) {
-					onCaptureErrorRef.current?.(message);
-				}
-			}
+			void startRecognition();
 		} else if (mode === "media-recorder") {
 			if (isListening) {
 				stopMediaRecorder();
@@ -355,7 +410,13 @@ export const SpeechInput = ({
 				void startMediaRecorder();
 			}
 		}
-	}, [mode, isListening, startMediaRecorder, stopMediaRecorder]);
+	}, [
+		mode,
+		isListening,
+		startRecognition,
+		startMediaRecorder,
+		stopMediaRecorder,
+	]);
 
 	// Determine if button should be disabled. `disabled` is pulled out of the
 	// spread so a caller passing `disabled={false}` cannot re-enable a button

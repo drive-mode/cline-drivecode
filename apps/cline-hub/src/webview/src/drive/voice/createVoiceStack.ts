@@ -9,6 +9,12 @@ import {
 	topologyCacheKey,
 	ttsBackendsEqual,
 } from "@cline/shared";
+import {
+	ensureMicPermission,
+	noteMicPermissionFailure,
+	noteMicPermissionGranted,
+} from "../../components/ai-elements/micPermissionGate";
+import { MIC_PERMISSION_DENIED_MESSAGE } from "../../components/ai-elements/speechInputSupport";
 import { applyAudioOutputSinkId } from "./driveHardwarePrefs";
 import { LocalSttError, transcribeAudioBlob } from "./transcribeAudioBlob";
 
@@ -128,6 +134,12 @@ function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 				let stopped = false;
 				let mediaRecorder: MediaRecorder | null = null;
 				let stream: MediaStream | null = null;
+				/**
+				 * Set the moment the mic is actually ours. `new MediaRecorder` and
+				 * `start()` below can still throw `SecurityError` for reasons that
+				 * are not a refusal, and remembering one would strand a working mic.
+				 */
+				let captured = false;
 				const chunks: BlobPart[] = [];
 				void (async () => {
 					try {
@@ -142,7 +154,18 @@ function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 							});
 							return;
 						}
+						// A remembered denial is answered here: the host surface re-raises
+						// its own blocked-mic banner on every request it can see.
+						if ((await ensureMicPermission()) === "denied") {
+							handlers.onError({
+								code: "stt_permission",
+								message: MIC_PERMISSION_DENIED_MESSAGE,
+							});
+							return;
+						}
 						stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+						captured = true;
+						noteMicPermissionGranted();
 						if (stopped) {
 							for (const track of stream.getTracks()) {
 								track.stop();
@@ -191,10 +214,12 @@ function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 						};
 						mediaRecorder.start();
 					} catch (error) {
+						const denied = !captured && noteMicPermissionFailure({ error });
 						handlers.onError({
 							code: "stt_permission",
-							message:
-								error instanceof Error
+							message: denied
+								? MIC_PERMISSION_DENIED_MESSAGE
+								: error instanceof Error
 									? error.message
 									: "Could not start local STT capture.",
 						});

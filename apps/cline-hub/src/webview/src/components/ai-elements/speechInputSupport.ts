@@ -71,6 +71,34 @@ export function describeSpeechInputUnavailable(input: {
 const BENIGN_CODES = new Set(["no-speech", "aborted", "AbortError"]);
 
 /**
+ * Denial-class codes across both capture paths: `SpeechRecognitionErrorEvent`
+ * strings and `getUserMedia` rejection names. One list, because the copy that
+ * explains a denial and the gate that remembers one must agree on what counts
+ * as a denial — a second list would drift.
+ */
+const DENIAL_CODES = new Set([
+	"not-allowed",
+	"service-not-allowed",
+	"NotAllowedError",
+	"SecurityError",
+]);
+
+/** The one denial message, shared with callers that block before asking. */
+export const MIC_PERMISSION_DENIED_MESSAGE =
+	"Microphone permission denied. Allow mic access for this page, or type your message instead.";
+
+/** True when a capture failure is the user (or policy) refusing the mic. */
+export function isSpeechInputDenial(input: {
+	/** `SpeechRecognitionErrorEvent.error` */
+	code?: string;
+	/** `getUserMedia` / `MediaRecorder` rejection */
+	error?: unknown;
+}): boolean {
+	const code = input.code ?? errorName(input.error);
+	return code !== undefined && DENIAL_CODES.has(code);
+}
+
+/**
  * Actionable copy for a capture failure. Null when the failure is routine.
  * Every branch keeps the keyboard escape hatch visible: a denied mic must
  * leave the composer usable, not dead.
@@ -86,12 +114,10 @@ export function describeSpeechInputError(input: {
 	if (code && BENIGN_CODES.has(code)) {
 		return null;
 	}
+	if (isSpeechInputDenial({ code })) {
+		return MIC_PERMISSION_DENIED_MESSAGE;
+	}
 	switch (code) {
-		case "not-allowed":
-		case "service-not-allowed":
-		case "NotAllowedError":
-		case "SecurityError":
-			return "Microphone permission denied. Allow mic access for this page, or type your message instead.";
 		case "audio-capture":
 		case "NotFoundError":
 		case "DevicesNotFoundError":

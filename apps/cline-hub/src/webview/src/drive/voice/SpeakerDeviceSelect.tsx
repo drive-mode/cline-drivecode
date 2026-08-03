@@ -12,14 +12,16 @@ export function SpeakerDeviceSelect({
 	value: string | undefined;
 	onChange: (speakerDeviceId: string | undefined) => void;
 }) {
-	const { devices, loadDevices, hasPermission, loading } =
+	const { devices, loadDevices, hasPermission, loading, micDenied } =
 		useAudioDevices("audiooutput");
 
 	useEffect(() => {
-		if (!hasPermission && !loading) {
+		// Nothing gates this on a popover being open, so a blocked mic would ask
+		// on every loading flip for as long as the panel is mounted.
+		if (!hasPermission && !loading && !micDenied) {
 			void loadDevices();
 		}
-	}, [hasPermission, loading, loadDevices]);
+	}, [hasPermission, loading, loadDevices, micDenied]);
 
 	return (
 		<select

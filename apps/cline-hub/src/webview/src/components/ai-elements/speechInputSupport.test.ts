@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	describeSpeechInputError,
 	describeSpeechInputUnavailable,
+	isSpeechInputDenial,
+	MIC_PERMISSION_DENIED_MESSAGE,
 	readSpeechInputCapabilities,
 	resolveSpeechInputMode,
 	type SpeechInputCapabilities,
@@ -155,6 +157,18 @@ describe("describeSpeechInputError", () => {
 		);
 	});
 
+	it("uses the one denial message the permission gate also shows", () => {
+		expect(
+			describeSpeechInputError({
+				mode: "media-recorder",
+				error: { name: "NotAllowedError" },
+			}),
+		).toBe(MIC_PERMISSION_DENIED_MESSAGE);
+		expect(MIC_PERMISSION_DENIED_MESSAGE).toContain(
+			"type your message instead",
+		);
+	});
+
 	it("always leaves the keyboard escape hatch in the copy", () => {
 		for (const code of [
 			"not-allowed",
@@ -166,5 +180,35 @@ describe("describeSpeechInputError", () => {
 				describeSpeechInputError({ mode: "speech-recognition", code }),
 			).toContain("type your message instead");
 		}
+	});
+});
+
+describe("isSpeechInputDenial", () => {
+	it("recognizes a refusal from either capture path", () => {
+		// The list the sticky permission gate keys off — it has to stay the same
+		// list describeSpeechInputError explains, or the two will disagree about
+		// what a denial is.
+		expect(isSpeechInputDenial({ code: "not-allowed" })).toBe(true);
+		expect(isSpeechInputDenial({ code: "service-not-allowed" })).toBe(true);
+		expect(isSpeechInputDenial({ error: { name: "NotAllowedError" } })).toBe(
+			true,
+		);
+		expect(isSpeechInputDenial({ error: { name: "SecurityError" } })).toBe(
+			true,
+		);
+	});
+
+	it("leaves recoverable failures alone", () => {
+		for (const name of [
+			"NotFoundError",
+			"NotReadableError",
+			"AbortError",
+			"TypeError",
+		]) {
+			expect(isSpeechInputDenial({ error: { name } })).toBe(false);
+		}
+		expect(isSpeechInputDenial({ code: "no-speech" })).toBe(false);
+		expect(isSpeechInputDenial({})).toBe(false);
+		expect(isSpeechInputDenial({ error: "not-allowed" })).toBe(false);
 	});
 });

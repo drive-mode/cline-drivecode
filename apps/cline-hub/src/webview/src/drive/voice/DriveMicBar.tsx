@@ -1,5 +1,10 @@
 import type { SttBackend } from "@cline/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+	micPermissionState,
+	retryMicPermission,
+	subscribeMicPermission,
+} from "@/components/ai-elements/micPermissionGate";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
 import {
 	describeSpeechInputUnavailable,
@@ -55,6 +60,18 @@ export function DriveMicBar({
 			setCaptureError(null);
 		}
 	}, [muted]);
+
+	/**
+	 * The retry affordance for a remembered denial. Subscribed, so a permission
+	 * granted in browser settings clears the offer on its own — the button is
+	 * the escape hatch for browsers whose permission state cannot be read.
+	 */
+	const micDenied =
+		useSyncExternalStore(
+			subscribeMicPermission,
+			micPermissionState,
+			micPermissionState,
+		) === "denied";
 
 	const capabilities = readSpeechInputCapabilities();
 	const resolvedMode = resolveSpeechInputMode({
@@ -142,6 +159,25 @@ export function DriveMicBar({
 					>
 						{captureError}
 					</p>
+				) : null}
+				{/*
+				 * Shown while muted too. Mute is the join default, and the Drive
+				 * settings device pickers can record the denial before the user
+				 * ever unmutes — gating this on `!muted` hid the only escape hatch
+				 * in exactly the state most users are in.
+				 */}
+				{micDenied ? (
+					<button
+						className="mt-1 rounded-md border px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+						onClick={() => {
+							retryMicPermission();
+							setCaptureError(null);
+						}}
+						title="Ask for the microphone again after allowing it in your browser"
+						type="button"
+					>
+						Retry mic access
+					</button>
 				) : null}
 			</div>
 		</div>
