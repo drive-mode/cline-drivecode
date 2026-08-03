@@ -46,6 +46,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [session-satisfaction-moments/](initiatives/session-satisfaction-moments/) | Product moments + [visual plan](initiatives/session-satisfaction-moments/visual-plan.md) / [canvas](../../design/canvases/session-satisfaction-moments-canvas.html) |
 | [drive-product-demo/](initiatives/drive-product-demo/) | Full-system product demo scene-player ([canvas](../../design/canvases/drive-product-demo.html)) |
 | [driveplan-agent-runtime/](initiatives/driveplan-agent-runtime/) | ADR-0018 DriveRun / lease / receipt + Kanban projection stub |
+| [hub-drive-ia-analytics/](initiatives/hub-drive-ia-analytics/) | Drive owns call+history; Analytics page; Status stays ops |
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
@@ -109,7 +110,8 @@ MVP is phases 0 through 3. Future is phases 4 and 5.
 | [DRV-CLEAN-DRAIN](features/DRV-CLEAN-DRAIN.md) | Clean-drain ritual → next-goal invite | 2+ | Landed (main #80) |
 | [DRV-RETURN-LOOP](features/DRV-RETURN-LOOP.md) | Leave/End handoff + while-away return | 2+ | Landed (main #80) |
 | [DRV-PLAN-REENTRY](features/DRV-PLAN-REENTRY.md) | Drive tab unfinished-plan re-entry | 2+ | Landed (main #80) |
-| [DRV-STATUS-SESSIONS](features/DRV-STATUS-SESSIONS.md) | Status Hub session accomplishment lens | 2+ | Landed (main #80) |
+| [DRV-STATUS-SESSIONS](features/DRV-STATUS-SESSIONS.md) | Session accomplishment lens (migrating to Analytics) | 2+ | Landed (main #80); home → Analytics |
+| [DRV-ANALYTICS](features/DRV-ANALYTICS.md) | Hub Analytics (rollups + digest) | 2+ | Landed |
 | [DRV-SHIPPED-DIGEST](features/DRV-SHIPPED-DIGEST.md) | Opt-in “what Drive shipped” digest | 2+ | Landed (main #80) |
 | [DRV-RECRUIT-STALL](features/DRV-RECRUIT-STALL.md) | Recruit on stuck task | 2+ | Landed (stall path; general Add open) |
 | [DRV-LEAVE-END](features/DRV-LEAVE-END.md) | Leave the call, end the session | 1 | MVP |

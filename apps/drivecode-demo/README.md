@@ -36,8 +36,10 @@ const hub = readDrivecodeDemoHubBootstrap(window.location.search);
 | CLI | `CLINE_DEMO_OPEN_STATUS=1` | Auto-open Status dialog |
 | CLI | `CLINE_DEMO_DRIVE=1` | Start with Drive active |
 | Hub | `?demoPlans=1` | Use demo teams fixture |
+| Hub | `?demoSessions=1` | Use demo SessionRollup fixture for Analytics |
 | Hub | `?demoShareScreen=1` | Mount simulated share-screen Spotlight demo on `/drive` |
 | Hub | `?statusMode=board\|changelog\|dependency-map` | Initial Status mode |
+| Hub | `?analytics=1` or legacy `?statusMode=sessions` | Open Analytics on boot |
 
 `load()` on the demo adapter never reads env or query — only the bootstrap
 helpers do.

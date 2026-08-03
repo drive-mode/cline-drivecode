@@ -95,7 +95,7 @@ const ROOM_STATE_COPY: Record<
 		badge: "On the call",
 		title: "Pairing room",
 		description:
-			"You are on the call. Return to Chat to watch the agent and steer.",
+			"You are on the call. Return to Drive to watch the agent and steer.",
 	},
 };
 
@@ -271,9 +271,11 @@ function RoomPreviewCard({
 
 export function DriveView({
 	onOpenCall,
+	onOpenHistory,
 	onOpenStatus,
 }: {
 	onOpenCall: (request: DriveOpenCallRequest) => void;
+	onOpenHistory: () => void;
 	onOpenStatus: () => void;
 }) {
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
@@ -368,6 +370,16 @@ export function DriveView({
 	return (
 		<PageFrame>
 			<PageHeader
+				actions={
+					<Button
+						onClick={onOpenHistory}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						Session history
+					</Button>
+				}
 				description="Stay on a call with an agent while it works. Watch what it is doing, then steer when needed."
 				icon={DriveMarkIcon}
 				title="Drive"

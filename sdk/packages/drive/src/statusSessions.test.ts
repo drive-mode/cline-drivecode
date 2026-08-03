@@ -18,9 +18,10 @@ describe("buildStatusSessionRow", () => {
 		expect(row.roomId).toBe("room-1");
 	});
 
-	it("renders churny progress with S2 only", () => {
+	it("renders churny progress with S2 + P1", () => {
 		expect(buildStatusSessionChips(STATUS_SESSION_FIXTURES.churny)).toEqual([
 			{ id: "S2", label: "1 done" },
+			{ id: "P1", label: "churn" },
 		]);
 	});
 
@@ -33,10 +34,16 @@ describe("buildStatusSessionRow", () => {
 		);
 	});
 
-	it("renders stickiness without accomplishment chips", () => {
+	it("renders stickiness with P2 chip", () => {
 		const row = buildStatusSessionRow(STATUS_SESSION_FIXTURES.stickiness);
-		expect(row.chips).toEqual([]);
+		expect(row.chips).toEqual([{ id: "P2", label: "sticky fail" }]);
 		expect(row.failureStickyCount).toBe(2);
+	});
+
+	it("renders intent refresh with E2", () => {
+		expect(buildStatusSessionChips(STATUS_SESSION_FIXTURES.intent)).toEqual([
+			{ id: "E2", label: "intent refresh" },
+		]);
 	});
 });
 

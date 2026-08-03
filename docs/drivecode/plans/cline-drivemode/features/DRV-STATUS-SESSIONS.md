@@ -4,11 +4,11 @@ Back to [README](../README.md). Phase 2+ **Landed (W3.1)**. Product: [PRD 10](..
 
 ## Implementation status
 
-**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md).
+**Landed (#80).** Residuals in [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md). **Product home moving to [DRV-ANALYTICS](DRV-ANALYTICS.md)** (Status Hub stays ops-only).
 
 ## Problem / user value
 
-Rollups are framed as eng/debug. Users and leads need a product lens: did sessions get work done? Open Status and see recent Drive sessions as accomplishment (tasks completed, clean-drain, continue), then drill into bank/plan/room.
+Rollups are framed as eng/debug. Users and leads need a product lens: did sessions get work done? Open **Analytics** (formerly Status sessions mode) and see recent Drive sessions as accomplishment (tasks completed, clean-drain, continue), then drill into bank/plan/room.
 
 ## Acceptance criteria
 
@@ -24,7 +24,7 @@ Rollups are framed as eng/debug. Users and leads need a product lens: did sessio
 
 ## Surfaces touched
 
-- Status Hub **sessions** mode (`StatusSessionRollupSource` / teams ports)
+- Hub **Analytics** page (migrated from Status Hub sessions mode; `StatusSessionRollupSource`)
 - Drill-down to bank / room / plan via `callSessionId` + `roomId`
 - Localhost product stance once Obs R1 green
 

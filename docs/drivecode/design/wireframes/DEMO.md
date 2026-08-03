@@ -9,8 +9,9 @@ Click-through surfaces for the Drive / Drivecode stack. Hub owns room state via 
 | Drive tab HTML | Throwaway prototype (locked IA) | Open [`drive-tab-discord-slack.html`](drive-tab-discord-slack.html) in a browser |
 | Dependency graph HTML | Throwaway Status Hub map UX ([DRV-DEP-MAP](../../plans/cline-drivemode/features/DRV-DEP-MAP.md)) | Open [`status-dependency-graph.html`](status-dependency-graph.html) in a browser |
 | Overview canvas | Cursor `.canvas.tsx` + HTML twin | Open `drivecode-overview.canvas.tsx` from your Cursor canvases beside chat, or [`overview-canvas.html`](../canvases/overview-canvas.html) |
-| Hub Chat Drive Spotlight | Shared Spotlight from hub room | `bun -F @cline/cline-hub dev` → open the printed dashboard URL → Connect → Chat → **Join call** |
+| Hub Drive Spotlight | Shared Spotlight from hub room | `bun -F @cline/cline-hub dev` → open the printed dashboard URL → Connect → **Drive** → **Join call** |
 | Status Hub Dependency map | Live team tasks, or Drive plan fixture | printed dashboard URL + `/status?demoPlans=1&statusMode=dependency-map` |
+| Analytics rollups | Local SessionRollup accomplishment lens | printed dashboard URL + `/analytics?demoSessions=1` |
 | CLI Drive teaser | Local TUI flags | `bun run cli -i` then `Ctrl+Shift+D` / status-bar Drive control (`CLINE_DEMO_DRIVE=1` starts with Drive on) |
 | CLI Status Hub | Board + dependency map dialog | Compose demo adapter: `CLINE_DEMO_STATUS_PLANS=1 CLINE_DEMO_OPEN_STATUS=1 bun run cli -i` (`CLINE_DEMO_STATUS_LENS=dependency-map` for the map). See `apps/drivecode-demo/README.md`. |
 
@@ -23,7 +24,7 @@ bun run build:sdk
 bun -F @cline/cline-hub dev
 ```
 
-Open the dashboard URL printed by `bun -F @cline/cline-hub dev` → Connect → Chat → **Join call**.
+Open the dashboard URL printed by `bun -F @cline/cline-hub dev` → Connect → **Drive** → **Join call**.
 
 Pipeline:
 

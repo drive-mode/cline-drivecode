@@ -1,5 +1,5 @@
 /**
- * Demo SessionRollup source for Status Hub sessions mode.
+ * Demo SessionRollup source for Analytics.
  * Wired only at composition roots (`?demoSessions=1`).
  */
 

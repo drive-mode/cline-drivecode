@@ -1,6 +1,6 @@
 /**
- * Status Hub · Drive sessions accomplishment lens (DRV-STATUS-SESSIONS).
- * Lists recent call sessions with S2/S3/E1 chips; drill to room/bank by
+ * Analytics · Drive sessions accomplishment lens (DRV-ANALYTICS).
+ * Lists recent call sessions with S2/S3/E1/E2/P1/P2 chips; drill to room/bank by
  * callSessionId. Distinct from agent Board / Changelog / Dependency map.
  */
 
@@ -67,7 +67,7 @@ export function StatusSessionsPanel({
 			<div className="rounded-lg border bg-card">
 				<PageEmptyState>
 					No Drive sessions in local room + bank logs yet. Complete tasks in
-					a call to see S2 / S3 / E1 accomplishment here.
+					a call to see accomplishment chips here.
 				</PageEmptyState>
 			</div>
 		);
@@ -76,9 +76,9 @@ export function StatusSessionsPanel({
 	return (
 		<div className="space-y-4" data-slot="status-sessions-panel">
 			<p className="text-xs text-muted-foreground">
-				Drive session accomplishment (local SessionRollups) — not the agent
-				Board or Changelog. Chips are S2 tasks done, S3 clean-drain, E1
-				post-success continue.
+				Drive session accomplishment (local SessionRollups) — Analytics, not
+				the agent Board or Changelog. Chips include S2 tasks done, S3
+				clean-drain, E1 continue, E2 intent refresh, P1 churn, P2 sticky fail.
 			</p>
 
 			{onExportShippedDigest ? (

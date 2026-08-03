@@ -8,6 +8,7 @@ import {
 	ActivityIcon,
 	ArrowUpDownIcon,
 	BotIcon,
+	ChartNoAxesColumnIcon,
 	ClockIcon,
 	CodeIcon,
 	DoorOpenIcon,
@@ -83,6 +84,13 @@ import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
 import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import { subscribeToHostMessages } from "./lib/host-message-gateway";
 import {
+	type DriveShellMode,
+	drivePath,
+	legacyChatOrSessionsRedirect,
+	parseDriveSessionId,
+	parseDriveShellMode,
+} from "./lib/drive-shell";
+import {
 	readStoredNavRailCollapsed,
 	setStoredNavRailCollapsed,
 } from "./lib/nav-rail";
@@ -106,6 +114,11 @@ const StatusView = lazy(() =>
 		default: module.StatusView,
 	})),
 );
+const AnalyticsView = lazy(() =>
+	import("./components/views/analytics-view").then((module) => ({
+		default: module.AnalyticsView,
+	})),
+);
 const RoomsView = lazy(() =>
 	import("./components/views/rooms-view").then((module) => ({
 		default: module.RoomsView,
@@ -119,11 +132,10 @@ const CustomizationSectionView = lazy(() =>
 
 type View =
 	| "home"
-	| "sessions"
 	| "drive"
 	| "status"
+	| "analytics"
 	| "rooms"
-	| "chat"
 	| "models"
 	| "rules"
 	| "hooks"
@@ -138,11 +150,10 @@ type View =
 	| "account";
 const VIEW_PATHS: Record<View, string> = {
 	home: "/",
-	sessions: "/sessions",
 	drive: "/drive",
 	status: "/status",
+	analytics: "/analytics",
 	rooms: "/rooms",
-	chat: "/chat",
 	models: "/models",
 	rules: "/rules",
 	hooks: "/hooks",
@@ -156,8 +167,6 @@ const VIEW_PATHS: Record<View, string> = {
 	settings: "/settings",
 	account: "/settings/account",
 };
-
-const CHAT_SESSION_QUERY_PARAM = "id";
 
 const SETTINGS_SECTION_PATHS: Record<SettingsSection, string> = {
 	General: "/settings",
@@ -190,11 +199,10 @@ const EMPTY_HUB_STATE: WebviewHubState = {
 };
 
 function viewFromPath(pathname: string): View {
-	if (pathname === VIEW_PATHS.sessions) return "sessions";
 	if (pathname === VIEW_PATHS.drive) return "drive";
 	if (pathname === VIEW_PATHS.status) return "status";
+	if (pathname === VIEW_PATHS.analytics) return "analytics";
 	if (pathname === VIEW_PATHS.rooms) return "rooms";
-	if (pathname === VIEW_PATHS.chat) return "chat";
 	if (pathname === VIEW_PATHS.models) return "models";
 	if (
 		pathname === VIEW_PATHS.rules ||
@@ -236,29 +244,35 @@ function settingsSectionFromPath(pathname: string): SettingsSection {
 	return "General";
 }
 
+function applyLegacyDriveRedirects(): void {
+	if (typeof window === "undefined") return;
+	const next = legacyChatOrSessionsRedirect(
+		window.location.pathname,
+		window.location.search,
+	);
+	if (!next) return;
+	const current = `${window.location.pathname}${window.location.search}`;
+	if (current !== next) {
+		window.history.replaceState(null, "", next);
+	}
+}
+
 function readCurrentView(): View {
 	if (typeof window === "undefined") return "home";
+	applyLegacyDriveRedirects();
 	return viewFromPath(window.location.pathname);
 }
 
-function readCurrentChatSessionId(): string | undefined {
+function readCurrentDriveSessionId(): string | undefined {
 	if (typeof window === "undefined") return undefined;
-	if (window.location.pathname !== VIEW_PATHS.chat) return undefined;
-	const sessionId = new URLSearchParams(window.location.search)
-		.get(CHAT_SESSION_QUERY_PARAM)
-		?.trim();
-	return sessionId || undefined;
+	if (window.location.pathname !== VIEW_PATHS.drive) return undefined;
+	return parseDriveSessionId(window.location.search);
 }
 
-function chatPath(sessionId?: string): string {
-	const params = persistentRouteSearchParams();
-	if (sessionId) {
-		params.set(CHAT_SESSION_QUERY_PARAM, sessionId);
-	} else {
-		params.delete(CHAT_SESSION_QUERY_PARAM);
-	}
-	const query = params.toString();
-	return query ? `${VIEW_PATHS.chat}?${query}` : VIEW_PATHS.chat;
+function readCurrentDriveShellMode(forceCall = false): DriveShellMode {
+	if (typeof window === "undefined") return "lobby";
+	if (window.location.pathname !== VIEW_PATHS.drive) return "lobby";
+	return parseDriveShellMode(window.location.search, { forceCall });
 }
 
 function readCurrentSettingsSection(): SettingsSection {
@@ -269,7 +283,8 @@ function readCurrentSettingsSection(): SettingsSection {
 function persistentRouteSearchParams(): URLSearchParams {
 	if (typeof window === "undefined") return new URLSearchParams();
 	const params = new URLSearchParams(window.location.search);
-	params.delete(CHAT_SESSION_QUERY_PARAM);
+	params.delete("id");
+	params.delete("mode");
 	return params;
 }
 
@@ -418,7 +433,6 @@ function Shell({
 
 	const navItems = [
 		{ view: "home", label: "Home", icon: HomeIcon },
-		{ view: "sessions", label: "Sessions", icon: MessageSquareIcon },
 		{ view: "models", label: "Models", icon: BotIcon },
 		{ view: "channels", label: "Channels", icon: LinkIcon },
 		{ view: "schedules", label: "Schedules", icon: ClockIcon },
@@ -427,9 +441,9 @@ function Shell({
 	] satisfies Array<{
 		view: Exclude<
 			View,
-			| "chat"
 			| "drive"
 			| "status"
+			| "analytics"
 			| "rooms"
 			| "rules"
 			| "hooks"
@@ -446,8 +460,9 @@ function Shell({
 		{ view: "drive", label: "Drive", icon: DriveMarkIcon },
 		{ view: "rooms", label: "Rooms", icon: DoorOpenIcon },
 		{ view: "status", label: "Status Hub", icon: ActivityIcon },
+		{ view: "analytics", label: "Analytics", icon: ChartNoAxesColumnIcon },
 	] satisfies Array<{
-		view: Extract<View, "drive" | "rooms" | "status">;
+		view: Extract<View, "drive" | "rooms" | "status" | "analytics">;
 		label: string;
 		// Wider than the lucide icons elsewhere: the Drive mark is a plain
 		// function component, and renderNavButton only needs `className`.
@@ -478,8 +493,7 @@ function Shell({
 		)[number],
 	) => {
 		const Icon = item.icon;
-		const active =
-			view === item.view || (item.view === "sessions" && view === "chat");
+		const active = view === item.view;
 		return (
 			<button
 				aria-current={active ? "page" : undefined}
@@ -954,7 +968,7 @@ function SessionsView({
 	return (
 		<PageFrame>
 			<PageHeader
-				title="Sessions"
+				title="History"
 				description="Review, reopen, rename, and delete recent sessions."
 				actions={
 					<>
@@ -1264,8 +1278,11 @@ function App() {
 	const [restartPending, setRestartPending] = useState(false);
 	const [selectedSessionId, setSelectedSessionId] = useState<
 		string | undefined
-	>(() => readCurrentChatSessionId());
+	>(() => readCurrentDriveSessionId());
 	const lastChatSessionIdRef = useRef<string | undefined>(selectedSessionId);
+	const [driveShellMode, setDriveShellMode] = useState<DriveShellMode>(() =>
+		readCurrentDriveShellMode(),
+	);
 	const [recentSessions, setRecentSessions] = useState<WebviewSessionSummary[]>(
 		[],
 	);
@@ -1321,16 +1338,23 @@ function App() {
 	useEffect(() => {
 		syncHubTheme();
 		replaceLegacyCustomizationRoute();
+		applyLegacyDriveRedirects();
 	}, []);
 
 	useEffect(() => {
 		const handlePopState = () => {
 			replaceLegacyCustomizationRoute();
+			applyLegacyDriveRedirects();
 			const nextView = readCurrentView();
 			const nextSessionId =
-				nextView === "chat" ? readCurrentChatSessionId() : undefined;
+				nextView === "drive" ? readCurrentDriveSessionId() : undefined;
+			const nextShell =
+				nextView === "drive"
+					? readCurrentDriveShellMode(Boolean(driveLaunchRequest))
+					: "lobby";
 			setView(nextView);
-			if (nextView !== "chat") {
+			setDriveShellMode(nextShell);
+			if (nextView !== "drive" || nextShell === "lobby" || nextShell === "history") {
 				setDriveLaunchRequest(null);
 			}
 			if (nextSessionId) {
@@ -1342,7 +1366,7 @@ function App() {
 		};
 		window.addEventListener("popstate", handlePopState);
 		return () => window.removeEventListener("popstate", handlePopState);
-	}, []);
+	}, [driveLaunchRequest]);
 
 	useEffect(() => {
 		const unsubscribe = subscribeToHostMessages({
@@ -1380,21 +1404,53 @@ function App() {
 	}, []);
 
 	const navigate = useCallback((nextView: View) => {
-		if (nextView === "chat") {
-			setSelectedSessionId(undefined);
-		}
 		if (nextView === "settings") {
 			setSettingsSection("General");
 		}
-		if (nextView !== "chat") {
-			setSelectedSessionId(undefined);
-			setDriveLaunchRequest(null);
+		setSelectedSessionId(undefined);
+		setDriveLaunchRequest(null);
+		if (nextView === "drive") {
+			setDriveShellMode("lobby");
+			const nextPath = drivePath({
+				mode: "lobby",
+				preserveSearch: persistentRouteSearchParams(),
+			});
+			if (currentPathWithSearch() !== nextPath) {
+				window.history.pushState(null, "", nextPath);
+			}
+			setView("drive");
+			setLocationSearch(window.location.search);
+			return;
 		}
 		const nextPath = routePath(VIEW_PATHS[nextView]);
 		if (currentPathWithSearch() !== nextPath) {
 			window.history.pushState(null, "", nextPath);
 		}
 		setView(nextView);
+		setLocationSearch(
+			typeof window !== "undefined" ? window.location.search : "",
+		);
+	}, []);
+
+	useEffect(() => {
+		if (!demoHub.openAnalytics) return;
+		if (view === "analytics") return;
+		navigate("analytics");
+	}, [demoHub.openAnalytics, navigate, view]);
+
+	const openDriveHistory = useCallback(() => {
+		setDriveLaunchRequest(null);
+		setSelectedSessionId(undefined);
+		setDriveShellMode("history");
+		const nextPath = drivePath({
+			mode: "history",
+			preserveSearch: persistentRouteSearchParams(),
+		});
+		if (currentPathWithSearch() !== nextPath) {
+			window.history.pushState(null, "", nextPath);
+		}
+		setView("drive");
+		setLocationSearch(window.location.search);
 	}, []);
 
 	const openDriveCall = useCallback((request: DriveOpenCallRequest) => {
@@ -1406,11 +1462,17 @@ function App() {
 		const sessionId =
 			request.action === "focus" ? lastChatSessionIdRef.current : undefined;
 		setSelectedSessionId(sessionId);
-		const nextPath = chatPath(sessionId);
+		setDriveShellMode("call");
+		const nextPath = drivePath({
+			mode: "call",
+			sessionId,
+			preserveSearch: persistentRouteSearchParams(),
+		});
 		if (currentPathWithSearch() !== nextPath) {
 			window.history.pushState(null, "", nextPath);
 		}
-		setView("chat");
+		setView("drive");
+		setLocationSearch(window.location.search);
 	}, []);
 
 	const acknowledgeDriveLaunch = useCallback((requestId: number) => {
@@ -1447,11 +1509,17 @@ function App() {
 	const openSession = useCallback((sessionId: string) => {
 		lastChatSessionIdRef.current = sessionId;
 		setSelectedSessionId(sessionId);
-		const nextPath = chatPath(sessionId);
+		setDriveShellMode("call");
+		const nextPath = drivePath({
+			mode: "call",
+			sessionId,
+			preserveSearch: persistentRouteSearchParams(),
+		});
 		if (currentPathWithSearch() !== nextPath) {
 			window.history.pushState(null, "", nextPath);
 		}
-		setView("chat");
+		setView("drive");
+		setLocationSearch(window.location.search);
 	}, []);
 
 	const updateChatSessionRoute = useCallback((sessionId?: string) => {
@@ -1459,10 +1527,16 @@ function App() {
 			lastChatSessionIdRef.current = sessionId;
 		}
 		setSelectedSessionId(sessionId);
-		const nextPath = chatPath(sessionId);
+		setDriveShellMode("call");
+		const nextPath = drivePath({
+			mode: "call",
+			sessionId,
+			preserveSearch: persistentRouteSearchParams(),
+		});
 		if (currentPathWithSearch() !== nextPath) {
 			window.history.replaceState(null, "", nextPath);
 		}
+		setLocationSearch(window.location.search);
 	}, []);
 
 	const deleteSession = useCallback((sessionId: string) => {
@@ -1486,16 +1560,6 @@ function App() {
 	}, []);
 
 	const content = useMemo(() => {
-		if (view === "chat") {
-			return (
-				<Chat
-					driveLaunchRequest={driveLaunchRequest}
-					initialSessionId={selectedSessionId}
-					onDriveLaunchHandled={acknowledgeDriveLaunch}
-					onSessionSelected={updateChatSessionRoute}
-				/>
-			);
-		}
 		if (view === "drive") {
 			if (demoHub.useShareScreenSpotlightDemo) {
 				return <ShareScreenSpotlightDemo />;
@@ -1503,9 +1567,30 @@ function App() {
 			if (demoHub.useChatForkDemo) {
 				return <ChatForkDemo />;
 			}
+			if (driveShellMode === "history") {
+				return (
+					<SessionsView
+						onDeleteSession={deleteSession}
+						onOpenSession={openSession}
+						onRenameSession={renameSession}
+						sessions={recentSessions}
+					/>
+				);
+			}
+			if (driveShellMode === "call") {
+				return (
+					<Chat
+						driveLaunchRequest={driveLaunchRequest}
+						initialSessionId={selectedSessionId}
+						onDriveLaunchHandled={acknowledgeDriveLaunch}
+						onSessionSelected={updateChatSessionRoute}
+					/>
+				);
+			}
 			return (
 				<DriveView
 					onOpenCall={openDriveCall}
+					onOpenHistory={openDriveHistory}
 					onOpenStatus={() => navigate("status")}
 				/>
 			);
@@ -1523,19 +1608,15 @@ function App() {
 			return (
 				<StatusView
 					initialMode={demoHub.initialStatusMode}
-					onOpenSessionRoom={openStatusSessionRoom}
-					sessionSource={statusSessionSource}
 					teamsSource={statusTeamsSource}
 				/>
 			);
 		}
-		if (view === "sessions") {
+		if (view === "analytics") {
 			return (
-				<SessionsView
-					onDeleteSession={deleteSession}
-					onOpenSession={openSession}
-					onRenameSession={renameSession}
-					sessions={recentSessions}
+				<AnalyticsView
+					onOpenSessionRoom={openStatusSessionRoom}
+					sessionSource={statusSessionSource}
 				/>
 			);
 		}
@@ -1625,7 +1706,7 @@ function App() {
 				hubState={hubState}
 				onOpenSession={openSession}
 				onRestartHub={restartHub}
-				onViewSessions={() => navigate("sessions")}
+				onViewSessions={openDriveHistory}
 				recentSessions={recentSessions}
 				restartPending={restartPending}
 			/>
@@ -1636,8 +1717,10 @@ function App() {
 		demoHub.useShareScreenSpotlightDemo,
 		acknowledgeDriveLaunch,
 		driveLaunchRequest,
+		driveShellMode,
 		openRoom,
 		openStatusSessionRoom,
+		openDriveHistory,
 		roomsSource,
 		roomsWorkspaceRoot,
 		statusSessionSource,

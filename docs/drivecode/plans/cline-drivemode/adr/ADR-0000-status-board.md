@@ -37,7 +37,7 @@
 | [ADR-0004](ADR-0004-gated-learn-privacy.md) | Gated learn; no transcript dump | **Accepted** | partial | Event privacy yes; knowledge learn UI open |
 | [ADR-0005](ADR-0005-status-hub.md) | Status Hub: SQLite status log in the Cline SDK | **Accepted** | shipped | Store, service, hub ops, `report_status`, dashboard |
 | [ADR-0006](ADR-0006-pip-partner-companion.md) | PiP Partner is a companion surface | **Accepted** | decision | Companion IA; no PipPartner UI yet |
-| [ADR-0007](ADR-0007-drive-as-cline-mode.md) | Drive is a Cline mode | **Accepted** | partial | Join/Leave + postures; not Plan\|Act peer pill yet |
+| [ADR-0007](ADR-0007-drive-as-cline-mode.md) | Drive is a Cline mode | **Accepted** | partial | Drive owns work surface (hub IA); Join/Leave + postures; not Plan\|Act peer pill yet |
 | [ADR-0008](ADR-0008-task-bank.md) | Task bank is Drive’s execution primitive | **Accepted** | partial | Workspace bank shipped; receipt / covered-check → ADR-0018 |
 | [ADR-0009](ADR-0009-runtime-topology-local-cloud.md) | Runtime topology local / cloud / hybrid | **Accepted** | partial | `assertTopologyLegal` + seeds; cap name drift noted |
 | [ADR-0010](ADR-0010-provider-harness-byok.md) | Provider harness (BYOK) | **Accepted** | partial | Facets + secrets forbid; adapters not fully registry-wired |

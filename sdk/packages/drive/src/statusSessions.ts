@@ -1,5 +1,5 @@
 /**
- * Status Hub accomplishment lens row model (DRV-STATUS-SESSIONS).
+ * Drive Analytics accomplishment row model (DRV-ANALYTICS / former Status sessions).
  *
  * Counts-only chips from SessionRollup — no transcript / utterance text.
  * Distinct from agent Board / Changelog / Dependency map.
@@ -7,7 +7,7 @@
 
 import type { SessionRollup } from "./sessionRollup.js";
 
-export type StatusSessionChipId = "S2" | "S3" | "E1";
+export type StatusSessionChipId = "S2" | "S3" | "E1" | "E2" | "P1" | "P2";
 
 export type StatusSessionChip = {
 	id: StatusSessionChipId;
@@ -47,18 +47,25 @@ export type StatusSessionRollupSlice = Pick<
 	| "completedTaskIds"
 	| "planCleanDrain"
 	| "postSuccessPlanContinue"
+	| "intentRefresh"
+	| "midPlanAddCount"
 	| "failureStickyCount"
 	| "durationMs"
 >;
 
 /**
- * Build glanceable accomplishment chips (S2/S3/E1) from a rollup.
+ * Build glanceable accomplishment chips (S2/S3/E1/E2/P1/P2) from a rollup.
  * Empty chips when the session made no measurable progress.
  */
 export function buildStatusSessionChips(
 	rollup: Pick<
 		SessionRollup,
-		"tasksCompleted" | "planCleanDrain" | "postSuccessPlanContinue"
+		| "tasksCompleted"
+		| "planCleanDrain"
+		| "postSuccessPlanContinue"
+		| "intentRefresh"
+		| "midPlanAddCount"
+		| "failureStickyCount"
 	>,
 ): StatusSessionChip[] {
 	const chips: StatusSessionChip[] = [];
@@ -74,11 +81,20 @@ export function buildStatusSessionChips(
 	if (rollup.postSuccessPlanContinue) {
 		chips.push({ id: "E1", label: "continued" });
 	}
+	if (rollup.intentRefresh) {
+		chips.push({ id: "E2", label: "intent refresh" });
+	}
+	if (rollup.midPlanAddCount > 0) {
+		chips.push({ id: "P1", label: "churn" });
+	}
+	if (rollup.failureStickyCount > 0) {
+		chips.push({ id: "P2", label: "sticky fail" });
+	}
 	return chips;
 }
 
 /**
- * Project a SessionRollup into a Status Hub accomplishment row.
+ * Project a SessionRollup into an Analytics accomplishment row.
  */
 export function buildStatusSessionRow(
 	rollup: StatusSessionRollupSlice,
@@ -130,6 +146,11 @@ export function statusSessionRowFromUnknown(
 		Number.isFinite(record.failureStickyCount)
 			? Math.max(0, Math.floor(record.failureStickyCount))
 			: 0;
+	const midPlanAddCount =
+		typeof record.midPlanAddCount === "number" &&
+		Number.isFinite(record.midPlanAddCount)
+			? Math.max(0, Math.floor(record.midPlanAddCount))
+			: 0;
 	return buildStatusSessionRow({
 		callSessionId,
 		roomId:
@@ -140,6 +161,8 @@ export function statusSessionRowFromUnknown(
 		completedTaskIds,
 		planCleanDrain: record.planCleanDrain === true,
 		postSuccessPlanContinue: record.postSuccessPlanContinue === true,
+		intentRefresh: record.intentRefresh === true,
+		midPlanAddCount,
 		failureStickyCount,
 		durationMs,
 	});
@@ -160,7 +183,7 @@ export function statusSessionRowIsPrivate(value: unknown): boolean {
 	return true;
 }
 
-/** Fixture shapes for clean / churny / continue / stickiness Status renders. */
+/** Fixture shapes for clean / churny / continue / stickiness / intent renders. */
 export const STATUS_SESSION_FIXTURES = {
 	clean: {
 		callSessionId: "sess-clean",
@@ -169,6 +192,8 @@ export const STATUS_SESSION_FIXTURES = {
 		completedTaskIds: ["t1", "t2"],
 		planCleanDrain: true,
 		postSuccessPlanContinue: false,
+		intentRefresh: false,
+		midPlanAddCount: 0,
 		failureStickyCount: 0,
 		durationMs: 120_000,
 	},
@@ -179,6 +204,8 @@ export const STATUS_SESSION_FIXTURES = {
 		completedTaskIds: ["t1"],
 		planCleanDrain: false,
 		postSuccessPlanContinue: false,
+		intentRefresh: false,
+		midPlanAddCount: 2,
 		failureStickyCount: 0,
 		durationMs: 90_000,
 	},
@@ -189,6 +216,8 @@ export const STATUS_SESSION_FIXTURES = {
 		completedTaskIds: ["t1"],
 		planCleanDrain: false,
 		postSuccessPlanContinue: true,
+		intentRefresh: false,
+		midPlanAddCount: 0,
 		failureStickyCount: 0,
 		durationMs: 180_000,
 	},
@@ -199,7 +228,21 @@ export const STATUS_SESSION_FIXTURES = {
 		completedTaskIds: [],
 		planCleanDrain: false,
 		postSuccessPlanContinue: false,
+		intentRefresh: false,
+		midPlanAddCount: 0,
 		failureStickyCount: 2,
 		durationMs: 60_000,
+	},
+	intent: {
+		callSessionId: "sess-intent",
+		roomId: "room-3",
+		tasksCompleted: 0,
+		completedTaskIds: [],
+		planCleanDrain: false,
+		postSuccessPlanContinue: false,
+		intentRefresh: true,
+		midPlanAddCount: 0,
+		failureStickyCount: 0,
+		durationMs: 45_000,
 	},
 } as const satisfies Record<string, StatusSessionRollupSlice>;

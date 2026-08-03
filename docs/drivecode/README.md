@@ -189,7 +189,8 @@ caller decides.
 ### The view
 
 `apps/cline-hub/src/webview/src/components/views/status-view.tsx` exposes three
-modes: **Board**, **Changelog**, and **Dependency map**.
+modes: **Board**, **Changelog**, and **Dependency map**. Retrospective session
+rollups live on **Analytics** (`/analytics`, [DRV-ANALYTICS](plans/cline-drivemode/features/DRV-ANALYTICS.md)), not as a Status lens.
 
 Board and Changelog are the same paginated query with `currentOnly` flipped, so
 opening the view never materializes the whole log. State-filter chips, free-text
@@ -348,6 +349,8 @@ and every client. Surfaces render "Spotlight"; the protocol says `stage`.
 | Room state and `call_*` ops | `sdk/packages/core/src/hub/collaboration/` |
 | Spotlight UI, call chrome | `apps/cline-hub/src/webview/src/drive/` |
 | Status Hub view (Board / Changelog / Dependency map) | `apps/cline-hub/src/webview/src/components/views/status-view.tsx`, `dependency-map.tsx` |
+| Analytics (session rollups + shipped digest) | `apps/cline-hub/src/webview/src/components/views/analytics-view.tsx` |
+| Drive shell (lobby / call / history) | `apps/cline-hub/src/webview/src/App.tsx`, `lib/drive-shell.ts`, `drive-view.tsx`, `Chat.tsx` |
 | TUI Status Hub port + hub adapter | `apps/cli/src/tui/status/` |
 | TUI Status Hub (`/status`) | `apps/cli/src/tui/views/status-view.tsx` |
 | Drive tab home | `apps/cline-hub/src/webview/src/components/views/drive-view.tsx` |

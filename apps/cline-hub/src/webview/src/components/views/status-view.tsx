@@ -1,7 +1,7 @@
 /**
  * Status Hub — the changelog for every agent.
  *
- * Four lenses over one operational surface:
+ * Three lenses over one operational surface:
  *
  * **Board** answers "where is everything, and what needs me?" It shows one row
  * per subject (the current status), ordered by attention (blocked, then failed,
@@ -16,15 +16,12 @@
  * the `teamsSource` prop from the composition root (App.tsx) — this
  * view does not read demo query params or import fixtures.
  *
- * **Sessions** answers "did Drive sessions get work done?" It lists local
- * SessionRollups with S2/S3/E1 chips via `sessionSource` (composition root).
+ * Analytics owns retrospective rollups (session accomplishment digests).
  *
  * Board and Changelog page server-side with a keyset cursor, so opening this
  * view never pulls the whole log.
  */
 
-import type { StatusSessionRow } from "@cline/drive";
-import { buildShippedDigest, formatShippedDigestMarkdown } from "@cline/drive";
 import type {
 	StatusState,
 	StatusSummary,
@@ -38,9 +35,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { subscribeToHostMessages } from "../../lib/host-message-gateway";
-import { downloadTextFile } from "../../status/downloadTextFile";
-import { StatusSessionsPanel } from "../../status/StatusSessionsPanel";
-import type { StatusSessionRollupSource } from "../../status/status-session-rollup-source";
 import type { StatusTeamsSource } from "../../status/status-teams-source";
 import { postToHost } from "../../vscode";
 import { DependencyMap } from "./dependency-map";
@@ -58,11 +52,7 @@ import {
 
 const PAGE_LIMIT = 50;
 
-export type StatusViewMode =
-	| "board"
-	| "changelog"
-	| "dependency-map"
-	| "sessions";
+export type StatusViewMode = "board" | "changelog" | "dependency-map";
 
 /** Board section order — what needs a human first. */
 const BOARD_SECTIONS: ReadonlyArray<{ state: StatusState; blurb: string }> = [
@@ -87,7 +77,6 @@ const MODE_LABELS: Record<StatusViewMode, string> = {
 	board: "board",
 	changelog: "changelog",
 	"dependency-map": "dependency-map",
-	sessions: "sessions",
 };
 
 function StatTile({
@@ -128,17 +117,9 @@ function StatTile({
 
 export function StatusView(props: {
 	teamsSource: StatusTeamsSource;
-	sessionSource: StatusSessionRollupSource;
 	initialMode?: StatusViewMode;
-	/** Open Drive room for bank/plan correlation (sessions drill-down). */
-	onOpenSessionRoom?: (row: StatusSessionRow) => void;
 }) {
-	const {
-		teamsSource,
-		sessionSource,
-		initialMode = "board",
-		onOpenSessionRoom,
-	} = props;
+	const { teamsSource, initialMode = "board" } = props;
 	const [mode, setMode] = useState<StatusViewMode>(initialMode);
 	const [updates, setUpdates] = useState<StatusUpdate[]>([]);
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
@@ -152,15 +133,7 @@ export function StatusView(props: {
 	const [search, setSearch] = useState("");
 	const [teams, setTeams] = useState<TeamRuntimeState[]>([]);
 	const [tasksLoading, setTasksLoading] = useState(false);
-	const [sessionRows, setSessionRows] = useState<StatusSessionRow[]>([]);
-	const [sessionsLoading, setSessionsLoading] = useState(false);
-	const [sessionsError, setSessionsError] = useState<string | null>(null);
-	const [selectedCallSessionId, setSelectedCallSessionId] = useState<
-		string | null
-	>(null);
-	const [exportBusy, setExportBusy] = useState(false);
 	const tasksRequestRef = useRef<string | null>(null);
-	const sessionsRequestRef = useRef<string | null>(null);
 
 	/**
 	 * Only the newest request may write results. Without this, a slow first
@@ -216,28 +189,8 @@ export function StatusView(props: {
 		});
 	}, [teamsSource]);
 
-	const requestSessions = useCallback(() => {
-		const requestId = `status-sessions-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-		sessionsRequestRef.current = requestId;
-		setSessionsLoading(true);
-		setSessionsError(null);
-		void sessionSource
-			.loadSessions({ limit: 20 })
-			.then((rows) => {
-				if (sessionsRequestRef.current !== requestId) return;
-				setSessionRows(rows);
-				setSessionsLoading(false);
-			})
-			.catch((err) => {
-				if (sessionsRequestRef.current !== requestId) return;
-				setSessionsError(err instanceof Error ? err.message : String(err));
-				setSessionRows([]);
-				setSessionsLoading(false);
-			});
-	}, [sessionSource]);
-
 	useEffect(() => {
-		if (mode === "sessions" || mode === "dependency-map") {
+		if (mode === "dependency-map") {
 			return;
 		}
 		request(null, true);
@@ -250,10 +203,6 @@ export function StatusView(props: {
 	useEffect(() => {
 		if (mode === "dependency-map") requestTasks();
 	}, [mode, requestTasks]);
-
-	useEffect(() => {
-		if (mode === "sessions") requestSessions();
-	}, [mode, requestSessions]);
 
 	useEffect(() => {
 		return subscribeToHostMessages({
@@ -334,35 +283,13 @@ export function StatusView(props: {
 		})).filter((section) => section.rows.length > 0);
 	}, [mode, updates]);
 
-	const exportShippedDigest = useCallback(async () => {
-		setExportBusy(true);
-		try {
-			const rows =
-				sessionRows.length > 0
-					? sessionRows
-					: await sessionSource.loadSessions({ limit: 20 });
-			const digest = buildShippedDigest({ rollups: rows });
-			const markdown = formatShippedDigestMarkdown(digest);
-			const stamp = digest.generatedAt.slice(0, 19).replace(/[:T]/g, "-");
-			downloadTextFile(`drive-shipped-digest-${stamp}.md`, markdown);
-		} catch (err) {
-			setSessionsError(err instanceof Error ? err.message : String(err));
-		} finally {
-			setExportBusy(false);
-		}
-	}, [sessionRows, sessionSource]);
-
 	const refreshAll = useCallback(() => {
-		if (mode === "sessions") {
-			requestSessions();
-			return;
-		}
 		if (mode !== "dependency-map") {
 			request(null, true);
 		}
 		requestSummary();
 		if (mode === "dependency-map") requestTasks();
-	}, [mode, request, requestSummary, requestTasks, requestSessions]);
+	}, [mode, request, requestSummary, requestTasks]);
 
 	const activeAgent = summary?.byAgent.find((a) => a.agentId === agentFilter);
 
@@ -371,9 +298,7 @@ export function StatusView(props: {
 			? "Where every agent is right now ? one row per piece of work, most urgent first."
 			: mode === "dependency-map"
 				? "Task prerequisites and dependent work from active teams."
-				: mode === "sessions"
-					? "Drive session accomplishment — tasks completed, clean-drain, continue (local rollups)."
-					: "Everything that has happened, newest first, including superseded updates.";
+				: "Everything that has happened, newest first, including superseded updates.";
 
 	return (
 		<PageFrame>
@@ -381,7 +306,7 @@ export function StatusView(props: {
 				description={description}
 				icon={ActivityIcon}
 				meta={
-					summary?.lastUpdatedAt && mode !== "sessions" ? (
+					summary?.lastUpdatedAt ? (
 						<Badge className="text-[10px]" variant="outline">
 							last update {relativeTime(summary.lastUpdatedAt)}
 						</Badge>
@@ -390,24 +315,21 @@ export function StatusView(props: {
 				title="Status Hub"
 				actions={
 					<Button
-						disabled={loading || sessionsLoading}
+						disabled={loading}
 						onClick={refreshAll}
 						size="sm"
 						type="button"
 						variant="outline"
 					>
 						<RefreshCwIcon
-							className={cn(
-								"size-3.5",
-								(loading || sessionsLoading) && "animate-spin",
-							)}
+							className={cn("size-3.5", loading && "animate-spin")}
 						/>
 						Refresh
 					</Button>
 				}
 			/>
 
-			{summary && mode !== "sessions" ? (
+			{summary ? (
 				<div className="mb-4 flex flex-wrap gap-2">
 					{TILE_STATES.map((state) => (
 						<StatTile
@@ -423,27 +345,25 @@ export function StatusView(props: {
 
 			<div className="mb-4 flex flex-wrap items-center gap-2">
 				<div className="flex overflow-hidden rounded-md border">
-					{(["board", "changelog", "dependency-map", "sessions"] as const).map(
-						(value) => (
-							<button
-								className={cn(
-									"px-3 py-1.5 text-xs capitalize transition-colors",
-									mode === value
-										? "bg-primary text-primary-foreground"
-										: "text-muted-foreground hover:text-foreground",
-								)}
-								aria-pressed={mode === value}
-								key={value}
-								onClick={() => setMode(value)}
-								type="button"
-							>
-								{MODE_LABELS[value]}
-							</button>
-						),
-					)}
+					{(["board", "changelog", "dependency-map"] as const).map((value) => (
+						<button
+							className={cn(
+								"px-3 py-1.5 text-xs capitalize transition-colors",
+								mode === value
+									? "bg-primary text-primary-foreground"
+									: "text-muted-foreground hover:text-foreground",
+							)}
+							aria-pressed={mode === value}
+							key={value}
+							onClick={() => setMode(value)}
+							type="button"
+						>
+							{MODE_LABELS[value]}
+						</button>
+					))}
 				</div>
 
-				{mode !== "sessions" && mode !== "dependency-map" ? (
+				{mode !== "dependency-map" ? (
 					<form
 						className="flex items-center gap-2"
 						onSubmit={(event) => {
@@ -476,7 +396,7 @@ export function StatusView(props: {
 					</form>
 				) : null}
 
-				{summary && summary.byAgent.length > 0 && mode !== "sessions" ? (
+				{summary && summary.byAgent.length > 0 ? (
 					<div className="flex flex-wrap items-center gap-1">
 						{summary.byAgent.slice(0, 6).map((agent) => (
 							<Button
@@ -503,8 +423,7 @@ export function StatusView(props: {
 					</div>
 				) : null}
 
-				{mode !== "sessions" &&
-				(stateFilter.length > 0 || agentFilter || search) ? (
+				{stateFilter.length > 0 || agentFilter || search ? (
 					<Button
 						className="h-7 px-2 text-xs"
 						onClick={() => {
@@ -522,7 +441,7 @@ export function StatusView(props: {
 				) : null}
 			</div>
 
-			{activeAgent && mode !== "sessions" ? (
+			{activeAgent ? (
 				<p className="mb-3 text-xs text-muted-foreground">
 					Showing {activeAgent.agentName ?? activeAgent.agentId} —{" "}
 					{activeAgent.total} active, {activeAgent.running} running,{" "}
@@ -530,7 +449,7 @@ export function StatusView(props: {
 				</p>
 			) : null}
 
-			{error && mode !== "sessions" ? (
+			{error ? (
 				<div
 					className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
 					role="alert"
@@ -539,18 +458,7 @@ export function StatusView(props: {
 				</div>
 			) : null}
 
-			{mode === "sessions" ? (
-				<StatusSessionsPanel
-					error={sessionsError}
-					exportBusy={exportBusy}
-					loading={sessionsLoading}
-					onExportShippedDigest={exportShippedDigest}
-					onOpenRoom={onOpenSessionRoom}
-					onSelect={(row) => setSelectedCallSessionId(row.callSessionId)}
-					rows={sessionRows}
-					selectedCallSessionId={selectedCallSessionId}
-				/>
-			) : mode === "dependency-map" ? (
+			{mode === "dependency-map" ? (
 				<DependencyMap loading={tasksLoading} teams={teams} />
 			) : updates.length === 0 && !loading ? (
 				<div className="rounded-lg border bg-card">
@@ -601,7 +509,7 @@ export function StatusView(props: {
 				</div>
 			)}
 
-			{mode !== "dependency-map" && mode !== "sessions" ? (
+			{mode !== "dependency-map" ? (
 				<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
 					<span>
 						{updates.length} shown

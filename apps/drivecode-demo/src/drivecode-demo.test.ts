@@ -65,6 +65,7 @@ describe("readDrivecodeDemoHubBootstrap", () => {
 			useShareScreenSpotlightDemo: false,
 			useChatForkDemo: false,
 			initialStatusMode: undefined,
+			openAnalytics: false,
 		});
 	});
 
@@ -78,15 +79,17 @@ describe("readDrivecodeDemoHubBootstrap", () => {
 			useShareScreenSpotlightDemo: true,
 			useChatForkDemo: true,
 			initialStatusMode: "dependency-map",
+			openAnalytics: false,
 		});
 	});
 
-	it("parses demoSessions and sessions statusMode", () => {
+	it("parses demoSessions and maps legacy sessions statusMode to Analytics", () => {
 		const boot = readDrivecodeDemoHubBootstrap(
 			"?demoSessions=1&statusMode=sessions",
 		);
 		expect(boot.useDemoSessionsAdapter).toBe(true);
-		expect(boot.initialStatusMode).toBe("sessions");
+		expect(boot.initialStatusMode).toBeUndefined();
+		expect(boot.openAnalytics).toBe(true);
 	});
 
 	it("accepts URLSearchParams and board/changelog modes", () => {
@@ -100,7 +103,14 @@ describe("readDrivecodeDemoHubBootstrap", () => {
 			useShareScreenSpotlightDemo: false,
 			useChatForkDemo: false,
 			initialStatusMode: "changelog",
+			openAnalytics: false,
 		});
+	});
+
+	it("opens Analytics via analytics=1", () => {
+		expect(readDrivecodeDemoHubBootstrap("?analytics=1").openAnalytics).toBe(
+			true,
+		);
 	});
 
 	it("ignores unknown statusMode values", () => {

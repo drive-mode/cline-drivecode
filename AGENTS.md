@@ -16,11 +16,11 @@ This is the **Cline** monorepo. Toolchain is **Bun 1.3.13** (package manager + t
 - Seed the TUI past onboarding with `--key "$ANTHROPIC_API_KEY"` (or another provider key) when capturing screenshots.
 
 ### Drive / Status Hub (product surfaces)
-- **Hub UI:** `bun run --cwd apps/cline-hub dev` → open the printed dashboard URL → Connect. Drive tab, Spotlight (in-call), Status Hub (`/status`), Drive Settings.
+- **Hub UI:** `bun run --cwd apps/cline-hub dev` → open the printed dashboard URL → Connect. Drive (lobby / call / history), Spotlight (in-call), Status Hub (`/status`), Analytics (`/analytics`), Drive Settings.
 - **Status data ports:** product views depend on ports only (`StatusSnapshotSource` in CLI, `StatusTeamsSource` in hub). Live hub adapters implement them; demos are separate adapters in `@cline/drivecode-demo`, wired only at composition roots (`apps/cli/src/tui/root.tsx`, hub `App.tsx`).
 - **Demo bootstrap (edge only):** `readDrivecodeDemoCliBootstrap()` / `readDrivecodeDemoHubBootstrap()` parse env/query. Views do not read `CLINE_DEMO_*` or `?demoPlans`.
   - CLI: `CLINE_DEMO_STATUS_PLANS=1` → compose `DrivePlansDemoStatusSnapshotSource` as fallback behind the hub adapter; `CLINE_DEMO_STATUS_LENS`; `CLINE_DEMO_OPEN_STATUS=1`; `CLINE_DEMO_DRIVE=1`
-  - Hub: `?demoPlans=1` → `DrivePlansDemoTeamsSource`; `?statusMode=dependency-map`
+  - Hub: `?demoPlans=1` → `DrivePlansDemoTeamsSource`; `?demoSessions=1` → Analytics rollups; `?analytics=1` or legacy `?statusMode=sessions` opens Analytics; `?statusMode=board|changelog|dependency-map`
   - Screenshots: also `CLINE_DISABLE_CLINE_PASS_NOTICE=1`
 - Domain graph logic stays in `@cline/shared` (`buildDependencyMap`). Rebuild with `bun run build:sdk` after shared edits.
 - Product screenshots: `docs/drivecode/assets/{hub,tui,demos,logos}/` (e.g. `tui/tui-drive-*.png`, `hub/status-*.png`, `hub/drive-*.png`).
@@ -64,6 +64,8 @@ A Tauri v2 (Rust) shell + Next.js webview + a Bun "sidecar" backend. Rust and th
 - Use **ADR** (Architecture Decision Record) naming — never **ARD**; files live under `docs/drivecode/plans/cline-drivemode/adr/` as `ADR-NNNN-*`.
 - Prefer shipping Drive agent capabilities as **Cline skills** in this repo (`.agents` / `.cline` / package skills) rather than Claude-only skills when the feature belongs here.
 - Prefer evaluating upstream [`cline/plugins`](https://github.com/cline/plugins) before inventing parallel Drive-only capability packs.
+- Prefer reusable **codebase-map** (graphify-backed skill/package) over one-off graph dumps when mapping DriveMode or explaining/showcasing the codebase.
+- Prefer `/poteto-mode` for nontrivial Drive architecture and planning sessions.
 - In public docs and PRs, link with repo-relative `docs/drivecode/...` paths — not machine-absolute Windows paths.
 - Prefer feature-branch + PR for local WIP instead of leaving work only in stashes; split related Drive delivery into **stacked PRs** when reviewability benefits.
 - Sync local `main` to `origin/main` before large planning or implementation sessions so work starts from the current tip.
@@ -77,3 +79,4 @@ A Tauri v2 (Rust) shell + Next.js webview + a Bun "sidecar" backend. Rust and th
 - Drive planning backlog is often tracked in sibling `drivekanban` (forked Kanban) alongside `docs/drivecode/plans/` (e.g. TASK-GRAPH phase cards).
 - Target Drive↔DriveKanban boundary is **managed execution integration** (DriveMode/DrivePlan owns task truth, gates, and completion verification; DriveKanban is the execution workbench) — not a loose board sync; today the CLI is still launcher + seed only.
 - Design canvases and visual explainers for Drive live under `docs/drivecode/design/canvases/` (e.g. product demo, implementation-state-plane, drivemode explainer, architecture explorer); brand tokens live under `docs/drivecode/design/brand/`.
+- Platform **codebase-map** is graphify-backed explain/showcase only (`sdk/packages/shared/src/codebase-map/`, skill `.agents/skills/codebase-map/`); it must not write agent portfolio knowledge or Status Hub task deps (ADR-0025 firewall).

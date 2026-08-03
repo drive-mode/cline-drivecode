@@ -20,11 +20,11 @@ Task-as-unit is the honest alternative to token narratives, but users cannot exp
 
 ## Dependencies
 
-- SessionRollup honesty ([DRV-TASK-METRICS](DRV-TASK-METRICS.md)). Soft: [DRV-STATUS-SESSIONS](DRV-STATUS-SESSIONS.md) as launch point.
+- SessionRollup honesty ([DRV-TASK-METRICS](DRV-TASK-METRICS.md)). Soft: [DRV-ANALYTICS](DRV-ANALYTICS.md) as launch point (was Status sessions).
 
 ## Surfaces touched
 
-- Status sessions “Export shipped digest” + Drive Settings opt-in control
+- Analytics “Export shipped digest” + Drive Settings opt-in control
 - CLI: `cline doctor shipped-digest` (`--format md|json`, `--out <file>`)
 - Pure digest builder in `@cline/drive` (`shippedDigest.ts`)
 - Local file download / stdout only
