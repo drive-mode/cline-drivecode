@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { REPO_CHANGELOG_SNAPSHOT_PATH } from "@cline/drive";
 import type {
 	HubCommandEnvelope,
 	HubEventEnvelope,
@@ -10,7 +11,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { StatusService } from "../../../status";
 import { SqliteStatusStore } from "../../../status/store/sqlite-status-store";
 import type { HubTransportContext } from "./context";
-import { attachStatusBroadcast, handleStatusCommand } from "./status-handlers";
+import {
+	attachStatusBroadcast,
+	handleStatusCommand,
+	REPO_CHANGELOG_SNAPSHOT_ENV,
+	resolveRepoChangelogSnapshotPath,
+	seedRepoChangelog,
+} from "./status-handlers";
 
 let dir: string;
 let service: StatusService;
@@ -339,5 +346,182 @@ describe("handleStatusCommand", () => {
 		);
 		expect(reply.ok).toBe(false);
 		expect(reply.error?.code).toBe("invalid_payload");
+	});
+});
+
+describe("seedRepoChangelog", () => {
+	function writeSnapshot(value: unknown): string {
+		const path = join(dir, "repo-changelog.json");
+		writeFileSync(path, JSON.stringify(value), "utf8");
+		return path;
+	}
+
+	const snapshot = {
+		kind: "repo_changelog",
+		generatedAt: "2026-07-30T10:11:12.000Z",
+		entries: [
+			{
+				subject: "repo/aaaaaaa",
+				state: "done",
+				headline: "add a status board",
+				source: "git",
+				tags: ["feat", "hub"],
+				metadata: { shortSha: "aaaaaaa" },
+			},
+			{
+				subject: "repo/bbbbbbb",
+				state: "done",
+				headline: "fix the changelog order",
+				source: "git",
+				tags: ["fix", "drive"],
+			},
+		],
+	};
+
+	it("publishes every snapshot entry with its tags intact", () => {
+		const result = seedRepoChangelog(service, {
+			snapshotPath: writeSnapshot(snapshot),
+		});
+
+		expect(result.published).toBe(2);
+		expect(result.skipped).toBe(0);
+		expect(service.current("repo/aaaaaaa")?.tags).toEqual(["feat", "hub"]);
+		expect(service.current("repo/bbbbbbb")?.source).toBe("git");
+	});
+
+	it("seeds in snapshot order so seq matches commit order", () => {
+		seedRepoChangelog(service, { snapshotPath: writeSnapshot(snapshot) });
+		const first = service.current("repo/aaaaaaa");
+		const second = service.current("repo/bbbbbbb");
+		expect(first?.seq).toBeLessThan(second?.seq ?? -1);
+	});
+
+	it("is idempotent: a second seed republishes nothing", () => {
+		const path = writeSnapshot(snapshot);
+		seedRepoChangelog(service, { snapshotPath: path });
+		const again = seedRepoChangelog(service, { snapshotPath: path });
+
+		expect(again.published).toBe(0);
+		expect(again.skipped).toBe(2);
+		expect(service.query({ subjectPrefix: "repo/" }).updates).toHaveLength(2);
+	});
+
+	it("skips older entries prepended by a regenerated, longer snapshot", () => {
+		// A snapshot regenerated with a bigger --limit prepends older commits.
+		// Publishing those now would give the oldest history the highest `seq`
+		// and permanently invert a changelog that reads newest `seq` first.
+		seedRepoChangelog(service, { snapshotPath: writeSnapshot(snapshot) });
+
+		const older = {
+			subject: "repo/0000000",
+			state: "done",
+			headline: "an older commit that was previously out of range",
+			source: "git",
+			tags: ["chore"],
+		};
+		const newer = {
+			subject: "repo/ccccccc",
+			state: "done",
+			headline: "a commit made after the first seed",
+			source: "git",
+			tags: ["feat"],
+		};
+		const result = seedRepoChangelog(service, {
+			snapshotPath: writeSnapshot({
+				...snapshot,
+				entries: [older, ...snapshot.entries, newer],
+			}),
+		});
+
+		expect(result.published).toBe(1);
+		expect(service.current("repo/0000000")).toBeUndefined();
+		const newest = service.current("repo/ccccccc");
+		expect(newest?.seq).toBeGreaterThan(
+			service.current("repo/bbbbbbb")?.seq ?? -1,
+		);
+	});
+
+	it("survives a store that throws instead of failing hub start", () => {
+		const exploding = {
+			current() {
+				throw new Error("SQLITE_BUSY");
+			},
+		} as unknown as StatusService;
+
+		expect(
+			seedRepoChangelog(exploding, { snapshotPath: writeSnapshot(snapshot) }),
+		).toEqual({ snapshotPath: null, published: 0, skipped: 0 });
+	});
+
+	it("skips malformed entries without abandoning the rest", () => {
+		const result = seedRepoChangelog(service, {
+			snapshotPath: writeSnapshot({
+				...snapshot,
+				entries: [{ subject: "repo/ccccccc" }, ...snapshot.entries],
+			}),
+		});
+
+		expect(result.published).toBe(2);
+		expect(result.skipped).toBe(1);
+		expect(service.current("repo/ccccccc")).toBeUndefined();
+	});
+
+	it("is a no-op for a missing, unparseable, or foreign snapshot", () => {
+		expect(seedRepoChangelog(service, { snapshotPath: null }).published).toBe(
+			0,
+		);
+
+		const bad = join(dir, "bad.json");
+		writeFileSync(bad, "{ not json", "utf8");
+		expect(seedRepoChangelog(service, { snapshotPath: bad }).published).toBe(0);
+
+		expect(
+			seedRepoChangelog(service, {
+				snapshotPath: writeSnapshot({ kind: "something_else", entries: [] }),
+			}).published,
+		).toBe(0);
+		expect(service.query({ subjectPrefix: "repo/" }).updates).toHaveLength(0);
+	});
+
+	it("broadcasts each seeded row so an open changelog sees it", () => {
+		seedRepoChangelog(service, { snapshotPath: writeSnapshot(snapshot) });
+		expect(published.map((event) => event.event)).toEqual([
+			"status.updated",
+			"status.updated",
+		]);
+	});
+});
+
+describe("resolveRepoChangelogSnapshotPath", () => {
+	it("prefers an explicit env override", () => {
+		const path = join(dir, "explicit.json");
+		writeFileSync(path, "{}", "utf8");
+		expect(
+			resolveRepoChangelogSnapshotPath({
+				[REPO_CHANGELOG_SNAPSHOT_ENV]: path,
+			}),
+		).toBe(path);
+	});
+
+	it("returns null when the env override does not exist", () => {
+		expect(
+			resolveRepoChangelogSnapshotPath({
+				[REPO_CHANGELOG_SNAPSHOT_ENV]: join(dir, "missing.json"),
+			}),
+		).toBeNull();
+	});
+
+	it("walks up from a start directory to the checkout root", () => {
+		const snapshotPath = join(dir, REPO_CHANGELOG_SNAPSHOT_PATH);
+		mkdirSync(dirname(snapshotPath), { recursive: true });
+		writeFileSync(snapshotPath, "{}", "utf8");
+		const nested = join(dir, "sdk", "packages", "core");
+		mkdirSync(nested, { recursive: true });
+
+		expect(resolveRepoChangelogSnapshotPath({}, [nested])).toBe(snapshotPath);
+	});
+
+	it("returns null outside a checkout that carries the snapshot", () => {
+		expect(resolveRepoChangelogSnapshotPath({}, [dir])).toBeNull();
 	});
 });

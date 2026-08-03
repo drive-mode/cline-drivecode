@@ -461,3 +461,17 @@ export {
 	CompletionReceiptError,
 	type AssertCompletionReceiptInput,
 } from "./driveplan/completionReceipt.js";
+export {
+	buildRepoChangelog,
+	isRepoChangelogSnapshot,
+	parseConventionalCommit,
+	REPO_CHANGELOG_SNAPSHOT_KIND,
+	REPO_CHANGELOG_SNAPSHOT_PATH,
+	repoChangelogTagVocabulary,
+	repoChangelogTags,
+	toRepoChangelogEntry,
+	type BuildRepoChangelogOptions,
+	type ConventionalCommit,
+	type RepoChangelogSnapshot,
+	type RepoCommitRecord,
+} from "./changelog/repoChangelog.js";

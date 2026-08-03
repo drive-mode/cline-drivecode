@@ -7,6 +7,12 @@
  * raise `ui.notify` so they reach the human rather than waiting to be found.
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import {
+	isRepoChangelogSnapshot,
+	REPO_CHANGELOG_SNAPSHOT_PATH,
+} from "@cline/drive";
 import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
 import {
 	StatusPrunePayloadSchema,
@@ -72,6 +78,145 @@ export function attachStatusBroadcast(
 			ctx.publish(ctx.buildEvent("ui.notify", notifyPayload(update)));
 		}
 	});
+}
+
+/** Point the seeder at a snapshot explicitly, overriding path discovery. */
+export const REPO_CHANGELOG_SNAPSHOT_ENV = "CLINE_REPO_CHANGELOG_SNAPSHOT";
+
+export type RepoChangelogSeedResult = {
+	/** The snapshot actually read, or null when none was found. */
+	snapshotPath: string | null;
+	/** Entries inserted by this call. */
+	published: number;
+	/** Entries left alone: already seeded, older than the seeded run, or invalid. */
+	skipped: number;
+};
+
+const EMPTY_SEED_RESULT: RepoChangelogSeedResult = {
+	snapshotPath: null,
+	published: 0,
+	skipped: 0,
+};
+
+function findSnapshotUpwards(startDir: string): string | null {
+	let dir = resolve(startDir);
+	for (;;) {
+		const candidate = join(dir, REPO_CHANGELOG_SNAPSHOT_PATH);
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+		const parent = dirname(dir);
+		if (parent === dir) {
+			return null;
+		}
+		dir = parent;
+	}
+}
+
+/**
+ * Locate the committed repo changelog snapshot.
+ *
+ * An explicit env path wins; otherwise walk up from the working directory and
+ * then from this module, which finds it in a monorepo checkout whether the hub
+ * was started from the repo root or from a package. Returns null when the hub
+ * is running outside a checkout that carries the snapshot — seeding is then a
+ * no-op rather than an error.
+ */
+export function resolveRepoChangelogSnapshotPath(
+	env: Record<string, string | undefined> = process.env,
+	startDirs: readonly string[] = [process.cwd(), import.meta.dirname],
+): string | null {
+	const explicit = env[REPO_CHANGELOG_SNAPSHOT_ENV]?.trim();
+	if (explicit) {
+		return existsSync(explicit) ? resolve(explicit) : null;
+	}
+	for (const startDir of startDirs) {
+		if (!startDir) {
+			continue;
+		}
+		const found = findSnapshotUpwards(startDir);
+		if (found) {
+			return found;
+		}
+	}
+	return null;
+}
+
+/**
+ * Seed the Status Hub from the committed repo changelog snapshot.
+ *
+ * A fresh hub has an empty changelog, which makes the whole surface look
+ * broken; this fills it with the repo's own history, tags and all.
+ *
+ * Only the entries after the newest already-seeded one are published. Plain
+ * per-entry deduplication would be enough for a re-run of the same snapshot,
+ * but a snapshot regenerated with a larger `--limit` *prepends* older commits:
+ * publishing those would hand the oldest history the highest `seq`, and the
+ * changelog reads newest `seq` first, so the whole feed would invert.
+ *
+ * Every failure is swallowed. A missing, malformed, or unreadable snapshot —
+ * or a busy database — must never stop the hub from starting.
+ */
+export function seedRepoChangelog(
+	service: StatusService = getStatusService(),
+	options: { snapshotPath?: string | null } = {},
+): RepoChangelogSeedResult {
+	try {
+		return seedRepoChangelogUnguarded(service, options);
+	} catch {
+		return EMPTY_SEED_RESULT;
+	}
+}
+
+function seedRepoChangelogUnguarded(
+	service: StatusService,
+	options: { snapshotPath?: string | null },
+): RepoChangelogSeedResult {
+	const snapshotPath =
+		options.snapshotPath === undefined
+			? resolveRepoChangelogSnapshotPath()
+			: options.snapshotPath;
+	if (!snapshotPath) {
+		return EMPTY_SEED_RESULT;
+	}
+
+	let snapshot: unknown;
+	try {
+		snapshot = JSON.parse(readFileSync(snapshotPath, "utf8"));
+	} catch {
+		return { ...EMPTY_SEED_RESULT, snapshotPath };
+	}
+	if (!isRepoChangelogSnapshot(snapshot)) {
+		return { ...EMPTY_SEED_RESULT, snapshotPath };
+	}
+
+	const parsed = snapshot.entries.map((raw) =>
+		StatusPublishInputSchema.safeParse(raw),
+	);
+	let start = 0;
+	for (let index = parsed.length - 1; index >= 0; index -= 1) {
+		const entry = parsed[index];
+		if (entry?.success && service.current(entry.data.subject)) {
+			start = index + 1;
+			break;
+		}
+	}
+
+	let published = 0;
+	let skipped = start;
+	for (const entry of parsed.slice(start)) {
+		if (!entry?.success) {
+			skipped += 1;
+			continue;
+		}
+		try {
+			service.publish(entry.data);
+			published += 1;
+		} catch {
+			skipped += 1;
+		}
+	}
+	return { snapshotPath, published, skipped };
 }
 
 export async function handleStatusCommand(

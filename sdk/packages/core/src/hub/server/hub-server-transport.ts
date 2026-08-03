@@ -84,6 +84,7 @@ import {
 import {
 	attachStatusBroadcast,
 	handleStatusCommand,
+	seedRepoChangelog,
 } from "./handlers/status-handlers";
 import { eventNameForScheduleCommand } from "./hub-schedule-events";
 import { logHubBoundaryError } from "./hub-server-logging";
@@ -298,6 +299,15 @@ export class HubServerTransport implements NativeHubTransport {
 	}
 
 	async start(): Promise<void> {
+		// Seed before listening: the changelog is empty on a fresh data dir, and
+		// an empty changelog reads as a broken feature rather than as no news.
+		// Idempotent, so restarts republish nothing.
+		const seeded = seedRepoChangelog();
+		if (seeded.published > 0) {
+			console.info(
+				`[hub] seeded ${seeded.published} repo changelog entries from ${seeded.snapshotPath}`,
+			);
+		}
 		await this.schedules.start();
 		if (this.cronService) {
 			try {
