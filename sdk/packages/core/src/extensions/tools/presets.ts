@@ -37,8 +37,19 @@ export const ToolPresets = {
 	},
 
 	/**
-	 * Plan mode (read-only, no shell access)
-	 * Good for analysis and documentation agents
+	 * Plan mode (no file mutation; shell stays available for inspection)
+	 * Good for analysis and documentation agents.
+	 *
+	 * `enableBash` is deliberately true. `run_commands` is essential for
+	 * read-only investigation -- `git log`, `git diff`, version probes -- and
+	 * no other tool covers those. The mitigation for plan-mode mutations is
+	 * prompting plus mode-switch notices, not tool removal; see
+	 * `PLAN_MODE_INSTRUCTIONS` in `@cline/shared` (`prompt/cline.ts`), which
+	 * tells the model the tool is inspection-only here, and the product
+	 * decision pinned in `prompt/cline.test.ts`.
+	 *
+	 * Capping a delegated child's shell authority is a per-delegation
+	 * `ToolPolicy` concern, not a change to this preset.
 	 */
 	plan: {
 		enableReadFiles: true,

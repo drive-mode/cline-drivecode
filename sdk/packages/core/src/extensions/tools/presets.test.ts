@@ -27,6 +27,37 @@ describe("default tool presets", () => {
 		expect(ToolPresets.yolo.enableWebFetch).toBe(false);
 	});
 
+	it("keeps run_commands in plan mode while withholding file mutation", () => {
+		// Explicit product decision, pinned here because nothing else pins it at
+		// the preset level: run_commands stays available in plan mode for
+		// read-only investigation (git log / git diff / version probes have no
+		// alternative tool). PLAN_MODE_INSTRUCTIONS tells the model it is
+		// inspection-only, and prompt/cline.test.ts pins that half. Removing the
+		// tool here would ship a prompt describing a tool the model lacks.
+		expect(ToolPresets.plan.enableBash).toBe(true);
+		expect(ToolPresets.plan.enableEditor).toBe(false);
+		expect(ToolPresets.plan.enableApplyPatch).toBe(false);
+	});
+
+	it("plan preset yields the inspection tools and no mutation tools", () => {
+		const tools = createDefaultToolsWithPreset("plan", {
+			executors: {
+				readFile: async () => "ok",
+				search: async () => "ok",
+				bash: async () => "ok",
+				webFetch: async () => "ok",
+				applyPatch: async () => "ok",
+				editor: async () => "ok",
+			},
+		});
+
+		const names = tools.map((tool) => tool.name);
+		expect(names).toContain("run_commands");
+		expect(names).toContain("read_files");
+		expect(names).not.toContain("editor");
+		expect(names).not.toContain("apply_patch");
+	});
+
 	it("yolo preset excludes ask_question even when its executor exists", () => {
 		const tools = createDefaultToolsWithPreset("yolo", {
 			executors: {
