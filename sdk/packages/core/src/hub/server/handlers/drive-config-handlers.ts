@@ -1,9 +1,30 @@
 /**
- * Hub drive_config_get / drive_config_put (durable facet lane).
+ * Hub drive_config_get / drive_config_put / drive_config_upsert_profile.
+ *
+ * The two lanes here write different files on purpose. Voice + provider facets
+ * live in `facets.v1.json` (whole-object put); per-agent appearance lives in
+ * the catalog envelope `catalog-facets.v1.json` as an `agent.appearance` map.
+ * Keeping them apart is what makes a TTS change unable to erase an agent's
+ * colours — see `upsertAgentProfile`.
  */
 
-import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
-import { parseDriveFacetValues, type ResolvedLlmEgress } from "@cline/shared";
+import type {
+	AgentAppearance,
+	AgentRef,
+	HubCommandEnvelope,
+	HubReplyEnvelope,
+} from "@cline/shared";
+import {
+	agentProfileId,
+	parseAgentAppearance,
+	parseAgentRef,
+	parseDriveFacetValues,
+	type ResolvedLlmEgress,
+} from "@cline/shared";
+import {
+	listAgentProfiles,
+	upsertAgentProfile,
+} from "../../drive-config/driveCatalogFacetStore";
 import {
 	loadOrSeedDriveFacets,
 	setDriveFacets,
@@ -40,7 +61,12 @@ export function handleDriveConfigCommand(
 	switch (envelope.command) {
 		case "drive_config_get": {
 			const facets = loadOrSeedDriveFacets({ configParent });
-			return okReply(envelope, { facets });
+			// Read back through the facet store's map lane, so the durable
+			// appearance written by drive_config_upsert_profile has a caller.
+			return okReply(envelope, {
+				facets,
+				profiles: listAgentProfiles(configParent),
+			});
 		}
 		case "drive_config_put": {
 			let facets: ReturnType<typeof parseDriveFacetValues>;
@@ -69,6 +95,58 @@ export function handleDriveConfigCommand(
 				facets: result.facets,
 				snapshot: result.snapshot,
 			});
+		}
+		case "drive_config_upsert_profile": {
+			const raw = envelope.payload?.profile;
+			if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					"profile object is required",
+				);
+			}
+			const { id, ref: rawRef, ...rest } = raw as Record<string, unknown>;
+
+			let ref: AgentRef;
+			let appearance: AgentAppearance;
+			try {
+				ref = parseAgentRef(rawRef);
+				appearance = parseAgentAppearance(rest);
+			} catch (error) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+
+			// The id is derived from the ref, so a supplied one is only accepted
+			// when it agrees — honouring a conflicting id would file the
+			// appearance under a key no reader ever looks up. Checked before the
+			// write, not after, so a rejected call leaves disk untouched.
+			const derivedId = agentProfileId(ref);
+			if (typeof id === "string" && id !== derivedId) {
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					`profile.id "${id}" does not match the id derived from ref ("${derivedId}")`,
+				);
+			}
+
+			const result = upsertAgentProfile({
+				workspaceRoot: configParent,
+				ref,
+				appearance,
+			});
+			if (!result.ok) {
+				return errorReply(envelope, result.code, result.message);
+			}
+			ctx.publish(
+				ctx.buildEvent("drive.profile.changed", {
+					profile: result.profile as unknown as Record<string, unknown>,
+				}),
+			);
+			return okReply(envelope, { profile: result.profile });
 		}
 		default:
 			return errorReply(

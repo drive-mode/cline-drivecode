@@ -38,11 +38,21 @@ const FACET_IDS = [
 	"drive.defaults.pairAgent",
 ] as const satisfies ReadonlyArray<keyof DriveFacetValues>;
 
-/** Flat runtime values → on-disk envelope (ADR-0013 / D7). */
+/**
+ * Flat runtime values → on-disk envelope (ADR-0013 / D7).
+ *
+ * `previous` is not optional in spirit: the write below atomically replaces the
+ * whole file, and `DriveFacetValues` only covers `FACET_IDS`. Rebuilding
+ * `entries` from `FACET_IDS` alone would drop every other entry in the file —
+ * silently, since `diskFileToFacetValues` also ignores anything that is not a
+ * `kind: "value"`. Carrying the rest forward keeps an unrelated put (a user
+ * changing their TTS provider) from deleting data it never read.
+ */
 export function facetValuesToDiskFile(
 	facets: DriveFacetValues,
+	previous?: DriveFacetDiskFile | null,
 ): DriveFacetDiskFile {
-	const entries: DriveFacetDiskFile["entries"] = {};
+	const entries: DriveFacetDiskFile["entries"] = { ...previous?.entries };
 	for (const id of FACET_IDS) {
 		entries[id] = { kind: "value", value: facets[id] };
 	}
@@ -50,6 +60,40 @@ export function facetValuesToDiskFile(
 		schemaVersion: DRIVE_FACET_SCHEMA_VERSION,
 		entries,
 	};
+}
+
+/**
+ * Raw envelope on disk, or null when there is nothing to carry forward.
+ *
+ * Unparseable bytes yield null so a corrupt file is still repaired by the next
+ * write, as it was before this merge existed — an unreadable file holds no
+ * entries worth preserving anyway. A *future* schemaVersion is different, and
+ * `parseDriveFacetDiskFile` is left to throw on it: overwriting a v2 file with
+ * a v1 one is the exact silent downgrade this merge exists to prevent.
+ */
+function readDriveFacetsDiskFile(
+	configParent: string,
+): DriveFacetDiskFile | null {
+	const path = resolveDriveFacetsPath(configParent);
+	if (!existsSync(path)) {
+		return null;
+	}
+	let raw: unknown;
+	try {
+		raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
+	} catch {
+		return null;
+	}
+	if (
+		raw === null ||
+		typeof raw !== "object" ||
+		!("schemaVersion" in raw) ||
+		!("entries" in raw)
+	) {
+		// Legacy flat JSON carries no extra entries to preserve.
+		return null;
+	}
+	return parseDriveFacetDiskFile(raw);
 }
 
 /** Envelope or legacy flat JSON → flat DriveFacetValues. */
@@ -90,8 +134,9 @@ export function writeDriveFacetsFile(
 	facets: DriveFacetValues,
 ): void {
 	const path = resolveDriveFacetsPath(configParent);
+	const previous = readDriveFacetsDiskFile(configParent);
 	mkdirSync(dirname(path), { recursive: true });
-	const envelope = facetValuesToDiskFile(facets);
+	const envelope = facetValuesToDiskFile(facets, previous);
 	const tmp = join(dirname(path), `.facets.v1.${process.pid}.tmp.json`);
 	writeFileSync(tmp, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
 	renameSync(tmp, path);

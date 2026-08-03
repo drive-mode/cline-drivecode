@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { AgentRef } from "../agentRef";
 import {
 	AgentAppearanceSchema,
 	AgentProfileSchema,
+	agentProfileId,
+	DEFAULT_AGENT_PROFILE_ID,
 	DRIVE_FACET_FORBIDDEN_PROMPT_KEYS,
 	emptyFacetDiskSnapshot,
 	mergeFacetScopes,
+	parseAgentProfileId,
 	parseDriveFacetDiskFile,
+	toAgentProfile,
 	UnknownFacetSchemaVersionError,
 } from "./index";
 
@@ -225,6 +230,66 @@ describe("facet document no-prompt invariant", () => {
 				}).success,
 			).toBe(false);
 		}
+	});
+});
+
+describe("agentProfileId", () => {
+	/**
+	 * The id is the only place the ref survives — the `agent.appearance` map
+	 * stores appearance alone. A lossy id would strand every stored appearance
+	 * on an agent nobody could name again.
+	 */
+	const refs: AgentRef[] = [
+		{ kind: "driveagent", slug: "pair-partner" },
+		{ kind: "driveagent", slug: "a1" },
+		{ kind: "builtin", id: "pair_partner" },
+		{ kind: "configured", id: "legacy-1" },
+		// Ids may contain the separator; the split is on the first one only.
+		{ kind: "builtin", id: "team.reviewer.v2" },
+	];
+
+	it("round-trips every AgentRef kind", () => {
+		for (const ref of refs) {
+			expect(parseAgentProfileId(agentProfileId(ref))).toEqual(ref);
+		}
+	});
+
+	it("gives distinct kinds distinct ids", () => {
+		const ids = refs.map(agentProfileId);
+		expect(new Set(ids).size).toBe(refs.length);
+		expect(agentProfileId({ kind: "builtin", id: "x" })).not.toBe(
+			agentProfileId({ kind: "configured", id: "x" }),
+		);
+	});
+
+	it("agrees with the store's default instance id", () => {
+		expect(agentProfileId({ kind: "builtin", id: "pair_partner" })).toBe(
+			DEFAULT_AGENT_PROFILE_ID,
+		);
+	});
+
+	it("returns null rather than inventing a ref for a non-canonical id", () => {
+		for (const id of [
+			"",
+			"partner",
+			".partner",
+			"builtin.",
+			"unknown.thing",
+			// Driveagent slugs are `[a-z0-9-]+`; an invalid one is not a ref.
+			"driveagent.Not_A_Slug",
+		]) {
+			expect(parseAgentProfileId(id)).toBeNull();
+		}
+	});
+
+	it("rebuilds a schema-valid AgentProfile from id + appearance", () => {
+		const id = agentProfileId({ kind: "driveagent", slug: "pair-partner" });
+		const profile = toAgentProfile(id, {
+			displayName: "Partner",
+			...appearanceBase,
+		});
+		expect(AgentProfileSchema.safeParse(profile).success).toBe(true);
+		expect(profile?.ref).toEqual({ kind: "driveagent", slug: "pair-partner" });
 	});
 });
 

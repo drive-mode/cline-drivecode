@@ -1,5 +1,8 @@
 /**
- * Durable Drive registry envelope (profiles + packs) — registry.v1.json.
+ * Durable Drive registry envelope (roster packs) — registry.v1.json.
+ *
+ * Agent appearance profiles are *not* here: they live in the `agent.appearance`
+ * map of the catalog facet envelope, keyed by `agentProfileId(ref)`.
  */
 
 import { z } from "zod";

@@ -482,6 +482,7 @@ export class HubServerTransport implements NativeHubTransport {
 				return await handleDrivePlanCommand(this.ctx, envelope);
 			case "drive_config_get":
 			case "drive_config_put":
+			case "drive_config_upsert_profile":
 				return handleDriveConfigCommand(this.ctx, envelope);
 			case "drive_catalog_get":
 			case "drive_catalog_put":
