@@ -184,4 +184,68 @@ describe("bankStore", () => {
 		expect(events).toContain("drive_task_archived");
 		expect(events).toContain("drive_plan_archived");
 	});
+
+	it("refuses completeTask when a bound run has no receipt", async () => {
+		const fs = createMemoryBankFs();
+		const store = createBankStore(fs, ROOT);
+		await store.createTask({ id: "t1", title: "One", body: "a" });
+		await store.createPlan({
+			id: "p1",
+			title: "Plan",
+			taskIds: ["t1"],
+		});
+		await expect(
+			store.completeTask("t1", {
+				boundRun: {
+					id: "run_1",
+					driveTaskId: "t1",
+					title: "Run",
+					status: "awaiting_verification",
+					spec: {
+						revision: 0,
+						maxParallel: 1,
+						gates: [],
+						waves: [],
+						workItems: [],
+					},
+				},
+			}),
+		).rejects.toThrow(/no receipt/);
+		expect(await fs.exists(archivedTaskPath(ROOT, "t1"))).toBe(false);
+	});
+
+	it("archives when bound run has an accepted receipt with evidence", async () => {
+		const fs = createMemoryBankFs();
+		const store = createBankStore(fs, ROOT);
+		await store.createTask({ id: "t1", title: "One", body: "a" });
+		await store.createPlan({
+			id: "p1",
+			title: "Plan",
+			taskIds: ["t1"],
+		});
+		await store.completeTask("t1", {
+			boundRun: {
+				id: "run_1",
+				driveTaskId: "t1",
+				title: "Run",
+				status: "awaiting_verification",
+				spec: {
+					revision: 0,
+					maxParallel: 1,
+					gates: [],
+					waves: [],
+					workItems: [],
+				},
+			},
+			receipt: {
+				id: "rcpt_1",
+				driveTaskId: "t1",
+				driveRunId: "run_1",
+				evidenceRefs: ["tests:green"],
+				decision: "accepted",
+				createdAt: "2026-08-02T12:00:00.000Z",
+			},
+		});
+		expect(await fs.exists(archivedTaskPath(ROOT, "t1"))).toBe(true);
+	});
 });

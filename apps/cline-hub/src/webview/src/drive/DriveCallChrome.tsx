@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
+	debugRetentionStripCopy,
 	interruptChromeCopy,
 	resolveInterruptPhase,
 } from "./agencyChrome";
@@ -402,6 +403,11 @@ export function DriveCallStrip({
 		turnInFlight,
 	});
 	const interruptCopy = interruptChromeCopy(interruptPhase);
+	const debugRetentionCopy = debugRetentionStripCopy(
+		Boolean(
+			(drive as DriveUiState & { debugRetention?: boolean }).debugRetention,
+		),
+	);
 	// Icon states carry the status the old text run spelled out; assistive tech
 	// gets the same facts back from a live region. One span per fact (and no
 	// aria-atomic) so a single toggle announces itself, not the whole strip.
@@ -412,6 +418,10 @@ export function DriveCallStrip({
 			text: drive.deafened ? "You are deafened" : "",
 		},
 		{ id: "spotlight", text: `Spotlight on ${spotlightLabel}` },
+		{
+			id: "debug-retention",
+			text: debugRetentionCopy ?? "",
+		},
 		{
 			id: "partner-audio",
 			text: [

@@ -2,12 +2,13 @@
  * Hub-local plan-improve resolve (DRV-PLAN-IMPROVE / Slice 3).
  *
  * Writes accepted artifacts under `<workspace>/.drive/plan-improve/` only.
- * Reject/mute are no-ops on disk. Does not compile `.driveagent` homes —
- * host skill invocation stays outside this boundary.
+ * Reject/mute are no-ops on disk. Skill accept also enqueues a host
+ * `.driveagent` compile job under `.drive/plan-improve/host-compile/` —
+ * hub never writes `.driveagent/` itself.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
 	planPlanImproveResolve,
 	type PlanImproveDecision,
@@ -16,6 +17,7 @@ import {
 	parsePlanningProposal,
 	type PlanningProposal,
 } from "@cline/shared";
+import { enqueueHostDriveagentSkillCompile } from "./host-driveagent-compile";
 import type { HubContext } from "./state";
 import type { BrowserPeer } from "./types";
 
@@ -32,7 +34,8 @@ function assertUnderPlanImprove(workspaceRoot: string, relativePath: string): st
 	const root = resolve(workspaceRoot);
 	const abs = resolve(root, relativePath);
 	const allowed = resolve(root, ".drive/plan-improve");
-	if (abs !== allowed && !abs.startsWith(`${allowed}/`)) {
+	const fromAllowed = relative(allowed, abs);
+	if (fromAllowed.startsWith("..") || isAbsolute(fromAllowed)) {
 		throw new Error(
 			`Plan-improve write refused outside .drive/plan-improve: ${relativePath}`,
 		);
@@ -118,6 +121,13 @@ export async function handleDrivePlanImproveWebviewCommand(
 			await writeFile(abs, body, "utf8");
 			wrote = true;
 			relativePath = rel;
+			if (plan.action === "enqueue_skill") {
+				await enqueueHostDriveagentSkillCompile({
+					workspaceRoot,
+					proposal: plan.proposal,
+					skillId: plan.skillId,
+				});
+			}
 		}
 
 		ctx.send(peer, {

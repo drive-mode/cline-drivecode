@@ -277,7 +277,7 @@ export function resolveDriveCallError({
 				? detail
 					? `Could not join Drive: ${detail}`
 					: "Could not join Drive."
-				: "The Drive call is no longer available.",
+				: "Room ended. Join again.",
 			phase: joinFailed ? "error" : "off",
 		};
 	}
@@ -291,6 +291,24 @@ export function resolveDriveCallError({
 		};
 	}
 	if (command === "call_get_room") {
+		if (
+			code === "hub_disconnected" ||
+			code === "version_skew" ||
+			/hub is not (connected|running)/i.test(detail ?? "")
+		) {
+			return {
+				kind: "reset",
+				note:
+					code === "version_skew"
+						? detail
+							? `Drive schema skew — reconnect blocked: ${detail}`
+							: "Drive schema skew — reconnect blocked. Update clients and Join again."
+						: detail
+							? `Hub is down: ${detail}`
+							: "Hub is down. Join again when it is back.",
+				phase: "error",
+			};
+		}
 		return {
 			kind: "notice",
 			note: detail
@@ -1075,7 +1093,7 @@ export function useDriveSession(
 			});
 			if (!roomId) {
 				resetDriveConnection({
-					note: "The Drive call is no longer available.",
+					note: "Room ended. Join again.",
 					phase: "off",
 				});
 				return true;

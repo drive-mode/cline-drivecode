@@ -20,7 +20,7 @@ export const DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS = 2_048;
 export const DEFAULT_BANK_EVENT_LOG_MAX_RECORDS = 4_096;
 
 /**
- * Raised caps when `privacy.debugRetention` is on (catalog facet; wire later).
+ * Raised caps when `privacy.debugRetention` is on (see retentionCaps.ts).
  * Still local-only — never phone-home.
  */
 export const DEBUG_ROOM_EVENT_LOG_MAX_RECORDS = 16_384;

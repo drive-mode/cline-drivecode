@@ -1,20 +1,28 @@
 /** Nested call roster from hub participants (DRV-ROSTER MVP). */
 
-import type { Participant } from "@cline/shared";
+import type { RankedRecruit, RecruitCandidate } from "@cline/drive";
+import type { Participant, RosterPack } from "@cline/shared";
 import { HandIcon, MicOffIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+	AddPackMenu,
+	type AddPackMenuPanel,
+} from "./AddPackMenu";
 import {
 	ParticipantSheet,
 	type ParticipantSheetMode,
 } from "./ParticipantSheet";
+import { RecruitAddPicker } from "./RecruitAddPicker";
+import { collectRecruitCandidates } from "./recruitAddNeed";
 import {
 	isRosterParticipantHandRaised,
 	isRosterParticipantMuted,
 	participantStatusLabel,
 	resolveRosterParticipants,
 } from "./rosterHelpers";
+import { RosterPackLibrary } from "./RosterPackLibrary";
 import type { DriveUiState } from "./types";
 import { nameInkPaletteColor } from "./types";
 
@@ -23,27 +31,44 @@ export function Roster({
 	workspaceRoot,
 	onTranscriptFocus,
 	onDriveChange,
+	disabled = false,
+	seatCap = 1,
+	onSeatRecruit,
+	onAddRosterPack,
 }: {
 	drive: DriveUiState;
 	workspaceRoot?: string;
 	/** Transcript intent — Profile must not call this. */
 	onTranscriptFocus: (participantId: string) => void;
 	onDriveChange: (next: DriveUiState) => void;
+	disabled?: boolean;
+	/** Multi-agent ceiling; 1 when team opt is off. */
+	seatCap?: number;
+	onSeatRecruit?: (entry: RankedRecruit) => void;
+	onAddRosterPack?: (pack: RosterPack) => void;
 }) {
 	const participants = resolveRosterParticipants(drive);
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [sheetMode, setSheetMode] = useState<ParticipantSheetMode>("chooser");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [addPanel, setAddPanel] = useState<AddPackMenuPanel>("closed");
 	const selected =
 		selectedId === null
 			? null
 			: (participants.find((entry) => entry.id === selectedId) ?? null);
+
+	const recruitCandidates: RecruitCandidate[] = useMemo(
+		() => collectRecruitCandidates(participants),
+		[participants],
+	);
 
 	const openChooser = (participant: Participant) => {
 		setSelectedId(participant.id);
 		setSheetMode("chooser");
 		setSheetOpen(true);
 	};
+
+	const showAdd = Boolean(onSeatRecruit || onAddRosterPack);
 
 	return (
 		<>
@@ -132,7 +157,44 @@ export function Roster({
 						</button>
 					);
 				})}
+				{showAdd ? (
+					<AddPackMenu
+						disabled={disabled}
+						onClose={() => setAddPanel("closed")}
+						onOpenMenu={() => setAddPanel("menu")}
+						onOpenPack={() => setAddPanel("pack")}
+						onOpenRecruit={() => setAddPanel("recruit")}
+						panel={addPanel}
+					/>
+				) : null}
 			</fieldset>
+
+			{addPanel === "recruit" && onSeatRecruit ? (
+				<div className="px-4 py-2">
+					<RecruitAddPicker
+						candidates={recruitCandidates}
+						disabled={disabled}
+						onDismiss={() => setAddPanel("closed")}
+						onSeat={(entry) => {
+							onSeatRecruit(entry);
+							setAddPanel("closed");
+						}}
+					/>
+				</div>
+			) : null}
+			{addPanel === "pack" && onAddRosterPack ? (
+				<div className="px-4 py-2">
+					<RosterPackLibrary
+						disabled={disabled}
+						onAddPack={(pack) => {
+							onAddRosterPack(pack);
+							setAddPanel("closed");
+						}}
+						onDismiss={() => setAddPanel("closed")}
+						seatCap={seatCap}
+					/>
+				</div>
+			) : null}
 
 			<ParticipantSheet
 				drive={drive}

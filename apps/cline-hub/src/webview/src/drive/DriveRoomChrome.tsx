@@ -1,4 +1,4 @@
-import type { PlanReentryRowModel } from "@cline/drive";
+import type { PlanReentryRowModel, RankedRecruit } from "@cline/drive";
 import {
 	applyPlanImproveAccept,
 	buildShippedDigest,
@@ -7,6 +7,7 @@ import {
 	planPlanImproveResolve,
 	statusSessionRowFromUnknown,
 } from "@cline/drive";
+import type { RosterPack } from "@cline/shared";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NowNext } from "../components/NowNext";
@@ -70,18 +71,34 @@ function DriveNarrationBanner({
 }
 
 /** Call roster wired to the session — mounts wherever the roster belongs. */
-export function DriveRoster({ session }: { session: UseDriveSessionResult }) {
+export function DriveRoster({
+	session,
+	disabled = false,
+	seatCap = 1,
+	onSeatRecruit,
+	onAddRosterPack,
+}: {
+	session: UseDriveSessionResult;
+	disabled?: boolean;
+	seatCap?: number;
+	onSeatRecruit?: (entry: RankedRecruit) => void;
+	onAddRosterPack?: (pack: RosterPack) => void;
+}) {
 	const { drive, setDrive } = session;
 	if (!drive.active) {
 		return null;
 	}
 	return (
 		<Roster
+			disabled={disabled}
 			drive={drive}
+			onAddRosterPack={onAddRosterPack}
 			onDriveChange={setDrive}
+			onSeatRecruit={onSeatRecruit}
 			onTranscriptFocus={(participantId) => {
 				setDrive((current) => applyTranscriptFocus(current, participantId));
 			}}
+			seatCap={seatCap}
 			workspaceRoot={session.workspaceRoot}
 		/>
 	);
@@ -97,6 +114,9 @@ export function DriveRoomChrome({
 	disabled,
 	providerId,
 	showRoster = true,
+	seatCap = 1,
+	onSeatRecruit,
+	onAddRosterPack,
 	onCleanDrainContinue,
 	onCleanDrainDismiss,
 	onPlanningImproveResolved,
@@ -106,6 +126,9 @@ export function DriveRoomChrome({
 	providerId: string;
 	/** False when the caller mounts {@link DriveRoster} itself (feed drawer). */
 	showRoster?: boolean;
+	seatCap?: number;
+	onSeatRecruit?: (entry: RankedRecruit) => void;
+	onAddRosterPack?: (pack: RosterPack) => void;
 	onCleanDrainContinue?: () => void;
 	onCleanDrainDismiss?: () => void;
 	/** After accept/reject/mute — parent may mute identical offerKeys. */
@@ -232,7 +255,15 @@ export function DriveRoomChrome({
 					row={planReentry}
 				/>
 			) : null}
-			{showRoster ? <DriveRoster session={session} /> : null}
+			{showRoster ? (
+				<DriveRoster
+					disabled={disabled}
+					onAddRosterPack={onAddRosterPack}
+					onSeatRecruit={onSeatRecruit}
+					seatCap={seatCap}
+					session={session}
+				/>
+			) : null}
 			{drive.active && driveVoice.settingsOpen ? (
 				<DriveSettingsPanel
 					onClose={() =>

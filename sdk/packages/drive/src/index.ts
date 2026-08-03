@@ -438,3 +438,19 @@ export {
 	runHostBehaviorConformance,
 	type HostBehaviorCase,
 } from "./conformance/hostBehavior.js";
+export {
+	claimWorkLease,
+	listEligibleWork,
+	reportProgress,
+	type AgentControlError,
+	type ClaimWorkLeaseInput,
+	type ClaimWorkLeaseResult,
+	type ListEligibleWorkInput,
+	type ReportProgressInput,
+	type ReportProgressResult,
+} from "./driveplan/agentControl.js";
+export {
+	assertCompletionReceipt,
+	CompletionReceiptError,
+	type AssertCompletionReceiptInput,
+} from "./driveplan/completionReceipt.js";

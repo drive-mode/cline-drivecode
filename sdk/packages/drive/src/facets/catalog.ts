@@ -75,6 +75,28 @@ export const DRIVE_FACET_CATALOG = {
 		phase: 0,
 		defaultValue: false,
 	} satisfies FacetDefMeta<boolean>,
+
+	/**
+	 * Durable local retention profile (DRV-PRIVACY). When set, hosts use these
+	 * base caps unless privacy.debugRetention raises them. Never phone-home.
+	 */
+	"privacy.retention": {
+		id: "privacy.retention",
+		title: "Event log retention",
+		owner: "hub",
+		scope: "workspace",
+		lane: "durable",
+		privacy: "sensitive",
+		conflict: "workspace_over_user",
+		phase: 0,
+		defaultValue: {
+			roomMaxRecords: 2048,
+			bankMaxRecords: 4096,
+		},
+	} satisfies FacetDefMeta<{
+		roomMaxRecords: number;
+		bankMaxRecords: number;
+	}>,
 } as const;
 
 export type DriveFacetCatalog = typeof DRIVE_FACET_CATALOG;

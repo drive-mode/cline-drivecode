@@ -4,7 +4,7 @@
 
 Drivecode should make Cline feel like a pair-programming call with recruitable agents, shared work, and clear room context. The product north star is a Drive tab with Discord-style information architecture, Slack-like chrome, pair-call interactions, and the cline.bot visual brand.
 
-**Current agent work (2026-08-02):** ADR validation fixes + DrivePlan agent-runtime track ([ADR-0018](plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md), [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/)); satisfaction residuals remain. Systems map: [plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md](plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md) §13.0. Living satisfaction checklist: [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md). Audit: [research/19-adr-validation-audit.md](plans/cline-drivemode/research/19-adr-validation-audit.md).
+**Current agent work (2026-08-02):** Tracks A–F of the remaining backlog landed on `feat/drive-remaining-backlog` (GATES feed + reconnect, Recruit/Pack UI, REMAINING residuals, ADR-0018 control + receipt guard, Voice STT, CLI `call_join`). Systems map: [plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md](plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md) §13.0. Living satisfaction checklist: [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md). Audit: [research/19-adr-validation-audit.md](plans/cline-drivemode/research/19-adr-validation-audit.md).
 
 ## Requirements
 
@@ -37,8 +37,8 @@ Leadership planning wave entry. [cline-drivemode/LEADERSHIP-BRIEF.md](plans/clin
 | Hub join / raise-hand / address / stage / mode / show via harness | **On main** (merged #58) |
 | Phase-2 pure helpers + durable pack registry + DirectorOps | **On main** — see [06-sdk-leverage.md](plans/drivecode-sdk/delivery/06-sdk-leverage.md) |
 | Task-satisfaction + session moments (W0–W4 + retention caps) | **On main** (merged #80); residuals in REMAINING |
-| Pack library UI / `/pack` | **Open** (out of harness track) |
-| DRV-GATES feed UI + reconnect UX + recruit Add path | **Open** — see SYSTEMS-ANALYSIS §13.0 / §16 |
+| Pack library UI / Add→Pack | **Shipped** (`RosterPackLibrary` / `AddPackMenu`; optional `/pack` composer still open) |
+| DRV-GATES feed UI + reconnect UX + recruit Add path | **Shipped** — GateFeedCard + session allow; RecruitAddPicker; reconnect empty states |
 
 Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session notes: [07-agent-handoff.md](plans/drivecode-sdk/delivery/07-agent-handoff.md) (superseded).
 
@@ -64,7 +64,7 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
 - `docs/drivecode/plans/cline-drivemode/delivery/TASK-GRAPH.md` orders phases and acceptance gates.
 - `docs/drivecode/plans/cline-drivemode/delivery/AGENT-RUNBOOK.md` explains how the next agent should select, implement, and verify tasks.
 - `docs/drivecode/plans/cline-drivemode/prd/prd-driveagent-portfolio.md` defines Driveagent portfolios, knowledge graphs, and recruit.
-- `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ADR-0015](plans/cline-drivemode/adr/ADR-0015-task-session-observability.md) Proposed).
+- `docs/drivecode/plans/cline-drivemode/prd/prd-task-satisfaction-observability.md` (PRD 10) + research `15`/`16` explore task-centric session satisfaction, local rollups, and gated plan improve ([initiative](plans/cline-drivemode/initiatives/task-satisfaction-observability/), [ADR-0015](plans/cline-drivemode/adr/ADR-0015-task-session-observability.md) Accepted).
 - `docs/drivecode/plans/cline-drivemode/initiatives/session-satisfaction-moments/` defines product moments on the call arc ([visual plan](plans/cline-drivemode/initiatives/session-satisfaction-moments/visual-plan.md), [canvas](design/canvases/session-satisfaction-moments-canvas.html)).
 - **Remaining implementation checklist:** [delivery/REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md) (satisfaction track landed; residuals in that file).
 - `docs/drivecode/plans/cline-drivemode/adr/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, gated learning, and agent runtime (see status board + **Impl** column).
@@ -103,18 +103,14 @@ Hub-owned rooms, Show backlog wire commands, Drive webview chrome, Status Hub, a
 - Harness: `sdk/packages/drive/src/harness.ts`
 - Product screenshots: `docs/drivecode/assets/{hub,tui,demos,logos}/`
 
-CLI Status uses the live hub adapter; CLI Drive chrome is a **local toggle** (no `call_join` yet — TASK-GRAPH Phase 4).
+CLI Status uses the live hub adapter; CLI Drive toggle best-effort `call_join`/`call_leave` via discovered hub (Phase 4; local chrome stays on if hub is down).
 
 ### Top gaps
 
-- ADR-0018 follow-ons: Agent Control tools + completion/receipt guard (schemas + interop stub landed) — [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/).
-- Satisfaction residuals: W1.1 redirect/narration, host `.driveagent` skill compile, `privacy.debugRetention` UI + raised caps, durable `privacy.retention`, ADR-0015 still **Proposed** — [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md).
-- `DRV-GATES` taxonomy landed (`gates.ts`); still needs expiry rules and an owner for the approval feed UI.
-- Hub reconnect needs acceptance criteria and degraded-state UX under `DRV-ROOM-MVP`.
-- Recruit product Add path + RosterPack library UI (kernel score + hub pack seat path already exist).
-- Spatial Dependency map (`DRV-DEP-MAP`) — shipped lens is card grid only.
-- Voice Phase 3 (local STT); CLI call parity / isolation / teamOpt (Phase 4).
-- Explicit non-goals: WebRTC, room persistence, multi-human media, Discord channels IA (wireframe only).
+- ADR-0019 full DrivePlan–Kanban Interop wire (after ADR-0018 D1–D2 proved on this branch) — [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/).
+- Optional composers: `/recruit`, `/pack`; Spatial Dependency map (`DRV-DEP-MAP`) still card-grid only.
+- Isolation required before `teamOpt` multi-seat beyond fail-closed seatCap.
+- Discord channels IA polish (out of Tracks A–F).
 
 ## Demo
 

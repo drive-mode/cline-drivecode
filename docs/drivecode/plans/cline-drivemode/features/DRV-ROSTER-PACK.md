@@ -6,7 +6,7 @@ Back to [README](../README.md). Phase 2 in [TASK-GRAPH](../delivery/TASK-GRAPH.m
 
 ## Implementation status
 
-`expandRosterPack` + hub `call_add` / `call_remove_roster_pack` shipped. Pack library UI still open.
+`expandRosterPack` + hub `call_add` / `call_remove_roster_pack` + pack library UI (`RosterPackLibrary` / `AddPackMenu`, fixture catalog, seatCap fail-closed) shipped. Live durable pack catalog / `/pack` composer still open.
 
 ## Problem / user value
 

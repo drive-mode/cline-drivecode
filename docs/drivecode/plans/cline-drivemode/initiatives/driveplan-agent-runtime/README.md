@@ -1,7 +1,7 @@
 # DrivePlan agent runtime
 
 **Status:** active
-**ADR:** [ADR-0018](../../adr/ADR-0018-agent-runtime-contract.md) (Accepted — Impl partial)
+**ADR:** [ADR-0018](../../adr/ADR-0018-agent-runtime-contract.md) (Accepted — Impl partial; Agent Control + completion guard landed, ADR-0019 wire later)
 **DRV:** [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md)
 
 ## Purpose
@@ -20,9 +20,9 @@ Ship the agent-first execution contract: `DriveTask` → `DriveRun` → `DriveRu
 | Hub brand tokens on state plane | done | `cline-canvas-tokens.css` |
 | Shared schemas (`DriveRun`, lease, receipt) | done | `@cline/shared` `drive/run.ts` — `DriveRunWorkItem` ≠ wave `DriveWorkItem` |
 | Read-only one-task/one-run projection | done | Kanban `externalRef` + `@cline/drive` `kanbanInterop` stub |
-| Agent Control tools | later | `driveplan.*` at mutation boundary |
-| Completion guard | later | receipt + verifier before archive |
-| ADR-0019 Interop wire | later | full host protocol |
+| Agent Control tools | done | `@cline/drive` `driveplan/agentControl` — list/claim/progress propose-only |
+| Completion guard | done | `assertCompletionReceipt` wired into `bankStore.completeTask` |
+| ADR-0019 Interop wire | later | full host protocol — stub TODO only in `kanbanInterop` |
 
 ## Non-goals
 

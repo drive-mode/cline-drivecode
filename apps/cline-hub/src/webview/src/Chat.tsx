@@ -8,14 +8,21 @@ import {
 	diagnoseAndPropose,
 	formatCleanDrainNarration,
 	type RankedRecruit,
-	type RecruitCandidate,
 	type RecruitNeed,
 	rankRecruitCandidates,
 	type StallOpenFailure,
 	shouldOfferCleanDrain,
 	stallRollupSliceFromCounters,
 } from "@cline/drive";
-import type { AddressSet } from "@cline/shared";
+import type { AddressSet, GateSessionState, RosterPack } from "@cline/shared";
+import {
+	allowGateClassForSession,
+	classifyToolNameForGate,
+	clearGateSession,
+	createGateSessionState,
+	recordGateDenial,
+	shouldShowGatesActiveStrip,
+} from "@cline/shared";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
@@ -73,6 +80,11 @@ import {
 	DriveVoiceBar,
 } from "./drive/DriveRoomChrome";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
+import {
+	GateFeedCard,
+	type GateFeedResponse,
+} from "./drive/GateFeedCard";
+import { collectRecruitCandidates } from "./drive/recruitAddNeed";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
 import { resolveRosterParticipants } from "./drive/rosterHelpers";
@@ -224,6 +236,9 @@ export default function Chat({
 	const [autoApproveTools, setAutoApproveTools] = useState(true);
 	const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
 		[],
+	);
+	const [gateSession, setGateSession] = useState<GateSessionState>(() =>
+		createGateSessionState(),
 	);
 	const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
 	const [titleEditing, setTitleEditing] = useState(false);
@@ -518,6 +533,25 @@ export default function Chat({
 		[bankSessionRef, defaults.workspaceRoot, setDrive],
 	);
 
+	const addRosterPack = useCallback(
+		(pack: RosterPack) => {
+			const roomId = driveRef.current.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID;
+			postToHost({
+				type: "call_add_roster_pack",
+				roomId,
+				packId: pack.id,
+				...(defaults.workspaceRoot?.trim()
+					? { workspaceRoot: defaults.workspaceRoot.trim() }
+					: {}),
+			});
+			setDrive((current) => ({
+				...current,
+				agencyBanner: `Added pack ${pack.displayName}`,
+			}));
+		},
+		[defaults.workspaceRoot, setDrive],
+	);
+
 	/** Baseline activate task ids when a plan first appears this session. */
 	const lastCleanDrainPlanIdRef = useRef<string | null>(null);
 	useEffect(() => {
@@ -576,6 +610,8 @@ export default function Chat({
 		if (!wasActive) {
 			return;
 		}
+		// Leave / End clears session allows (DRV-GATES — never durable by default).
+		setGateSession(clearGateSession());
 		if (drive.pendingPlanningImprove) {
 			return;
 		}
@@ -647,51 +683,9 @@ export default function Chat({
 							failureNote:
 								snapshot.nowLastFailure ?? offer?.failureNote ?? null,
 						});
-						const candidates: RecruitCandidate[] = [];
-						const seen = new Set<string>();
-						for (const participant of resolveRosterParticipants(
-							driveRef.current,
-						)) {
-							if (participant.kind !== "agent") {
-								continue;
-							}
-							if (seen.has(participant.id)) {
-								continue;
-							}
-							seen.add(participant.id);
-							candidates.push({
-								slug: participant.id,
-								displayName: participant.displayName,
-								labels: [
-									participant.role,
-									participant.displayName,
-									participant.id,
-								],
-								domains: [],
-							});
-						}
-						// Builtin fixtures so lexical rank has something beyond the pair.
-						for (const fixture of [
-							{
-								slug: "security-reviewer",
-								displayName: "Security Reviewer",
-								labels: ["security", "auth", "review"],
-								domains: ["auth"],
-								suggestedPackIds: ["security-crew"],
-							},
-							{
-								slug: "test-fixer",
-								displayName: "Test Fixer",
-								labels: ["tests", "parser", "fixup"],
-								domains: ["qa"],
-							},
-						] as RecruitCandidate[]) {
-							if (seen.has(fixture.slug)) {
-								continue;
-							}
-							seen.add(fixture.slug);
-							candidates.push(fixture);
-						}
+						const candidates = collectRecruitCandidates(
+							resolveRosterParticipants(driveRef.current),
+						);
 						const ranked = rankRecruitCandidates(need, candidates, {
 							limit: 5,
 						});
@@ -1701,6 +1695,47 @@ export default function Chat({
 		setStatus(approved ? "Approval sent." : "Rejection sent.");
 	};
 
+	const respondToGateFeed = (approvalId: string, response: GateFeedResponse) => {
+		const approval = pendingApprovals.find((item) => item.approvalId === approvalId);
+		if (!approval) {
+			return;
+		}
+		const actionClass = classifyToolNameForGate(approval.toolName);
+		if (response.kind === "deny") {
+			setGateSession((current) => recordGateDenial(current, actionClass));
+		}
+		if (response.kind === "allow_session") {
+			setGateSession((current) =>
+				allowGateClassForSession(current, response.actionClass),
+			);
+		}
+		const approved = response.kind === "approve" || response.kind === "allow_session";
+		const reason =
+			response.kind === "allow_session"
+				? `Allow-for-session (${response.actionClass}) in Drive feed.`
+				: response.kind === "approve"
+					? "Approved in Drive gate feed."
+					: "Denied in Drive gate feed — partner must replan.";
+		setPendingApprovals((current) =>
+			current.map((item) =>
+				item.approvalId === approvalId ? { ...item, responding: true } : item,
+			),
+		);
+		postToHost({
+			type: "approval_response",
+			approvalId,
+			approved,
+			reason,
+		});
+		setStatus(
+			response.kind === "deny"
+				? "Gate denied — partner must replan."
+				: response.kind === "allow_session"
+					? "Gate allowed for this call session."
+					: "Gate approved.",
+		);
+	};
+
 	return (
 		<PromptInputProvider>
 			<div className="relative flex h-screen flex-col overflow-hidden">
@@ -1802,6 +1837,7 @@ export default function Chat({
 				</div>
 				<DriveRoomChrome
 					disabled={isHydrating}
+					onAddRosterPack={addRosterPack}
 					onCleanDrainContinue={continueCleanDrain}
 					onCleanDrainDismiss={dismissCleanDrain}
 					onPlanningImproveResolved={(decision, offerKey) => {
@@ -1809,7 +1845,9 @@ export default function Chat({
 							setDismissedPlanImproveOfferKey(offerKey);
 						}
 					}}
+					onSeatRecruit={seatRecruitCandidate}
 					providerId={provider}
+					seatCap={1}
 					session={driveSession}
 					showRoster={!stageLayout}
 				/>
@@ -1877,6 +1915,15 @@ export default function Chat({
 									onDismiss={dismissStuckRecovery}
 									source={recoveryOfferTarget.source}
 									taskId={recoveryOfferTarget.taskId}
+								/>
+							) : null}
+							{drive.active && pendingApprovals.length > 0 ? (
+								<GateFeedCard
+									approvals={pendingApprovals}
+									className="mb-3"
+									disabled={isHydrating}
+									onRespond={respondToGateFeed}
+									requesterLabel={drive.partnerName}
 								/>
 							) : null}
 							{recruitStall ? (
@@ -2104,7 +2151,15 @@ export default function Chat({
 						}
 						inert={stageLayout && feedCollapsed}
 					>
-						{stageLayout ? <DriveRoster session={driveSession} /> : null}
+						{stageLayout ? (
+							<DriveRoster
+								disabled={isHydrating}
+								onAddRosterPack={addRosterPack}
+								onSeatRecruit={seatRecruitCandidate}
+								seatCap={1}
+								session={driveSession}
+							/>
+						) : null}
 						<ConversationPanel
 							forkError={forkError}
 							forking={forking}
@@ -2117,10 +2172,20 @@ export default function Chat({
 							}}
 							sending={sending}
 						/>
-						<PendingApprovalsPanel
-							approvals={pendingApprovals}
-							onRespond={respondToApproval}
-						/>
+						{drive.active ? null : (
+							<PendingApprovalsPanel
+								approvals={pendingApprovals}
+								onRespond={respondToApproval}
+							/>
+						)}
+						{drive.active && shouldShowGatesActiveStrip(gateSession) ? (
+							<p
+								className="border-t px-4 py-1.5 text-[11px] text-amber-800 dark:text-amber-200"
+								data-slot="gates-active-strip"
+							>
+								Gates active — several high-impact denials this call.
+							</p>
+						) : null}
 						<DriveVoiceBar
 							disabled={isHydrating}
 							onSendSpoken={sendDrivePrompt}

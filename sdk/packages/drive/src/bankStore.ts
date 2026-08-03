@@ -2,7 +2,9 @@ import type {
 	BankDriveEvent,
 	BankSnapshot,
 	DrivePlan,
+	DriveRun,
 	DriveTask,
+	Receipt,
 } from "@cline/shared";
 import type { BankFs } from "./bankFs.js";
 import {
@@ -18,6 +20,7 @@ import {
 	serializeDriveTask,
 } from "./bankSerialize.js";
 import { deriveBankSnapshot } from "./bankSnapshot.js";
+import { assertCompletionReceipt } from "./driveplan/completionReceipt.js";
 import {
 	createDrivePlanActivatedEvent,
 	createDrivePlanArchivedEvent,
@@ -48,7 +51,15 @@ export interface BankStore {
 	bindNowTask(options?: {
 		agentId?: string;
 	}): Promise<{ plan: DrivePlan; task: DriveTask } | null>;
-	completeTask(taskId: string, options?: { agentId?: string }): Promise<void>;
+	completeTask(
+		taskId: string,
+		options?: {
+			agentId?: string;
+			/** When set, archive requires an accepted receipt (ADR-0018 §5). */
+			boundRun?: DriveRun;
+			receipt?: Receipt;
+		},
+	): Promise<void>;
 	recordTaskFailure(taskId: string, note: string): Promise<DriveTask>;
 	editPlanTaskIds(planId: string, taskIds: string[]): Promise<DrivePlan>;
 	closeAndArchivePlan(planId: string): Promise<void>;
@@ -264,6 +275,11 @@ export function createBankStore(
 			if (!raw) {
 				throw new Error(`Task not found: ${taskId}`);
 			}
+			assertCompletionReceipt({
+				taskId,
+				boundRun: completeOptions?.boundRun,
+				receipt: completeOptions?.receipt,
+			});
 			const task = deserializeDriveTask(raw);
 			const done: DriveTask = { ...task, status: "done" };
 			await fs.write(activePath, serializeDriveTask(done));

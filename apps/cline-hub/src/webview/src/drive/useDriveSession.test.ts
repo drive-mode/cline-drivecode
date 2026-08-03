@@ -21,7 +21,7 @@ describe("Drive call error transitions", () => {
 			}),
 		).toEqual({
 			kind: "reset",
-			note: "The Drive call is no longer available.",
+			note: "Room ended. Join again.",
 			phase: "off",
 		});
 	});
@@ -35,7 +35,7 @@ describe("Drive call error transitions", () => {
 			}),
 		).toEqual({
 			kind: "reset",
-			note: "The Drive call is no longer available.",
+			note: "Room ended. Join again.",
 			phase: "off",
 		});
 	});
@@ -55,7 +55,7 @@ describe("Drive call error transitions", () => {
 		});
 	});
 
-	it("treats a failed room refresh as a terminal notice", () => {
+	it("makes hub-down / version skew a terminal empty state", () => {
 		expect(
 			resolveDriveCallError({
 				code: "hub_disconnected",
@@ -64,8 +64,35 @@ describe("Drive call error transitions", () => {
 				wasJoining: false,
 			}),
 		).toEqual({
+			kind: "reset",
+			note: "Hub is down: Hub is not connected.",
+			phase: "error",
+		});
+		expect(
+			resolveDriveCallError({
+				code: "version_skew",
+				command: "call_get_room",
+				text: "major mismatch",
+				wasJoining: false,
+			}),
+		).toEqual({
+			kind: "reset",
+			note: "Drive schema skew — reconnect blocked: major mismatch",
+			phase: "error",
+		});
+	});
+
+	it("treats a failed room refresh as a terminal notice", () => {
+		expect(
+			resolveDriveCallError({
+				code: "timeout",
+				command: "call_get_room",
+				text: "timed out",
+				wasJoining: false,
+			}),
+		).toEqual({
 			kind: "notice",
-			note: "Could not refresh the Drive call: Hub is not connected.",
+			note: "Could not refresh the Drive call: timed out",
 		});
 	});
 

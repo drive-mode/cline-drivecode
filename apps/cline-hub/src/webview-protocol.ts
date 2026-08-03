@@ -377,6 +377,18 @@ export type WebviewInboundMessage =
 			seatCap?: number;
 	  }
 	| {
+			type: "call_add_roster_pack";
+			roomId: string;
+			packId: string;
+			workspaceRoot?: string;
+	  }
+	| {
+			type: "call_remove_roster_pack";
+			roomId: string;
+			packId: string;
+			workspaceRoot?: string;
+	  }
+	| {
 			type: "call_get_room";
 			roomId?: string;
 			sessionId?: string;

@@ -358,6 +358,8 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						frame.type === "call_set_address" ||
 						frame.type === "call_set_mode" ||
 						frame.type === "call_seat" ||
+						frame.type === "call_add_roster_pack" ||
+						frame.type === "call_remove_roster_pack" ||
 						frame.type === "call_get_room"
 					) {
 						await handleCallCommand(ctx, peer, frame);

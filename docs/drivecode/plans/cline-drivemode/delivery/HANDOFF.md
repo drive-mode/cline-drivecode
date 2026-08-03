@@ -64,7 +64,7 @@ At handoff time (2026-07-25) only early chrome existed. **On current `main` that
 | `apps/cline-hub/src/webview/src/drive/` | Early `DriveCallChrome` / types |
 | `apps/cli/src/tui/...` | Status bar Drive toggle |
 
-**Still open today (not “not done” for rooms):** pack library UI, recruit Add path, DRV-GATES feed UI, CLI `call_join` parity, Discord channels IA.
+**Still open today (not “not done” for rooms):** optional `/recruit` `/pack` composers, Discord channels IA, ADR-0019 interop wire. GATES feed, recruit Add, pack library, CLI `call_join` shipped on remaining-backlog branch.
 
 ### Outside this repo (do not expect in the PR tree)
 

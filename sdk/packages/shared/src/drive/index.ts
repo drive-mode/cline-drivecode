@@ -189,6 +189,23 @@ export {
 	GateDispositionSchema,
 	parseGateActionClass,
 } from "./gates";
+export {
+	allowGateClassForSession,
+	canOfferGateSessionAllow,
+	clearGateSession,
+	createGateSessionState,
+	EMPTY_GATE_SESSION,
+	GATE_DENIAL_STRATEGY_THRESHOLD,
+	GATE_WARNING_STRIP_THRESHOLD,
+	gateDenialCount,
+	type GateSessionState,
+	isGateSessionAllowed,
+	recordGateDenial,
+	recordGateWarning,
+	requiresGateStrategyChange,
+	resolveGateBypass,
+	shouldShowGatesActiveStrip,
+} from "./gateSession";
 export type {
 	AgentAppearance,
 	AgentProfile,

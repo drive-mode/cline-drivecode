@@ -1,12 +1,12 @@
 # DRV-GATES · High-impact approval and policy blocks
 
-Back to [README](../README.md). Phase 1 (taxonomy + events) / Phase 2 (UI) in [TASK-GRAPH](../delivery/TASK-GRAPH.md).  
-Owns workflows **W-24** (approve high-impact) and **W-25** (policy block).  
+Back to [README](../README.md). Phase 1 (taxonomy + events) / Phase 2 (UI) in [TASK-GRAPH](../delivery/TASK-GRAPH.md).
+Owns workflows **W-24** (approve high-impact) and **W-25** (policy block).
 Closes the top gap previously parked only as platform facet `#26` / `#27`.
 
 ## Implementation status
 
-`gates.ts` taxonomy landed. Feed UI + expiry still open.
+`gates.ts` taxonomy + session-allow helpers landed. Feed UI projects `approval.requested` into room feed cards (approve / deny / allow-for-session).
 
 ## Problem / user value
 

@@ -1,8 +1,8 @@
 /**
- * DRV-GATES v1 action taxonomy (Phase 0 schema stub).
+ * DRV-GATES v1 action taxonomy.
  *
  * High-impact classes that must emit a gate when Drive is active
- * (unless session-allowed). Feed-card UI and approval projection are later.
+ * (unless session-allowed). Feed-card UI projects approvals into the room feed.
  */
 
 import { z } from "zod";

@@ -4,7 +4,7 @@ Back to [README](../README.md). Phase 2–4 in [TASK-GRAPH](../delivery/TASK-GRA
 
 ## Implementation status
 
-`scoreNeed` + stall `RecruitStallPicker` partial. General Add / Recruit UI still open.
+`scoreNeed` + stall `RecruitStallPicker` + general Add → Recruit (`RecruitAddPicker` / roster Add menu) shipped. Optional `/recruit` composer still open.
 
 ## Problem / user value
 

@@ -28,6 +28,8 @@ export async function handleCallCommand(
 			| "call_set_address"
 			| "call_set_mode"
 			| "call_seat"
+			| "call_add_roster_pack"
+			| "call_remove_roster_pack"
 			| "call_get_room";
 		[key: string]: unknown;
 	},

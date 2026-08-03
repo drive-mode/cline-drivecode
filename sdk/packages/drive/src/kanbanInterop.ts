@@ -2,6 +2,10 @@
  * Narrow DrivePlan–Kanban Interop stub (ADR-0018 §7).
  * Full wire shapes defer to ADR-0019.
  *
+ * TODO(ADR-0019): expand beyond getCapabilities / applyProjection / observe —
+ * execute(allowedCommand) + collectReceipt() host wire lives in initiative
+ * docs/drivecode/plans/cline-drivemode/initiatives/driveplan-agent-runtime/.
+ *
  * Parses at the host boundary: callers pass a typed `DriveRun` (from
  * `@cline/shared` parse helpers). This package stays type-only on shared.
  */

@@ -41,6 +41,37 @@ export function interruptChromeCopy(
 }
 
 /**
+ * W1.1 / W-13: announce that Now was rewritten after an interrupt redirect.
+ * Feed / strip narration only — no utterance payload.
+ */
+export function interruptRedirectNowAnnounce(input: {
+	previousNowTitle?: string | null;
+	nextNowTitle?: string | null;
+	nextNowTaskId?: string | null;
+}): string | null {
+	const next =
+		input.nextNowTitle?.trim() ||
+		input.nextNowTaskId?.trim() ||
+		null;
+	if (!next) {
+		return null;
+	}
+	const prev = input.previousNowTitle?.trim();
+	if (prev && prev === next) {
+		return null;
+	}
+	if (prev) {
+		return `Redirect: Now was “${prev}”; now “${next}”.`;
+	}
+	return `Redirect: Now is “${next}”.`;
+}
+
+/** Visible call-strip badge when privacy.debugRetention is on. */
+export function debugRetentionStripCopy(debugRetention: boolean): string | null {
+	return debugRetention ? "Debug retention on" : null;
+}
+
+/**
  * One-shot consequence after a PlanEditor bank mutation.
  * Skips reorder-only noise when the cursor (now/next) is unchanged.
  */

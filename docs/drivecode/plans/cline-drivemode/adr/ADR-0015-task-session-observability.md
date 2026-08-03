@@ -2,12 +2,12 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Metadata
 
 - Date: 2026-07-30
-- Deciders: Drivecode planning (pending leadership accept)
+- Deciders: Drivecode planning (leadership accept 2026-08-02 with remaining backlog Track C)
 - Related: PRD 10, research 15–16, ADR-0004, ADR-0008, DRV-CALL-SESSION, DRV-TASK-METRICS, DRV-PLAN-IMPROVE, DRV-PRIVACY
 
 ## Context
@@ -16,7 +16,7 @@ Drive’s execution primitive is the task bank (ADR-0008). Leadership wants to m
 
 Existing [prd-success-metrics](../prd/prd-success-metrics.md) covers phase gates and privacy CI, and explicitly forbids phone-home Drive telemetry in MVP. A “task model” metaphor (tasks ≈ tokens) risks becoming a second runtime or a retention excuse if unbounded.
 
-**Impl note (2026-08-02):** Partial slices are on tip — `callSessionId` on join/leave and bank events, session rollups from local JSONL, `classifyStall` / `PlanningProposal` / plan-improve store+resolve, stall → recovery fork paths. Status stays **Proposed** until leadership accept. Remaining gaps include honest dashboard spine completeness (e.g. dedicated `plan-ref changed` event naming) and product rollup UX.
+**Impl note (2026-08-02):** Partial slices are on tip — `callSessionId` on join/leave and bank events, session rollups from local JSONL, `classifyStall` / `PlanningProposal` / plan-improve store+resolve, stall → recovery fork paths. Host `.driveagent` skill compile remains enqueue-only via `.drive/plan-improve/host-compile/`. Remaining gaps include honest dashboard spine completeness (e.g. dedicated `plan-ref changed` event naming).
 
 ## Decision
 

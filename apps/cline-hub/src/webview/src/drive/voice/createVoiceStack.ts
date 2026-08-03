@@ -10,6 +10,7 @@ import {
 	ttsBackendsEqual,
 } from "@cline/shared";
 import { applyAudioOutputSinkId } from "./driveHardwarePrefs";
+import { LocalSttError, transcribeAudioBlob } from "./transcribeAudioBlob";
 
 export interface SttHandlers {
 	onInterim?(text: string): void;
@@ -104,6 +105,10 @@ export function createVoiceStack(
 
 function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 	const backend = manifest.backend as SttBackend;
+	const config =
+		manifest.defaultConfig && typeof manifest.defaultConfig === "object"
+			? (manifest.defaultConfig as Record<string, unknown>)
+			: {};
 	return {
 		backend,
 		egress: manifest.egress,
@@ -115,12 +120,103 @@ function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 					message:
 						"Use SpeechInput for webSpeech STT; SttPort.start is a no-op.",
 				});
-			} else {
-				handlers.onError({
-					code: "stt_not_wired",
-					message: `Local STT adapter ${manifest.id} is selected but the worker is not wired yet.`,
-				});
+				return { stop() {} };
 			}
+			if (backend.kind === "local-worker" || backend.kind === "cloud-api") {
+				// MediaRecorder session → OpenAI-compatible local/cloud transcription.
+				// Privacy: blobs are not persisted; only confirmed text is returned.
+				let stopped = false;
+				let mediaRecorder: MediaRecorder | null = null;
+				let stream: MediaStream | null = null;
+				const chunks: BlobPart[] = [];
+				void (async () => {
+					try {
+						if (
+							typeof navigator === "undefined" ||
+							!navigator.mediaDevices?.getUserMedia ||
+							typeof MediaRecorder === "undefined"
+						) {
+							handlers.onError({
+								code: "stt_unsupported",
+								message: "MediaRecorder STT is not available in this environment.",
+							});
+							return;
+						}
+						stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+						if (stopped) {
+							for (const track of stream.getTracks()) {
+								track.stop();
+							}
+							return;
+						}
+						mediaRecorder = new MediaRecorder(stream);
+						mediaRecorder.ondataavailable = (event) => {
+							if (event.data.size > 0) {
+								chunks.push(event.data);
+							}
+						};
+						mediaRecorder.onstop = () => {
+							void (async () => {
+								try {
+									const blob = new Blob(chunks, {
+										type: mediaRecorder?.mimeType || "audio/webm",
+									});
+									const text = await transcribeAudioBlob({
+										blob,
+										backend,
+										config,
+									});
+									if (!stopped && text.trim()) {
+										handlers.onFinal(text.trim());
+									}
+								} catch (error) {
+									handlers.onError({
+										code:
+											error instanceof LocalSttError
+												? error.code
+												: "stt_failed",
+										message:
+											error instanceof Error
+												? error.message
+												: String(error),
+									});
+								} finally {
+									if (stream) {
+										for (const track of stream.getTracks()) {
+											track.stop();
+										}
+									}
+								}
+							})();
+						};
+						mediaRecorder.start();
+					} catch (error) {
+						handlers.onError({
+							code: "stt_permission",
+							message:
+								error instanceof Error
+									? error.message
+									: "Could not start local STT capture.",
+						});
+					}
+				})();
+				return {
+					stop() {
+						stopped = true;
+						if (mediaRecorder && mediaRecorder.state !== "inactive") {
+							mediaRecorder.stop();
+						} else if (stream) {
+							for (const track of stream.getTracks()) {
+								track.stop();
+							}
+						}
+					},
+				};
+			}
+			handlers.onError({
+				code: "stt_not_wired",
+				message: `STT adapter ${manifest.id} backend is unsupported.`,
+			});
 			return { stop() {} };
 		},
 	};

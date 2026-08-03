@@ -4,11 +4,12 @@ import { DRIVE_FACET_CATALOG, listFacetDefs } from "./catalog";
 import { createFacetStore } from "./store";
 
 describe("DRIVE_FACET_CATALOG", () => {
-	it("ships the Phase 0 durable pair plus live subMode and debugRetention", () => {
+	it("ships the Phase 0 durable pair plus live subMode, debugRetention, and retention", () => {
 		expect(Object.keys(DRIVE_FACET_CATALOG).sort()).toEqual([
 			"agent.appearance",
 			"drive.defaults.subMode",
 			"privacy.debugRetention",
+			"privacy.retention",
 			"room.live.subMode",
 		]);
 		expect(DRIVE_FACET_CATALOG["drive.defaults.subMode"].lane).toBe(
@@ -23,10 +24,15 @@ describe("DRIVE_FACET_CATALOG", () => {
 			defaultValue: false,
 			privacy: "sensitive",
 		});
+		expect(DRIVE_FACET_CATALOG["privacy.retention"]).toMatchObject({
+			lane: "durable",
+			scope: "workspace",
+			defaultValue: { roomMaxRecords: 2048, bankMaxRecords: 4096 },
+		});
 	});
 
 	it("lists defs by lane", () => {
-		expect(listFacetDefs({ lane: "durable" })).toHaveLength(2);
+		expect(listFacetDefs({ lane: "durable" })).toHaveLength(3);
 		expect(listFacetDefs({ lane: "live" })).toHaveLength(2);
 	});
 });

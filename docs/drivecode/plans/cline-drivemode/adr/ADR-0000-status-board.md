@@ -45,10 +45,10 @@
 | [ADR-0012](ADR-0012-agent-router.md) | Agent router for multi-agent rooms | **Accepted** | shipped | `planRoute` + addressSet |
 | [ADR-0013](ADR-0013-state-partition.md) | Three-lane state partition | **Accepted** | partial | Log + live + facets; two live maps wording soft |
 | [ADR-0014](ADR-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle | **Accepted** | shipped | Hub `drive.fork.*` + PromotePacket |
-| [ADR-0015](ADR-0015-task-session-observability.md) | Local task-session observability | **Proposed** | partial | Slices landed; leadership accept pending |
+| [ADR-0015](ADR-0015-task-session-observability.md) | Local task-session observability | **Accepted** | partial | Slices + privacy UI + host compile enqueue; materialize into `.driveagent/` still host |
 | [ADR-0016](ADR-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** | decision | Route B fork; public self-hosted beta |
 | [ADR-0017](ADR-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | **Proposed — deferred** | deferred | Demo canvas only; behind S9 |
-| [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | **Accepted** | partial | `run.ts` + interop stub + Kanban `externalRef`; tools/guards follow-on |
+| [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | **Accepted** | partial | `run.ts` + interop stub + Agent Control propose helpers + `assertCompletionReceipt` in `completeTask`; ADR-0019 wire still later |
 | ADR-0019 | DrivePlan–Kanban Interop wire | **Reserved** | — | Named by ADR-0018; not drafted yet |
 | [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | decision | Hold + rewind; coalesce projection; wire `run_expensive` |
 | [ADR-0021](ADR-0021-drive-credential-onboarding.md) | Drive credential onboarding (device-code first) | **Proposed** | none | Blocks the beta's credentialed-call gate. Credentials stay in Cline's `ProviderSettingsManager` per ADR-0010; Drive consumes a readiness boolean, never a key. Ships with three secret-hygiene fixes: the provider catalog broadcasts **plaintext API keys** today (`local-provider-service.ts:709`), the desktop-command OAuth reply returns a **raw token** (`desktop-commands.ts:194`), and Drive reports ready when unconfigured (`driveVoiceUi.ts:89` substitutes `anthropic`) |

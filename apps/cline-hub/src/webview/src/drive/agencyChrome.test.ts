@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
 import {
+	debugRetentionStripCopy,
 	hasNowLastFailure,
 	interruptChromeCopy,
+	interruptRedirectNowAnnounce,
 	planAddTreatment,
 	planEditConsequenceBanner,
 	resolveInterruptPhase,
@@ -104,6 +106,28 @@ describe("planAddTreatment", () => {
 		const collaborative = planAddTreatment(false);
 		expect(collaborative.tone).toBe("collaborative");
 		expect(collaborative.addLabel).toBe("Add task");
+	});
+});
+
+describe("interruptRedirectNowAnnounce / debugRetentionStripCopy", () => {
+	it("announces Now rewrite after redirect", () => {
+		expect(
+			interruptRedirectNowAnnounce({
+				previousNowTitle: "Fix parser",
+				nextNowTitle: "Narrow repro",
+			}),
+		).toBe('Redirect: Now was “Fix parser”; now “Narrow repro”.');
+		expect(
+			interruptRedirectNowAnnounce({
+				previousNowTitle: "Same",
+				nextNowTitle: "Same",
+			}),
+		).toBeNull();
+	});
+
+	it("shows debug retention strip when facet is on", () => {
+		expect(debugRetentionStripCopy(true)).toBe("Debug retention on");
+		expect(debugRetentionStripCopy(false)).toBeNull();
 	});
 });
 

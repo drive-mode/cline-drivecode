@@ -11,6 +11,7 @@ import { getCliCompactionMode } from "../../utils/compaction-mode";
 import type { CliCompactionMode } from "../../utils/types";
 import type { ChatEntry, InlineStream, TuiProps } from "../types";
 import { MAX_BUFFERED_LINES } from "../types";
+import { joinCliDriveRoom, leaveCliDriveRoom } from "../drive/cliDriveRoom";
 
 interface SessionContextValue {
 	entries: ChatEntry[];
@@ -226,6 +227,10 @@ export function SessionProvider(props: {
 			const next = !prev;
 			if (next) {
 				setUiMode(driveSubMode === "plan" || driveSubMode === "ask" ? "plan" : "act");
+				// Best-effort hub call_join (Phase 4). Local chrome stays on even if hub is down.
+				void joinCliDriveRoom({ partnerName: "Cline" });
+			} else {
+				void leaveCliDriveRoom({});
 			}
 			return next;
 		});

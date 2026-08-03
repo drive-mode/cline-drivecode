@@ -103,7 +103,7 @@ Premature “done” is refused. A receipt candidate plus verification decision 
 
 **Read-only managed projection for one `DriveTask` and one `DriveRun`.** Not board-wide sync. Not seed-as-product-path.
 
-**Impl note (2026-08-02):** Schemas live in `@cline/shared` `drive/run.ts` (`DriveRun`, `DriveRunWorkItem`, `WorkLease`, `Receipt`) — not embedded in `bank.ts`. Narrow Interop stub: `@cline/drive` `kanbanInterop` (`getCapabilities` / `applyProjection` / `observe`). Sibling DriveKanban may carry `externalRef`. Agent Control tools and completion-guard enforcement remain follow-on.
+**Impl note (2026-08-02):** Schemas live in `@cline/shared` `drive/run.ts` (`DriveRun`, `DriveRunWorkItem`, `WorkLease`, `Receipt`) — not embedded in `bank.ts`. Narrow Interop stub: `@cline/drive` `kanbanInterop` (`getCapabilities` / `applyProjection` / `observe`). Sibling DriveKanban may carry `externalRef`. Agent Control propose helpers: `@cline/drive` `driveplan/agentControl` (`listEligibleWork` / `claimWorkLease` / `reportProgress`). Completion guard: `assertCompletionReceipt` enforced by `bankStore.completeTask` when `boundRun` is set. Full Interop wire (`execute` / `collectReceipt`) remains ADR-0019.
 
 ## Consequences
 
