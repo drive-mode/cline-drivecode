@@ -60,6 +60,45 @@ export function canCommitFieldOnBlur({
 }
 
 /**
+ * Locally edited field values, keyed by provider id and then by field path.
+ *
+ * The values have to be scoped exactly like the dirty flags above, for the same
+ * reason. A flag saying "the user edited apiKey on this provider" is only safe
+ * to act on if the value the blur then commits belongs to that provider too.
+ * With one shared value map the two can disagree: the panel stays mounted
+ * across a provider switch, so provider B's apiKey input would render whatever
+ * was last typed on A, and blurring A's field after visiting B would commit B's
+ * value — or the blank left behind by clearing B's — over A's stored key.
+ */
+export type ProviderFieldValueStore<T> = Record<string, Record<string, T>>;
+
+/** One provider's field values, falling back to its untouched defaults. */
+export function fieldValuesFor<T>(
+	store: ProviderFieldValueStore<T>,
+	providerId: string,
+	initialValues: Record<string, T>,
+): Record<string, T> {
+	return store[providerId] ?? initialValues;
+}
+
+/** The store with one field of one provider set, leaving the others alone. */
+export function withFieldValue<T>(
+	store: ProviderFieldValueStore<T>,
+	providerId: string,
+	initialValues: Record<string, T>,
+	fieldPath: string,
+	value: T,
+): ProviderFieldValueStore<T> {
+	return {
+		...store,
+		[providerId]: {
+			...(store[providerId] ?? initialValues),
+			[fieldPath]: value,
+		},
+	};
+}
+
+/**
  * Whether the provider should be treated as having a stored API key. Falls
  * back to server presence unless the user has cleared the field locally.
  */

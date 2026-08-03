@@ -32,7 +32,10 @@ import {
 	canCommitFieldOnBlur,
 	createSecretDirtyStore,
 	dirtyFieldsFor,
+	fieldValuesFor,
+	type ProviderFieldValueStore,
 	resolveApiKeyPresent,
+	withFieldValue,
 } from "./secret-field-state";
 
 // -----------------------------------------------------------
@@ -263,9 +266,14 @@ export function ProviderDetailContent({
 	variant?: "page" | "panel";
 }) {
 	const [shownSecrets, setShownSecrets] = useState<Record<string, boolean>>({});
-	const [localConfigValues, setLocalConfigValues] = useState<
-		Record<string, ProviderConfigFieldPrimitive>
-	>(() => getInitialConfigValues(provider));
+	// Edited field values, kept per provider id for the same reason the dirty
+	// paths below are: the panel stays mounted across a provider switch and field
+	// paths repeat, so one shared map would render the next provider's apiKey
+	// input holding whatever was last typed here, and would let a blur commit the
+	// wrong provider's value — or a blank — over a stored credential.
+	const [configValueStore, setConfigValueStore] = useState<
+		ProviderFieldValueStore<ProviderConfigFieldPrimitive>
+	>({});
 	const [modelSearchState, setModelSearchState] = useState<{
 		providerId: string;
 		value: string;
@@ -296,6 +304,26 @@ export function ProviderDetailContent({
 	);
 
 	const configFields = provider.configFields ?? [];
+	const initialConfigValues = getInitialConfigValues(provider);
+	const localConfigValues = fieldValuesFor(
+		configValueStore,
+		provider.id,
+		initialConfigValues,
+	);
+	const setFieldValue = (
+		fieldPath: string,
+		value: ProviderConfigFieldPrimitive,
+	) => {
+		setConfigValueStore((current) =>
+			withFieldValue(
+				current,
+				provider.id,
+				initialConfigValues,
+				fieldPath,
+				value,
+			),
+		);
+	};
 	const apiKeyValue = fieldValueToString(localConfigValues.apiKey);
 	// Presence is server state and only refreshes on a catalog reload. Once the
 	// user has cleared the key locally, keep treating it as absent so the OAuth
@@ -336,11 +364,7 @@ export function ProviderDetailContent({
 		rawValue: string | boolean,
 	) => {
 		const value = coerceFieldValue(field, rawValue);
-		const nextConfigValues = {
-			...localConfigValues,
-			[field.path]: value,
-		};
-		setLocalConfigValues(nextConfigValues);
+		setFieldValue(field.path, value);
 
 		const updates: ProviderSettingsUpdate = {
 			configValues: { [field.path]: value },
@@ -489,10 +513,7 @@ export function ProviderDetailContent({
 														if (isSecret) {
 															dirtySecretFields.add(field.path);
 														}
-														setLocalConfigValues((current) => ({
-															...current,
-															[field.path]: event.target.value,
-														}));
+														setFieldValue(field.path, event.target.value);
 													}}
 													placeholder={
 														isSavedApiKey
