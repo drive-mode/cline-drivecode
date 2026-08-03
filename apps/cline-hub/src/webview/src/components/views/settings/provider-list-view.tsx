@@ -28,6 +28,12 @@ import type {
 	ProviderSettingsUpdate,
 } from "@/lib/provider-schema";
 import { cn } from "@/lib/utils";
+import {
+	canCommitFieldOnBlur,
+	createSecretDirtyStore,
+	dirtyFieldsFor,
+	resolveApiKeyPresent,
+} from "./secret-field-state";
 
 // -----------------------------------------------------------
 // Provider LIST content (the grid of all providers)
@@ -274,28 +280,31 @@ export function ProviderDetailContent({
 	// user never actually typed into must not resend an empty value and wipe
 	// a previously saved credential, so only fields the user has edited this
 	// session are eligible to commit on blur.
-	const dirtySecretFieldsRef = useRef<Set<string>>(new Set());
+	//
 	// This component stays mounted when the panel switches provider — the
 	// providerId guards on modelSearchState/copiedModelState below exist for
-	// the same reason. Field paths repeat across providers ("apiKey"), so a
-	// carried-over dirty flag would let an untouched field on the next
-	// provider commit blank and wipe its credential: the exact loss the flag
-	// exists to prevent. Reset synchronously in render, not in an effect,
-	// so there is no window where the stale set is live.
-	const dirtyProviderIdRef = useRef(provider.id);
-	if (dirtyProviderIdRef.current !== provider.id) {
-		dirtyProviderIdRef.current = provider.id;
-		dirtySecretFieldsRef.current.clear();
-	}
+	// the same reason. Field paths repeat across providers ("apiKey"), so the
+	// dirty paths are stored per provider rather than in one shared set: an
+	// untouched field on the next provider can never see a carried-over flag
+	// and commit blank, and a key the user cleared here stays cleared when
+	// they switch away and come back. Scoped synchronously in render, not in
+	// an effect, so there is no window where the wrong set is live.
+	const dirtySecretFieldsRef = useRef(createSecretDirtyStore());
+	const dirtySecretFields = dirtyFieldsFor(
+		dirtySecretFieldsRef.current,
+		provider.id,
+	);
 
 	const configFields = provider.configFields ?? [];
 	const apiKeyValue = fieldValueToString(localConfigValues.apiKey);
 	// Presence is server state and only refreshes on a catalog reload. Once the
 	// user has cleared the key locally, keep treating it as absent so the OAuth
 	// path stays reachable instead of being hidden until a reload.
-	const apiKeyPresent =
-		provider.apiKeyPresent === true &&
-		!(dirtySecretFieldsRef.current.has("apiKey") && !apiKeyValue);
+	const apiKeyPresent = resolveApiKeyPresent({
+		serverPresent: provider.apiKeyPresent,
+		dirtyFields: dirtySecretFields,
+		apiKeyValue,
+	});
 	const modelList = provider.modelList ?? [];
 	const modelSearch =
 		modelSearchState?.providerId === provider.id ? modelSearchState.value : "";
@@ -403,7 +412,8 @@ export function ProviderDetailContent({
 							{configFields.map((field) => {
 								const value = localConfigValues[field.path];
 								const valueText = fieldValueToString(value);
-								const isSecret = field.type === "password" || field.secret;
+								const isSecret =
+									field.type === "password" || field.secret === true;
 								const isShown = shownSecrets[field.path] ?? false;
 								const isSavedApiKey =
 									field.path === "apiKey" && apiKeyPresent && !valueText;
@@ -460,20 +470,24 @@ export function ProviderDetailContent({
 												<Input
 													className="h-7 flex-1 border-0 bg-transparent px-0 text-sm text-foreground outline-none placeholder:text-muted-foreground"
 													onBlur={() => {
+														// An untouched secret field has nothing to save,
+														// and committing the blank placeholder would
+														// clear the credential already stored
+														// server-side.
 														if (
-															isSecret &&
-															!dirtySecretFieldsRef.current.has(field.path)
+															!canCommitFieldOnBlur({
+																isSecret,
+																fieldPath: field.path,
+																dirtyFields: dirtySecretFields,
+															})
 														) {
-															// Untouched secret field: nothing to save, and
-															// committing the blank placeholder would clear
-															// the credential already stored server-side.
 															return;
 														}
 														commitField(field, valueText);
 													}}
 													onChange={(event) => {
 														if (isSecret) {
-															dirtySecretFieldsRef.current.add(field.path);
+															dirtySecretFields.add(field.path);
 														}
 														setLocalConfigValues((current) => ({
 															...current,
