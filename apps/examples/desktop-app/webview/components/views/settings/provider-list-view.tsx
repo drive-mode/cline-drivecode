@@ -274,9 +274,27 @@ export function ProviderDetailContent({
 	// a previously saved credential, so only fields the user has edited this
 	// session are eligible to commit on blur.
 	const dirtySecretFieldsRef = useRef<Set<string>>(new Set());
+	// This component stays mounted when the panel switches provider — the
+	// providerId guards on modelSearchState/copiedModelState below exist for
+	// the same reason. Field paths repeat across providers ("apiKey"), so a
+	// carried-over dirty flag would let an untouched field on the next
+	// provider commit blank and wipe its credential: the exact loss the flag
+	// exists to prevent. Reset synchronously in render, not in an effect,
+	// so there is no window where the stale set is live.
+	const dirtyProviderIdRef = useRef(provider.id);
+	if (dirtyProviderIdRef.current !== provider.id) {
+		dirtyProviderIdRef.current = provider.id;
+		dirtySecretFieldsRef.current.clear();
+	}
 
 	const configFields = provider.configFields ?? [];
 	const apiKeyValue = fieldValueToString(localConfigValues.apiKey);
+	// Presence is server state and only refreshes on a catalog reload. Once the
+	// user has cleared the key locally, keep treating it as absent so the OAuth
+	// path stays reachable instead of being hidden until a reload.
+	const apiKeyPresent =
+		provider.apiKeyPresent === true &&
+		!(dirtySecretFieldsRef.current.has("apiKey") && !apiKeyValue);
 	const modelList = provider.modelList ?? [];
 	const modelSearch =
 		modelSearchState?.providerId === provider.id ? modelSearchState.value : "";
@@ -387,9 +405,7 @@ export function ProviderDetailContent({
 								const isSecret = field.type === "password" || field.secret;
 								const isShown = shownSecrets[field.path] ?? false;
 								const isSavedApiKey =
-									field.path === "apiKey" &&
-									provider.apiKeyPresent === true &&
-									!valueText;
+									field.path === "apiKey" && apiKeyPresent && !valueText;
 								return (
 									<div
 										className="grid min-h-18 grid-cols-[minmax(12rem,0.55fr)_minmax(16rem,0.45fr)] items-center gap-6 border-b py-4 max-[900px]:grid-cols-1 max-[900px]:gap-3"
@@ -523,7 +539,7 @@ export function ProviderDetailContent({
 				) : null}
 
 				{!apiKeyValue &&
-				!provider.apiKeyPresent &&
+				!apiKeyPresent &&
 				!provider.oauthAccessTokenPresent &&
 				onOAuthLogin ? (
 					<div className="mb-8">
