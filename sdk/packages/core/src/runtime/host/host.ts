@@ -15,8 +15,11 @@ import { SqliteSessionStore } from "../../services/storage/sqlite-session-store"
 import { resolveCoreDistinctId } from "../../services/telemetry/distinct-id";
 import { FileSessionService } from "../../session/services/file-session-service";
 import { CoreSessionService } from "../../session/services/session-service";
+import type { SessionBackend } from "./local/session-record";
 import { LocalRuntimeHost } from "./local-runtime-host";
 import type { RuntimeHost, RuntimeHostMode } from "./runtime-host";
+
+export type { SessionBackend } from "./local/session-record";
 
 function resolveConfiguredBackendMode(
 	options: ClineCoreOptions,
@@ -33,8 +36,6 @@ function resolveConfiguredBackendMode(
 	}
 	return "auto";
 }
-
-export type SessionBackend = CoreSessionService | FileSessionService;
 
 let cachedBackend: SessionBackend | undefined;
 let backendInitPromise: Promise<SessionBackend> | undefined;

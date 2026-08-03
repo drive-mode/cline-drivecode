@@ -12,9 +12,10 @@ import type {
 	SessionHistoryRecord,
 	SessionRecord,
 } from "../../types/sessions";
-import type { SessionBackend } from "./host";
+import type { SessionBackend } from "./local/session-record";
 import type { RuntimeHost } from "./runtime-host";
 import { readPersistedMessagesFile } from "./runtime-host-support";
+// ponytail: host triangle broken via SessionBackend leaf; revisit if graphify re-lists history↔host↔local-runtime-host
 
 export interface SessionHistoryListOptions {
 	limit?: number;
