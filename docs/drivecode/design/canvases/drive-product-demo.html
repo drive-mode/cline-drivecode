@@ -4784,7 +4784,7 @@
       title: "Live captions · CC panel",
       caption: "Live captions of everything said on the call. Nothing is recorded — close them and they're gone.",
       hubOp: "captions",
-      maturity: "planned",
+      maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#strip-cc", action: "click" },
       patch: { ccOpen: true, narration: "" },
@@ -5572,9 +5572,9 @@
       id: "a9-gates",
       act: 9,
       title: "Gates approval card",
-      caption: "High-impact tools surface an approval card (taxonomy shipped; feed UI planned).",
+      caption: "High-impact tools surface an approval card in the feed — approve or deny before the tool runs.",
       hubOp: "approval",
-      maturity: "planned",
+      maturity: "shipped",
       // Dwell raised past the 0.72 cue for the same reason as a3-edit:
       // a9-approved's cursor CLICKS this card, so its leg must not start
       // before the card exists. Audio still gates the press and the beat.
@@ -5602,7 +5602,7 @@
       title: "Approved · pr_create proceeds",
       caption: "Approved. pr_create proceeds — the PR opens with the handoff attached.",
       hubOp: "pr_create",
-      maturity: "planned",
+      maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: ".gates-card .approve", action: "click" },
       // "PR ninety-one's up" opens the second clip — 55% of the FULL
@@ -5670,7 +5670,7 @@
       title: "Rooms · every session, resumable",
       caption: "Rooms: every session, resumable. Stop ≠ lose.",
       hubOp: "call_get_room",
-      maturity: "planned",
+      maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#rail-rooms", action: "click" },
       patch: { surface: "rooms" },
@@ -5681,7 +5681,7 @@
       title: "Stop demo-polish · nothing lost",
       caption: "Session stopped — config and history kept. Start it again tomorrow.",
       hubOp: "call_end",
-      maturity: "planned",
+      maturity: "shipped",
       dwellMs: 2000,
       cursor: { target: "#room-stop-demo", action: "click" },
       // Deliberately silent — the caption carries the product story.
