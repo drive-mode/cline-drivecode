@@ -3,6 +3,8 @@ import {
 	defaultStickyForArtifactKind,
 	parseAgentMediaBag,
 	parseStageDirectorState,
+	type ShowBacklogItem,
+	ShowBacklogItemSchema,
 } from "./director";
 import { parseAddressSet, parseRoutePlan } from "./router";
 import { DemoArtifactRefSchema, ShareModeSchema } from "./share";
@@ -53,6 +55,20 @@ describe("router schemas", () => {
 });
 
 describe("director schemas", () => {
+	const baseShowItem = {
+		id: "show-1",
+		ownerParticipantId: "agent-1",
+		title: "Arch",
+		intent: "explain layout",
+		artifactKind: "diagram.architecture",
+		mediaClass: "still",
+		caption: "system diagram",
+		produce: { tool: "render_mermaid", args: {} },
+		priority: 10,
+		status: "ready",
+		scoreReasons: [],
+	} satisfies ShowBacklogItem;
+
 	it("defaults sticky hold for architecture diagrams", () => {
 		expect(defaultStickyForArtifactKind("diagram.architecture")).toEqual({
 			mode: "hold",
@@ -97,6 +113,35 @@ describe("director schemas", () => {
 			],
 		});
 		expect(bag.scripts[0]?.beats).toHaveLength(1);
+	});
+
+	it("round-trips optional tags on a show backlog item", () => {
+		const parsed = ShowBacklogItemSchema.parse({
+			...baseShowItem,
+			tags: ["architecture", "scripts"],
+		});
+		expect(parsed.tags).toEqual(["architecture", "scripts"]);
+		expect(
+			ShowBacklogItemSchema.parse({ ...baseShowItem, tags: [] }).tags,
+		).toEqual([]);
+	});
+
+	it("leaves tags undefined when omitted", () => {
+		// Guards the .optional()-over-.default([]) choice: a default would make
+		// tags required in the inferred type and parse omissions as [] here.
+		expect(ShowBacklogItemSchema.parse(baseShowItem).tags).toBeUndefined();
+	});
+
+	it("rejects non-string tag entries", () => {
+		expect(() =>
+			ShowBacklogItemSchema.parse({ ...baseShowItem, tags: [1] }),
+		).toThrow();
+	});
+
+	it("still rejects unknown keys alongside tags", () => {
+		expect(() =>
+			ShowBacklogItemSchema.parse({ ...baseShowItem, tagz: ["typo"] }),
+		).toThrow();
 	});
 
 	it("parses stage director state with spotlight", () => {

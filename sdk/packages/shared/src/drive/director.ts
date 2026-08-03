@@ -66,6 +66,12 @@ export const ShowBacklogItemSchema = z
 		linkedDoItemId: z.string().min(1).optional(),
 		linkedScriptId: z.string().min(1).optional(),
 		scoreReasons: z.array(z.string()),
+		/**
+		 * Free-form sort/filter labels. Complements artifactKind for facets it
+		 * cannot express (e.g. "scripts"). Optional, never defaulted: read sites
+		 * use `item.tags ?? []` so producers need not populate it.
+		 */
+		tags: z.array(z.string()).optional(),
 	})
 	.strict();
 export type ShowBacklogItem = z.infer<typeof ShowBacklogItemSchema>;
