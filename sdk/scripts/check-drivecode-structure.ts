@@ -95,7 +95,20 @@ export const PRODUCT_ROLE_DIRS = new Set([
 export const HARNESS_ROOT_FILES = new Set(["README.md", "decisions.tsv"]);
 export const HARNESS_ROOT_DIRS = new Set(["foundation", "delivery"]);
 
-export const ASSET_BUCKETS = new Set(["logos", "hub", "tui", "demos", "fonts"]);
+/**
+ * Asset buckets. All but one hold images or fonts; `changelog` is the
+ * exception — it holds the generated repo-history snapshot
+ * (`repo-changelog.json`, written by `scripts/drive/seed-repo-changelog.ts`)
+ * that the hub seeds the Status Hub changelog from.
+ */
+export const ASSET_BUCKETS = new Set([
+	"logos",
+	"hub",
+	"tui",
+	"demos",
+	"fonts",
+	"changelog",
+]);
 export const DESIGN_DIRS = new Set(["brand", "wireframes", "canvases"]);
 
 /** Legacy paths that must stay gone. */

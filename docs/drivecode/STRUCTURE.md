@@ -62,7 +62,8 @@ docs/drivecode/
 │   ├── hub/
 │   ├── tui/
 │   ├── demos/
-│   └── fonts/                # self-hosted WOFF2 for canvases
+│   ├── fonts/                # self-hosted WOFF2 for canvases
+│   └── changelog/            # generated repo-history snapshot for the hub
 │
 └── meta/
     ├── glossary.md
@@ -96,6 +97,7 @@ docs/drivecode/
 | Overview / share canvases | `design/canvases/` |
 | Product screenshot | `assets/{hub,tui,demos,logos}/` |
 | Self-hosted webfont (WOFF2) | `assets/fonts/` |
+| Generated repo-history snapshot | `assets/changelog/` |
 | Term definition | `meta/glossary.md` |
 | PR review narrative | `meta/reviews/` |
 
