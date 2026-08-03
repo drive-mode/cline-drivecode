@@ -1,5 +1,5 @@
 import {
-	type DriveEvent,
+	type ChatForkRecord,
 	type RoomSnapshot,
 	type ShowBacklogItem,
 	topologyCacheKey,
@@ -13,10 +13,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import {
-	type HostMessage,
-	subscribeToHostMessages,
-} from "../lib/host-message-gateway";
+import { subscribeToHostMessages } from "../lib/host-message-gateway";
 import { getVsCodeApi, postToHost } from "../vscode";
 import { shouldSeedBankOnSeat } from "./bankHydrationGate";
 import {
@@ -27,6 +24,7 @@ import {
 } from "./bankSession";
 import {
 	buildDriveJoinPayload,
+	DRIVE_SESSION_MESSAGE_TYPES,
 	type DriveConnectionPhase,
 	type DriveSessionHostMessage,
 	hasPendingDriveJoinRequest,

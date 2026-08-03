@@ -188,15 +188,18 @@ export function isDriveRoomSnapshotForTarget({
 	);
 }
 
+export const DRIVE_SESSION_MESSAGE_TYPES = [
+	"drive_show_presented",
+	"drive_script_beat",
+	"call_error",
+	"drive_fork_audit",
+	"room_snapshot",
+	"drive_event",
+	"drive_room_changed",
+] as const;
+
 export type DriveSessionHostMessage = HostMessage & {
-	type:
-		| "drive_show_presented"
-		| "drive_script_beat"
-		| "call_error"
-		| "drive_fork_audit"
-		| "room_snapshot"
-		| "drive_event"
-		| "drive_room_changed";
+	type: (typeof DRIVE_SESSION_MESSAGE_TYPES)[number];
 	text?: string;
 	code?: string;
 	command?: string;
