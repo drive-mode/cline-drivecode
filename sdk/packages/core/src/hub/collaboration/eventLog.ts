@@ -170,6 +170,8 @@ export class JsonlRoomEventLog implements RoomEventLog {
 	 */
 	private readonly explicitMaxRecords: number | undefined;
 	private readonly lineCounts = new Map<string, number>();
+	/** Last skip count warned per room, so a stuck bad line warns once. */
+	private readonly warnedSkips = new Map<string, number>();
 
 	constructor(
 		readonly configParent: string,
@@ -252,21 +254,59 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		}
 		const text = readFileSync(eventsPath, "utf8");
 		const out: RoomLogRecord[] = [];
+		let skipped = 0;
+		let total = 0;
+		// One corrupt or forward-incompatible record must degrade a single
+		// event, never the whole room history.
 		for (const line of text.split("\n")) {
 			const trimmed = line.trim();
 			if (!trimmed) {
 				continue;
 			}
-			const raw = JSON.parse(trimmed) as { seq?: unknown; event?: unknown };
-			if (typeof raw.seq !== "number" || raw.seq <= afterSeq) {
+			total += 1;
+			let raw: { seq?: unknown; event?: unknown };
+			try {
+				raw = JSON.parse(trimmed) as { seq?: unknown; event?: unknown };
+			} catch {
+				skipped += 1;
 				continue;
 			}
-			out.push({
-				seq: raw.seq,
-				event: parseDriveEvent(raw.event),
-			});
+			if (typeof raw.seq !== "number") {
+				skipped += 1;
+				continue;
+			}
+			// Already-seen records are a normal skip, not a corrupt one.
+			if (raw.seq <= afterSeq) {
+				continue;
+			}
+			try {
+				out.push({ seq: raw.seq, event: parseDriveEvent(raw.event) });
+			} catch {
+				skipped += 1;
+			}
 		}
+		this.warnOnceForSkips(roomId, skipped, total);
 		return out;
+	}
+
+	private warnOnceForSkips(
+		roomId: string,
+		skipped: number,
+		total: number,
+	): void {
+		if (skipped === 0) {
+			this.warnedSkips.delete(roomId);
+			return;
+		}
+		if (this.warnedSkips.get(roomId) === skipped) {
+			return;
+		}
+		this.warnedSkips.set(roomId, skipped);
+		const detail =
+			skipped === total
+				? `every one of its ${total} record(s) is unreadable; the room cannot be restored`
+				: `skipped ${skipped} of ${total} unreadable event log record(s)`;
+		console.warn(`[drive] room ${roomId}: ${detail}`);
 	}
 }
 

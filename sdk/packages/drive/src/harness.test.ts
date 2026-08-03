@@ -183,6 +183,135 @@ describe("createDriveHarness", () => {
 		});
 	});
 
+	it("addRosterPack persists the expanded effective preset as capPreset", async () => {
+		const host = memoryDriveHost();
+		const drive = createDriveHarness({
+			host,
+			// Parent ceiling is below the pair_partner default intent.
+			parentPreset: "readonly",
+			resolveRosterPack: () => [
+				{ id: "reviewer", displayName: "Reviewer", role: "specialist" },
+				{ id: "buddy", displayName: "Buddy", role: "partner" },
+			],
+		});
+		await drive.rooms.createOrAttach({
+			roomId: "r_preset",
+			humanId: "h1",
+			partner: null,
+		});
+		const next = await drive.rooms.addRosterPack("r_preset", "capped-crew");
+
+		const buddy = next.participants.find((p) => p.id === "buddy");
+		expect(buddy?.kind === "agent" && buddy.capPreset).toBe("readonly");
+		const reviewer = next.participants.find((p) => p.id === "reviewer");
+		expect(reviewer?.kind === "agent" && reviewer.capPreset).toBe("readonly");
+	});
+
+	it("addRosterPack keeps the child intent when the parent ceiling is wider", async () => {
+		const host = memoryDriveHost();
+		const drive = createDriveHarness({
+			host,
+			parentPreset: "full",
+			resolveRosterPack: () => [
+				{ id: "buddy", displayName: "Buddy", role: "partner" },
+			],
+		});
+		await drive.rooms.createOrAttach({
+			roomId: "r_preset_wide",
+			humanId: "h1",
+			partner: null,
+		});
+		const next = await drive.rooms.addRosterPack("r_preset_wide", "wide-crew");
+		const buddy = next.participants.find((p) => p.id === "buddy");
+		expect(buddy?.kind === "agent" && buddy.capPreset).toBe("standard");
+	});
+
+	it("addRosterPack carries the profile AgentRef onto the seated participant", async () => {
+		const host = memoryDriveHost();
+		const drive = createDriveHarness({
+			host,
+			resolveRosterPack: () => [
+				{ id: "reviewer", displayName: "Reviewer", role: "specialist" },
+			],
+			resolveProfiles: (ids) =>
+				new Map(
+					ids.map((id) => [
+						id,
+						{
+							id,
+							ref: { kind: "driveagent" as const, slug: id },
+							displayName: id,
+						},
+					]),
+				),
+		});
+		await drive.rooms.createOrAttach({
+			roomId: "r_ref",
+			humanId: "h1",
+			partner: null,
+		});
+		const next = await drive.rooms.addRosterPack("r_ref", "ref-crew");
+		const reviewer = next.participants.find((p) => p.id === "reviewer");
+		expect(reviewer?.kind === "agent" && reviewer.ref).toEqual({
+			kind: "driveagent",
+			slug: "reviewer",
+		});
+	});
+
+	it("addRosterPack narrows but never widens an already-seated ceiling", async () => {
+		const host = memoryDriveHost();
+		const drive = createDriveHarness({
+			host,
+			resolveRosterPack: (packId) =>
+				packId === "wide"
+					? [{ id: "x", displayName: "X", role: "partner" }]
+					: [{ id: "x", displayName: "X", role: "specialist" }],
+		});
+		await drive.rooms.createOrAttach({
+			roomId: "r_narrow",
+			humanId: "h1",
+			partner: null,
+			activateDrive: false,
+		});
+
+		const wide = await drive.rooms.addRosterPack("r_narrow", "wide");
+		const afterWide = wide.participants.find((p) => p.id === "x");
+		expect(afterWide?.kind === "agent" && afterWide.capPreset).toBe("standard");
+
+		// A narrower pack tightens the recorded ceiling...
+		const narrow = await drive.rooms.addRosterPack("r_narrow", "narrow");
+		const afterNarrow = narrow.participants.find((p) => p.id === "x");
+		expect(afterNarrow?.kind === "agent" && afterNarrow.capPreset).toBe(
+			"readonly",
+		);
+
+		// ...and re-adding the wide pack must not loosen it again.
+		const reWide = await drive.rooms.addRosterPack("r_narrow", "wide");
+		const afterReWide = reWide.participants.find((p) => p.id === "x");
+		expect(afterReWide?.kind === "agent" && afterReWide.capPreset).toBe(
+			"readonly",
+		);
+	});
+
+	it("addRosterPack records a ceiling for an agent seated without one", async () => {
+		const host = memoryDriveHost();
+		const drive = createDriveHarness({
+			host,
+			resolveRosterPack: () => [
+				{ id: "partner", displayName: "Partner", role: "specialist" },
+			],
+		});
+		// createOrAttach seats the partner manually — no capPreset recorded.
+		await drive.rooms.createOrAttach({
+			roomId: "r_backfill",
+			humanId: "h1",
+			partner: { id: "partner", displayName: "Partner" },
+		});
+		const next = await drive.rooms.addRosterPack("r_backfill", "crew");
+		const partner = next.participants.find((p) => p.id === "partner");
+		expect(partner?.kind === "agent" && partner.capPreset).toBe("readonly");
+	});
+
 	it("addRosterPack adds a pack source when the member is already seated", async () => {
 		const host = memoryDriveHost();
 		const drive = createDriveHarness({

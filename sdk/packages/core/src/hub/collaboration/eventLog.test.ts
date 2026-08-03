@@ -1,7 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { dirname, join } from "node:path";
+import { resolveDriveRoomEventsPath } from "@cline/shared";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	DriveRoomStore,
 	JsonlRoomEventLog,
@@ -288,6 +289,163 @@ describe("RoomEventLog + DriveRoomStore", () => {
 			store.attachEventLog(log);
 			rebindJsonlRoomEventLog(store, dir);
 			expect(store.getEventLog()).toBe(log);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("JsonlRoomEventLog forward-compatibility", () => {
+	let warn: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		warn.mockRestore();
+	});
+
+	function writeEvents(dir: string, roomId: string, lines: string[]): void {
+		const eventsPath = resolveDriveRoomEventsPath(dir, roomId);
+		mkdirSync(dirname(eventsPath), { recursive: true });
+		writeFileSync(eventsPath, `${lines.join("\n")}\n`, "utf8");
+	}
+
+	function joinLine(seq: number, participantId: string): string {
+		return JSON.stringify({
+			seq,
+			event: {
+				schemaVersion: 1,
+				id: `evt_${seq}`,
+				roomId: "r1",
+				at: "2026-07-25T12:00:00.000Z",
+				type: "control.join",
+				track: "control",
+				participant: {
+					id: participantId,
+					kind: "human",
+					displayName: "H",
+					role: "host",
+					status: "idle",
+				},
+			},
+		});
+	}
+
+	it("skips unreadable records instead of failing the whole read", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-bad-"));
+		try {
+			writeEvents(dir, "r1", [
+				joinLine(1, "h1"),
+				"{ not json",
+				JSON.stringify({ seq: 3, event: { type: "control.from_the_future" } }),
+				JSON.stringify({ seq: "not-a-number", event: {} }),
+				joinLine(5, "h2"),
+			]);
+			const log = new JsonlRoomEventLog(dir);
+			const records = log.readSinceSync("r1", 0);
+			expect(records.map((record) => record.seq)).toEqual([1, 5]);
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(String(warn.mock.calls[0]?.[0])).toContain("skipped 3 of 5");
+
+			// A stuck bad line must not warn once per read, forever.
+			log.readSinceSync("r1", 0);
+			log.readSinceSync("r1", 0);
+			expect(warn).toHaveBeenCalledTimes(1);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("says the room cannot be restored when every record is unreadable", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-all-bad-"));
+		try {
+			writeEvents(dir, "r1", ["{ not json", "also not json"]);
+			const records = new JsonlRoomEventLog(dir).readSinceSync("r1", 0);
+			expect(records).toEqual([]);
+			expect(String(warn.mock.calls[0]?.[0])).toContain("cannot be restored");
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("does not warn when the only skips are records the caller already has", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-cursor-"));
+		try {
+			writeEvents(dir, "r1", [joinLine(1, "h1"), joinLine(2, "h2")]);
+			const records = new JsonlRoomEventLog(dir).readSinceSync("r1", 1);
+			expect(records.map((record) => record.seq)).toEqual([2]);
+			expect(warn).not.toHaveBeenCalled();
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("hydrates a room whose log mixes legacy, malformed, and new records", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-mixed-"));
+		try {
+			const legacyAgentJoin = JSON.stringify({
+				seq: 2,
+				event: {
+					schemaVersion: 1,
+					id: "evt_2",
+					roomId: "r1",
+					at: "2026-07-25T12:00:01.000Z",
+					type: "control.join",
+					track: "control",
+					participant: {
+						id: "a1",
+						kind: "agent",
+						displayName: "A",
+						role: "partner",
+						status: "idle",
+						seatSources: [],
+					},
+				},
+			});
+			const seatedWithRef = JSON.stringify({
+				seq: 4,
+				event: {
+					schemaVersion: 1,
+					id: "evt_4",
+					roomId: "r1",
+					at: "2026-07-25T12:00:03.000Z",
+					type: "control.join",
+					track: "control",
+					participant: {
+						id: "a2",
+						kind: "agent",
+						displayName: "B",
+						role: "specialist",
+						status: "idle",
+						ref: { kind: "driveagent", slug: "reviewer" },
+						capPreset: "readonly",
+						seatSources: [{ kind: "pack", packId: "pack_review" }],
+					},
+				},
+			});
+			writeEvents(dir, "r1", [
+				joinLine(1, "h1"),
+				legacyAgentJoin,
+				'{"seq":3,"event":{"type":"nope"}}',
+				seatedWithRef,
+			]);
+
+			const store = new DriveRoomStore();
+			store.attachEventLog(new JsonlRoomEventLog(dir));
+			const snapshot = await store.hydrateFromLog("r1");
+
+			expect(snapshot?.participants.map((p) => p.id)).toEqual([
+				"h1",
+				"a1",
+				"a2",
+			]);
+			const legacy = snapshot?.participants.find((p) => p.id === "a1");
+			expect(legacy?.kind === "agent" && legacy.ref).toBeUndefined();
+			const seated = snapshot?.participants.find((p) => p.id === "a2");
+			expect(seated?.kind === "agent" && seated.capPreset).toBe("readonly");
+			expect(store.lastSeq("r1")).toBe(4);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}

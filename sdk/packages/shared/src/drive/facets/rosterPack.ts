@@ -7,8 +7,10 @@ import { z } from "zod";
 import { InkRefSchema } from "./schemas";
 
 /** Effective permission ceiling at seat time (DRV-ROSTER-PACK / home intents). */
-export const PermissionPresetSchema = z.enum(["readonly", "standard", "full"]);
-export type PermissionPreset = z.infer<typeof PermissionPresetSchema>;
+export {
+	type PermissionPreset,
+	PermissionPresetSchema,
+} from "../room";
 
 export const RosterPackMemberRoleSchema = z.enum([
 	"pair_partner",

@@ -175,6 +175,32 @@ describe("resolveAgentHomeSlug", () => {
 		).toBe("pair-partner");
 	});
 
+	it("prefers a driveagent ref over the seatSources guess", () => {
+		expect(
+			resolveAgentHomeSlug({
+				...partner,
+				ref: { kind: "driveagent", slug: "reviewer" },
+				seatSources: [{ kind: "pack", packId: "review-crew" }],
+			}),
+		).toBe("reviewer");
+	});
+
+	it("falls back to the heuristic for non-driveagent refs", () => {
+		expect(
+			resolveAgentHomeSlug({
+				...partner,
+				ref: { kind: "builtin", id: "pair_partner" },
+			}),
+		).toBe("pair-partner");
+		expect(
+			resolveAgentHomeSlug({
+				...partner,
+				ref: { kind: "builtin", id: "pair_partner" },
+				seatSources: [{ kind: "pack", packId: "custom-agent" }],
+			}),
+		).toBe("custom-agent");
+	});
+
 	it("prefers seatSources slug when present", () => {
 		expect(
 			resolveAgentHomeSlug({

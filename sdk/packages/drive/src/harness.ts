@@ -21,7 +21,7 @@ import type {
 import { pickNextShowToPresent } from "./director/pickNextShow.js";
 import { planShowIntents } from "./director/planShowIntents.js";
 import { advanceScriptBeat } from "./director/rankBacklogs.js";
-import { expandRosterPack } from "./facets/expand.js";
+import { capPreset, expandRosterPack } from "./facets/expand.js";
 import type { DirectorOpResult, DriveHostPort } from "./hostPort.js";
 import { setSpotlight } from "./room/participantControls.js";
 import {
@@ -363,7 +363,12 @@ export function createDriveHarness(
 						type: "add",
 						source: packSource,
 					});
-					const unchanged =
+					// A second pack may only narrow the ceiling, never widen it.
+					const nextPreset =
+						existing.capPreset === undefined
+							? proposal.effectivePreset
+							: capPreset(existing.capPreset, proposal.effectivePreset);
+					const sourcesUnchanged =
 						delta.next.length === existing.seatSources.length &&
 						delta.next.every((source, index) => {
 							const prior = existing.seatSources[index];
@@ -377,11 +382,12 @@ export function createDriveHarness(
 										source.parentId === prior.parentId))
 							);
 						});
-					if (unchanged) {
+					if (sourcesUnchanged && nextPreset === existing.capPreset) {
 						continue;
 					}
 					const updated: AgentParticipant = {
 						...existing,
+						capPreset: nextPreset,
 						seatSources: delta.next,
 					};
 					snapshot = await host.commitRoomOp({
@@ -400,6 +406,8 @@ export function createDriveHarness(
 					displayName: proposal.displayName,
 					role: agentRoleFromPack(proposal.role),
 					status: "idle",
+					ref: profiles.get(proposal.profileId)?.ref,
+					capPreset: proposal.effectivePreset,
 					seatSources: [packSource],
 				};
 				snapshot = await host.commitRoomOp({

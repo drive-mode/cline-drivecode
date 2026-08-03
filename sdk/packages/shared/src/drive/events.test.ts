@@ -45,6 +45,59 @@ describe("DriveEvent schemas", () => {
 		expect(event.schemaVersion).toBe(1);
 	});
 
+	it("parses a control.join whose agent predates ref / capPreset", () => {
+		const event = parseDriveEvent({
+			...base,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "agent_1",
+				kind: "agent",
+				displayName: "Partner",
+				role: "partner",
+				status: "idle",
+				seatSources: [],
+			},
+		});
+		expect(event.type).toBe("control.join");
+		if (event.type === "control.join" && event.participant.kind === "agent") {
+			expect(event.participant.ref).toBeUndefined();
+			expect(event.participant.capPreset).toBeUndefined();
+		}
+	});
+
+	it("carries ref + capPreset through a control.join round-trip", () => {
+		const original = parseDriveEvent({
+			...base,
+			type: "control.join",
+			track: "control",
+			participant: {
+				id: "agent_1",
+				kind: "agent",
+				displayName: "Partner",
+				role: "partner",
+				status: "idle",
+				ref: { kind: "driveagent", slug: "pair-partner" },
+				capPreset: "standard",
+				seatSources: [{ kind: "pack", packId: "pack_review" }],
+			},
+		});
+		const roundTripped = parseDriveEvent(
+			JSON.parse(JSON.stringify(original)) as unknown,
+		);
+		expect(roundTripped).toEqual(original);
+		if (
+			roundTripped.type === "control.join" &&
+			roundTripped.participant.kind === "agent"
+		) {
+			expect(roundTripped.participant.ref).toEqual({
+				kind: "driveagent",
+				slug: "pair-partner",
+			});
+			expect(roundTripped.participant.capPreset).toBe("standard");
+		}
+	});
+
 	it("round-trips through JSON", () => {
 		const original = parseDriveEvent({
 			...base,

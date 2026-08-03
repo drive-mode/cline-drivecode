@@ -78,14 +78,18 @@ export function resolveNarratorParticipantId(drive: DriveUiState): string {
 
 /**
  * Resolve `.driveagent/<slug>/` for an agent participant.
- * Builtin pair_partner / default partner maps to the example fixture slug.
- * Pack seat sources may carry a driveagent slug when packs seat a home.
+ * `participant.ref` is authoritative when the seat recorded one.
+ * Otherwise fall back to the legacy guess: pack / spawn seat sources may
+ * carry a driveagent slug, and the builtin partner maps to the fixture slug.
  */
 export function resolveAgentHomeSlug(
 	participant: Participant,
 ): string | null {
 	if (participant.kind !== "agent") {
 		return null;
+	}
+	if (participant.ref?.kind === "driveagent") {
+		return participant.ref.slug;
 	}
 	for (const source of participant.seatSources) {
 		const candidate =

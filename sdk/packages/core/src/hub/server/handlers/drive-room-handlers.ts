@@ -23,6 +23,7 @@ import type {
 import { handleDriveWaveCommand } from "./drive-wave-handlers";
 import {
 	AddressSetSchema,
+	AgentRefSchema,
 	DriveSubModeSchema,
 	ParticipantSchema,
 	StageSharerSchema,
@@ -169,6 +170,12 @@ const CallSeatPayloadSchema = RoomIdSchema.extend({
 			id: z.string().min(1),
 			displayName: z.string().min(1),
 			role: z.enum(["partner", "specialist", "recorder"]).optional(),
+			/**
+			 * Identity spine, recorded verbatim when the caller knows it.
+			 * Left absent otherwise — a guessed ref would be a false claim
+			 * in an append-only log, and absent is the honest reading.
+			 */
+			ref: AgentRefSchema.optional(),
 		})
 		.strict(),
 	/** Soft multi-agent ceiling; omit for unlimited. */
@@ -999,6 +1006,7 @@ export async function handleDriveRoomCommand(
 					displayName: payload.agent.displayName,
 					role: payload.agent.role ?? "specialist",
 					status: "idle",
+					ref: payload.agent.ref,
 					seatSources: [{ kind: "manual" }],
 				};
 				const committed = store.join({

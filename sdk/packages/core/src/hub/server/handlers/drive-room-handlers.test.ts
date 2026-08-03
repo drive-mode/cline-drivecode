@@ -975,12 +975,15 @@ describe("handleDriveRoomCommand", () => {
 			participants: Array<{
 				id: string;
 				kind: string;
+				ref?: { kind: string; id?: string; slug?: string };
 				seatSources?: Array<{ kind: string }>;
 			}>;
 		};
 		const agent = snap.participants.find((p) => p.id === "security-reviewer");
 		expect(agent?.kind).toBe("agent");
 		expect(agent?.seatSources).toEqual([{ kind: "manual" }]);
+		// No ref is guessed from the agent id: a wrong one would be durable.
+		expect(agent?.ref).toBeUndefined();
 		expect(snap.participants.some((p) => p.id === "adam")).toBe(true);
 
 		const capped = await handleDriveRoomCommand(ctx, {
@@ -999,6 +1002,42 @@ describe("handleDriveRoomCommand", () => {
 		});
 		expect(capped.ok).toBe(false);
 		expect(capped.error?.code).toBe("seat_cap_exceeded");
+	});
+
+	it("call_seat keeps an explicit driveagent ref", async () => {
+		resetDriveRoomStoreForTests();
+		const ctx = makeCtx();
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "j_ref",
+			payload: {
+				roomId: "room_ref",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Cline" },
+			},
+		});
+		const seated = await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_seat",
+			requestId: "s_ref",
+			payload: {
+				roomId: "room_ref",
+				agent: {
+					id: "security-reviewer",
+					displayName: "Security Reviewer",
+					role: "specialist",
+					ref: { kind: "driveagent", slug: "security-reviewer" },
+				},
+			},
+		});
+		expect(seated.ok).toBe(true);
+		const snap = seated.payload?.snapshot as {
+			participants: Array<{ id: string; ref?: { kind: string } }>;
+		};
+		expect(
+			snap.participants.find((p) => p.id === "security-reviewer")?.ref,
+		).toEqual({ kind: "driveagent", slug: "security-reviewer" });
 	});
 
 	/**

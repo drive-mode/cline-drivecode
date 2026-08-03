@@ -7,8 +7,17 @@
 
 import { z } from "zod";
 import { AddressSetSchema, EVERYONE_ADDRESS } from "./address";
+import { AgentRefSchema } from "./agentRef";
 
 export const DRIVE_SCHEMA_VERSION = 1 as const;
+
+/**
+ * Effective permission ceiling at seat time (DRV-ROSTER-PACK / home intents).
+ * Lives here (not in facets) so the participant shape stays cycle-free;
+ * `facets/rosterPack` re-exports it as the roster-pack public surface.
+ */
+export const PermissionPresetSchema = z.enum(["readonly", "standard", "full"]);
+export type PermissionPreset = z.infer<typeof PermissionPresetSchema>;
 
 export const DriveSubModeSchema = z.enum(["plan", "act", "ask", "debug"]);
 export type DriveSubMode = z.infer<typeof DriveSubModeSchema>;
@@ -87,6 +96,18 @@ export const AgentParticipantSchema = z
 		displayName: z.string().min(1),
 		role: DriveAgentRoleSchema,
 		status: ParticipantStatusSchema.default("idle"),
+		/**
+		 * Identity spine (DEC-agent-source-of-truth). Optional forever: join
+		 * events persisted by earlier builds have no `ref`, and a required
+		 * field would make those event logs unparseable.
+		 */
+		ref: AgentRefSchema.optional(),
+		/**
+		 * Permission ceiling recorded at seat time (DRV-ROSTER-PACK). Storage
+		 * only — enforcement happens at the approval point. Optional for the
+		 * same backward-compatibility reason as `ref`.
+		 */
+		capPreset: PermissionPresetSchema.optional(),
 		/** Seat provenance (DRV-ROSTER-PACK). Never empty while seated. */
 		seatSources: z.preprocess(
 			(value) => (value === undefined ? undefined : coerceSeatSources(value)),
