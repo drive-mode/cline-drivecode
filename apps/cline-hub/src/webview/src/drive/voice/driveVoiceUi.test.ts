@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DRIVE_UI } from "../types";
 import {
 	applyHardwarePrefsPatch,
+	applyVoiceFacetPatch,
 	applyVoiceProfile,
 	createDefaultDriveVoiceUi,
 	isSpokenDriveJoinNote,
 	resolveDriveVoiceTopology,
+	resolveLlmEgressForUi,
 	shouldSpeakDriveTts,
 } from "./driveVoiceUi";
 
@@ -123,6 +125,58 @@ describe("driveVoiceUi", () => {
 		expect(isSpokenDriveJoinNote("Tests pass, moving to the parser.")).toBe(
 			false,
 		);
+	});
+
+	it("no longer substitutes a default provider id (ADR-0021)", () => {
+		expect(resolveLlmEgressForUi({ profile: "cloud", providerId: "" })).toEqual(
+			{ kind: "cloud", providerId: "" },
+		);
+		expect(resolveLlmEgressForUi({ profile: "local", providerId: "" })).toEqual(
+			{ kind: "local", providerId: "", baseUrlClass: "loopback" },
+		);
+	});
+
+	it("reports unconfigured (not illegal) when no LLM credential exists, cloud profile", () => {
+		const voice = createDefaultDriveVoiceUi("cloud");
+		const resolved = resolveDriveVoiceTopology({ voice, providerId: "" });
+		expect(resolved.ok).toBe(false);
+		if (resolved.ok) {
+			return;
+		}
+		expect(resolved.reason).toBe("unconfigured");
+		expect(resolved.message).not.toMatch(/anthropic/i);
+	});
+
+	it("reports unconfigured (not illegal) when no LLM credential exists, local profile", () => {
+		const voice = applyVoiceProfile(
+			createDefaultDriveVoiceUi("cloud"),
+			"local",
+		);
+		const resolved = resolveDriveVoiceTopology({ voice, providerId: "" });
+		expect(resolved.ok).toBe(false);
+		if (resolved.ok) {
+			return;
+		}
+		expect(resolved.reason).toBe("unconfigured");
+		expect(resolved.message).not.toMatch(/ollama/i);
+	});
+
+	it("still reports illegal for a genuinely bad topology with a real credential", () => {
+		// Local profile + Web Speech STT is forbidden (ADR-0009), independent
+		// of whether a credential is configured.
+		const voice = applyVoiceFacetPatch(
+			applyVoiceProfile(createDefaultDriveVoiceUi("cloud"), "local"),
+			{ "providers.sttId": "builtin.webSpeech" },
+		);
+		const resolved = resolveDriveVoiceTopology({
+			voice,
+			providerId: "ollama",
+		});
+		expect(resolved.ok).toBe(false);
+		if (resolved.ok) {
+			return;
+		}
+		expect(resolved.reason).toBe("illegal");
 	});
 
 	it("preserves hardware prefs across profile switches", () => {

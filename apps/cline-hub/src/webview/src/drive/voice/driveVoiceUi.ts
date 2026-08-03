@@ -81,22 +81,45 @@ export function resolveLlmEgressForUi(input: {
 	if (input.profile === "local") {
 		return {
 			kind: "local",
-			providerId: input.providerId || "ollama",
+			providerId: input.providerId,
 			baseUrlClass: "loopback",
 		};
 	}
 	return {
 		kind: "cloud",
-		providerId: input.providerId || "anthropic",
+		providerId: input.providerId,
 	};
 }
+
+/**
+ * Why a call can't proceed: `unconfigured` means no LLM credential has been
+ * set up anywhere (nothing to route to Settings for except "add one"), while
+ * `illegal` means a credential exists but the resolved topology violates
+ * ADR-0009/ADR-0010 (e.g. a cloud STT provider under the Local profile).
+ * Callers must not collapse these into one "invalid" message — telling a
+ * tester their topology is invalid when they simply have no API key yet is
+ * wrong (ADR-0021 decision 4).
+ */
+export type DriveVoiceUnready =
+	| { ok: false; reason: "unconfigured"; message: string }
+	| { ok: false; reason: "illegal"; message: string };
 
 export function resolveDriveVoiceTopology(input: {
 	voice: DriveVoiceUi;
 	providerId: string;
 }):
 	| { ok: true; topology: RuntimeTopology; forceMode: SpeechInputMode }
-	| { ok: false; message: string } {
+	| DriveVoiceUnready {
+	// No credential configured anywhere (ADR-0021): fail closed instead of
+	// substituting a default provider id and reporting fake readiness.
+	if (!input.providerId) {
+		return {
+			ok: false,
+			reason: "unconfigured",
+			message:
+				"No LLM provider is configured yet. Add one in Settings to start a Drive call.",
+		};
+	}
 	const llm = resolveLlmEgressForUi({
 		profile: input.voice.profile,
 		providerId: input.providerId,
@@ -106,7 +129,7 @@ export function resolveDriveVoiceTopology(input: {
 		llm,
 	});
 	if (!resolved.ok) {
-		return resolved;
+		return { ok: false, reason: "illegal", message: resolved.message };
 	}
 	return {
 		ok: true,
