@@ -96,6 +96,7 @@ docs/drivecode/
 | HTML IA prototype / DEMO | `design/wireframes/` |
 | Overview / share canvases | `design/canvases/` |
 | Product screenshot | `assets/{hub,tui,demos,logos}/` |
+| Generated data snapshot | `assets/changelog/` (e.g. `repo-changelog.json`, read at runtime — not a screenshot) |
 | Self-hosted webfont (WOFF2) | `assets/fonts/` |
 | Generated repo-history snapshot | `assets/changelog/` |
 | Term definition | `meta/glossary.md` |

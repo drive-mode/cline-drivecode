@@ -270,7 +270,7 @@ export async function checkDrivecodeStructure(
 	for (const entry of await list(join(nest, "assets"))) {
 		const rel = report(`assets/${entry.name}`);
 		if (!entry.isDir) {
-			fail(rel, "no loose files in assets/ — use logos/, hub/, tui/, demos/, or fonts/");
+			fail(rel, "no loose files in assets/ — use logos/, hub/, tui/, demos/, fonts/, or changelog/");
 			continue;
 		}
 		if (!ASSET_BUCKETS.has(entry.name)) {

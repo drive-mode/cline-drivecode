@@ -80,7 +80,7 @@ The SDK owns exactly four things.
 
 - **A second host.** Cursor or Claude Code implementing the same port. The port must be designed as if this will happen, and the conformance kit is what keeps it honest, but no second adapter gets written in this plan.
 - **Multiple humans in a room.** Participants already carry a `human | agent` kind. Adding humans must be adding participants, not rewriting the primitive.
-- **WebRTC and media tracks.** Reserved with zero members, per `04-future-multi-user.md`. The SDK models a `Stage` with a `sharer` pointer and does not model pixels.
+- **WebRTC and media tracks.** No pixel transport, per `04-future-multi-user.md`; the media track carries only `media.artifact`, a bytes-free reference. The SDK models a `Stage` with a `sharer` pointer and does not model pixels.
 - **Voice.** Phase 3 in the drivemode task graph. The SDK may carry narration and caption event variants; it does not carry an STT or TTS engine.
 
 ## Definition of done for this planning wave

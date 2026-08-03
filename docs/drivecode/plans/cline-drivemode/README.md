@@ -16,7 +16,6 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 
 | File | What it holds |
 |---|---|
-
 | [../../native-vs-drivecode.md](../../reference/native-vs-drivecode.md) | Native Cline vs Drivecode value matrix with maturity labels |
 | [00-vision.md](foundation/00-vision.md) | Drive mode inside Cline; Chat default work surface; staged delivery |
 | [01-architecture.md](foundation/01-architecture.md) | Kernel `@cline/drive`, hub `:25463` single writer, room-first, **Drive mode** primary activation, Chat default surface, events-first stage, D1–D9 |
@@ -53,13 +52,6 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
-| [00-vision.md](foundation/00-vision.md) | Drive-tab north star and staged delivery (tab + room, stage/share/address, voice) |
-| [01-architecture.md](foundation/01-architecture.md) | Kernel `@cline/drive`, hub `:25463` as single writer, room-first model, Drive tab primary, events-first stage, decisions D1 through D7 |
-| [02-research-streaming.md](research/02-research-streaming.md) | Call-architecture research synthesis (Discord, Zoom, Meet, Teams, Webex, Huddles, Twitch) with adopted anti-patterns |
-| [03-research-inventory.md](research/03-research-inventory.md) | Cline surface inventory, hub and hook gaps, workflows and skills to define |
-| [04-future-multi-user.md](research/04-future-multi-user.md) | Discord-in-IDE desired state, room/participant/track model, phased media strategy |
-| [05-workflows.md](foundation/05-workflows.md) | Canonical workflow catalog. 45 sequences a human performs (incl. Group I SDLC leadership), cited to cursor-drive and claude-drive prior art, tiered and mapped to DRV features or gaps |
-| [06-platform-config.md](foundation/06-platform-config.md) | Platform configuration surface. `AgentProfile` and `RosterPack` domain model, 34-facet inventory with owner/scope/lane/privacy/phase, ownership matrix, phasing, open forks |
 | [LEADERSHIP-BRIEF.md](leadership/LEADERSHIP-BRIEF.md) | SE lead / PM brief for the planning wave (defaults, MoSCoW, risks) |
 | [SYSTEMS-ANALYSIS.md](leadership/SYSTEMS-ANALYSIS.md) | End-to-end systems analysis (context, flows, NFRs, as-is/to-be, recommendations) |
 | [CHECKLIST-phase0-entry.md](leadership/CHECKLIST-phase0-entry.md) | Gate before schema freeze |
@@ -68,8 +60,6 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [ops/hub-drive-ops.md](ops/hub-drive-ops.md) | Hub op catalog and failure modes |
 | [ops/beta-support.md](ops/beta-support.md) | Where self-hosted beta testers report problems (proposed default) |
 | [schemas/README.md](schemas/README.md) | Phase 0 schema index |
-| [prd/](prd/) | Product requirements. PRD 6 Driveagent portfolio / knowledge graph / recruit; success metrics |
-| [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn (+ status board) |
 | [examples/driveagent-pair-partner/](examples/driveagent-pair-partner/) | Example `.driveagent` home + BRIEF + sample graph |
 | [TASK-GRAPH.md](delivery/TASK-GRAPH.md) | Phases 0 through 5 with verifiable gates |
 | [AGENT-RUNBOOK.md](delivery/AGENT-RUNBOOK.md) | How agents pick tasks, spawn, verify, and report |
@@ -162,7 +152,7 @@ Each principle below drove a concrete choice you can see in the files.
 - **Redesign from First Principles.** Mode-first integration ([ADR-0007](adr/ADR-0007-drive-as-cline-mode.md)) amends Drive-tab-as-sole-home while keeping the room primitive.
 - **Sequence Work into Verifiable Units.** Every checklist task ends in a named verify command, every phase ends in a gate, and read-and-map tasks precede write tasks so risky assumptions fail first.
 - **Foundational Thinking.** Schemas (DRV-EVENTS) and the kernel (DRV-KERNEL) are phase 0 because every later phase consumes them. The event union is the data shape that makes the stage, the TUI, and remote clients cheap.
-- **Subtract Before You Add.** The plan wires bundled ai-elements instead of writing components, collapses cursor-drive's `:7891` daemon into existing hub ops instead of porting it, and reserves the media track with zero members instead of speculating schema.
+- **Subtract Before You Add.** The plan wires bundled ai-elements instead of writing components, collapses cursor-drive's `:7891` daemon into existing hub ops instead of porting it, and keeps the media track to one bytes-free member (`media.artifact`) instead of speculating schema.
 - **Boundary Discipline.** Validation lives at hub ops, the kernel is pure with no transport, and surfaces render typed events without re-validating. Ask-mode enforcement sits at the tool-policy layer, not in UI affordances.
 - **Separate Before Serializing Shared State.** The hub is the single writer of room state, clients hold read-only projections, and the stage is a derived reducer, so no lock or CRDT is needed anywhere in the MVP.
 - **Never Block on the Human.** Preference forks (stream model, user share, accent, focus policy, pause vs cancel) ship with leadership defaults in [decisions/DEC-open-product-forks.md](decisions/DEC-open-product-forks.md) rather than blocking implementation. ADRs stay on the [status board](adr/ADR-0000-status-board.md) until formally Accepted.
