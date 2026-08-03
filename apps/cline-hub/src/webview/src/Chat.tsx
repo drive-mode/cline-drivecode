@@ -80,6 +80,7 @@ import {
 	DriveVoiceBar,
 } from "./drive/DriveRoomChrome";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
+import { resolveIncomingApprovalBypass } from "./drive/gateApproval";
 import {
 	GateFeedCard,
 	type GateFeedResponse,
@@ -240,6 +241,13 @@ export default function Chat({
 	const [gateSession, setGateSession] = useState<GateSessionState>(() =>
 		createGateSessionState(),
 	);
+	/**
+	 * `handleMessage` below is wired up once (empty effect deps) so it reads
+	 * gate-session state through a ref rather than a stale closure — same
+	 * pattern as driveRef.
+	 */
+	const gateSessionRef = useRef(gateSession);
+	gateSessionRef.current = gateSession;
 	const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
 	const [titleEditing, setTitleEditing] = useState(false);
 	const [forking, setForking] = useState(false);
@@ -1166,7 +1174,25 @@ export default function Chat({
 						})();
 					}
 					return;
-				case "approval_request":
+				case "approval_request": {
+					// DRV-GATES: a class the user already allowed "for this
+					// session" must not re-queue a card — that is what
+					// "allow for the session" means.
+					const { bypass, actionClass } = resolveIncomingApprovalBypass({
+						driveActive: driveRef.current.active,
+						gateSession: gateSessionRef.current,
+						toolName: message.toolName,
+					});
+					if (bypass) {
+						postToHost({
+							type: "approval_response",
+							approvalId: message.approvalId,
+							approved: true,
+							reason: `Allow-for-session (${actionClass}): auto-approved, already allowed.`,
+						});
+						setStatus(`Auto-approved (session allow): ${message.toolName}`);
+						return;
+					}
 					setPendingApprovals((current) => {
 						const existingIndex = current.findIndex(
 							(item) => item.approvalId === message.approvalId,
@@ -1181,6 +1207,7 @@ export default function Chat({
 					});
 					setStatus(`Waiting for approval: ${message.toolName}`);
 					return;
+				}
 				case "approval_resolved":
 					setPendingApprovals((current) =>
 						current.filter((item) => item.approvalId !== message.approvalId),
