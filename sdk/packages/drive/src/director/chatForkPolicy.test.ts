@@ -103,6 +103,52 @@ describe("assertForkLegal", () => {
 			}),
 		).toThrow(/not claimable/);
 	});
+
+	it("allows depth 1 (first generation) by default", () => {
+		expect(() =>
+			assertForkLegal({
+				reason: "do_claim",
+				doItem: queuedDo,
+				workspace: { mode: "shared_readonly" },
+				depth: 1,
+			}),
+		).not.toThrow();
+	});
+
+	it("rejects depth 2 by default — a worker may not cause workers", () => {
+		expect(() =>
+			assertForkLegal({
+				reason: "do_claim",
+				doItem: queuedDo,
+				workspace: { mode: "shared_readonly" },
+				depth: 2,
+			}),
+		).toThrow(IllegalChatForkError);
+		try {
+			assertForkLegal({
+				reason: "do_claim",
+				doItem: queuedDo,
+				workspace: { mode: "shared_readonly" },
+				depth: 2,
+			});
+		} catch (error) {
+			expect((error as InstanceType<typeof IllegalChatForkError>).code).toBe(
+				"depth_exceeded",
+			);
+		}
+	});
+
+	it("allows depth 2 when maxDepth is raised", () => {
+		expect(() =>
+			assertForkLegal({
+				reason: "do_claim",
+				doItem: queuedDo,
+				workspace: { mode: "shared_readonly" },
+				depth: 2,
+				maxDepth: 2,
+			}),
+		).not.toThrow();
+	});
 });
 
 describe("buildSeedPacket", () => {
@@ -120,6 +166,20 @@ describe("buildSeedPacket", () => {
 		expect(seed.parentBriefing).toBe("Keep auth green");
 		expect(seed.allowedPathPrefixes).toEqual(["src/auth"]);
 		expect(seed.parentSessionId).toBe("sess-main");
+		expect(seed.depth).toBe(1);
+	});
+
+	it("throws depth_exceeded and never returns a packet past the default depth", () => {
+		expect(() =>
+			buildSeedPacket({
+				doItem: queuedDo,
+				parentBriefing: "",
+				assigneeParticipantId: "agent-1",
+				parentSessionId: "sess-worker",
+				workspace: { mode: "shared_readonly" },
+				depth: 2,
+			}),
+		).toThrow(IllegalChatForkError);
 	});
 });
 

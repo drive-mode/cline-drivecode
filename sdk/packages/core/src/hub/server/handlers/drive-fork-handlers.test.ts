@@ -21,6 +21,7 @@ function envelope(
 function createCtx() {
 	const published: HubEventEnvelope[] = [];
 	const messagesBySession = new Map<string, unknown[]>();
+	const metadataBySession = new Map<string, Record<string, unknown> | undefined>();
 	const ctx = {
 		clients: new Map(),
 		sessionState: new Map(),
@@ -28,24 +29,37 @@ function createCtx() {
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
 		sessionHost: {
-			startSession: vi.fn(async (input: { config?: { sessionId?: string } }) => {
-				const sessionId = input.config?.sessionId ?? "worker-generated";
-				messagesBySession.set(sessionId, [
-					{ role: "user", content: "seed" },
-					{ role: "assistant", content: "worked" },
-				]);
-				return {
-					sessionId,
-					manifest: {},
-					manifestPath: "",
-					messagesPath: "",
-				};
-			}),
+			startSession: vi.fn(
+				async (input: {
+					config?: { sessionId?: string };
+					sessionMetadata?: Record<string, unknown>;
+				}) => {
+					const sessionId = input.config?.sessionId ?? "worker-generated";
+					messagesBySession.set(sessionId, [
+						{ role: "user", content: "seed" },
+						{ role: "assistant", content: "worked" },
+					]);
+					metadataBySession.set(sessionId, input.sessionMetadata);
+					return {
+						sessionId,
+						manifest: {},
+						manifestPath: "",
+						messagesPath: "",
+					};
+				},
+			),
 			abort: vi.fn(async () => undefined),
 			runTurn: vi.fn(async () => undefined),
 			deleteSession: vi.fn(async () => true),
 			readSessionMessages: vi.fn(async (sessionId: string) => {
 				return messagesBySession.get(sessionId) ?? [];
+			}),
+			/** Simulates the durable (SQLite-backed) session record lookup. */
+			getSession: vi.fn(async (sessionId: string) => {
+				if (!metadataBySession.has(sessionId)) {
+					return undefined;
+				}
+				return { sessionId, metadata: metadataBySession.get(sessionId) };
 			}),
 		},
 		publish: (event: HubEventEnvelope) => {
@@ -360,5 +374,111 @@ describe("handleDriveForkCommand", () => {
 		expect(audit.ok).toBe(true);
 		expect(audit.payload?.summaryOnly).toBe(false);
 		expect((audit.payload?.messages as unknown[]).length).toBeGreaterThan(0);
+	});
+
+	describe("fork depth bound", () => {
+		it("allows a first-generation fork spawned by a non-fork session", async () => {
+			const { ctx } = createCtx();
+			const claim = await handleDriveForkCommand(
+				ctx,
+				envelope("drive.fork.claim", {
+					roomId: "r-depth",
+					parentSessionId: "sess-main",
+					assigneeParticipantId: "agent-1",
+					doItem,
+					workspace: { mode: "shared_readonly" },
+				}),
+			);
+			expect(claim.ok).toBe(true);
+			const fork = claim.payload?.fork as { seed: { depth: number } };
+			expect(fork.seed.depth).toBe(1);
+		});
+
+		it("refuses a second-generation fork spawned by a worker session, visibly", async () => {
+			const { ctx } = createCtx();
+			const firstGen = await handleDriveForkCommand(
+				ctx,
+				envelope("drive.fork.claim", {
+					roomId: "r-depth",
+					parentSessionId: "sess-main",
+					assigneeParticipantId: "agent-1",
+					doItem,
+					workspace: { mode: "shared_readonly" },
+				}),
+			);
+			expect(firstGen.ok).toBe(true);
+			const worker = firstGen.payload?.fork as { workerSessionId: string };
+
+			// The worker itself now tries to claim a second Do item, i.e. cause
+			// a worker of its own — this is exactly the recursion the depth
+			// bound exists to stop.
+			const secondGen = await handleDriveForkCommand(
+				ctx,
+				envelope("drive.fork.claim", {
+					roomId: "r-depth",
+					parentSessionId: worker.workerSessionId,
+					assigneeParticipantId: "agent-1",
+					doItem: { ...doItem, id: "do-2", title: "Second gen" },
+					workspace: { mode: "shared_readonly" },
+				}),
+			);
+			expect(secondGen.ok).toBe(false);
+			expect(secondGen.error?.code).toBe("depth_exceeded");
+
+			// Suppression must be visible: a refused record appears in the
+			// room's chatForks (what the Workers panel renders from), not just
+			// a swallowed reply.
+			const room = secondGen.payload?.room as
+				| { chatForks?: unknown[] }
+				| undefined;
+			const list = await handleDriveForkCommand(
+				ctx,
+				envelope("drive.fork.list", { roomId: "r-depth" }),
+			);
+			const chatForks = list.payload?.chatForks as Array<{
+				lifecycle: string;
+				seed: { doItemId: string; depth?: number };
+				visibleToHuman: boolean;
+				refusal?: { code: string; message: string };
+			}>;
+			expect(room).toBeUndefined(); // errorReply carries no room payload
+			expect(chatForks.some((entry) => entry.lifecycle === "refused")).toBe(
+				true,
+			);
+			const refused = chatForks.find((entry) => entry.lifecycle === "refused");
+			expect(refused?.seed.doItemId).toBe("do-2");
+			expect(refused?.seed.depth).toBe(2);
+			expect(refused?.visibleToHuman).toBe(true);
+			expect(refused?.refusal?.code).toBe("depth_exceeded");
+		});
+
+		it("allows a second-generation fork when maxDepth is raised", async () => {
+			const { ctx } = createCtx();
+			const firstGen = await handleDriveForkCommand(
+				ctx,
+				envelope("drive.fork.claim", {
+					roomId: "r-depth-2",
+					parentSessionId: "sess-main",
+					assigneeParticipantId: "agent-1",
+					doItem,
+					workspace: { mode: "shared_readonly" },
+				}),
+			);
+			const worker = firstGen.payload?.fork as { workerSessionId: string };
+			const secondGen = await handleDriveForkCommand(
+				ctx,
+				envelope("drive.fork.claim", {
+					roomId: "r-depth-2",
+					parentSessionId: worker.workerSessionId,
+					assigneeParticipantId: "agent-1",
+					doItem: { ...doItem, id: "do-2", title: "Second gen" },
+					workspace: { mode: "shared_readonly" },
+					maxDepth: 2,
+				}),
+			);
+			expect(secondGen.ok).toBe(true);
+			const fork = secondGen.payload?.fork as { seed: { depth: number } };
+			expect(fork.seed.depth).toBe(2);
+		});
 	});
 });

@@ -8,6 +8,13 @@ import { rankDoBacklog } from "./rankBacklogs.js";
 
 export const DEFAULT_MAX_CONCURRENT_CHAT_FORKS = 2;
 
+/**
+ * Default ceiling on fork generations: a worker may not cause workers.
+ * Room-global like DEFAULT_MAX_CONCURRENT_CHAT_FORKS, configurable upward via
+ * assertForkLegal's `maxDepth` / the drive.fork.claim payload's `maxDepth`.
+ */
+export const DEFAULT_MAX_CHAT_FORK_DEPTH = 1;
+
 export function activeForkClaimsFromRecords(
 	forks: readonly ChatForkRecord[],
 ): ActiveForkClaim[] {
@@ -56,11 +63,18 @@ export function tickChatForks(input: {
 		return [];
 	}
 
+	// `refused` is excluded alongside dropped/archived: a depth refusal says
+	// "not from this parent", not "this work is spoken for". Leaving it in
+	// would keep the Do item claimed forever, so a legal first-generation
+	// parent could never pick up work a worker was refused — turning a
+	// generation bound into permanent work loss.
 	const claimedDoIds = new Set(
 		input.chatForks
 			.filter(
 				(fork) =>
-					fork.lifecycle !== "dropped" && fork.lifecycle !== "archived",
+					fork.lifecycle !== "dropped" &&
+					fork.lifecycle !== "archived" &&
+					fork.lifecycle !== "refused",
 			)
 			.map((fork) => fork.seed.doItemId),
 	);

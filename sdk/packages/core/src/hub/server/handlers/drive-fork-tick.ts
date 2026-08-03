@@ -1,4 +1,5 @@
 import {
+	DEFAULT_MAX_CHAT_FORK_DEPTH,
 	DEFAULT_MAX_CONCURRENT_CHAT_FORKS,
 	tickChatForks,
 } from "@cline/drive";
@@ -6,6 +7,38 @@ import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
 import { getDriveRoomStore } from "../../collaboration";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 import { handleDriveForkCommand } from "./drive-fork-handlers";
+
+/**
+ * Picks the first room-linked session that is not itself a chat-fork worker,
+ * for callers that don't pass parentSessionId explicitly. The room's
+ * chatForks list is ephemeral (reset on hub restart), so a session that
+ * looks "not forked" there can still be a worker from before the restart —
+ * fall back to the session's own persisted metadata (survives restart) to
+ * avoid resolving a worker session as if it were a fresh root.
+ */
+async function resolveFallbackParentSessionId(
+	ctx: HubTransportContext,
+	roomId: string,
+	chatForks: readonly { workerSessionId: string }[],
+): Promise<string | undefined> {
+	const store = getDriveRoomStore();
+	for (const sessionId of store.roomToSessions.get(roomId) ?? []) {
+		if (chatForks.some((entry) => entry.workerSessionId === sessionId)) {
+			continue;
+		}
+		let isKnownWorker = false;
+		try {
+			const session = await ctx.sessionHost.getSession?.(sessionId);
+			isKnownWorker = session?.metadata?.chatFork === true;
+		} catch {
+			// Unknown session state; treat as not-a-worker rather than block the tick.
+		}
+		if (!isKnownWorker) {
+			return sessionId;
+		}
+	}
+	return undefined;
+}
 
 /**
  * Claim next Do items via tickChatForks. Requires parentSessionId + assignee
@@ -19,6 +52,7 @@ export async function runChatForkDirectorTick(
 		assigneeParticipantId?: string;
 		parentBriefing?: string;
 		maxConcurrent?: number;
+		maxDepth?: number;
 		worktreeIsolationAvailable?: boolean;
 	},
 ): Promise<{ claimed: number; errors: string[] }> {
@@ -33,12 +67,11 @@ export async function runChatForkDirectorTick(
 
 	const parentSessionId =
 		input.parentSessionId ??
-		[...(store.roomToSessions.get(input.roomId) ?? [])].find((sessionId) => {
-			const fork = (room.chatForks ?? []).some(
-				(entry) => entry.workerSessionId === sessionId,
-			);
-			return !fork;
-		});
+		(await resolveFallbackParentSessionId(
+			ctx,
+			input.roomId,
+			room.chatForks ?? [],
+		));
 
 	const assigneeParticipantId =
 		input.assigneeParticipantId ??
@@ -74,6 +107,7 @@ export async function runChatForkDirectorTick(
 				reason: "do_claim",
 				worktreeIsolationAvailable: input.worktreeIsolationAvailable ?? false,
 				maxConcurrent: input.maxConcurrent,
+				maxDepth: input.maxDepth ?? DEFAULT_MAX_CHAT_FORK_DEPTH,
 			},
 		});
 		if (reply.ok) {
@@ -112,6 +146,10 @@ export async function handleDriveForkTickCommand(
 		maxConcurrent:
 			typeof envelope.payload?.maxConcurrent === "number"
 				? envelope.payload.maxConcurrent
+				: undefined,
+		maxDepth:
+			typeof envelope.payload?.maxDepth === "number"
+				? envelope.payload.maxDepth
 				: undefined,
 		worktreeIsolationAvailable:
 			typeof envelope.payload?.worktreeIsolationAvailable === "boolean"

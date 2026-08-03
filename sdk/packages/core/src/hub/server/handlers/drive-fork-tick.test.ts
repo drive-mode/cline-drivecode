@@ -1,5 +1,6 @@
 import type { HubCommandEnvelope, HubEventEnvelope } from "@cline/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getDriveRoomStore } from "../../collaboration";
 import type { HubTransportContext } from "./context";
 import {
 	__resetDriveRoomsForTests,
@@ -49,6 +50,8 @@ function createCtx() {
 			readSessionMessages: vi.fn(async (sessionId: string) => {
 				return messagesBySession.get(sessionId) ?? [];
 			}),
+			/** Default: unknown session, i.e. not a chat-fork worker. */
+			getSession: vi.fn(async () => undefined),
 		},
 		publish: (event: HubEventEnvelope) => {
 			published.push(event);
@@ -114,6 +117,52 @@ describe("drive.do.enqueue → drive.fork.tick", () => {
 		expect(
 			published.some((event) => event.event === "drive.fork.changed"),
 		).toBe(true);
+	});
+
+	it("does not fall back to a session that is a worker per its own persisted metadata, even when the room's live chatForks list is empty (post-restart)", async () => {
+		const { ctx } = createCtx();
+		const store = getDriveRoomStore();
+		store.create("r-restart");
+		// Simulates a worker session that existed before a hub restart wiped
+		// the room's ephemeral chatForks list — only its own durable session
+		// record still says it is a chat-fork worker.
+		store.linkSession("worker-1", "r-restart");
+		ctx.sessionHost.getSession = vi.fn(async (sessionId: string) =>
+			sessionId === "worker-1"
+				? { sessionId, metadata: { chatFork: true } }
+				: undefined,
+		) as typeof ctx.sessionHost.getSession;
+
+		const enqueue = await handleDriveCommand(
+			ctx,
+			envelope("drive.do.enqueue", {
+				roomId: "r-restart",
+				doItem: {
+					id: "do-restart",
+					title: "After restart",
+					goal: "Prove ancestry survives a restart",
+					priority: 10,
+					status: "queued",
+					dependsOn: [],
+					source: "planner",
+				},
+			}),
+		);
+		expect(enqueue.ok).toBe(true);
+
+		const tick = await handleDriveForkTickCommand(
+			ctx,
+			envelope("drive.fork.tick", {
+				roomId: "r-restart",
+				assigneeParticipantId: "agent-1",
+				// No parentSessionId: exercises the non-fork-parent fallback.
+			}),
+		);
+		// worker-1 is the only room-linked session and it is a known worker,
+		// so no legal parent is found — the tick must not silently treat the
+		// worker as a fresh root.
+		expect(tick.ok).toBe(false);
+		expect(tick.payload?.claimed ?? 0).toBe(0);
 	});
 
 	it("is a no-op when Do backlog is empty", async () => {

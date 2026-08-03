@@ -38,6 +38,13 @@ export const SeedPacketSchema = z
 		linkedShowTemplateIds: z.array(z.string()),
 		workspace: SeedWorkspaceSchema,
 		parentSessionId: z.string().min(1),
+		/**
+		 * Generations from the nearest non-fork ancestor: 1 = spawned directly
+		 * by a root/human session, 2 = spawned by a depth-1 worker, etc.
+		 * Optional (not `.default()`) so older persisted records still parse;
+		 * treat missing as depth 0 (unknown ancestry) at read sites.
+		 */
+		depth: z.number().int().nonnegative().optional(),
 	})
 	.strict();
 export type SeedPacket = z.infer<typeof SeedPacketSchema>;
@@ -69,10 +76,21 @@ export const ChatForkLifecycleStateSchema = z.enum([
 	"archived",
 	"dropped",
 	"auditing",
+	/** Claim was rejected before a worker session existed (e.g. depth cap). */
+	"refused",
 ]);
 export type ChatForkLifecycleState = z.infer<
 	typeof ChatForkLifecycleStateSchema
 >;
+
+/** Why a claim never became a worker. Kept on the record so refusals are auditable, not silent. */
+export const ChatForkRefusalSchema = z
+	.object({
+		code: z.string().min(1),
+		message: z.string().min(1),
+	})
+	.strict();
+export type ChatForkRefusal = z.infer<typeof ChatForkRefusalSchema>;
 
 export const ChatForkRecordSchema = z
 	.object({
@@ -81,6 +99,8 @@ export const ChatForkRecordSchema = z
 		seed: SeedPacketSchema,
 		promote: PromotePacketSchema.nullable(),
 		visibleToHuman: z.boolean(),
+		/** Present only when lifecycle is "refused". */
+		refusal: ChatForkRefusalSchema.optional(),
 	})
 	.strict();
 export type ChatForkRecord = z.infer<typeof ChatForkRecordSchema>;

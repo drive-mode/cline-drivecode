@@ -354,6 +354,7 @@ export {
 	type BuildSeedPacketInput,
 } from "./director/chatForkPolicy.js";
 export {
+	DEFAULT_MAX_CHAT_FORK_DEPTH,
 	DEFAULT_MAX_CONCURRENT_CHAT_FORKS,
 	activeForkClaimsFromRecords,
 	buildSeedUserMessage,

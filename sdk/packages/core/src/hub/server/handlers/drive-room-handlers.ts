@@ -897,9 +897,26 @@ export async function handleDriveRoomCommand(
 				void runChatForkDirectorTick(ctx, {
 					roomId,
 					parentSessionId: payload.sessionId,
-				}).catch(() => {
-					// tick is best-effort; claim failures must not fail work record
-				});
+				})
+					.then((result) => {
+						// Best-effort tick: claim refusals (e.g. depth_exceeded) are
+						// already recorded on the room's chatForks trail by
+						// handleForkClaim. Still surface them in server logs so a
+						// human watching the hub — not just the Workers panel — sees
+						// suppressed work instead of unexplained silence.
+						if (result.errors.length > 0) {
+							console.warn(
+								`runChatForkDirectorTick refused claim(s) for room ${roomId}: ${result.errors.join("; ")}`,
+							);
+						}
+					})
+					.catch((error) => {
+						// tick is best-effort; claim failures must not fail work record
+						console.warn(
+							`runChatForkDirectorTick threw for room ${roomId}:`,
+							error,
+						);
+					});
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),

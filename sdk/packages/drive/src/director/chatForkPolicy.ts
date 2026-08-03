@@ -8,6 +8,7 @@ import type {
 	StageDirectorState,
 	WorkspaceIsolationMode,
 } from "@cline/shared";
+import { DEFAULT_MAX_CHAT_FORK_DEPTH } from "./chatForkLifecycle.js";
 import { getShowTemplate, showItemFromTemplate } from "./showTemplates.js";
 
 export class IllegalChatForkError extends Error {
@@ -33,6 +34,15 @@ export type AssertForkLegalInput = {
 	allowedPathPrefixes?: readonly string[];
 	activeForks?: readonly ActiveForkClaim[];
 	worktreeIsolationAvailable?: boolean;
+	/**
+	 * Generations from the nearest non-fork ancestor this fork would be
+	 * created at. 1 = spawned by a root/human session. Defaults to 1 when
+	 * omitted, matching "assume first generation" for callers that don't
+	 * track ancestry.
+	 */
+	depth?: number;
+	/** Ceiling for `depth`. Defaults to DEFAULT_MAX_CHAT_FORK_DEPTH. */
+	maxDepth?: number;
 };
 
 function normalizePrefix(prefix: string): string {
@@ -69,6 +79,15 @@ export function assertForkLegal(input: AssertForkLegalInput): void {
 				`Unsupported fork reason: ${_exhaustive}`,
 			);
 		}
+	}
+
+	const depth = input.depth ?? 1;
+	const maxDepth = input.maxDepth ?? DEFAULT_MAX_CHAT_FORK_DEPTH;
+	if (depth > maxDepth) {
+		throw new IllegalChatForkError(
+			"depth_exceeded",
+			`Fork depth ${depth} exceeds max depth ${maxDepth}: a worker may not cause workers by default`,
+		);
 	}
 
 	if (input.doItem.status !== "queued" && input.doItem.status !== "active") {
@@ -145,10 +164,15 @@ export type BuildSeedPacketInput = {
 	reason?: ForkReason;
 	activeForks?: readonly ActiveForkClaim[];
 	worktreeIsolationAvailable?: boolean;
+	/** See AssertForkLegalInput.depth. Defaults to 1 (first generation). */
+	depth?: number;
+	/** See AssertForkLegalInput.maxDepth. */
+	maxDepth?: number;
 };
 
 export function buildSeedPacket(input: BuildSeedPacketInput): SeedPacket {
 	const allowedPathPrefixes = [...(input.allowedPathPrefixes ?? [])];
+	const depth = input.depth ?? 1;
 	assertForkLegal({
 		reason: input.reason ?? "do_claim",
 		doItem: input.doItem,
@@ -156,6 +180,8 @@ export function buildSeedPacket(input: BuildSeedPacketInput): SeedPacket {
 		allowedPathPrefixes,
 		activeForks: input.activeForks,
 		worktreeIsolationAvailable: input.worktreeIsolationAvailable,
+		depth,
+		maxDepth: input.maxDepth,
 	});
 
 	return {
@@ -173,6 +199,7 @@ export function buildSeedPacket(input: BuildSeedPacketInput): SeedPacket {
 		],
 		workspace: input.workspace,
 		parentSessionId: input.parentSessionId,
+		depth,
 	};
 }
 

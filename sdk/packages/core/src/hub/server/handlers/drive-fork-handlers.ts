@@ -4,6 +4,7 @@ import {
 	buildSeedPacket,
 	buildSeedUserMessage,
 	countRunningChatForks,
+	DEFAULT_MAX_CHAT_FORK_DEPTH,
 	DEFAULT_MAX_CONCURRENT_CHAT_FORKS,
 	IllegalChatForkError,
 } from "@cline/drive";
@@ -47,6 +48,34 @@ function readBoolean(
 	return typeof value === "boolean" ? value : undefined;
 }
 
+/**
+ * Depth of `parentSessionId` itself, read from its own persisted session
+ * metadata rather than the room's (ephemeral, restart-reset) chatForks list.
+ * A session that was never a chat-fork worker (root/human session, or
+ * unknown) is depth 0, so its children are first-generation (depth 1).
+ *
+ * A session that *is* a worker but carries no recorded depth counts as 1, not
+ * 0. Every worker session created before this shipped is in exactly that
+ * state, and reading them as roots would let their children claim as
+ * first-generation — defeating the bound for precisely the sessions it exists
+ * to catch.
+ */
+async function resolveParentForkDepth(
+	ctx: HubTransportContext,
+	parentSessionId: string,
+): Promise<number> {
+	try {
+		const parentSession = await ctx.sessionHost.getSession?.(parentSessionId);
+		const raw = parentSession?.metadata?.chatForkDepth;
+		if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+			return raw;
+		}
+		return parentSession?.metadata?.chatFork === true ? 1 : 0;
+	} catch {
+		return 0;
+	}
+}
+
 function publishRoom(
 	ctx: HubTransportContext,
 	room: ReturnType<ReturnType<typeof getDriveRoomStore>["getOrCreateLive"]>,
@@ -76,6 +105,66 @@ function upsertFork(
 		(fork) => fork.workerSessionId !== next.workerSessionId,
 	);
 	return [...without, next];
+}
+
+/**
+ * A depth-refused claim never gets a worker session, so with nothing else it
+ * would read as the agent going quiet. Record it in chatForks (same live
+ * state the Workers panel already renders from) and publish so it is visible
+ * on the room's live trail instead of vanishing into the best-effort tick
+ * catch in drive-room-handlers.ts.
+ */
+function recordRefusedFork(
+	ctx: HubTransportContext,
+	store: ReturnType<typeof getDriveRoomStore>,
+	room: ReturnType<ReturnType<typeof getDriveRoomStore>["getOrCreateLive"]>,
+	chatForks: readonly ChatForkRecord[],
+	input: {
+		roomId: string;
+		doItem: DoBacklogItem;
+		parentBriefing: string;
+		assigneeParticipantId: string;
+		parentSessionId: string;
+		workspace: SeedWorkspace;
+		allowedPathPrefixes: string[];
+		linkedShowTemplateIds: string[];
+		depth: number;
+		refusal: { code: string; message: string };
+	},
+): void {
+	const refused: ChatForkRecord = {
+		workerSessionId: createSessionId("refused_"),
+		lifecycle: "refused",
+		seed: {
+			doItemId: input.doItem.id,
+			title: input.doItem.title,
+			goal: input.doItem.goal,
+			parentBriefing: input.parentBriefing,
+			assigneeParticipantId: input.assigneeParticipantId,
+			allowedPathPrefixes: input.allowedPathPrefixes,
+			linkedShowTemplateIds: input.linkedShowTemplateIds,
+			workspace: input.workspace,
+			parentSessionId: input.parentSessionId,
+			depth: input.depth,
+		},
+		promote: null,
+		visibleToHuman: true,
+		refusal: input.refusal,
+	};
+	const next = store.setLive({
+		...room,
+		chatForks: upsertFork(chatForks, refused),
+	});
+	publishRoom(ctx, next, {
+		event: "drive.fork.changed",
+		payload: {
+			roomId: input.roomId,
+			workerSessionId: refused.workerSessionId,
+			lifecycle: refused.lifecycle,
+			doItemId: input.doItem.id,
+			refusal: input.refusal,
+		},
+	});
 }
 
 export async function handleDriveForkCommand(
@@ -136,6 +225,10 @@ async function handleForkClaim(
 		typeof envelope.payload?.maxConcurrent === "number"
 			? envelope.payload.maxConcurrent
 			: DEFAULT_MAX_CONCURRENT_CHAT_FORKS;
+	const maxDepth =
+		typeof envelope.payload?.maxDepth === "number"
+			? envelope.payload.maxDepth
+			: DEFAULT_MAX_CHAT_FORK_DEPTH;
 
 	if (
 		!parentSessionId ||
@@ -167,6 +260,8 @@ async function handleForkClaim(
 	const doItem: DoBacklogItem = doParse.data;
 	const workspace: SeedWorkspace = workspaceParse.data;
 	const reason: ForkReason = reasonParse.data;
+	const parentDepth = await resolveParentForkDepth(ctx, parentSessionId);
+	const depth = parentDepth + 1;
 
 	let seed: SeedPacket;
 	try {
@@ -181,9 +276,25 @@ async function handleForkClaim(
 			reason,
 			activeForks: activeForkClaimsFromRecords(chatForks),
 			worktreeIsolationAvailable,
+			depth,
+			maxDepth,
 		});
 	} catch (error) {
 		if (error instanceof IllegalChatForkError) {
+			if (error.code === "depth_exceeded") {
+				recordRefusedFork(ctx, store, room, chatForks, {
+					roomId,
+					doItem,
+					parentBriefing,
+					assigneeParticipantId,
+					parentSessionId,
+					workspace,
+					allowedPathPrefixes,
+					linkedShowTemplateIds,
+					depth,
+					refusal: { code: error.code, message: error.message },
+				});
+			}
 			return errorReply(envelope, error.code, error.message);
 		}
 		throw error;
@@ -206,6 +317,13 @@ async function handleForkClaim(
 				parentSessionId,
 				isSubagent: true,
 				chatFork: true,
+				/**
+				 * Persisted on the session record (SQLite-backed, survives hub
+				 * restart) so a later claim spawned from *this* worker can read
+				 * its own ancestry back via resolveParentForkDepth, instead of
+				 * relying on the room's ephemeral chatForks list.
+				 */
+				chatForkDepth: seed.depth ?? depth,
 				doItemId: seed.doItemId,
 				assigneeParticipantId,
 				roomId,
@@ -217,6 +335,15 @@ async function handleForkClaim(
 				providerId: "hub",
 				modelId: "hub",
 				cwd: seed.workspace.cwd ?? seed.workspace.worktreePath,
+				// SessionManifestSchema requires these as booleans (no default);
+				// a real (non-mocked) sessionHost rejects the start without them.
+				// A chat-fork worker needs tools to do its assigned work, but —
+				// consistent with "a worker may not cause workers" — does not get
+				// the (currently otherwise-inert, per ADR-0023 Finding 1)
+				// agent-spawn/team capabilities.
+				enableTools: true,
+				enableSpawnAgent: false,
+				enableAgentTeams: false,
 			} as never,
 		});
 		workerSessionId = started.sessionId || requestedSessionId;
