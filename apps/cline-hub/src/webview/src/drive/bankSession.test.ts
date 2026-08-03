@@ -2,6 +2,7 @@ import type { BankSnapshot } from "@cline/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	createDriveBankSession,
+	HUB_BANK_DEGRADED_NOTICE,
 	hydrateLocalBankFromHubSnapshot,
 	mutateBankActivatePlan,
 	mutateBankBindNow,
@@ -125,6 +126,9 @@ describe("bankSession hub seed helpers", () => {
 		const result = await seedBankForJoin(session, "  ");
 		expect(result.fromHub).toBe(false);
 		expect(result.snapshot.activePlanId).toBe("p-active");
+		// No workspaceRoot means a local/demo bank was expected from the
+		// start — this is not the hub silently degrading, so no notice.
+		expect(result.degradedNotice).toBeNull();
 	});
 
 	it("seedBankForJoin uses hub snapshot when drive_bank_snapshot arrives", async () => {
@@ -156,6 +160,8 @@ describe("bankSession hub seed helpers", () => {
 		});
 		expect(result.fromHub).toBe(true);
 		expect(result.snapshot).toEqual(sampleSnapshot);
+		// Healthy hub join — no degradation notice, no false alarm.
+		expect(result.degradedNotice).toBeNull();
 		expect(postSpy).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: "drive_bank_seed",
@@ -194,6 +200,12 @@ describe("bankSession hub seed helpers", () => {
 		const result = await seedBankForJoin(session, "/tmp/workspace");
 		expect(result.fromHub).toBe(false);
 		expect(result.snapshot.activePlanId).toBe("p-active");
+		// A workspaceRoot was set, so a durable hub bank was expected — the
+		// hub error means this join silently fell back to the local bank,
+		// which must be flagged rather than shown as the user's saved one.
+		// (requestHubBankOp's own timeout rejects the same way, exercising
+		// this identical catch path — see bankSession.ts:383-385.)
+		expect(result.degradedNotice).toBe(HUB_BANK_DEGRADED_NOTICE);
 	});
 
 	it("seedDemoBank is idempotent", async () => {

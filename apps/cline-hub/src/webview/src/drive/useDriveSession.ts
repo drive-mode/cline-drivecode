@@ -1138,7 +1138,11 @@ export function useDriveSession(
 			},
 		) => {
 			const current = driveRef.current;
-			const { snapshot } = await seedBankForJoin(
+			// Not the "hub is gone" terminal empty state — the call stays joined.
+			// This is the silent-fallback case: on a timeout/error seedBankForJoin
+			// swaps in the in-memory bank and flags it via `degradedNotice`, which
+			// must be surfaced instead of showing it as the user's real bank.
+			const { snapshot, degradedNotice } = await seedBankForJoin(
 				bankSessionRef.current,
 				workspaceRootRef.current,
 				{
@@ -1159,7 +1163,11 @@ export function useDriveSession(
 				if (!prev.active || prev.roomId == null) {
 					return prev;
 				}
-				return applyBankSnapshot(prev, snapshot);
+				return applyBankSnapshot(prev, snapshot, {
+					// Explicit null clears a stale notice once the hub answers again —
+					// a false alarm on the healthy path is worse than staying silent.
+					agencyBanner: degradedNotice,
+				});
 			});
 			if (!driveIntentRef.current) {
 				return;

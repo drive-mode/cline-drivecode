@@ -363,14 +363,34 @@ export function requestHubBankSeed(
 }
 
 /**
+ * Degradation notice for the case a terminal "hub is gone" empty state does
+ * not cover: the hub did not answer `drive_bank_seed` in time, so
+ * {@link seedBankForJoin} silently fell back to the in-memory bank and the
+ * session carried on. Distinct from a terminal hub-down state — the call
+ * stays joined, so this is a standing notice, not a blocker.
+ */
+export const HUB_BANK_DEGRADED_NOTICE =
+	"Hub did not answer. Showing a local task bank, not your saved one.";
+
+/**
  * Prefer hub durable seed when workspaceRoot is set; fall back to in-memory
  * demo seed on missing root, hub error, or timeout.
+ *
+ * `degradedNotice` is set only when a workspaceRoot was supplied (a durable
+ * hub bank was expected) and the hub did not deliver one — callers must
+ * surface it rather than presenting the local fallback as the real bank. An
+ * absent root means a local/demo bank was expected from the start, so that
+ * case is `null`, not degradation.
  */
 export async function seedBankForJoin(
 	session: DriveBankSession,
 	workspaceRoot: string | undefined,
 	correlation?: BankOpSessionContext,
-): Promise<{ snapshot: BankSnapshot; fromHub: boolean }> {
+): Promise<{
+	snapshot: BankSnapshot;
+	fromHub: boolean;
+	degradedNotice: string | null;
+}> {
 	const root = workspaceRoot?.trim();
 	if (root) {
 		try {
@@ -379,13 +399,17 @@ export async function seedBankForJoin(
 				...bankCorrelationFields(correlation),
 			});
 			await hydrateLocalBankFromHubSnapshot(session, snapshot);
-			return { snapshot, fromHub: true };
+			return { snapshot, fromHub: true, degradedNotice: null };
 		} catch {
 			// Hub unavailable / timed out — memory fallback below.
 		}
 	}
 	const snapshot = await seedDemoBank(session);
-	return { snapshot, fromHub: false };
+	return {
+		snapshot,
+		fromHub: false,
+		degradedNotice: root ? HUB_BANK_DEGRADED_NOTICE : null,
+	};
 }
 
 export type BankMutationResult = {

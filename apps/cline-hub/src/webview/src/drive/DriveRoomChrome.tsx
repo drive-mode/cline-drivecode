@@ -165,6 +165,11 @@ export function DriveRoomChrome({
 			return;
 		}
 		const root = workspaceRoot?.trim();
+		// Set only for reject/mute, which clear locally even when the hub
+		// rejects/times out — the banner below must not then claim a durable
+		// sync the hub never confirmed (previously a bare `catch {}` that
+		// dropped the distinction entirely).
+		let hubUnreachable = false;
 		if (root) {
 			try {
 				await requestPlanImproveResolve(root, proposal, decision);
@@ -174,21 +179,25 @@ export function DriveRoomChrome({
 					return;
 				}
 				// reject/mute must not write — clear locally even if hub errors.
+				hubUnreachable = true;
 			}
 		} else {
 			// Demo / no workspace: memory BankFs only (still gated).
 			const plan = planPlanImproveResolve({ proposal, decision });
 			await applyPlanImproveAccept(createMemoryBankFs(), plan);
 		}
+		const decisionLabel =
+			decision === "accept"
+				? "accepted"
+				: decision === "mute"
+					? "muted"
+					: "rejected";
 		setDrive((current) => ({
 			...current,
 			pendingPlanningImprove: null,
-			agencyBanner:
-				decision === "accept"
-					? "Planning improve accepted"
-					: decision === "mute"
-						? "Planning improve muted"
-						: "Planning improve rejected",
+			agencyBanner: hubUnreachable
+				? `Planning improve ${decisionLabel} locally — hub did not confirm.`
+				: `Planning improve ${decisionLabel}`,
 		}));
 		onPlanningImproveResolved?.(decision, proposal.offerKey);
 	};
