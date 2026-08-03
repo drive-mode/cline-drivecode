@@ -11,6 +11,7 @@ import {
 } from "./assertProviderCompatible.js";
 import {
 	cloudDefaultsWithAnthropic,
+	defaultFacetValuesFromProfile,
 	localDefaultsWithOllama,
 	resolveTopologyFromFacets,
 } from "./resolveTopologyFromFacets.js";
@@ -122,6 +123,19 @@ describe("assertProviderCompatible", () => {
 		const result = assertProviderCompatible(manifest, localTopology);
 		expect(result.ok).toBe(false);
 	});
+});
+
+describe("defaultFacetValuesFromProfile earcons", () => {
+	it.each(["cloud", "local"] as const)(
+		"defaults taskComplete off and the rest on for %s",
+		(profile) => {
+			const seed = defaultFacetValuesFromProfile(profile);
+			expect(seed["earcons.taskComplete"]).toBe(false);
+			expect(seed["earcons.approvalRequired"]).toBe(true);
+			expect(seed["earcons.join"]).toBe(true);
+			expect(seed["earcons.leave"]).toBe(true);
+		},
+	);
 });
 
 describe("resolveTopologyFromFacets", () => {

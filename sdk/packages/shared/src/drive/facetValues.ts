@@ -61,11 +61,14 @@ export const DriveFacetValuesSchema = z
 		"tts.enabled": z.boolean(),
 		"tts.maxSpokenSentences": z.number().int().positive(),
 		"captions.enabled": z.boolean(),
-		// Earcons are individually toggleable and default on: they only sound
-		// inside an active Drive call, at 25% of partner volume, and mute /
-		// reduced-motion silence all of them. Defaulted (not required) so facet
-		// files written before this slice still parse.
-		"earcons.taskComplete": z.boolean().default(true),
+		// Earcons are individually toggleable; they only sound inside an active
+		// Drive call, at 25% of partner volume, and mute / reduced-motion
+		// silence all of them. Defaulted (not required) so facet files written
+		// before this slice still parse. taskComplete defaults off: it is
+		// ambient and fires often, and a chime that never means anything
+		// trains people to ignore chimes. The rest default on. See
+		// docs/drivecode/plans/cline-drivemode/research/22-default-posture.md.
+		"earcons.taskComplete": z.boolean().default(false),
 		"earcons.approvalRequired": z.boolean().default(true),
 		"earcons.join": z.boolean().default(true),
 		"earcons.leave": z.boolean().default(true),

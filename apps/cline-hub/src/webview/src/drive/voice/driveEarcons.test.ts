@@ -167,7 +167,7 @@ describe("detectDriveEarcons", () => {
 });
 
 describe("shouldPlayDriveEarcon", () => {
-	it("allows every kind under the shipped defaults", () => {
+	it("allows every kind except taskComplete under shipped defaults", () => {
 		for (const kind of DRIVE_EARCON_KINDS) {
 			expect(
 				shouldPlayDriveEarcon({
@@ -176,7 +176,7 @@ describe("shouldPlayDriveEarcon", () => {
 					outputSilenced: false,
 					reducedMotion: false,
 				}),
-			).toBe(true);
+			).toBe(kind !== "taskComplete");
 		}
 	});
 
@@ -228,7 +228,11 @@ describe("shouldPlayDriveEarcon", () => {
 		expect(
 			shouldPlayDriveEarcon({
 				kind: "taskComplete",
-				facets: { ...FACETS, "tts.enabled": true },
+				facets: {
+					...FACETS,
+					"tts.enabled": true,
+					"earcons.taskComplete": true,
+				},
 				outputSilenced: false,
 				reducedMotion: false,
 			}),
@@ -321,7 +325,7 @@ describe("earcon motifs", () => {
 		const ids = DRIVE_EARCON_KINDS.map((kind) => DRIVE_EARCON_FACET_ID[kind]);
 		expect(new Set(ids).size).toBe(DRIVE_EARCON_KINDS.length);
 		for (const id of ids) {
-			expect(FACETS[id]).toBe(true);
+			expect(typeof FACETS[id]).toBe("boolean");
 		}
 	});
 });

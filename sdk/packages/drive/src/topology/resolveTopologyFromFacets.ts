@@ -58,7 +58,11 @@ export function defaultFacetValuesFromProfile(
 		"tts.enabled": false,
 		"tts.maxSpokenSentences": 3,
 		"captions.enabled": true,
-		"earcons.taskComplete": true,
+		// Task-complete is ambient and fires often; a chime that never means
+		// anything trains people to ignore chimes. Approval-required stays on
+		// because it is actionable. See docs/drivecode/plans/cline-drivemode/
+		// research/22-default-posture.md.
+		"earcons.taskComplete": false,
 		"earcons.approvalRequired": true,
 		"earcons.join": true,
 		"earcons.leave": true,

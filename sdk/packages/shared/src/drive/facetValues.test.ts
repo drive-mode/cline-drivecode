@@ -76,6 +76,26 @@ describe("parseDriveFacetValues pairAgent", () => {
 		});
 	});
 
+	it("defaults taskComplete off and the rest on when earcon keys are omitted", () => {
+		const values = parseDriveFacetValues({
+			...base,
+			"drive.defaults.pairAgent": { kind: "builtin", id: "pair_partner" },
+		});
+		expect(values["earcons.taskComplete"]).toBe(false);
+		expect(values["earcons.approvalRequired"]).toBe(true);
+		expect(values["earcons.join"]).toBe(true);
+		expect(values["earcons.leave"]).toBe(true);
+	});
+
+	it("respects an explicit earcons.taskComplete: true from an older facet file", () => {
+		const values = parseDriveFacetValues({
+			...base,
+			"earcons.taskComplete": true,
+			"drive.defaults.pairAgent": { kind: "builtin", id: "pair_partner" },
+		});
+		expect(values["earcons.taskComplete"]).toBe(true);
+	});
+
 	it("rejects apiKey in provider config", () => {
 		expect(() =>
 			parseDriveFacetValues({
