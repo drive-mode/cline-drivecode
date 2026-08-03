@@ -5,7 +5,12 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CLINE_HOST_CAPABILITIES, createDriveHarness, runHostConformance } from "@cline/drive";
+import {
+	CLINE_HOST_CAPABILITIES,
+	createDriveHarness,
+	runHostBehaviorConformance,
+	runHostConformance,
+} from "@cline/drive";
 import { afterEach, describe, expect, it } from "vitest";
 import { createClineDriveHost } from "./clineDriveHost";
 import {
@@ -36,6 +41,20 @@ describe("createClineDriveHost", () => {
 			promptRewrite: false,
 			worktreeIsolation: false,
 		});
+		expect(report.ok).toBe(true);
+	});
+
+	it("passes real behavioural conformance (invokes methods, not just capability flags)", async () => {
+		// The capability-matrix check above (runHostConformance) only reads
+		// HostCapabilities booleans; it never calls the host. This is the real
+		// suite: it creates a room, joins/leaves/mutes/raises hands, and checks
+		// the effects actually landed and were emitted to subscribers.
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const store = new DriveRoomStore();
+		const host = createClineDriveHost({ configParent: dir, store });
+		const report = await runHostBehaviorConformance(host);
+		expect(report.issues).toEqual([]);
 		expect(report.ok).toBe(true);
 	});
 

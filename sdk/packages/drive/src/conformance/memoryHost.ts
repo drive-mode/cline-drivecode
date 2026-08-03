@@ -15,6 +15,14 @@ export type MemoryDriveHost = DriveHostPort & {
 	readonly rooms: Map<string, RoomSnapshot>;
 };
 
+function nowIso(): string {
+	return new Date().toISOString();
+}
+
+function newEventId(prefix: string): string {
+	return `${prefix}_${crypto.randomUUID()}`;
+}
+
 export function memoryDriveHost(
 	capabilities: HostCapabilities = {
 		...CLINE_HOST_CAPABILITIES,
@@ -82,6 +90,15 @@ export function memoryDriveHost(
 						participants: [...without, op.participant],
 					};
 					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("join"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.join",
+						track: "control",
+						participant: op.participant,
+					});
 					return next;
 				}
 				case "leave": {
@@ -96,6 +113,15 @@ export function memoryDriveHost(
 						),
 					};
 					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("leave"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.leave",
+						track: "control",
+						participantId: op.participantId,
+					});
 					return next;
 				}
 				case "setAddress": {
@@ -108,6 +134,15 @@ export function memoryDriveHost(
 						addressSet: op.addressSet,
 					};
 					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("address"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.address",
+						track: "control",
+						addressSet: op.addressSet,
+					});
 					return next;
 				}
 				case "setStage": {
@@ -124,6 +159,16 @@ export function memoryDriveHost(
 						},
 					};
 					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("stage"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.stage",
+						track: "control",
+						sharer: op.sharer,
+						...(op.pin !== undefined ? { pin: op.pin } : {}),
+					});
 					return next;
 				}
 				case "setMode": {
@@ -140,6 +185,16 @@ export function memoryDriveHost(
 								: current.driveActive,
 					};
 					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("mode"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.mode",
+						track: "control",
+						subMode: op.subMode,
+						driveActive: op.driveActive,
+					});
 					return next;
 				}
 				case "raiseHand": {
@@ -147,14 +202,50 @@ export function memoryDriveHost(
 					if (!current) {
 						throw new Error(`room_not_found:${op.roomId}`);
 					}
-					return current;
+					const next: RoomSnapshot = {
+						...current,
+						raisedHandByParticipantId: {
+							...current.raisedHandByParticipantId,
+							[op.participantId]: op.raised,
+						},
+					};
+					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("hand"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.raise_hand",
+						track: "control",
+						participantId: op.participantId,
+						raised: op.raised,
+					});
+					return next;
 				}
 				case "mute": {
 					const current = rooms.get(op.roomId);
 					if (!current) {
 						throw new Error(`room_not_found:${op.roomId}`);
 					}
-					return current;
+					const next: RoomSnapshot = {
+						...current,
+						muteByParticipantId: {
+							...current.muteByParticipantId,
+							[op.participantId]: op.muted,
+						},
+					};
+					rooms.set(op.roomId, next);
+					emit({
+						schemaVersion: 1,
+						id: newEventId("mute"),
+						roomId: op.roomId,
+						at: nowIso(),
+						type: "control.mute",
+						track: "control",
+						participantId: op.participantId,
+						muted: op.muted,
+					});
+					return next;
 				}
 				default: {
 					const _never: never = op;

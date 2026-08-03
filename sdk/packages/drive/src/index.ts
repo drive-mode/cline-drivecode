@@ -432,3 +432,8 @@ export {
 	type ObserveResult,
 	type ProjectedKanbanCard,
 } from "./kanbanInterop.js";
+export {
+	HOST_BEHAVIOR_CASES,
+	runHostBehaviorConformance,
+	type HostBehaviorCase,
+} from "./conformance/hostBehavior.js";
