@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { DRIVE_DEFAULT_ROOM_ID } from "./types";
+import {
+	DEFAULT_DRIVE_UI,
+	DRIVE_DEFAULT_ROOM_ID,
+	DRIVE_PARTICIPANT_PARTNER,
+} from "./types";
 import {
 	buildDriveJoinPayload,
 	hasPendingDriveJoinRequest,
 	isDriveRoomSnapshotForTarget,
 	isDriveSessionHostMessage,
+	type LegacyDriveUi,
+	migrateLegacyPartnerInk,
 	resolveDriveCallError,
 	resolveDriveTargetRoomId,
 	shouldReattachDriveSession,
@@ -403,5 +409,66 @@ describe("Drive session host message guard", () => {
 
 	it("rejects unknown message types", () => {
 		expect(isDriveSessionHostMessage({ type: "totally_unknown" })).toBe(false);
+	});
+});
+
+describe("legacy partnerNameInk migration", () => {
+	const legacy = (partnerNameInk: unknown): LegacyDriveUi =>
+		({ ...DEFAULT_DRIVE_UI, partnerNameInk }) as LegacyDriveUi;
+
+	it("carries a stored global index onto the partner's own key", () => {
+		expect(migrateLegacyPartnerInk(legacy(3))).toEqual({
+			[DRIVE_PARTICIPANT_PARTNER]: {
+				nameInk: { kind: "palette", index: 3 },
+			},
+		});
+	});
+
+	it("keeps index 0 — falsy, but a real colour choice", () => {
+		expect(
+			migrateLegacyPartnerInk(legacy(0))[DRIVE_PARTICIPANT_PARTNER]?.nameInk,
+		).toEqual({ kind: "palette", index: 0 });
+	});
+
+	it("ignores an absent, null, or out-of-range legacy value", () => {
+		expect(migrateLegacyPartnerInk(DEFAULT_DRIVE_UI)).toEqual({});
+		expect(migrateLegacyPartnerInk(legacy(null))).toEqual({});
+		expect(migrateLegacyPartnerInk(legacy(99))).toEqual({});
+		expect(migrateLegacyPartnerInk(legacy(-1))).toEqual({});
+		expect(migrateLegacyPartnerInk(legacy("3"))).toEqual({});
+	});
+
+	it("never overwrites an ink already stored under the new shape", () => {
+		const current: LegacyDriveUi = {
+			...DEFAULT_DRIVE_UI,
+			agentInks: {
+				[DRIVE_PARTICIPANT_PARTNER]: {
+					nameInk: { kind: "palette", index: 6 },
+				},
+			},
+			partnerNameInk: 1,
+		};
+		expect(
+			migrateLegacyPartnerInk(current)[DRIVE_PARTICIPANT_PARTNER]?.nameInk,
+		).toEqual({ kind: "palette", index: 6 });
+	});
+
+	it("leaves other agents' inks untouched", () => {
+		const current: LegacyDriveUi = {
+			...DEFAULT_DRIVE_UI,
+			agentInks: {
+				"driveagent.nova": { nameInk: { kind: "palette", index: 2 } },
+			},
+			partnerNameInk: 4,
+		};
+		const migrated = migrateLegacyPartnerInk(current);
+		expect(migrated["driveagent.nova"]?.nameInk).toEqual({
+			kind: "palette",
+			index: 2,
+		});
+		expect(migrated[DRIVE_PARTICIPANT_PARTNER]?.nameInk).toEqual({
+			kind: "palette",
+			index: 4,
+		});
 	});
 });

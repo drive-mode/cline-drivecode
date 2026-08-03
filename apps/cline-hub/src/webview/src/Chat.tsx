@@ -88,6 +88,10 @@ import {
 import { collectRecruitCandidates } from "./drive/recruitAddNeed";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
+import {
+	DRIVE_SCREEN_INK_THEME,
+	resolveSpotlightSharerInk,
+} from "./drive/agentInk";
 import { resolveRosterParticipants } from "./drive/rosterHelpers";
 import {
 	type RouterUiMode,
@@ -337,6 +341,15 @@ export default function Chat({
 
 	/** Spotlight-primary split: Spotlight owns the room, feed folds beside it. */
 	const stageLayout = drive.active && drive.stageLayout;
+	/**
+	 * Ink for the shared screen's sharing chip. The screen is fixed-dark in both
+	 * host themes, so it clamps against the screen well rather than the host one.
+	 */
+	const spotlightSharerInk = resolveSpotlightSharerInk(
+		drive,
+		DRIVE_SCREEN_INK_THEME,
+		resolveRosterParticipants(drive),
+	);
 	const feedRoomKey = drive.roomId ?? DRIVE_DEFAULT_ROOM_ID;
 	const [feedCollapsed, setFeedCollapsed] = useState(false);
 	/** Fold state is webview-local and per room — rejoining restores the drawer. */
@@ -1932,6 +1945,7 @@ export default function Chat({
 								(sending ? "partner working" : "idle")
 							}
 							onToggleFeed={toggleFeedCollapsed}
+							sharerInk={spotlightSharerInk}
 							sharerIsAgent={drive.stageSharer === "agent"}
 							sharerLabel={
 								drive.stageSharer === "you" ? "You" : drive.partnerName

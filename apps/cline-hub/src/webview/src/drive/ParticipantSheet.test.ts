@@ -1,11 +1,10 @@
 import type { Participant } from "@cline/shared";
 import { describe, expect, it } from "vitest";
 import {
+	applyAgentNameInk,
 	applyPartnerDisplayName,
-	applyPartnerNameInk,
 	DEFAULT_DRIVE_UI,
 	DRIVE_PARTICIPANT_PARTNER,
-	nameInkPaletteColor,
 } from "./types";
 
 const partner: Participant = {
@@ -74,12 +73,49 @@ describe("applyPartnerDisplayName", () => {
 	});
 });
 
-describe("applyPartnerNameInk", () => {
-	it("stores palette index 0–7 and clears with null", () => {
-		const tinted = applyPartnerNameInk(DEFAULT_DRIVE_UI, 3);
-		expect(tinted.partnerNameInk).toBe(3);
-		expect(nameInkPaletteColor(3)).toBe("#be123c");
-		expect(applyPartnerNameInk(tinted, null).partnerNameInk).toBeNull();
-		expect(applyPartnerNameInk(DEFAULT_DRIVE_UI, 99)).toBe(DEFAULT_DRIVE_UI);
+describe("applyAgentNameInk", () => {
+	it("stores a durable palette ref under one profile id and clears it", () => {
+		const tinted = applyAgentNameInk(DEFAULT_DRIVE_UI, "driveagent.nova", 3);
+		expect(tinted.agentInks["driveagent.nova"]?.nameInk).toEqual({
+			kind: "palette",
+			index: 3,
+		});
+		// No hex reaches state — the concrete colour is resolved per theme.
+		expect(JSON.stringify(tinted.agentInks)).not.toContain("#");
+		expect(
+			applyAgentNameInk(tinted, "driveagent.nova", null).agentInks,
+		).toEqual({});
+		expect(applyAgentNameInk(DEFAULT_DRIVE_UI, "driveagent.nova", 99)).toBe(
+			DEFAULT_DRIVE_UI,
+		);
+	});
+
+	it("clearing nameInk keeps a bodyInk the sibling channel may have set", () => {
+		const withBody = {
+			...DEFAULT_DRIVE_UI,
+			agentInks: {
+				"driveagent.nova": {
+					nameInk: { kind: "palette", index: 2 },
+					bodyInk: { kind: "token", token: "muted" },
+				},
+			},
+		} as typeof DEFAULT_DRIVE_UI;
+		const cleared = applyAgentNameInk(withBody, "driveagent.nova", null);
+		expect(cleared.agentInks["driveagent.nova"]).toEqual({
+			bodyInk: { kind: "token", token: "muted" },
+		});
+	});
+
+	it("leaves other agents alone — the old global field repainted all of them", () => {
+		const one = applyAgentNameInk(DEFAULT_DRIVE_UI, "driveagent.nova", 3);
+		const two = applyAgentNameInk(one, "driveagent.reviewer", 1);
+		expect(two.agentInks["driveagent.nova"]?.nameInk).toEqual({
+			kind: "palette",
+			index: 3,
+		});
+		expect(two.agentInks["driveagent.reviewer"]?.nameInk).toEqual({
+			kind: "palette",
+			index: 1,
+		});
 	});
 });

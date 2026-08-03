@@ -79,6 +79,13 @@ export type SpotlightViewProps = {
 	sharerLabel: string;
 	/** True when the primary agent (Cline) holds the spotlight, for the idle avatar mark. */
 	sharerIsAgent?: boolean;
+	/**
+	 * Resolved name ink for that agent (DRV-AGENT-PROFILE), already clamped
+	 * against this screen's fixed-dark well. Undefined falls back to the room's
+	 * amber chrome — never to accent violet, which is product chrome rather than
+	 * an agent identity colour.
+	 */
+	sharerInk?: string;
 	demo?: boolean;
 	/** Structured human share when you take the spotlight (hub pin). */
 	humanPin?: SpotlightHumanPin | null;
@@ -340,10 +347,13 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 /** Nothing staged — the sharer's plain workspace is what the room sees. */
 function ScreenIdle({
 	hint,
+	sharerInk,
 	sharerIsAgent,
 	sharerLabel,
 }: {
 	hint?: string;
+	/** Resolved, contrast-clamped ink for the sharing agent. */
+	sharerInk?: string;
 	/** The primary agent (Cline) gets its bot mark; every human keeps an initial. */
 	sharerIsAgent?: boolean;
 	sharerLabel: string;
@@ -357,9 +367,14 @@ function ScreenIdle({
 				className={cn(
 					"grid size-11 shrink-0 place-items-center rounded-full border",
 					sharerIsAgent
-						? "border-violet-500/45 bg-violet-500/15 text-violet-300"
+						? "border-current/45 bg-current/15"
 						: "border-amber-500/45 bg-amber-500/15 font-mono text-base font-bold text-amber-300",
 				)}
+				style={
+					sharerIsAgent
+						? { color: sharerInk ?? "var(--drive-ink-2)" }
+						: undefined
+				}
 			>
 				{sharerIsAgent ? (
 					<ClineMarkIcon className="size-5" />
@@ -547,6 +562,7 @@ function ShowBacklogRail({
 export function Spotlight({
 	cards,
 	sharerLabel,
+	sharerInk,
 	sharerIsAgent,
 	demo,
 	humanPin,
@@ -646,6 +662,7 @@ export function Spotlight({
 				) : (
 					<ScreenIdle
 						hint={cards.length === 0 ? emptyHint : undefined}
+						sharerInk={sharerInk}
 						sharerIsAgent={sharerIsAgent}
 						sharerLabel={sharerLabel}
 					/>

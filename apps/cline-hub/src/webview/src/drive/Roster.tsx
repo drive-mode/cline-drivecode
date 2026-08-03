@@ -24,7 +24,7 @@ import {
 } from "./rosterHelpers";
 import { RosterPackLibrary } from "./RosterPackLibrary";
 import type { DriveUiState } from "./types";
-import { nameInkPaletteColor } from "./types";
+import { resolveParticipantNameInk, useDriveInkTheme } from "./agentInk";
 
 export function Roster({
 	drive,
@@ -48,6 +48,7 @@ export function Roster({
 	onAddRosterPack?: (pack: RosterPack) => void;
 }) {
 	const participants = resolveRosterParticipants(drive);
+	const inkTheme = useDriveInkTheme();
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [sheetMode, setSheetMode] = useState<ParticipantSheetMode>("chooser");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -87,11 +88,11 @@ export function Roster({
 					);
 					const focused = drive.focusedParticipantId === participant.id;
 					const speaking = participant.status === "speaking";
-					const inkColor =
-						participant.kind === "agent" &&
-						drive.partnerNameInk !== null
-							? nameInkPaletteColor(drive.partnerNameInk)
-							: undefined;
+					const inkColor = resolveParticipantNameInk({
+						drive,
+						participant,
+						theme: inkTheme,
+					});
 
 					return (
 						<button

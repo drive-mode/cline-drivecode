@@ -16,6 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { postToHost } from "../vscode";
 import {
+	driveParticipantInk,
+	driveParticipantProfileId,
+	resolveParticipantNameInk,
+	useDriveInkTheme,
+} from "./agentInk";
+import {
 	buildHumanPinDefaults,
 	type HumanPinKind,
 } from "./pinDefaults";
@@ -31,12 +37,11 @@ import {
 } from "./rosterHelpers";
 import { postSetStage } from "./stageSharePin";
 import {
+	applyAgentNameInk,
 	applyPartnerDisplayName,
-	applyPartnerNameInk,
 	DRIVE_PARTICIPANT_HUMAN,
 	DRIVE_PARTICIPANT_PARTNER,
 	type DriveUiState,
-	nameInkPaletteColor,
 } from "./types";
 
 export type ParticipantSheetMode = "chooser" | "profile";
@@ -336,6 +341,7 @@ function AgentProfileSections({
 	workspaceRoot?: string;
 	onDriveChange: (next: DriveUiState) => void;
 }) {
+	const inkTheme = useDriveInkTheme();
 	const [displayNameDraft, setDisplayNameDraft] = useState(
 		participant.displayName,
 	);
@@ -409,9 +415,16 @@ function AgentProfileSections({
 		}
 	};
 
-	const inkIndex = drive.partnerNameInk;
-	const inkColor =
-		inkIndex !== null ? nameInkPaletteColor(inkIndex) : undefined;
+	// Scoped to the agent whose sheet this is — editing one seat must not
+	// repaint the rest of the roster.
+	const profileId = driveParticipantProfileId(participant);
+	const storedInk = driveParticipantInk(drive, participant, "name");
+	const inkIndex = storedInk?.kind === "palette" ? storedInk.index : null;
+	const inkColor = resolveParticipantNameInk({
+		drive,
+		participant,
+		theme: inkTheme,
+	});
 
 	return (
 		<>
@@ -454,7 +467,7 @@ function AgentProfileSections({
 						onChange={(event) => {
 							const raw = event.target.value;
 							const next = raw === "" ? null : Number.parseInt(raw, 10);
-							onDriveChange(applyPartnerNameInk(drive, next));
+							onDriveChange(applyAgentNameInk(drive, profileId, next));
 						}}
 						value={inkIndex === null ? "" : String(inkIndex)}
 					>
@@ -466,6 +479,7 @@ function AgentProfileSections({
 						))}
 					</select>
 					<p className="text-[11px] text-muted-foreground">
+						Resolved against the active theme and clamped for contrast.
 						Local only — durable facet upsert TBD.
 					</p>
 				</div>

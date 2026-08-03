@@ -121,7 +121,7 @@ describe("applyRoomSnapshot", () => {
 		expect(DEFAULT_DRIVE_UI.participants).toEqual([]);
 		expect(DEFAULT_DRIVE_UI.focusedParticipantId).toBeNull();
 		expect(DEFAULT_DRIVE_UI.addressFollowsFocusParticipantId).toBeNull();
-		expect(DEFAULT_DRIVE_UI.partnerNameInk).toBeNull();
+		expect(DEFAULT_DRIVE_UI.agentInks).toEqual({});
 	});
 
 	it("copies stage cards and pin from snapshot", () => {

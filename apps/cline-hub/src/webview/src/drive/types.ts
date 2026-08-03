@@ -9,6 +9,7 @@ import {
 } from "@cline/drive";
 import type {
 	BankSnapshot,
+	InkRef,
 	Participant,
 	PlanningProposal,
 	RoomSnapshot,
@@ -23,6 +24,16 @@ import { isDriveHumanId } from "./participantIds";
 
 export type DriveSubMode = "plan" | "agent" | "ask" | "debug";
 
+/**
+ * One agent's two ink channels. Both optional — an unset channel means "use the
+ * resolver's default", which is a stable hash for names and `muted` for bodies,
+ * not a shared constant.
+ */
+export type DriveAgentInk = {
+	nameInk?: InkRef;
+	bodyInk?: InkRef;
+};
+
 /** Projection of hub stage.sharer for strip/Stage chrome. */
 export type DriveStageSharerLocal = "agent" | "you";
 
@@ -35,10 +46,15 @@ export type DriveUiState = {
 	postureOverride: DrivePostureOverride | null;
 	partnerName: string;
 	/**
-	 * Local nameInk palette index (0–7) for the pair partner roster byline.
-	 * Durable hub facet upsert is TODO when drive_config_upsert_profile lands.
+	 * Per-agent appearance, keyed by durable profile id (`agentProfileId(ref)`,
+	 * falling back to the participant id for seats with no ref).
+	 *
+	 * Mirrors the durable `agent.appearance` facet shape so the pending
+	 * `drive_config_get` / `drive_config_upsert_profile` wire-up drops straight
+	 * in. An agent absent from this map is not colourless — it resolves through
+	 * the stable default hash in `@cline/drive`.
 	 */
-	partnerNameInk: number | null;
+	agentInks: Record<string, DriveAgentInk>;
 	/** Human mic mute — input only (DRV-MIC). Never gates playback. */
 	muted: boolean;
 	/**
@@ -152,7 +168,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	subMode: "plan",
 	postureOverride: null,
 	partnerName: "Cline",
-	partnerNameInk: null,
+	agentInks: {},
 	// Joining a call with a hot mic is the wrong privacy default (spotlight S4).
 	// Safe only because `deafened` — not this — gates playback.
 	muted: true,
@@ -404,42 +420,49 @@ export function applyPartnerDisplayName(
 	};
 }
 
-/** Local-only nameInk palette index for the pair partner (0–7). */
-export function applyPartnerNameInk(
+/**
+ * Set one agent's nameInk palette index, or clear it back to the default hash.
+ *
+ * Scoped to a single profile id — the previous global field repainted every
+ * seated agent at once, which made two agents indistinguishable by design.
+ * No hex is stored: the durable `InkRef` is what persists, and the concrete
+ * colour is resolved per theme at paint time.
+ */
+export function applyAgentNameInk(
 	state: DriveUiState,
+	profileId: string,
 	index: number | null,
 ): DriveUiState {
+	if (!profileId) {
+		return state;
+	}
+	const existing = state.agentInks[profileId];
 	if (index === null) {
-		return { ...state, partnerNameInk: null };
+		if (!existing?.nameInk) {
+			return state;
+		}
+		const { nameInk: _dropped, ...rest } = existing;
+		const agentInks = { ...state.agentInks };
+		if (Object.keys(rest).length > 0) {
+			agentInks[profileId] = rest;
+		} else {
+			delete agentInks[profileId];
+		}
+		return { ...state, agentInks };
 	}
 	if (!Number.isInteger(index) || index < 0 || index > 7) {
 		return state;
 	}
-	return { ...state, partnerNameInk: index };
-}
-
-/** CSS color for a palette nameInk index (appearance overlay — not a theme token). */
-export function nameInkPaletteColor(index: number): string | undefined {
-	switch (index) {
-		case 0:
-			return "#0f766e";
-		case 1:
-			return "#1d4ed8";
-		case 2:
-			return "#b45309";
-		case 3:
-			return "#be123c";
-		case 4:
-			return "#047857";
-		case 5:
-			return "#4338ca";
-		case 6:
-			return "#0e7490";
-		case 7:
-			return "#854d0e";
-		default:
-			return undefined;
-	}
+	return {
+		...state,
+		agentInks: {
+			...state.agentInks,
+			[profileId]: {
+				...existing,
+				nameInk: { kind: "palette", index: index as 0 },
+			},
+		},
+	};
 }
 
 export function drivePersonaSystemHint(state: DriveUiState): string {
