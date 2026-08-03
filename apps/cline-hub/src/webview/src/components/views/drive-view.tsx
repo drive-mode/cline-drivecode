@@ -21,14 +21,19 @@ import { cn } from "@/lib/utils";
 import type { DriveOpenCallRequest } from "../../drive/driveLaunch";
 import {
 	applyDriveRoomPreviewMessage,
+	DRIVE_ROOM_HUB_UNREACHABLE_MESSAGE,
 	type DriveRoomPreview,
 	type DriveRoomPreviewState,
 	driveRoomOpenIntent,
 	EMPTY_DRIVE_ROOM_PREVIEW,
 	isDriveRoomNotFoundMessage,
+	isDriveTransportErrorMessage,
 } from "../../drive/driveRoomPreview";
 import { DRIVE_DEFAULT_ROOM_ID } from "../../drive/types";
-import { subscribeToHostMessages } from "../../lib/host-message-gateway";
+import {
+	type HostMessage,
+	subscribeToHostMessages,
+} from "../../lib/host-message-gateway";
 import { postToHost } from "../../vscode";
 import { DriveMarkIcon } from "../icons/drive-mark";
 import {
@@ -43,6 +48,19 @@ const SNAPSHOT_STATES: readonly StatusState[] = [
 	"running",
 	"queued",
 ];
+
+/** Room-lookup wait budget before treating the hub as unreachable — matches
+ * other hub round-trip timeouts in this app (bankSession.ts,
+ * requestDriveagentHome.ts both use 3s). */
+const ROOM_LOOKUP_TIMEOUT_MS = 3_000;
+
+/** Type-predicate wrapper so the transport `error` message can be routed
+ * through `subscribeToHostMessages`. */
+function isTransportErrorHostMessage(
+	message: HostMessage,
+): message is HostMessage & { type: "error" } {
+	return isDriveTransportErrorMessage(message);
+}
 
 const SNAPSHOT_STYLES: Record<string, string> = {
 	blocked: "text-amber-600 dark:text-amber-400",
@@ -316,6 +334,34 @@ export function DriveView({
 			},
 		});
 	}, [requestSummary]);
+
+	// The hub may never answer `call_get_room` at all — no `call_error`, no
+	// `room_snapshot`, nothing the effect above listens for — when it is not
+	// reachable (e.g. no hub process running). Left alone the room preview
+	// card would read "Checking…" forever. This effect is only armed while
+	// the lookup is still outstanding (both pieces of state are null); it
+	// clears on cleanup the moment either a real answer lands or the room is
+	// requested again, so it never clobbers a result that already arrived.
+	useEffect(() => {
+		if (roomPreview !== null || roomLookupError !== null) {
+			return;
+		}
+		const timer = window.setTimeout(() => {
+			setRoomLookupError(DRIVE_ROOM_HUB_UNREACHABLE_MESSAGE);
+		}, ROOM_LOOKUP_TIMEOUT_MS);
+		const unsubscribe = subscribeToHostMessages({
+			types: ["error"],
+			guard: isTransportErrorHostMessage,
+			onMessage: () => {
+				window.clearTimeout(timer);
+				setRoomLookupError(DRIVE_ROOM_HUB_UNREACHABLE_MESSAGE);
+			},
+		});
+		return () => {
+			window.clearTimeout(timer);
+			unsubscribe();
+		};
+	}, [roomPreview, roomLookupError]);
 
 	const blocked = summary?.byState.blocked ?? 0;
 

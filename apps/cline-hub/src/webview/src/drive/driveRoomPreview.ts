@@ -83,7 +83,7 @@ export function driveRoomOpenIntent(
 	}
 }
 
-type DriveRoomPreviewMessage = {
+export type DriveRoomPreviewMessage = {
 	type?: unknown;
 	roomId?: unknown;
 	snapshot?: unknown;
@@ -130,6 +130,45 @@ function isRoomSnapshot(value: unknown): value is RoomSnapshot {
 		Array.isArray(stage.cards)
 	);
 }
+
+/**
+ * True for the webview transport's own connectivity-failure message from
+ * `vscode.ts`'s socket handlers: `{ type: "error", text: "Failed to connect
+ * to the Cline Hub server." | "Received an invalid message from the Cline
+ * Hub server." }`. The Drive home view was not listening for this at all,
+ * so a browser session with no hub reachable stayed on "Checking…" forever.
+ *
+ * `{ type: "error" }` is also a general-purpose channel unrelated server
+ * features reuse for their own failures (mic-mute gate, session restore,
+ * drive commands, agent events — see `Chat.tsx`'s `isChatHostMessage`, which
+ * subscribes to the same type for those). Matching on `text` instead of the
+ * bare type keeps a coincidental unrelated error from reading as "the hub is
+ * unreachable" while a room lookup is still pending.
+ */
+export function isDriveTransportErrorMessage(
+	message: DriveRoomPreviewMessage,
+): boolean {
+	return (
+		message.type === "error" &&
+		typeof message.text === "string" &&
+		message.text.includes("Cline Hub server")
+	);
+}
+
+/**
+ * Copy for the room preview when the hub did not answer a lookup at all
+ * (transport error, or the bounded wait in `drive-view.tsx` expired) —
+ * distinct from `room_not_found`, where the hub answered and said there is
+ * no room.
+ *
+ * "Hub is down." matches the house copy `useDriveSession.ts` uses for the
+ * same underlying condition on an active call (hub_disconnected /
+ * version_skew). This surface is a pre-join room *probe*, not a connected
+ * call, so there is nothing to "Join again" yet — the existing Retry action
+ * on the room preview card covers re-probing instead.
+ */
+export const DRIVE_ROOM_HUB_UNREACHABLE_MESSAGE =
+	"Hub is down. Could not check the Pairing room.";
 
 /**
  * Apply only authoritative default-room messages to the home projection.
