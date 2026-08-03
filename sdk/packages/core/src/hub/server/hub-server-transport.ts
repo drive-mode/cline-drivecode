@@ -460,6 +460,7 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive.planner.set":
 			case "drive.script.attach":
 			case "drive.script.advance":
+			case "drive.artifacts.list":
 				return handleDriveCommand(this.ctx, envelope);
 			case "drive.fork.claim":
 			case "drive.fork.promote":

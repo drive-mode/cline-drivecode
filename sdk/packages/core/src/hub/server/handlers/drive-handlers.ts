@@ -1,20 +1,26 @@
+import { resolve } from "node:path";
 import {
+	artifactDirectoryTags,
 	assertDeliveryAllowed,
+	filterArtifactDirectory,
 	setParticipantDeafened,
 	setParticipantMuted,
 } from "@cline/drive";
 import type {
 	HubCommandEnvelope,
 	HubReplyEnvelope,
+	ShowArtifactKind,
 	StageSharer,
 } from "@cline/shared";
 import {
 	DirectorScriptSchema,
 	DoBacklogItemSchema,
+	ShowArtifactKindSchema,
 	ShowBacklogItemSchema,
 } from "@cline/shared";
 import {
 	getDriveRoomStore,
+	readArtifactCorpus,
 	resetDriveRoomStoreForTests,
 } from "../../collaboration";
 import { getHubDriveHarness } from "../../driveHarnessBinding";
@@ -109,9 +115,104 @@ export async function handleDriveCommand(
 			return await handleScriptAttach(ctx, envelope);
 		case "drive.script.advance":
 			return await handleScriptAdvance(ctx, envelope);
+		case "drive.artifacts.list":
+			return handleArtifactsList(envelope);
 		default:
 			return errorReply(envelope, "not_implemented", "Unknown drive command");
 	}
+}
+
+/**
+ * Same workspace, tolerating separator and drive-letter-case differences —
+ * the webview reports whatever the hub handed it, which on Windows can differ
+ * in case from the path the log was bound with.
+ */
+function sameWorkspaceRoot(a: string, b: string): boolean {
+	const normalize = (path: string) => {
+		const resolved = resolve(path);
+		return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+	};
+	return normalize(a) === normalize(b);
+}
+
+/**
+ * The Artifacts page's read of the corpus (DRV-ARTIFACTS).
+ *
+ * Spans rooms by design — the corpus outlives any one of them, which is the
+ * point of giving artifacts a durable family. Entries are bytes-free: the
+ * produce recipe travels, the rendered data URI never does.
+ *
+ * `workspaceRoot` must be the root this hub's log is already bound to. Unlike
+ * `call_join`, which binds the root it is given, this handler only reads — so
+ * an arbitrary path would let any connected client enumerate artifact titles,
+ * captions and produce recipes out of any directory on the machine that has a
+ * `.cline/drive/artifacts/events.jsonl`.
+ */
+function handleArtifactsList(envelope: HubCommandEnvelope): HubReplyEnvelope {
+	const workspaceRoot = readString(envelope.payload, "workspaceRoot");
+	if (!workspaceRoot) {
+		return errorReply(
+			envelope,
+			"invalid_payload",
+			"workspaceRoot is required — the corpus is owned by a workspace",
+		);
+	}
+	const boundRoot = getDriveRoomStore().getEventLog().configParent;
+	if (!boundRoot || !sameWorkspaceRoot(boundRoot, workspaceRoot)) {
+		return errorReply(
+			envelope,
+			"workspace_not_bound",
+			"workspaceRoot must be the workspace this hub is bound to",
+		);
+	}
+	const kindRaw = envelope.payload?.kind;
+	const parsedKind = ShowArtifactKindSchema.safeParse(kindRaw);
+	if (kindRaw !== undefined && !parsedKind.success) {
+		return errorReply(
+			envelope,
+			"invalid_payload",
+			"kind must be a ShowArtifactKind",
+		);
+	}
+	const kind: ShowArtifactKind | undefined = parsedKind.success
+		? parsedKind.data
+		: undefined;
+	const roomId = optionalStringFacet(envelope.payload, "roomId");
+	const tag = optionalStringFacet(envelope.payload, "tag");
+	if (roomId instanceof Error || tag instanceof Error) {
+		return errorReply(
+			envelope,
+			"invalid_payload",
+			"roomId and tag must be non-empty strings when present",
+		);
+	}
+	const corpus = readArtifactCorpus(workspaceRoot);
+	const scoped =
+		roomId === undefined
+			? corpus
+			: corpus.filter((entry) => entry.roomId === roomId);
+	return okReply(envelope, {
+		artifacts: filterArtifactDirectory(scoped, { kind, tag }),
+		tags: artifactDirectoryTags(scoped),
+	});
+}
+
+/**
+ * A present-but-unusable facet is a caller mistake, not "no filter". Silently
+ * widening it would list the whole corpus when the caller asked to narrow it.
+ */
+function optionalStringFacet(
+	payload: Record<string, unknown> | undefined,
+	key: string,
+): string | undefined | Error {
+	const value = payload?.[key];
+	if (value === undefined) {
+		return undefined;
+	}
+	if (typeof value !== "string" || !value.trim()) {
+		return new Error(`${key} must be a non-empty string`);
+	}
+	return value.trim();
 }
 
 function handleRoomGet(envelope: HubCommandEnvelope): HubReplyEnvelope {

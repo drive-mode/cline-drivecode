@@ -24,6 +24,7 @@ import {
 	durationMsBetween,
 	mintCallSessionId,
 } from "@cline/shared";
+import { restoreShowBacklogFromArtifacts } from "./artifactEventLog";
 import { resetDrivePauseAfterToolForTests } from "./drivePauseAfterTool";
 import { MemoryRoomEventLog, type RoomEventLog } from "./eventLog";
 import type { WorkRecordPayload } from "./work-from-tool";
@@ -246,6 +247,7 @@ export class DriveRoomStore {
 			this.callSessions.delete(roomId);
 		}
 		this.syncLiveFromSnapshot(snapshot);
+		this.restoreDirectorBacklogFromArtifacts(roomId);
 		return snapshot;
 	}
 
@@ -284,7 +286,41 @@ export class DriveRoomStore {
 			this.callSessions.delete(roomId);
 		}
 		this.syncLiveFromSnapshot(snapshot);
+		this.restoreDirectorBacklogFromArtifacts(roomId);
 		return snapshot;
+	}
+
+	/**
+	 * Rebuild `director.showBacklog` from the durable artifact corpus.
+	 *
+	 * Only the hydrate paths call this — the show backlog is live state that a
+	 * running room owns, so a mid-call commit must never have the corpus
+	 * reach back in and rewrite it. On a cold restore the backlog is empty and
+	 * this is the only thing that puts the room's artifacts back; on a warm one
+	 * the live items win and the corpus fills the gaps, so restoring twice
+	 * costs nothing.
+	 */
+	private restoreDirectorBacklogFromArtifacts(roomId: string): void {
+		const restored = restoreShowBacklogFromArtifacts({
+			configParent: this.eventLog.configParent,
+			roomId,
+		});
+		if (restored.length === 0) {
+			return;
+		}
+		const live = this.getOrCreateLive(roomId);
+		const liveIds = new Set(live.director.showBacklog.map((item) => item.id));
+		const missing = restored.filter((item) => !liveIds.has(item.id));
+		if (missing.length === 0) {
+			return;
+		}
+		this.setLive({
+			...live,
+			director: {
+				...live.director,
+				showBacklog: [...live.director.showBacklog, ...missing],
+			},
+		});
 	}
 
 	private syncLiveFromSnapshot(snapshot: RoomSnapshot): void {

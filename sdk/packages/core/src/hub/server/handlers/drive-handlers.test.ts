@@ -1,6 +1,15 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { HubCommandEnvelope, HubEventEnvelope } from "@cline/shared";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getDriveRoomStore } from "../../collaboration";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	getDriveRoomStore,
+	JsonlRoomEventLog,
+	readArtifactCorpus,
+	recordShowBacklogArtifacts,
+	resetArtifactLogRetentionCacheForTests,
+} from "../../collaboration";
 import type { HubTransportContext } from "./context";
 import {
 	__resetDriveRoomsForTests,
@@ -857,5 +866,234 @@ describe("handleDriveCommand", () => {
 		expect(room.director.showBacklog[0]?.id).toBe(showItem.id);
 		expect(room.director.showBacklog[0]?.uri).toBeUndefined();
 		expect(room.director.showBacklog[0]?.status).toBe("planned");
+	});
+});
+
+describe("drive artifact corpus", () => {
+	const dirs: string[] = [];
+	let workspaceRoot: string;
+
+	const showItem = {
+		id: "show-artifact-1",
+		ownerParticipantId: "drive:partner",
+		title: "Data flow",
+		intent: "Explain",
+		artifactKind: "diagram.data_flow" as const,
+		mediaClass: "still" as const,
+		caption: "Where the bytes go",
+		produce: {
+			tool: "render_mermaid",
+			templateId: "flow_overview",
+			args: { mermaidSource: "graph TD; A-->B;" },
+		},
+		priority: 1,
+		status: "planned" as const,
+		scoreReasons: [],
+		tags: ["onboarding"],
+	};
+
+	beforeEach(() => {
+		__resetDriveRoomsForTests();
+		resetArtifactLogRetentionCacheForTests();
+		workspaceRoot = mkdtempSync(join(tmpdir(), "drive-handlers-artifacts-"));
+		dirs.push(workspaceRoot);
+		getDriveRoomStore().attachEventLog(new JsonlRoomEventLog(workspaceRoot));
+	});
+
+	afterEach(() => {
+		for (const dir of dirs.splice(0)) {
+			rmSync(dir, { recursive: true, force: true });
+		}
+		resetArtifactLogRetentionCacheForTests();
+	});
+
+	it("records a presented show on the artifact family, bytes stripped", async () => {
+		const { ctx } = createCtx();
+		const reply = await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r_art",
+				presentNow: true,
+				showItem,
+			}),
+		);
+		expect(reply.ok).toBe(true);
+
+		const corpus = readArtifactCorpus(workspaceRoot);
+		expect(corpus).toHaveLength(1);
+		expect(corpus[0]?.showItemId).toBe("show-artifact-1");
+		expect(corpus[0]?.roomId).toBe("r_art");
+		expect(corpus[0]?.status).toBe("showing");
+		expect(corpus[0]?.produce.args.mermaidSource).toBe("graph TD; A-->B;");
+
+		// The live item carries the rendered SVG; the corpus must not.
+		const raw = readFileSync(
+			join(workspaceRoot, ".cline", "drive", "artifacts", "events.jsonl"),
+			"utf8",
+		);
+		expect(raw).not.toContain("data:image/svg+xml");
+		for (const key of [
+			"uri",
+			"dataUri",
+			"svg",
+			"image",
+			"bytes",
+			"thumbnail",
+		]) {
+			expect(raw).not.toContain(`"${key}":`);
+		}
+	});
+
+	it("keeps artifacts out of the room event log", async () => {
+		const { ctx } = createCtx();
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r_art",
+				presentNow: true,
+				showItem,
+			}),
+		);
+		const roomEvents = getDriveRoomStore()
+			.getEventLog()
+			.readSinceSync("r_art", 0);
+		expect(
+			roomEvents.filter((record) => record.event.type === "media.artifact"),
+		).toHaveLength(0);
+	});
+
+	it("lists the corpus across rooms and filters by kind and tag", async () => {
+		const { ctx } = createCtx();
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", { roomId: "r_a", showItem }),
+		);
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", {
+				roomId: "r_b",
+				showItem: {
+					...showItem,
+					id: "show-artifact-2",
+					artifactKind: "doc.plan",
+					mediaClass: "document",
+					produce: {
+						tool: "render_plan_card",
+						templateId: "plan_card",
+						args: { planTitle: "Ship it", steps: ["one", "two"] },
+					},
+					tags: ["release"],
+				},
+			}),
+		);
+
+		const all = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", { workspaceRoot }),
+		);
+		expect(all.ok).toBe(true);
+		const artifacts = all.payload?.artifacts as Array<{
+			showItemId: string;
+			roomId: string;
+		}>;
+		expect(artifacts.map((entry) => entry.showItemId).sort()).toEqual([
+			"show-artifact-1",
+			"show-artifact-2",
+		]);
+		expect(all.payload?.tags).toEqual(["onboarding", "release"]);
+
+		const byKind = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", {
+				workspaceRoot,
+				kind: "doc.plan",
+			}),
+		);
+		expect(
+			(byKind.payload?.artifacts as Array<{ showItemId: string }>).map(
+				(entry) => entry.showItemId,
+			),
+		).toEqual(["show-artifact-2"]);
+
+		const byTag = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", { workspaceRoot, tag: "onboarding" }),
+		);
+		expect(
+			(byTag.payload?.artifacts as Array<{ showItemId: string }>).map(
+				(entry) => entry.showItemId,
+			),
+		).toEqual(["show-artifact-1"]);
+
+		const byRoom = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", { workspaceRoot, roomId: "r_b" }),
+		);
+		expect(
+			(byRoom.payload?.artifacts as Array<{ showItemId: string }>).map(
+				(entry) => entry.showItemId,
+			),
+		).toEqual(["show-artifact-2"]);
+	});
+
+	it("rejects an artifacts list with no workspace root", async () => {
+		const { ctx } = createCtx();
+		const reply = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", {}),
+		);
+		expect(reply.ok).toBe(false);
+		expect(reply.error?.code).toBe("invalid_payload");
+	});
+
+	it("rejects an unknown artifact kind rather than listing everything", async () => {
+		const { ctx } = createCtx();
+		const reply = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", {
+				workspaceRoot,
+				kind: "diagram.nonsense",
+			}),
+		);
+		expect(reply.ok).toBe(false);
+		expect(reply.error?.code).toBe("invalid_payload");
+	});
+
+	it("rejects a non-string facet rather than widening the filter", async () => {
+		const { ctx } = createCtx();
+		await handleDriveCommand(
+			ctx,
+			envelope("drive.show.enqueue", { roomId: "r_art", showItem }),
+		);
+		for (const payload of [{ kind: 7 }, { tag: 7 }, { roomId: "  " }]) {
+			const reply = await handleDriveCommand(
+				ctx,
+				envelope("drive.artifacts.list", { workspaceRoot, ...payload }),
+			);
+			expect(reply.ok).toBe(false);
+			expect(reply.error?.code).toBe("invalid_payload");
+		}
+	});
+
+	it("refuses to read a corpus outside the workspace the hub is bound to", async () => {
+		const { ctx } = createCtx();
+		const foreign = mkdtempSync(join(tmpdir(), "drive-foreign-workspace-"));
+		dirs.push(foreign);
+		recordShowBacklogArtifacts({
+			configParent: foreign,
+			roomId: "r_foreign",
+			before: [],
+			after: [{ ...showItem, title: "Someone else's diagram" }],
+		});
+
+		const reply = await handleDriveCommand(
+			ctx,
+			envelope("drive.artifacts.list", { workspaceRoot: foreign }),
+		);
+		expect(reply.ok).toBe(false);
+		expect(reply.error?.code).toBe("workspace_not_bound");
+		expect(JSON.stringify(reply.payload ?? {})).not.toContain(
+			"Someone else's diagram",
+		);
 	});
 });

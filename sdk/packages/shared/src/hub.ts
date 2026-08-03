@@ -466,6 +466,7 @@ export type HubCommandName =
 	| "drive.planner.set"
 	| "drive.script.attach"
 	| "drive.script.advance"
+	| "drive.artifacts.list"
 	| "drive.fork.claim"
 	| "drive.fork.promote"
 	| "drive.fork.cancel"

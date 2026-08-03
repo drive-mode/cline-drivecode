@@ -4,8 +4,10 @@
  */
 
 import {
+	DEBUG_ARTIFACT_EVENT_LOG_MAX_RECORDS,
 	DEBUG_BANK_EVENT_LOG_MAX_RECORDS,
 	DEBUG_ROOM_EVENT_LOG_MAX_RECORDS,
+	DEFAULT_ARTIFACT_EVENT_LOG_MAX_RECORDS,
 	DEFAULT_BANK_EVENT_LOG_MAX_RECORDS,
 	DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS,
 } from "./logRetention";
@@ -45,6 +47,20 @@ export function resolveBankEventLogMaxRecords(
 		return Math.floor(facets.retentionBankMax);
 	}
 	return DEFAULT_BANK_EVENT_LOG_MAX_RECORDS;
+}
+
+/**
+ * Artifact corpus cap. Unlike room and bank there is no durable per-workspace
+ * override facet — the corpus is already denominated in artifacts rather than
+ * mixed events, so `debugRetention` is the only knob that has a reason to move
+ * it. Callers with an explicit cap (tests) bypass this entirely.
+ */
+export function resolveArtifactEventLogMaxRecords(
+	facets: RetentionFacetValues = {},
+): number {
+	return facets.debugRetention
+		? DEBUG_ARTIFACT_EVENT_LOG_MAX_RECORDS
+		: DEFAULT_ARTIFACT_EVENT_LOG_MAX_RECORDS;
 }
 
 /**

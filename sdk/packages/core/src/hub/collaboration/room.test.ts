@@ -1,4 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { ShowBacklogItem } from "@cline/shared";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+	recordShowBacklogArtifacts,
+	resetArtifactLogRetentionCacheForTests,
+} from "./artifactEventLog";
+import { JsonlRoomEventLog } from "./eventLog";
 import { joinCall } from "./join-call";
 import { DriveRoomStore, resetDriveRoomStoreForTests } from "./room";
 
@@ -357,5 +366,159 @@ describe("joinCall", () => {
 		});
 		expect(second.created).toBe(false);
 		expect(second.snapshot.participants).toHaveLength(2);
+	});
+});
+
+describe("DriveRoomStore artifact rehydrate", () => {
+	const dirs: string[] = [];
+
+	afterEach(() => {
+		for (const dir of dirs.splice(0)) {
+			rmSync(dir, { recursive: true, force: true });
+		}
+		resetArtifactLogRetentionCacheForTests();
+	});
+
+	function scratch(): string {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-artifacts-"));
+		dirs.push(dir);
+		return dir;
+	}
+
+	function artifact(overrides: Partial<ShowBacklogItem> = {}): ShowBacklogItem {
+		return {
+			id: "show_arch",
+			ownerParticipantId: "adam",
+			title: "Architecture",
+			intent: "orient the room",
+			artifactKind: "diagram.architecture",
+			mediaClass: "still",
+			uri: "data:image/svg+xml;base64,PHN2Zy8+",
+			caption: "Three lanes",
+			produce: {
+				tool: "render_mermaid",
+				args: { mermaidSource: "graph TD; log-->live" },
+			},
+			priority: 5,
+			status: "showing",
+			scoreReasons: [],
+			...overrides,
+		};
+	}
+
+	function seedRoom(dir: string, roomId: string): void {
+		const store = new DriveRoomStore();
+		store.attachEventLog(new JsonlRoomEventLog(dir));
+		store.create(roomId);
+		store.join({
+			roomId,
+			participant: {
+				id: "you",
+				kind: "human",
+				displayName: "You",
+				role: "host",
+				status: "idle",
+			},
+		});
+		recordShowBacklogArtifacts({
+			configParent: dir,
+			roomId,
+			before: [],
+			after: [artifact()],
+		});
+	}
+
+	it("rebuilds the show backlog from the corpus after the room stops", () => {
+		const dir = scratch();
+		seedRoom(dir, "r1");
+
+		// Hub restart: a brand-new store, nothing but the logs on disk.
+		const restarted = new DriveRoomStore();
+		restarted.attachEventLog(new JsonlRoomEventLog(dir));
+		expect(restarted.getOrCreateLive("r1").director.showBacklog).toHaveLength(
+			0,
+		);
+
+		const snapshot = restarted.hydrateFromLogSync("r1");
+		expect(snapshot?.participants).toHaveLength(1);
+
+		const backlog = restarted.getOrCreateLive("r1").director.showBacklog;
+		expect(backlog).toHaveLength(1);
+		expect(backlog[0]?.id).toBe("show_arch");
+		expect(backlog[0]?.title).toBe("Architecture");
+		expect(backlog[0]?.uri).toBeUndefined();
+		expect(backlog[0]?.produce.args.mermaidSource).toBe("graph TD; log-->live");
+	});
+
+	it("rebuilds the backlog on the async hydrate path too", async () => {
+		const dir = scratch();
+		seedRoom(dir, "r1");
+
+		const restarted = new DriveRoomStore();
+		restarted.attachEventLog(new JsonlRoomEventLog(dir));
+		await restarted.hydrateFromLog("r1");
+
+		expect(
+			restarted.getOrCreateLive("r1").director.showBacklog.map((i) => i.id),
+		).toEqual(["show_arch"]);
+	});
+
+	it("restores only the hydrated room's artifacts", () => {
+		const dir = scratch();
+		seedRoom(dir, "r1");
+		recordShowBacklogArtifacts({
+			configParent: dir,
+			roomId: "r2",
+			before: [],
+			after: [artifact({ id: "show_other" })],
+		});
+
+		const restarted = new DriveRoomStore();
+		restarted.attachEventLog(new JsonlRoomEventLog(dir));
+		restarted.hydrateFromLogSync("r1");
+
+		expect(
+			restarted.getOrCreateLive("r1").director.showBacklog.map((i) => i.id),
+		).toEqual(["show_arch"]);
+	});
+
+	it("keeps live backlog items when hydrating a room that already has them", () => {
+		const dir = scratch();
+		seedRoom(dir, "r1");
+
+		const restarted = new DriveRoomStore();
+		restarted.attachEventLog(new JsonlRoomEventLog(dir));
+		const live = restarted.getOrCreateLive("r1");
+		const inFlight = artifact({ id: "show_arch", title: "Live title" });
+		restarted.setLive({
+			...live,
+			director: { ...live.director, showBacklog: [inFlight] },
+		});
+
+		restarted.hydrateFromLogSync("r1");
+
+		const backlog = restarted.getOrCreateLive("r1").director.showBacklog;
+		expect(backlog).toHaveLength(1);
+		expect(backlog[0]?.title).toBe("Live title");
+	});
+
+	it("restores nothing when no workspace root owns the corpus", () => {
+		const store = new DriveRoomStore();
+		store.create("r1");
+		store.join({
+			roomId: "r1",
+			participant: {
+				id: "you",
+				kind: "human",
+				displayName: "You",
+				role: "host",
+				status: "idle",
+			},
+		});
+		const restarted = new DriveRoomStore();
+		restarted.hydrateFromLogSync("r1");
+		expect(restarted.getOrCreateLive("r1").director.showBacklog).toHaveLength(
+			0,
+		);
 	});
 });

@@ -20,11 +20,28 @@ export const DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS = 2_048;
 export const DEFAULT_BANK_EVENT_LOG_MAX_RECORDS = 4_096;
 
 /**
+ * Default max records retained in the workspace artifact `events.jsonl`.
+ *
+ * Denominated in artifact records, not mixed room events — that is the point
+ * of giving artifacts their own family: no amount of presence or work traffic
+ * can push an artifact out.
+ *
+ * One artifact writes a record each time its durable projection changes
+ * (planned → ready → showing → shown), so distinct-artifact capacity is some
+ * fraction of this. Re-enqueuing an item demotes it to `planned` again, so a
+ * demo loop that re-shows the same artifact spends the cap faster than a room
+ * that shows each once — and the corpus is workspace-wide, so that spend is
+ * shared across rooms.
+ */
+export const DEFAULT_ARTIFACT_EVENT_LOG_MAX_RECORDS = 8_192;
+
+/**
  * Raised caps when `privacy.debugRetention` is on (see retentionCaps.ts).
  * Still local-only — never phone-home.
  */
 export const DEBUG_ROOM_EVENT_LOG_MAX_RECORDS = 16_384;
 export const DEBUG_BANK_EVENT_LOG_MAX_RECORDS = 32_768;
+export const DEBUG_ARTIFACT_EVENT_LOG_MAX_RECORDS = 65_536;
 
 export type LogRetentionOptions = {
 	/** Max JSONL records to keep (oldest trimmed). */

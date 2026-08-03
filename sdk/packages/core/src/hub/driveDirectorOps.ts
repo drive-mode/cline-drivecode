@@ -5,7 +5,11 @@
 
 import { advanceScriptBeat, normalizeEnqueuedShowStatus } from "@cline/drive";
 import type { DirectorScript, ShowBacklogItem } from "@cline/shared";
-import { getDriveRoomStore, type DriveRoomStore } from "./collaboration";
+import {
+	type DriveRoomStore,
+	getDriveRoomStore,
+	recordShowBacklogArtifacts,
+} from "./collaboration";
 import {
 	applyPresentedShow,
 	materializeShowItem,
@@ -15,6 +19,39 @@ import {
 } from "./driveShowRuntime";
 
 type DriveLiveRoom = ReturnType<DriveRoomStore["getOrCreateLive"]>;
+
+/**
+ * Commit the durable artifact records a director mutation earned (DRV-ARTIFACTS).
+ *
+ * Every mutator here funnels its result through `store.setLive`, which is why
+ * this is the one choke point the artifact corpus needs: the show backlog only
+ * ever changes on the far side of one of these six calls. Records go to the
+ * artifact family, never the room event log — that log trims oldest-first at a
+ * cap counted in mixed events, so a chatty room would evict the artifacts.
+ *
+ * Recording is best-effort by construction. It runs *after* `store.setLive`
+ * has already landed the mutation, so a full disk, a read-only workspace or a
+ * corrupt `artifacts/meta.json` must not surface as a failed director op —
+ * that would report an error for a change the room actually made. The room
+ * loses corpus durability for that write and keeps its live state.
+ */
+function commitArtifacts(
+	store: DriveRoomStore,
+	roomId: string,
+	before: readonly ShowBacklogItem[],
+	after: DriveLiveRoom,
+): void {
+	try {
+		recordShowBacklogArtifacts({
+			configParent: store.getEventLog().configParent,
+			roomId,
+			before,
+			after: after.director.showBacklog,
+		});
+	} catch {
+		// Durability is best-effort; the mutation already happened.
+	}
+}
 
 export type DirectorCommitResult = {
 	room: DriveLiveRoom;
@@ -45,6 +82,7 @@ export function enqueueShowOnStore(input: {
 	const store = input.store ?? getDriveRoomStore();
 	store.create(input.roomId);
 	const room = store.getOrCreateLive(input.roomId);
+	const backlogBefore = room.director.showBacklog;
 	const status = normalizeEnqueuedShowStatus(input.showItem.status);
 	const enqueued: ShowBacklogItem = {
 		...input.showItem,
@@ -80,6 +118,7 @@ export function enqueueShowOnStore(input: {
 			const parseReason = materialized.scoreReasons.find((reason) =>
 				reason.startsWith("mermaid_parse_failed"),
 			);
+			commitArtifacts(store, input.roomId, backlogBefore, next);
 			return {
 				room: next,
 				presented: null,
@@ -92,6 +131,7 @@ export function enqueueShowOnStore(input: {
 			};
 		}
 	}
+	commitArtifacts(store, input.roomId, backlogBefore, next);
 	return { room: next, presented, planned: enqueued };
 }
 
@@ -104,6 +144,7 @@ export function presentShowOnStore(input: {
 	const store = input.store ?? getDriveRoomStore();
 	store.create(input.roomId);
 	const room = store.getOrCreateLive(input.roomId);
+	const backlogBefore = room.director.showBacklog;
 	const materialized =
 		input.showItem.uri && input.showItem.status === "showing"
 			? input.showItem
@@ -137,6 +178,7 @@ export function presentShowOnStore(input: {
 	const presented =
 		next.director.showBacklog.find((item) => item.id === materialized.id) ??
 		null;
+	commitArtifacts(store, input.roomId, backlogBefore, next);
 	return { room: next, presented, planned: null };
 }
 
@@ -149,6 +191,7 @@ export function tickShowOnStore(input: {
 	const store = input.store ?? getDriveRoomStore();
 	store.create(input.roomId);
 	const room = store.getOrCreateLive(input.roomId);
+	const backlogBefore = room.director.showBacklog;
 	const tick = runShowDirectorTick({
 		room,
 		preferShowId: input.preferShowId,
@@ -157,9 +200,11 @@ export function tickShowOnStore(input: {
 	if (!tick.presented) {
 		// Persist fail-closed demotions (scoreReasons) even when nothing presented.
 		const next = store.setLive(tick.room);
+		commitArtifacts(store, input.roomId, backlogBefore, next);
 		return { room: next, presented: null, planned: null };
 	}
 	const next = store.setLive(tick.room);
+	commitArtifacts(store, input.roomId, backlogBefore, next);
 	return { room: next, presented: tick.presented, planned: null };
 }
 
@@ -172,6 +217,7 @@ export function attachScriptOnStore(input: {
 	const store = input.store ?? getDriveRoomStore();
 	store.create(input.roomId);
 	const room = store.getOrCreateLive(input.roomId);
+	const backlogBefore = room.director.showBacklog;
 	const script = input.script;
 	const extraShows = input.showItems ?? [];
 	let showBacklog = [...room.director.showBacklog];
@@ -204,6 +250,7 @@ export function attachScriptOnStore(input: {
 	const beat = script.beats.find(
 		(entry) => entry.beatId === seeded.activeBeatId,
 	);
+	commitArtifacts(store, input.roomId, backlogBefore, next);
 	return {
 		room: next,
 		presented: presented.presented,
@@ -230,6 +277,7 @@ export function advanceScriptOnStore(input: {
 			errorMessage: "No active DirectorScript on this room",
 		};
 	}
+	const backlogBefore = room.director.showBacklog;
 	const previousShowId = room.director.activeShowId;
 	const advanced = advanceScriptBeat({
 		state: room.director,
@@ -249,6 +297,7 @@ export function advanceScriptOnStore(input: {
 		next = store.setLive(presentedResult.room);
 		presented = presentedResult.presented;
 	}
+	commitArtifacts(store, input.roomId, backlogBefore, next);
 	return {
 		room: next,
 		presented,
@@ -269,6 +318,7 @@ export function planFromWorkOnStore(input: {
 	const store = input.store ?? getDriveRoomStore();
 	store.create(input.roomId);
 	const room = store.getOrCreateLive(input.roomId);
+	const backlogBefore = room.director.showBacklog;
 	const planner = runShowPlannerFromWork({
 		room,
 		workKind: input.workKind,
@@ -286,6 +336,7 @@ export function planFromWorkOnStore(input: {
 		};
 	}
 	const next = store.setLive(planner.room);
+	commitArtifacts(store, input.roomId, backlogBefore, next);
 	return {
 		room: next,
 		presented: planner.presented,
