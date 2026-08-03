@@ -42,9 +42,7 @@ describe("compileDriveagentHome", () => {
 		const home = parseDriveagentHome({
 			slug: "pair-partner",
 			agent: parseDriveagentAgentYaml(loadYaml("agent.yaml")),
-			permissions: parseDriveagentPermissionsYaml(
-				loadYaml("permissions.yaml"),
-			),
+			permissions: parseDriveagentPermissionsYaml(loadYaml("permissions.yaml")),
 			env: parseDriveagentEnvYaml(loadYaml("env.yaml")),
 		});
 		const view = compileDriveagentHome(home);

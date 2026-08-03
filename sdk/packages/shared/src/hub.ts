@@ -498,6 +498,7 @@ export type HubCommandName =
 	| "drive_bank_accept_sdlc_freeze"
 	| "drive_session_rollups"
 	| "drive_agent_home_get"
+	| "drive_agent_home_put"
 	| "call_join"
 	| "call_leave"
 	| "call_end"

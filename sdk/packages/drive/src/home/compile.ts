@@ -20,9 +20,7 @@ export type CompiledDriveagentView = {
 	readonly maxIterations?: number;
 };
 
-export type DriveagentHomeCompileErrorCode =
-	| "unknown_agent"
-	| "invalid_home";
+export type DriveagentHomeCompileErrorCode = "unknown_agent" | "invalid_home";
 
 export class DriveagentHomeCompileError extends Error {
 	readonly code: DriveagentHomeCompileErrorCode;
@@ -91,7 +89,10 @@ function assertDriveagentHome(input: unknown): DriveagentHome {
 			`Driveagent home '${input.slug}' agent.name '${agent.name}' must match slug`,
 		);
 	}
-	if (!isNonEmptyString(agent.systemPrompt) && !isNonEmptyString(agent.promptPath)) {
+	if (
+		!isNonEmptyString(agent.systemPrompt) &&
+		!isNonEmptyString(agent.promptPath)
+	) {
 		throw new DriveagentHomeCompileError(
 			"invalid_home",
 			`Driveagent home '${input.slug}' requires systemPrompt or promptPath`,

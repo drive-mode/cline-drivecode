@@ -51,17 +51,17 @@ import {
 	type PendingCapabilityRequest,
 } from "./handlers/context";
 import { handleDriveBankCommand } from "./handlers/drive-bank-handlers";
-import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollups-handlers";
-import { handleDriveConfigCommand } from "./handlers/drive-config-handlers";
 import { handleDriveCatalogCommand } from "./handlers/drive-catalog-handlers";
-import { handleDriveCommand } from "./handlers/drive-handlers";
-import { handleDrivePrivacyCommand } from "./handlers/drive-privacy-handlers";
+import { handleDriveConfigCommand } from "./handlers/drive-config-handlers";
+import { handleDrivePlanCommand } from "./handlers/drive-driveplan-handlers";
 import { handleDriveForkCommand } from "./handlers/drive-fork-handlers";
 import { handleDriveForkTickCommand } from "./handlers/drive-fork-tick";
-import { handleDriveWaveCommand } from "./handlers/drive-wave-handlers";
-import { handleDrivePlanCommand } from "./handlers/drive-driveplan-handlers";
+import { handleDriveCommand } from "./handlers/drive-handlers";
 import { handleDriveHomeCommand } from "./handlers/drive-home-handlers";
+import { handleDrivePrivacyCommand } from "./handlers/drive-privacy-handlers";
 import { handleDriveRoomCommand } from "./handlers/drive-room-handlers";
+import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollups-handlers";
+import { handleDriveWaveCommand } from "./handlers/drive-wave-handlers";
 import {
 	handleRunAbort,
 	handleSessionHook,
@@ -502,6 +502,7 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_session_rollups":
 				return await handleDriveSessionRollupsCommand(this.ctx, envelope);
 			case "drive_agent_home_get":
+			case "drive_agent_home_put":
 				return await handleDriveHomeCommand(this.ctx, envelope);
 			case "call_join":
 			case "call_leave":

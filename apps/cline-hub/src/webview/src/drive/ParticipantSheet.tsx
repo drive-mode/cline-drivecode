@@ -15,16 +15,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { postToHost } from "../vscode";
+import { AgentPolicyEditor } from "./AgentPolicyEditor";
 import {
 	driveParticipantInk,
 	driveParticipantProfileId,
 	resolveParticipantNameInk,
 	useDriveInkTheme,
 } from "./agentInk";
-import {
-	buildHumanPinDefaults,
-	type HumanPinKind,
-} from "./pinDefaults";
+import { buildHumanPinDefaults, type HumanPinKind } from "./pinDefaults";
 import {
 	type DriveagentHomeProjection,
 	requestDriveagentHome,
@@ -484,8 +482,8 @@ function AgentProfileSections({
 						))}
 					</select>
 					<p className="text-[11px] text-muted-foreground">
-						Resolved against the active theme and clamped for contrast.
-						Local only — durable facet upsert TBD.
+						Resolved against the active theme and clamped for contrast. Local
+						only — durable facet upsert TBD.
 					</p>
 				</div>
 			</section>
@@ -496,6 +494,19 @@ function AgentProfileSections({
 				</h3>
 				<CapabilitiesSection homeState={homeState} />
 			</section>
+
+			{homeState.status === "ready" && root ? (
+				<section className="space-y-2">
+					<h3 className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+						Configuration
+					</h3>
+					<AgentPolicyEditor
+						home={homeState.home}
+						onSaved={(next) => setHomeState({ status: "ready", home: next })}
+						workspaceRoot={root}
+					/>
+				</section>
+			) : null}
 
 			<section className="space-y-2">
 				<h3 className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

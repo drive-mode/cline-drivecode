@@ -30,7 +30,8 @@
 		"node": ">=22"
 	},
 	"dependencies": {
-		"@cline/shared": "workspace:*"
+		"@cline/shared": "workspace:*",
+		"yaml": "^2.8.2"
 	},
 	"keywords": ["cline", "drive", "collaboration", "harness"],
 	"license": "Apache-2.0"

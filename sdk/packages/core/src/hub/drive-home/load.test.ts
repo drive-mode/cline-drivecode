@@ -1,12 +1,9 @@
-import { cp, mkdtemp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-	DriveagentHomeLoadError,
-	loadDriveagentHome,
-} from "./load";
+import { DriveagentHomeLoadError, loadDriveagentHome } from "./load";
 
 const EXAMPLE_HOME = join(
 	dirname(fileURLToPath(import.meta.url)),

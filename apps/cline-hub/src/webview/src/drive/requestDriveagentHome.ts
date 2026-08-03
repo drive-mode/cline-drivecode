@@ -83,7 +83,7 @@ function isHomePermissions(
 	);
 }
 
-function isHomeSection(value: unknown): value is {
+export function isHomeSection(value: unknown): value is {
 	slug: string;
 	agent: DriveagentHomeProjection["agent"];
 	permissions: DriveagentHomeProjection["permissions"];
@@ -96,7 +96,7 @@ function isHomeSection(value: unknown): value is {
 	);
 }
 
-function isCompiledSection(
+export function isCompiledSection(
 	value: unknown,
 ): value is DriveagentHomeProjection["compiled"] {
 	return (
