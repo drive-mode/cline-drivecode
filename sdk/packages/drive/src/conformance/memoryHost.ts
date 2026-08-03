@@ -85,9 +85,22 @@ export function memoryDriveHost(
 					const without = current.participants.filter(
 						(p) => p.id !== op.participant.id,
 					);
+					// Mirror reduceRoom's control.join: a joining human defaults to
+					// muted, and a prior explicit mute is never overwritten. This is
+					// the wire's default, not a client preference, so a host that
+					// skips it disagrees with the real hub about a privacy default.
+					const needsMuteDefault =
+						op.participant.kind === "human" &&
+						!(op.participant.id in current.muteByParticipantId);
 					const next: RoomSnapshot = {
 						...current,
 						participants: [...without, op.participant],
+						muteByParticipantId: needsMuteDefault
+							? {
+									...current.muteByParticipantId,
+									[op.participant.id]: true,
+								}
+							: current.muteByParticipantId,
 					};
 					rooms.set(op.roomId, next);
 					emit({

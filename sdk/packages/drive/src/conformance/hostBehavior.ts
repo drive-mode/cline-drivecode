@@ -67,6 +67,15 @@ export const HOST_BEHAVIOR_CASES: readonly HostBehaviorCase[] = [
 				snapshot.participants.some((p) => p.id === "human-1"),
 				"joined participant is not present in the read-back snapshot",
 			);
+			// A joining human defaults to muted. This is a wire-level privacy
+			// default, not a client preference, so every host owes it — a host
+			// that skips it disagrees with the real hub about whether the user's
+			// microphone is live, which is the worst kind of divergence to have
+			// go unnoticed.
+			assert(
+				snapshot.muteByParticipantId["human-1"] === true,
+				"a joining human must default to muted",
+			);
 		},
 	},
 	{
