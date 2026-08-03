@@ -42,9 +42,10 @@ The logs are capped and trim oldest-first on append — 2048 records per room,
 Most Drive events are metadata: a file path that was edited, a command that
 ran, who is speaking, who joined. The event schema
 (`sdk/packages/shared/src/drive/events.ts`) is closed — every variant is a
-`.strict()` object, and a list of forbidden keys (`audio`, `rawAudio`, `pcm`,
-`wav`, `transcript`, `fullTranscript`, `rawTranscript`, `speechAudio`) is
-rejected by parse, with tests that fail if a schema ever admits one.
+`.strict()` object, and a list of forbidden keys — `audio`, `rawAudio`, `pcm`,
+`wav`, `transcript`, `fullTranscript`, `rawTranscript` and `speechAudio` to keep
+speech out, plus `uri`, `dataUri`, `svg`, `image`, `bytes` and `thumbnail` to
+keep artifact bytes out — is rejected by parse, with tests that fail if a schema ever admits one.
 
 **But two event types carry text, and that text is written to disk:**
 `conversation.message` carries the message you sent, and

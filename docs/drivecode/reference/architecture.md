@@ -242,7 +242,7 @@ Retention: `prune` is explicit; default is keep-everything. Search: indexed
 | Handlers | Every `status.*` op; high/critical → `ui.notify` |
 | Broadcast | Tool `report_status` and command `status.publish` both fan out (`attachStatusBroadcast`) |
 | Webview | Live splice respects active filters; Board counts match lens |
-| Rooms | Status survives hub restart; rooms do not |
+| Rooms | Status survives hub restart; rooms do too — the live `RoomSnapshot` is rebuilt by folding the durable event log (`hydrateFromLogSync` on `call_join`) |
 
 ## Related documents
 

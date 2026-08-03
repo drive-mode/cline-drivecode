@@ -40,7 +40,7 @@ Design: [ADR-0005](./plans/cline-drivemode/adr/ADR-0005-status-hub.md) (Accepted
 ### Storage
 
 An append-only log in its own SQLite file, `~/.cline/db/status.db`, overridable
-with `CLINE_STATUS_DB_PATH` (`sdk/packages/shared/src/storage/paths.ts:219`).
+with `CLINE_STATUS_DB_PATH` (`sdk/packages/shared/src/storage/paths.ts:232`).
 It is a separate file from `sessions.db` and `cron.db` so a hot append path does
 not contend on session storage.
 
@@ -302,10 +302,13 @@ for the shared room object, so no lock and no CRDT is needed.
 Ops: `call_join`, `call_leave`, `call_mute`, `call_set_stage`, `call_set_mode`,
 `call_record_work`, `call_get_room`. Broadcasts: `room.snapshot`, `room.event`.
 
-Rooms live in a `Map` in hub memory
-(`sdk/packages/core/src/hub/collaboration/room.ts:35`). There is no room
-persistence: a hub restart ends the room. A client that reconnects to a dead room
-gets `room_not_found` and the Drive UI clears with "Room ended. Join again."
+The live `RoomSnapshot` is a `Map` in hub memory
+(`sdk/packages/core/src/hub/collaboration/room.ts:47`), but it is derived state:
+the room event log is durable and append-only (ADR-0013), and
+`DriveRoomStore.hydrateFromLog` rebuilds the snapshot by folding it, so a hub
+restart does not end the room. A client that reconnects to a room the hub has
+genuinely ended gets `room_not_found` and the Drive UI clears with "Room ended.
+Join again."
 
 ### Spotlight is a projection, not pixels
 
@@ -362,7 +365,7 @@ Stated plainly so nobody plans around it:
 
 - **WebRTC / pixel screen share.** Not implemented, and an explicit anti-pattern
   for the agent Spotlight path. Human share is the structured pin only.
-- **Room persistence.** Rooms are in-memory; a hub restart ends the room.
+- **Exact replay past the retention cap.** Room persistence itself ships — the append-only log under `.cline/drive/rooms/<roomId>/events.jsonl` is durable and `DriveRoomStore.hydrateFromLog` rebuilds a room after a hub restart. What is missing is a fold checkpoint: replay always starts at seq 0, so events trimmed by retention are not recoverable.
 - **Discord-like Drive channels IA.** The shipped **Drive** sidebar tab
   (`drive-view.tsx`) is the product home (status tiles, Start a Drive call,
   links into Spotlight / Status Hub). The channels-and-rooms wireframe
