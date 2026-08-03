@@ -1,5 +1,9 @@
 /**
- * Status Hub · Dependency map — the spatial lens over `buildDependencyMap`.
+ * Dependency map — the spatial lens over `buildDependencyMap`.
+ *
+ * Two surfaces mount it: the Status Hub's third lens, and the Tasks page,
+ * which is the same graph plus the Plans rail (`plansRail`). One component, so
+ * the two can never drift into two different maps.
  *
  * A layered graph in a pan/zoom viewport, replacing the two-column card grid
  * that could show prerequisite order but never topology. Composition and the
@@ -20,6 +24,7 @@
 
 import type { TeamTask } from "@cline/shared";
 import { MaximizeIcon, MinusIcon, PlusIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import {
 	useCallback,
 	useEffect,
@@ -43,6 +48,7 @@ import {
 } from "./dependency-graph-layout";
 import {
 	buildDependencyMap,
+	type DependencyMapAnnotations,
 	type DependencyNode,
 } from "./dependency-map-model";
 import {
@@ -50,6 +56,14 @@ import {
 	resolveDependencyNavAction,
 	rovingAnchor,
 } from "./dependency-map-nav";
+import {
+	nodeAccentClass,
+	type PlanRailRow,
+	planEmphasis,
+	planRailRows,
+	resolveActivePlanId,
+	togglePlanFilter,
+} from "./dependency-plan-rail";
 
 type Team = { teamId: string; teamName: string; tasks: TeamTask[] };
 
@@ -157,15 +171,126 @@ function stateNote(node: DependencyNode): string {
 	return `layer ${node.layer}`;
 }
 
+/**
+ * Plans, beside the graph rather than over it, so membership stays scannable
+ * without covering a node.
+ *
+ * A row is a filter, not a destination: it highlights its tasks and dims the
+ * rest, and every node stays focusable either way — dimming is opacity, not
+ * removal, so the arrow keys still reach a task the current filter excludes.
+ *
+ * The empty state is the load-bearing one. Production reaches it every time,
+ * because nothing in the team runtime carries plan membership; a rail that
+ * filled itself in anyway would be the map's first invented fact.
+ */
+function PlansRail({
+	activePlanId,
+	onSelect,
+	rows,
+}: {
+	activePlanId: string | null;
+	onSelect: (planId: string | null) => void;
+	rows: PlanRailRow[];
+}) {
+	return (
+		<aside
+			aria-labelledby="dependency-plans-heading"
+			className="w-64 shrink-0 self-start rounded-lg border bg-card p-3 max-[1100px]:w-full"
+		>
+			<h3 className="text-sm font-semibold" id="dependency-plans-heading">
+				Plans
+			</h3>
+			{rows.length === 0 ? (
+				<p className="mt-2 text-xs text-muted-foreground">
+					No plans for these tasks. Plan membership comes from the task bank —
+					until it reaches this map, every task is unfiled and the graph is the
+					whole story.
+				</p>
+			) : (
+				<ul className="mt-2 space-y-1">
+					<li>
+						<button
+							aria-pressed={activePlanId === null}
+							className={cn(
+								"w-full rounded-md px-2 py-1.5 text-left text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+								activePlanId === null
+									? "bg-accent font-medium"
+									: "text-muted-foreground hover:bg-muted/50",
+							)}
+							onClick={() => onSelect(null)}
+							type="button"
+						>
+							All tasks
+						</button>
+					</li>
+					{rows.map((row) => {
+						const active = row.id === activePlanId;
+						return (
+							<li key={row.id}>
+								<button
+									aria-pressed={active}
+									className={cn(
+										"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+										active ? "bg-accent" : "hover:bg-muted/50",
+									)}
+									onClick={() =>
+										onSelect(togglePlanFilter(activePlanId, row.id))
+									}
+									title={`${row.displayId} · ${row.title}`}
+									type="button"
+								>
+									<span
+										aria-hidden
+										className={cn(
+											"size-2.5 shrink-0 rounded-full",
+											row.accentClass,
+										)}
+									/>
+									<span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+										{row.displayId}
+									</span>
+									<span className="min-w-0 flex-1 truncate">{row.title}</span>
+									<span className="shrink-0 tabular-nums text-muted-foreground">
+										{row.taskCount}
+									</span>
+								</button>
+							</li>
+						);
+					})}
+				</ul>
+			)}
+		</aside>
+	);
+}
+
 export function DependencyMap({
 	teams,
 	loading,
+	annotations,
+	plansRail = false,
 }: {
 	teams: Team[];
 	loading: boolean;
+	/**
+	 * Plan groups, minted display ids and artifact edge labels, from whatever
+	 * the surface's annotation source returned. `null` — the live answer — is
+	 * an ordinary result, not a failure: the projection is built without
+	 * annotations and nothing is accented or labelled.
+	 */
+	annotations?: DependencyMapAnnotations | null;
+	/**
+	 * Whether this surface carries the Plans rail. The Tasks page does; the
+	 * Status Hub lens does not, so it keeps the graph at its own width instead
+	 * of reserving a column for a rail it never fills.
+	 */
+	plansRail?: boolean;
 }) {
-	const graph = useMemo(() => buildDependencyMap(teams), [teams]);
+	const graph = useMemo(
+		() => buildDependencyMap(teams, annotations ?? undefined),
+		[annotations, teams],
+	);
 	const [selected, setSelected] = useState<string | null>(null);
+	const [planFilter, setPlanFilter] = useState<string | null>(null);
 	const [camera, setCamera] = useState<Camera | null>(null);
 	const [animate, setAnimate] = useState(false);
 	const [viewportEl, setViewportEl] = useState<HTMLElement | null>(null);
@@ -184,6 +309,12 @@ export function DependencyMap({
 		() => new Map(graph.nodes.map((node) => [node.key, node])),
 		[graph],
 	);
+	const railRows = useMemo(() => planRailRows(graph.plans), [graph]);
+	/**
+	 * Derived rather than stored: a snapshot that drops the filtered plan would
+	 * otherwise leave every node dimmed with no visible control to clear it.
+	 */
+	const activePlanId = resolveActivePlanId(railRows, planFilter);
 	/**
 	 * `dependsOn` is a plain array, and a task listing the same prerequisite
 	 * twice — literally, or once by bare id and once by node key — projects to
@@ -311,22 +442,42 @@ export function DependencyMap({
 	}, []);
 
 	/**
+	 * The rail outlives the graph on a surface that owns one. A cold hub has no
+	 * tasks *and* no plans, and dropping the rail along with the nodes would
+	 * hide the page's one honest statement — that plan membership has no source
+	 * — behind a message about tasks.
+	 */
+	const withRail = (body: ReactNode) =>
+		plansRail ? (
+			<div className="flex gap-3 max-[1100px]:flex-col">
+				<div className="min-w-0 flex-1">{body}</div>
+				<PlansRail
+					activePlanId={activePlanId}
+					onSelect={setPlanFilter}
+					rows={railRows}
+				/>
+			</div>
+		) : (
+			body
+		);
+
+	/**
 	 * A refresh is not an empty graph. `loading` goes true on every task
 	 * re-request, and unmounting the viewport for it would drop both the camera
 	 * and keyboard focus while a team is running.
 	 */
 	if (loading && !graph.nodes.length)
-		return (
+		return withRail(
 			<p className="text-sm text-muted-foreground" role="status">
 				Loading dependency map…
-			</p>
+			</p>,
 		);
 	if (!graph.nodes.length)
-		return (
+		return withRail(
 			<div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
 				No active team tasks are available. Dependency maps appear when a team
 				session is active.
-			</div>
+			</div>,
 		);
 
 	const selectedNode = selected ? byKey.get(selected) : undefined;
@@ -345,6 +496,10 @@ export function DependencyMap({
 	const titleOf = (key: string) => byKey.get(key)?.title ?? key;
 	const displayName = (node: DependencyNode) =>
 		node.displayId ? `${node.displayId} · ${node.title}` : node.title;
+	/** Filtered by the rail, so a chip can only name a plan the rail lists. */
+	const selectedPlans = selectedNode
+		? railRows.filter((row) => selectedNode.planIds?.includes(row.id))
+		: [];
 
 	return (
 		<section aria-labelledby="dependency-map-heading" className="space-y-3">
@@ -375,283 +530,322 @@ export function DependencyMap({
 				</div>
 			) : null}
 
-			<div className="overflow-hidden rounded-lg border bg-card">
-				<div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-					{/* Live, or the zoom and Fit buttons are silent to a screen reader:
+			<div className="flex gap-3 max-[1100px]:flex-col">
+				<div className="min-w-0 flex-1 overflow-hidden rounded-lg border bg-card">
+					<div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+						{/* Live, or the zoom and Fit buttons are silent to a screen reader:
 					    the camera is the only thing they change. */}
-					<span aria-live="polite" className="text-xs text-muted-foreground">
-						{layout.orientation === "lr" ? "Left to right" : "Top down"} ·{" "}
-						{Math.round(activeCamera.scale * 100)}%
-					</span>
-					<span className="flex-1" />
-					<button
-						aria-label="Zoom out"
-						className={CONTROL_CLASS}
-						onClick={() => zoomBy(1 / ZOOM_STEP)}
-						type="button"
-					>
-						<MinusIcon aria-hidden className="size-3.5" />
-					</button>
-					<button
-						aria-label="Zoom in"
-						className={CONTROL_CLASS}
-						onClick={() => zoomBy(ZOOM_STEP)}
-						type="button"
-					>
-						<PlusIcon aria-hidden className="size-3.5" />
-					</button>
-					<button
-						className={cn(CONTROL_CLASS, "flex items-center gap-1")}
-						onClick={fit}
-						type="button"
-					>
-						<MaximizeIcon aria-hidden className="size-3.5" />
-						Fit
-					</button>
-				</div>
-
-				{/*
-				 * The viewport is the camera surface: pointer panning and the
-				 * arrow-key contract belong to it, while everything selectable
-				 * inside it is a real button. A named `<section>` gives it an
-				 * implicit `region` role without claiming `application`, which would
-				 * strip browse mode off a subtree made entirely of buttons.
-				 * `tabIndex={-1}` only lets a background click park focus so the
-				 * arrow keys keep arriving here.
-				 */}
-				<section
-					aria-label="Task dependency graph. Drag to pan, wheel to zoom."
-					className="relative h-[min(70vh,640px)] cursor-grab touch-none overflow-hidden bg-muted/20 active:cursor-grabbing"
-					onKeyDown={(event) => {
-						const action = resolveDependencyNavAction(
-							event.nativeEvent,
-							keys,
-							selected,
-						);
-						if (action.kind === "none") return;
-						event.preventDefault();
-						if (action.kind === "clear") setSelected(null);
-						else selectNode(action.key);
-					}}
-					onLostPointerCapture={(event) => {
-						if (dragRef.current?.pointerId === event.pointerId)
-							dragRef.current = null;
-					}}
-					onPointerCancel={() => {
-						dragRef.current = null;
-					}}
-					onPointerDown={(event) => {
-						if (event.button !== 0) return;
-						// One gesture at a time. Every touch contact reports button 0,
-						// so without this a second finger would rebase the drag origin
-						// on itself and the first finger's next move would jump the
-						// camera by the distance between the two.
-						if (dragRef.current) return;
-						if ((event.target as HTMLElement).closest("button")) return;
-						dragRef.current = {
-							pointerId: event.pointerId,
-							x: event.clientX,
-							y: event.clientY,
-							moved: false,
-						};
-						setAnimate(false);
-						event.currentTarget.setPointerCapture(event.pointerId);
-					}}
-					onPointerMove={(event) => {
-						const drag = dragRef.current;
-						if (!drag || drag.pointerId !== event.pointerId) return;
-						// A gesture whose element was unmounted mid-drag never gets its
-						// pointerup, so the next hover would pan by however far the
-						// pointer travelled in between. No buttons down, no drag.
-						if (event.buttons === 0) {
-							dragRef.current = null;
-							return;
-						}
-						const dx = event.clientX - drag.x;
-						const dy = event.clientY - drag.y;
-						if (
-							!drag.moved &&
-							Math.abs(dx) < DRAG_SLOP_PX &&
-							Math.abs(dy) < DRAG_SLOP_PX
-						)
-							return;
-						drag.moved = true;
-						drag.x = event.clientX;
-						drag.y = event.clientY;
-						setCamera((current) => panCamera(current ?? layout.camera, dx, dy));
-					}}
-					onPointerUp={(event) => {
-						const drag = dragRef.current;
-						dragRef.current = null;
-						if (event.currentTarget.hasPointerCapture(event.pointerId))
-							event.currentTarget.releasePointerCapture(event.pointerId);
-						if (drag && !drag.moved) setSelected(null);
-					}}
-					ref={setViewportEl}
-					tabIndex={-1}
-				>
-					<div
-						className="absolute left-0 top-0"
-						style={{
-							transform: `translate(${activeCamera.x}px, ${activeCamera.y}px) scale(${activeCamera.scale})`,
-							transformOrigin: "0 0",
-							transition:
-								animate && !reducedMotion ? "transform 160ms ease-out" : "none",
-							willChange: "transform",
-						}}
-					>
-						<svg
-							aria-hidden
-							className="pointer-events-none absolute left-0 top-0 overflow-visible"
-							height={Math.max(1, Math.ceil(layout.bounds.maxY))}
-							width={Math.max(1, Math.ceil(layout.bounds.maxX))}
+						<span aria-live="polite" className="text-xs text-muted-foreground">
+							{layout.orientation === "lr" ? "Left to right" : "Top down"} ·{" "}
+							{Math.round(activeCamera.scale * 100)}%
+						</span>
+						<span className="flex-1" />
+						<button
+							aria-label="Zoom out"
+							className={CONTROL_CLASS}
+							onClick={() => zoomBy(1 / ZOOM_STEP)}
+							type="button"
 						>
-							<title>Dependency edges</title>
-							<defs>
-								<marker
-									id="dependency-arrow"
-									markerHeight="6"
-									markerWidth="6"
-									orient="auto-start-reverse"
-									refX="9"
-									refY="5"
-									viewBox="0 0 10 10"
-								>
-									<path
-										className="fill-muted-foreground/60"
-										d="M 0 0 L 10 5 L 0 10 z"
-									/>
-								</marker>
-							</defs>
-							{edges.map((edge) => {
-								const from = boxes.get(edge.from);
-								const to = boxes.get(edge.to);
-								if (!from || !to) return null;
-								const hot = incident?.has(edgeId(edge.from, edge.to)) ?? false;
-								const cyclic = Boolean(
-									byKey.get(edge.from)?.inCycle && byKey.get(edge.to)?.inCycle,
-								);
-								return (
-									<path
-										className={cn(
-											"fill-none",
-											hot
-												? "stroke-primary"
-												: cyclic
-													? "stroke-destructive/70"
-													: "stroke-muted-foreground/30",
-											incident && !hot && "opacity-40",
-										)}
-										d={edgePath(from, to, layout.orientation)}
-										key={edgeId(edge.from, edge.to)}
-										markerEnd="url(#dependency-arrow)"
-										strokeDasharray={cyclic ? "4 3" : undefined}
-										strokeWidth={hot ? 2.25 : 1.5}
-										// A fitted deep graph sits near a third of full
-										// size, where a scaled 1.5px stroke thins to
-										// half a pixel and the topology greys out. Edges
-										// hold their screen weight at every zoom.
-										vectorEffect="non-scaling-stroke"
-									/>
-								);
-							})}
-						</svg>
+							<MinusIcon aria-hidden className="size-3.5" />
+						</button>
+						<button
+							aria-label="Zoom in"
+							className={CONTROL_CLASS}
+							onClick={() => zoomBy(ZOOM_STEP)}
+							type="button"
+						>
+							<PlusIcon aria-hidden className="size-3.5" />
+						</button>
+						<button
+							className={cn(CONTROL_CLASS, "flex items-center gap-1")}
+							onClick={fit}
+							type="button"
+						>
+							<MaximizeIcon aria-hidden className="size-3.5" />
+							Fit
+						</button>
+					</div>
 
-						{/* Tier 2: artifact labels are the first thing to go at overview
-						    scale, and the projection never invents one. */}
-						{lod === "detail"
-							? edges.map((edge) => {
+					{/*
+					 * The viewport is the camera surface: pointer panning and the
+					 * arrow-key contract belong to it, while everything selectable
+					 * inside it is a real button. A named `<section>` gives it an
+					 * implicit `region` role without claiming `application`, which would
+					 * strip browse mode off a subtree made entirely of buttons.
+					 * `tabIndex={-1}` only lets a background click park focus so the
+					 * arrow keys keep arriving here.
+					 */}
+					<section
+						aria-label="Task dependency graph. Drag to pan, wheel to zoom."
+						className="relative h-[min(70vh,640px)] cursor-grab touch-none overflow-hidden bg-muted/20 active:cursor-grabbing"
+						onKeyDown={(event) => {
+							const action = resolveDependencyNavAction(
+								event.nativeEvent,
+								keys,
+								selected,
+							);
+							if (action.kind === "none") return;
+							event.preventDefault();
+							if (action.kind === "clear") setSelected(null);
+							else selectNode(action.key);
+						}}
+						onLostPointerCapture={(event) => {
+							if (dragRef.current?.pointerId === event.pointerId)
+								dragRef.current = null;
+						}}
+						onPointerCancel={() => {
+							dragRef.current = null;
+						}}
+						onPointerDown={(event) => {
+							if (event.button !== 0) return;
+							// One gesture at a time. Every touch contact reports button 0,
+							// so without this a second finger would rebase the drag origin
+							// on itself and the first finger's next move would jump the
+							// camera by the distance between the two.
+							if (dragRef.current) return;
+							if ((event.target as HTMLElement).closest("button")) return;
+							dragRef.current = {
+								pointerId: event.pointerId,
+								x: event.clientX,
+								y: event.clientY,
+								moved: false,
+							};
+							setAnimate(false);
+							event.currentTarget.setPointerCapture(event.pointerId);
+						}}
+						onPointerMove={(event) => {
+							const drag = dragRef.current;
+							if (!drag || drag.pointerId !== event.pointerId) return;
+							// A gesture whose element was unmounted mid-drag never gets its
+							// pointerup, so the next hover would pan by however far the
+							// pointer travelled in between. No buttons down, no drag.
+							if (event.buttons === 0) {
+								dragRef.current = null;
+								return;
+							}
+							const dx = event.clientX - drag.x;
+							const dy = event.clientY - drag.y;
+							if (
+								!drag.moved &&
+								Math.abs(dx) < DRAG_SLOP_PX &&
+								Math.abs(dy) < DRAG_SLOP_PX
+							)
+								return;
+							drag.moved = true;
+							drag.x = event.clientX;
+							drag.y = event.clientY;
+							setCamera((current) =>
+								panCamera(current ?? layout.camera, dx, dy),
+							);
+						}}
+						onPointerUp={(event) => {
+							const drag = dragRef.current;
+							dragRef.current = null;
+							if (event.currentTarget.hasPointerCapture(event.pointerId))
+								event.currentTarget.releasePointerCapture(event.pointerId);
+							if (drag && !drag.moved) setSelected(null);
+						}}
+						ref={setViewportEl}
+						tabIndex={-1}
+					>
+						<div
+							className="absolute left-0 top-0"
+							style={{
+								transform: `translate(${activeCamera.x}px, ${activeCamera.y}px) scale(${activeCamera.scale})`,
+								transformOrigin: "0 0",
+								transition:
+									animate && !reducedMotion
+										? "transform 160ms ease-out"
+										: "none",
+								willChange: "transform",
+							}}
+						>
+							<svg
+								aria-hidden
+								className="pointer-events-none absolute left-0 top-0 overflow-visible"
+								height={Math.max(1, Math.ceil(layout.bounds.maxY))}
+								width={Math.max(1, Math.ceil(layout.bounds.maxX))}
+							>
+								<title>Dependency edges</title>
+								<defs>
+									<marker
+										id="dependency-arrow"
+										markerHeight="6"
+										markerWidth="6"
+										orient="auto-start-reverse"
+										refX="9"
+										refY="5"
+										viewBox="0 0 10 10"
+									>
+										<path
+											className="fill-muted-foreground/60"
+											d="M 0 0 L 10 5 L 0 10 z"
+										/>
+									</marker>
+								</defs>
+								{edges.map((edge) => {
 									const from = boxes.get(edge.from);
 									const to = boxes.get(edge.to);
-									if (!from || !to || !edge.artifactLabel) return null;
-									const a = centreOf(from);
-									const b = centreOf(to);
-									return (
-										<span
-											className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border bg-card/90 px-1.5 py-px text-[10px] text-muted-foreground"
-											key={edgeId(edge.from, edge.to)}
-											style={{ left: (a.x + b.x) / 2, top: (a.y + b.y) / 2 }}
-										>
-											{edge.artifactLabel}
-										</span>
+									if (!from || !to) return null;
+									const hot =
+										incident?.has(edgeId(edge.from, edge.to)) ?? false;
+									const cyclic = Boolean(
+										byKey.get(edge.from)?.inCycle &&
+											byKey.get(edge.to)?.inCycle,
 									);
-								})
-							: null}
+									return (
+										<path
+											className={cn(
+												"fill-none",
+												hot
+													? "stroke-primary"
+													: cyclic
+														? "stroke-destructive/70"
+														: "stroke-muted-foreground/30",
+												incident && !hot && "opacity-40",
+											)}
+											d={edgePath(from, to, layout.orientation)}
+											key={edgeId(edge.from, edge.to)}
+											markerEnd="url(#dependency-arrow)"
+											strokeDasharray={cyclic ? "4 3" : undefined}
+											strokeWidth={hot ? 2.25 : 1.5}
+											// A fitted deep graph sits near a third of full
+											// size, where a scaled 1.5px stroke thins to
+											// half a pixel and the topology greys out. Edges
+											// hold their screen weight at every zoom.
+											vectorEffect="non-scaling-stroke"
+										/>
+									);
+								})}
+							</svg>
 
-						{/* A real list, so the reader still announces "42 items, item 7"
+							{/* Tier 2: artifact labels are the first thing to go at overview
+						    scale, and the projection never invents one. */}
+							{lod === "detail"
+								? edges.map((edge) => {
+										const from = boxes.get(edge.from);
+										const to = boxes.get(edge.to);
+										if (!from || !to || !edge.artifactLabel) return null;
+										const a = centreOf(from);
+										const b = centreOf(to);
+										return (
+											<span
+												className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border bg-card/90 px-1.5 py-px text-[10px] text-muted-foreground"
+												key={edgeId(edge.from, edge.to)}
+												style={{ left: (a.x + b.x) / 2, top: (a.y + b.y) / 2 }}
+											>
+												{edge.artifactLabel}
+											</span>
+										);
+									})
+								: null}
+
+							{/* A real list, so the reader still announces "42 items, item 7"
 						    the way the card grid's <ul> did. The <li> carries the layout
 						    box and the button fills it, keeping one element per position. */}
-						<ul
-							aria-label="Tasks in dependency order"
-							className="absolute left-0 top-0 list-none"
-						>
-							{graph.nodes.map((node) => {
-								const box = boxes.get(node.key);
-								if (!box) return null;
-								const isSelected = selected === node.key;
-								return (
-									<li
-										className="absolute"
-										key={node.key}
-										style={{
-											height: box.height,
-											left: box.x,
-											top: box.y,
-											width: box.width,
-										}}
-									>
-										<button
-											aria-pressed={isSelected}
-											className={cn(
-												"flex size-full flex-col justify-center overflow-hidden rounded-lg border bg-card px-2.5 py-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-												isSelected
-													? "border-primary bg-accent"
-													: "hover:border-foreground/25",
-												node.inCycle && !isSelected && "border-destructive/50",
-											)}
-											id={`dependency-${node.key}`}
-											onClick={(event) => {
-												event.stopPropagation();
-												selectNode(node.key);
+							<ul
+								aria-label="Tasks in dependency order"
+								className="absolute left-0 top-0 list-none"
+							>
+								{graph.nodes.map((node) => {
+									const box = boxes.get(node.key);
+									if (!box) return null;
+									const isSelected = selected === node.key;
+									const accent = nodeAccentClass(
+										node.planIds,
+										railRows,
+										activePlanId,
+									);
+									const emphasis = planEmphasis(node.planIds, activePlanId);
+									return (
+										<li
+											className="absolute"
+											key={node.key}
+											style={{
+												height: box.height,
+												left: box.x,
+												top: box.y,
+												width: box.width,
 											}}
-											onFocus={() => bringIntoView(node.key)}
-											ref={(element) => {
-												if (element) nodeRefs.current.set(node.key, element);
-												else nodeRefs.current.delete(node.key);
-											}}
-											tabIndex={node.key === anchor ? 0 : -1}
-											title={displayName(node)}
-											type="button"
 										>
-											{node.displayId ? (
-												<span className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-													{node.displayId}
+											<button
+												aria-pressed={isSelected}
+												className={cn(
+													"relative flex size-full flex-col justify-center overflow-hidden rounded-lg border bg-card px-2.5 py-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+													isSelected
+														? "border-primary bg-accent"
+														: "hover:border-foreground/25",
+													node.inCycle &&
+														!isSelected &&
+														"border-destructive/50",
+													// Dimming is opacity only: a filtered-out task keeps
+													// its place in the tab order and the arrow ring, so a
+													// plan filter never costs anyone a task. Held at the
+													// same 50% the stat tiles use rather than pushed
+													// further — arrowing into a dimmed node is a
+													// supported move, so its title has to stay readable.
+													emphasis === "dim" && "opacity-50",
+												)}
+												id={`dependency-${node.key}`}
+												onClick={(event) => {
+													event.stopPropagation();
+													selectNode(node.key);
+												}}
+												onFocus={() => bringIntoView(node.key)}
+												ref={(element) => {
+													if (element) nodeRefs.current.set(node.key, element);
+													else nodeRefs.current.delete(node.key);
+												}}
+												tabIndex={node.key === anchor ? 0 : -1}
+												title={displayName(node)}
+												type="button"
+											>
+												{accent ? (
+													<span
+														aria-hidden
+														className={cn(
+															"absolute inset-y-0 left-0 w-1",
+															accent,
+														)}
+													/>
+												) : null}
+												{node.displayId ? (
+													<span className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+														{node.displayId}
+													</span>
+												) : null}
+												<span className="block truncate text-xs font-semibold">
+													{node.title}
 												</span>
-											) : null}
-											<span className="block truncate text-xs font-semibold">
-												{node.title}
-											</span>
-											<span className="block truncate text-[10px] uppercase tracking-wide text-muted-foreground">
-												<span className={STATUS_TEXT[node.status]}>
-													{statusLabel(node)}
-												</span>
-												{/* Level of detail is a visual budget, not an
+												<span className="block truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+													<span className={STATUS_TEXT[node.status]}>
+														{statusLabel(node)}
+													</span>
+													{/* Level of detail is a visual budget, not an
 												    accessibility one. Ready/waiting/cycle stays in the
 												    accessible name at overview scale — which is exactly
 												    the scale a graph too big to read is fitted at. */}
-												<span
-													className={lod === "detail" ? undefined : "sr-only"}
-												>
-													{` · ${stateNote(node)}`}
+													<span
+														className={lod === "detail" ? undefined : "sr-only"}
+													>
+														{` · ${stateNote(node)}`}
+													</span>
 												</span>
-											</span>
-										</button>
-									</li>
-								);
-							})}
-						</ul>
-					</div>
-				</section>
+											</button>
+										</li>
+									);
+								})}
+							</ul>
+						</div>
+					</section>
+				</div>
+				{plansRail ? (
+					<PlansRail
+						activePlanId={activePlanId}
+						onSelect={setPlanFilter}
+						rows={railRows}
+					/>
+				) : null}
 			</div>
 
 			<aside
@@ -662,6 +856,29 @@ export function DependencyMap({
 				{selectedNode ? (
 					<>
 						<h3 className="font-medium">{displayName(selectedNode)}</h3>
+						{selectedPlans.length ? (
+							<div className="mt-1.5 flex flex-wrap gap-1.5">
+								{selectedPlans.map((row) => (
+									<button
+										className="flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+										key={row.id}
+										onClick={() =>
+											setPlanFilter(togglePlanFilter(activePlanId, row.id))
+										}
+										type="button"
+									>
+										<span
+											aria-hidden
+											className={cn(
+												"size-2 shrink-0 rounded-full",
+												row.accentClass,
+											)}
+										/>
+										{row.displayId} · {row.title}
+									</button>
+								))}
+							</div>
+						) : null}
 						<p className="text-sm text-muted-foreground">
 							{statusLabel(selectedNode)} · {stateNote(selectedNode)}
 							{selectedNode.assignee ? ` · ${selectedNode.assignee}` : ""}.

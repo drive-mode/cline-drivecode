@@ -1,5 +1,6 @@
 import type { StatusSessionRow } from "@cline/drive";
 import {
+	DrivePlansDemoAnnotationsSource,
 	DrivePlansDemoTeamsSource,
 	DriveSessionsDemoRollupSource,
 	readDrivecodeDemoHubBootstrap,
@@ -15,6 +16,7 @@ import {
 	FileTextIcon,
 	Folder,
 	FunnelIcon,
+	GitBranchIcon,
 	HomeIcon,
 	LayersIcon,
 	LinkIcon,
@@ -100,6 +102,8 @@ import {
 import { syncHubTheme } from "./lib/theme";
 import type { DriveRoomsSource } from "./rooms/drive-rooms-source";
 import { HubDriveRoomsSource } from "./rooms/hub-drive-rooms-source";
+import type { DependencyAnnotationsSource } from "./status/dependency-annotations-source";
+import { HubDependencyAnnotationsSource } from "./status/hub-dependency-annotations-source";
 import { HubStatusSessionRollupSource } from "./status/hub-status-session-rollup-source";
 import { HubStatusTeamsSource } from "./status/hub-status-teams-source";
 import type { StatusSessionRollupSource } from "./status/status-session-rollup-source";
@@ -120,6 +124,11 @@ const StatusView = lazy(() =>
 const AnalyticsView = lazy(() =>
 	import("./components/views/analytics-view").then((module) => ({
 		default: module.AnalyticsView,
+	})),
+);
+const TasksView = lazy(() =>
+	import("./components/views/tasks-view").then((module) => ({
+		default: module.TasksView,
 	})),
 );
 const RoomsView = lazy(() =>
@@ -145,6 +154,7 @@ type View =
 	| "analytics"
 	| "rooms"
 	| "artifacts"
+	| "tasks"
 	| "models"
 	| "rules"
 	| "hooks"
@@ -164,6 +174,7 @@ const VIEW_PATHS: Record<View, string> = {
 	analytics: "/analytics",
 	rooms: "/rooms",
 	artifacts: "/artifacts",
+	tasks: "/tasks",
 	models: "/models",
 	rules: "/rules",
 	hooks: "/hooks",
@@ -214,6 +225,7 @@ function viewFromPath(pathname: string): View {
 	if (pathname === VIEW_PATHS.analytics) return "analytics";
 	if (pathname === VIEW_PATHS.rooms) return "rooms";
 	if (pathname === VIEW_PATHS.artifacts) return "artifacts";
+	if (pathname === VIEW_PATHS.tasks) return "tasks";
 	if (pathname === VIEW_PATHS.models) return "models";
 	if (
 		pathname === VIEW_PATHS.rules ||
@@ -457,6 +469,7 @@ function Shell({
 			| "analytics"
 			| "rooms"
 			| "artifacts"
+			| "tasks"
 			| "rules"
 			| "hooks"
 			| "mcp"
@@ -472,12 +485,13 @@ function Shell({
 		{ view: "drive", label: "Drive", icon: DriveMarkIcon },
 		{ view: "rooms", label: "Rooms", icon: DoorOpenIcon },
 		{ view: "artifacts", label: "Artifacts", icon: LayersIcon },
+		{ view: "tasks", label: "Tasks", icon: GitBranchIcon },
 		{ view: "status", label: "Status Hub", icon: ActivityIcon },
 		{ view: "analytics", label: "Analytics", icon: ChartNoAxesColumnIcon },
 	] satisfies Array<{
 		view: Extract<
 			View,
-			"drive" | "rooms" | "artifacts" | "status" | "analytics"
+			"drive" | "rooms" | "artifacts" | "tasks" | "status" | "analytics"
 		>;
 		label: string;
 		// Wider than the lucide icons elsewhere: the Drive mark is a plain
@@ -1321,6 +1335,19 @@ function App() {
 		}
 		return new HubStatusTeamsSource();
 	}, [demoHub.useDemoTeamsAdapter]);
+	/**
+	 * Plan groups and minted `T###`/`P###` ids for the Tasks page rail. The
+	 * live adapter answers `null` — no part of the team runtime carries plan
+	 * membership — so `?demoPlans=1` is the only way to see a populated rail,
+	 * and it rides the same flag as the demo teams it describes.
+	 */
+	const dependencyAnnotationsSource = useMemo(
+		(): DependencyAnnotationsSource =>
+			demoHub.useDemoTeamsAdapter
+				? new DrivePlansDemoAnnotationsSource()
+				: new HubDependencyAnnotationsSource(),
+		[demoHub.useDemoTeamsAdapter],
+	);
 	/** Hub defaults first, then whichever recent session names a workspace. */
 	const resolveWorkspaceRoot = useCallback((): string | undefined => {
 		const fromDefaults =
@@ -1633,6 +1660,14 @@ function App() {
 				/>
 			);
 		}
+		if (view === "tasks") {
+			return (
+				<TasksView
+					annotationsSource={dependencyAnnotationsSource}
+					teamsSource={statusTeamsSource}
+				/>
+			);
+		}
 		if (view === "status") {
 			return (
 				<StatusView
@@ -1746,6 +1781,7 @@ function App() {
 		demoHub.useShareScreenSpotlightDemo,
 		acknowledgeDriveLaunch,
 		artifactsSource,
+		dependencyAnnotationsSource,
 		driveLaunchRequest,
 		driveShellMode,
 		openRoom,
