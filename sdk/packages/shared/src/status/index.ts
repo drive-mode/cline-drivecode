@@ -28,6 +28,9 @@ export {
 } from "./status";
 export {
 	buildDependencyMap,
+	type DependencyEdge,
 	type DependencyMap,
+	type DependencyMapAnnotations,
 	type DependencyNode,
+	type DependencyPlan,
 } from "./dependency-map";
