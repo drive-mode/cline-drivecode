@@ -19,6 +19,10 @@ import {
 	keepLastNonEmptyLines,
 	trimJsonlFileToMaxRecords,
 } from "./logRetention";
+import {
+	resetLiveRetentionFacetsForTests,
+	setLiveRetentionFacets,
+} from "./retentionCaps";
 
 function muteEvent(roomId: string, seqHint: number): DriveEvent {
 	return {
@@ -58,6 +62,7 @@ describe("JsonlRoomEventLog retention", () => {
 	const dirs: string[] = [];
 
 	afterEach(() => {
+		resetLiveRetentionFacetsForTests();
 		for (const dir of dirs.splice(0)) {
 			rmSync(dir, { recursive: true, force: true });
 		}
@@ -91,6 +96,30 @@ describe("JsonlRoomEventLog retention", () => {
 		const retained = log.readSinceSync("r1", 0);
 		expect(retained.map((r) => r.seq)).toEqual([5, 6, 7]);
 	});
+
+	it("resolves maxRecords through the live privacy.debugRetention facet, not a fixed constant", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-retain-live-"));
+		dirs.push(dir);
+		// No explicit maxRecords override: the log must consult retentionCaps
+		// on every append, not just at construction.
+		const log = new JsonlRoomEventLog(dir);
+		setLiveRetentionFacets(dir, { retentionRoomMax: 3 });
+		for (let i = 1; i <= 5; i += 1) {
+			log.appendSync("r1", muteEvent("r1", i));
+		}
+		expect(log.readSinceSync("r1", 0)).toHaveLength(3);
+
+		// Turning debug retention on for the same live-toggled log raises the
+		// cap immediately — no new log instance needed — proving the trim
+		// point actually differs before/after the toggle.
+		setLiveRetentionFacets(dir, { debugRetention: true });
+		for (let i = 6; i <= 10; i += 1) {
+			log.appendSync("r1", muteEvent("r1", i));
+		}
+		// All 5 new records fit under the raised debug cap alongside
+		// whatever survived the earlier trim — nothing further trimmed.
+		expect(log.readSinceSync("r1", 0).length).toBeGreaterThan(3);
+	});
 });
 
 describe("bankEventLog retention", () => {
@@ -98,6 +127,7 @@ describe("bankEventLog retention", () => {
 
 	afterEach(() => {
 		resetBankLogRetentionCacheForTests();
+		resetLiveRetentionFacetsForTests();
 		for (const dir of dirs.splice(0)) {
 			rmSync(dir, { recursive: true, force: true });
 		}
@@ -121,5 +151,23 @@ describe("bankEventLog retention", () => {
 		expect(readBankLogSince(dir, 0).map((e) => e.seq)).toEqual([
 			8, 9, 10, 11,
 		]);
+	});
+
+	it("resolves maxRecords through the live privacy.debugRetention facet, not a fixed default", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-bank-retain-live-"));
+		dirs.push(dir);
+		setLiveRetentionFacets(dir, { retentionBankMax: 3 });
+		// No explicit maxRecords override: appendBankLogEvent must resolve it
+		// fresh from the live facet on every call, not a passed-in constant.
+		for (let i = 1; i <= 5; i += 1) {
+			appendBankLogEvent(dir, openedBank(i));
+		}
+		expect(readBankLogSince(dir, 0)).toHaveLength(3);
+
+		setLiveRetentionFacets(dir, { debugRetention: true });
+		for (let i = 6; i <= 10; i += 1) {
+			appendBankLogEvent(dir, openedBank(i));
+		}
+		expect(readBankLogSince(dir, 0).length).toBeGreaterThan(3);
 	});
 });

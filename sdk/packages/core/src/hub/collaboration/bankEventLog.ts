@@ -22,10 +22,13 @@ import {
 } from "@cline/shared";
 import {
 	countNonEmptyLines,
-	DEFAULT_BANK_EVENT_LOG_MAX_RECORDS,
 	type LogRetentionOptions,
 	trimJsonlFileToMaxRecords,
 } from "./logRetention";
+import {
+	getLiveRetentionFacets,
+	resolveBankEventLogMaxRecords,
+} from "./retentionCaps";
 
 type Meta = { schemaVersion: 1; nextSeq: number };
 
@@ -78,7 +81,8 @@ export function appendBankLogEvent(
 	options: AppendBankLogOptions = {},
 ): DriveLogEnvelope {
 	const maxRecords =
-		options.maxRecords ?? DEFAULT_BANK_EVENT_LOG_MAX_RECORDS;
+		options.maxRecords ??
+		resolveBankEventLogMaxRecords(getLiveRetentionFacets(configParent));
 	const mPath = metaPath(configParent);
 	const ePath = eventsPath(configParent);
 	mkdirSync(dirname(ePath), { recursive: true });

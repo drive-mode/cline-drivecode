@@ -475,6 +475,7 @@ export type HubCommandName =
 	| "drive.fork.tick"
 	| "drive_config_get"
 	| "drive_config_put"
+	| "drive_privacy_put"
 	| "drive_bank_get"
 	| "drive_bank_seed"
 	| "drive_bank_create_task"

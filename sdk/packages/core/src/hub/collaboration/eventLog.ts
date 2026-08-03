@@ -27,6 +27,10 @@ import {
 	type LogRetentionOptions,
 	trimJsonlFileToMaxRecords,
 } from "./logRetention";
+import {
+	getLiveRetentionFacets,
+	resolveRoomEventLogMaxRecords,
+} from "./retentionCaps";
 
 export type RoomLogRecord = {
 	readonly seq: number;
@@ -158,15 +162,27 @@ function migrateJsonlRoomEventLog(
  * (DRV-PRIVACY retention cap).
  */
 export class JsonlRoomEventLog implements RoomEventLog {
-	private readonly maxRecords: number;
+	/**
+	 * Explicit override (tests, callers that already resolved a cap) always
+	 * wins. When absent, `currentMaxRecords()` resolves fresh on every append
+	 * through the retention facet helpers so a live `privacy.debugRetention`
+	 * toggle takes effect on the very next write without recreating the log.
+	 */
+	private readonly explicitMaxRecords: number | undefined;
 	private readonly lineCounts = new Map<string, number>();
 
 	constructor(
 		readonly configParent: string,
 		options: RoomEventLogOptions = {},
 	) {
-		this.maxRecords =
-			options.maxRecords ?? DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS;
+		this.explicitMaxRecords = options.maxRecords;
+	}
+
+	private currentMaxRecords(): number {
+		return (
+			this.explicitMaxRecords ??
+			resolveRoomEventLogMaxRecords(getLiveRetentionFacets(this.configParent))
+		);
 	}
 
 	latestSeq(roomId: string): number {
@@ -217,8 +233,9 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		writeMetaAtomic(metaPath, { schemaVersion: 1, nextSeq: seq + 1 });
 		let count = before + 1;
 		this.lineCounts.set(roomId, count);
-		if (count > this.maxRecords) {
-			count = trimJsonlFileToMaxRecords(eventsPath, this.maxRecords);
+		const maxRecords = this.currentMaxRecords();
+		if (count > maxRecords) {
+			count = trimJsonlFileToMaxRecords(eventsPath, maxRecords);
 			this.lineCounts.set(roomId, count);
 		}
 		return record;
