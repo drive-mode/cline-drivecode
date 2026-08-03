@@ -79,6 +79,7 @@ import {
 	DriveRoster,
 	DriveVoiceBar,
 } from "./drive/DriveRoomChrome";
+import { buildRaiseHandFrame } from "./drive/driveCallOps";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
 import { resolveIncomingApprovalBypass } from "./drive/gateApproval";
 import {
@@ -739,12 +740,14 @@ export default function Chat({
 									driveActive: true,
 								});
 								if (!current.handRaised) {
-									postToHost({
-										type: "call_raise_hand",
+									const handFrame = buildRaiseHandFrame({
 										roomId: current.roomId,
 										participantId: DRIVE_PARTICIPANT_HUMAN,
 										raised: true,
 									});
+									if (handFrame) {
+										postToHost(handFrame);
+									}
 								}
 							}
 							return next;

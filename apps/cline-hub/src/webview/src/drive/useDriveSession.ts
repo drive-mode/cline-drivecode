@@ -24,6 +24,12 @@ import {
 	seedBankForJoin,
 } from "./bankSession";
 import {
+	buildLeaveFrame,
+	buildMuteFrame,
+	buildRaiseHandFrame,
+	buildSetStageFrame,
+} from "./driveCallOps";
+import {
 	buildDriveJoinPayload,
 	DRIVE_SESSION_MESSAGE_TYPES,
 	type DriveConnectionPhase,
@@ -42,7 +48,6 @@ import {
 	toggleDriveSpotlightId,
 } from "./participantIds";
 import { resolveNarratorParticipantId } from "./rosterHelpers";
-import { postSetStage } from "./stageSharePin";
 import {
 	applyBankSnapshot,
 	applyRoomSnapshot,
@@ -616,11 +621,12 @@ export function useDriveSession(
 
 	const leaveDrive = useCallback(() => {
 		const current = driveRef.current;
-		postToHost({
-			type: "call_leave",
-			roomId: current.roomId ?? DRIVE_DEFAULT_ROOM_ID,
-			participantId: DRIVE_PARTICIPANT_HUMAN,
-		});
+		postToHost(
+			buildLeaveFrame({
+				roomId: current.roomId,
+				participantId: DRIVE_PARTICIPANT_HUMAN,
+			}),
+		);
 		resetDriveConnection({ note: null, phase: "off" });
 	}, [resetDriveConnection]);
 
@@ -1408,13 +1414,14 @@ export function useDriveSession(
 						args.onAbort();
 						args.onStatus("Drive hand-raise: abort requested...");
 					}
-					if (current.roomId) {
-						postToHost({
-							type: "call_raise_hand",
-							roomId: current.roomId,
-							participantId: DRIVE_PARTICIPANT_HUMAN,
-							raised,
-						});
+					// null before a room exists — main guarded the post the same way.
+					const handFrame = buildRaiseHandFrame({
+						roomId: current.roomId,
+						participantId: DRIVE_PARTICIPANT_HUMAN,
+						raised,
+					});
+					if (handFrame) {
+						postToHost(handFrame);
 					}
 					// Optimistic flip so rapid toggles see fresh state; room_snapshot
 					// remains authoritative via applyRoomSnapshot.
@@ -1429,27 +1436,17 @@ export function useDriveSession(
 			onMuteToggle: () => {
 				setDrive((current) => {
 					const muted = !current.muted;
-					if (current.roomId) {
-						postToHost({
-							type: "call_mute",
+					// buildMuteFrame picks the seated `call_mute` op or the demo /
+					// pre-join legacy command. Prefer hub snapshot for muted
+					// (applyRoomSnapshot); optimistic flip so rapid toggles see
+					// fresh state.
+					postToHost(
+						buildMuteFrame({
 							roomId: current.roomId,
 							participantId: DRIVE_PARTICIPANT_HUMAN,
 							muted,
-						});
-						// Prefer hub snapshot for muted (applyRoomSnapshot); optimistic
-						// flip so rapid toggles see fresh state.
-						return { ...current, muted };
-					}
-					// Demo / pre-join: legacy mute path.
-					postToHost({
-						type: "driveCommand",
-						command: "drive.participant.mute.set",
-						payload: {
-							roomId: current.roomId ?? DRIVE_DEFAULT_ROOM_ID,
-							participantId: DRIVE_PARTICIPANT_HUMAN,
-							muted,
-						},
-					});
+						}),
+					);
 					return { ...current, muted };
 				});
 			},
@@ -1482,43 +1479,36 @@ export function useDriveSession(
 				});
 			},
 			onTogglePartnerMute: () => {
-				// call_mute accepts any participantId (human or agent).
-				if (drive.roomId) {
-					postToHost({
-						type: "call_mute",
+				// Same op as self-mute; call_mute accepts any participantId.
+				postToHost(
+					buildMuteFrame({
 						roomId: drive.roomId,
 						participantId: DRIVE_PARTICIPANT_PARTNER,
 						muted: !drive.partnerMuted,
-					});
-					return;
-				}
-				postToHost({
-					type: "driveCommand",
-					command: "drive.participant.mute.set",
-					payload: {
-						roomId: drive.roomId ?? DRIVE_DEFAULT_ROOM_ID,
-						participantId: DRIVE_PARTICIPANT_PARTNER,
-						muted: !drive.partnerMuted,
-					},
-				});
+					}),
+				);
 			},
 			onMoveSpotlight: () => {
 				const nextId = toggleDriveSpotlightId(drive.spotlightParticipantId);
 				const kind = isDriveHumanId(nextId) ? "human" : "agent";
 				// call_set_stage is authoritative; live spotlight syncs from sharer.
-				postSetStage({
-					roomId: drive.roomId,
-					sharer: { kind, participantId: nextId },
-					pin: null,
-				});
+				postToHost(
+					buildSetStageFrame({
+						roomId: drive.roomId,
+						sharer: { kind, participantId: nextId },
+						pin: null,
+					}),
+				);
 			},
 			onSharePin: (pin: StagePin) => {
 				// The roster sheet's Share pin op, reached from the strip.
-				postSetStage({
-					roomId: drive.roomId,
-					sharer: { kind: "human", participantId: DRIVE_PARTICIPANT_HUMAN },
-					pin,
-				});
+				postToHost(
+					buildSetStageFrame({
+						roomId: drive.roomId,
+						sharer: { kind: "human", participantId: DRIVE_PARTICIPANT_HUMAN },
+						pin,
+					}),
+				);
 			},
 			onToggleWorkers: toggleWorkersPanel,
 			onSubModeChange: (subMode: DriveUiState["subMode"]) => {

@@ -35,7 +35,7 @@ import {
 	participantStatusLabel,
 	resolveAgentHomeSlug,
 } from "./rosterHelpers";
-import { postSetStage } from "./stageSharePin";
+import { buildSetStageMessage } from "./stageSharePin";
 import {
 	applyAgentNameInk,
 	applyPartnerDisplayName,
@@ -73,14 +73,17 @@ function StageShareChooser({
 								data-testid={`drive-share-pin-${kind}`}
 								key={kind}
 								onClick={() => {
-									postSetStage({
-										roomId,
-										sharer: {
-											kind: "human",
-											participantId: participant.id || DRIVE_PARTICIPANT_HUMAN,
-										},
-										pin: defaults[kind],
-									});
+									postToHost(
+										buildSetStageMessage({
+											roomId,
+											sharer: {
+												kind: "human",
+												participantId:
+													participant.id || DRIVE_PARTICIPANT_HUMAN,
+											},
+											pin: defaults[kind],
+										}),
+									);
 									onDone();
 								}}
 								size="sm"
@@ -126,14 +129,16 @@ function StageShareChooser({
 				className="justify-start"
 				data-testid="drive-return-spotlight"
 				onClick={() => {
-					postSetStage({
-						roomId,
-						sharer: {
-							kind: "agent",
-							participantId: participant.id || DRIVE_PARTICIPANT_PARTNER,
-						},
-						pin: null,
-					});
+					postToHost(
+						buildSetStageMessage({
+							roomId,
+							sharer: {
+								kind: "agent",
+								participantId: participant.id || DRIVE_PARTICIPANT_PARTNER,
+							},
+							pin: null,
+						}),
+					);
 					onDone();
 				}}
 				type="button"

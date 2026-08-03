@@ -282,8 +282,8 @@ function StripVolume({
 /**
  * Share pin on the strip — the one call control the roster sheet had and the
  * strip did not, two clicks deep behind a participant row. It hands the caller
- * a {@link StagePin} that goes out through the same `postSetStage` the sheet's
- * chooser uses (`stageSharePin.ts`), never a second payload.
+ * a {@link StagePin} that goes out through the same `buildSetStageMessage` the
+ * sheet's chooser uses (`stageSharePin.ts`), never a second payload.
  *
  * Defaults are read here, at render, exactly as the sheet reads them, so the
  * `selection` pin still sees the live browser selection.

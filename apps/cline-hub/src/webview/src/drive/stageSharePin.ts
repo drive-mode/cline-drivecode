@@ -3,11 +3,12 @@
  *
  * Share pin is reachable from two places — the roster sheet and the call
  * strip — and they must be the same op, not two payloads that happen to
- * agree today. The payload builder is pure so a `.ts` test can pin its shape.
+ * agree today. The payload builder is pure so a `.ts` test can pin its shape,
+ * and so `driveCallOps` can re-export it without dragging `postToHost` (and
+ * with it the DOM) into the hub-side suites. Callers post the result.
  */
 
 import type { StagePin } from "@cline/shared";
-import { postToHost } from "../vscode";
 import { DRIVE_DEFAULT_ROOM_ID } from "./types";
 
 export type StageSharer = {
@@ -29,8 +30,4 @@ export function buildSetStageMessage(input: SetStageInput) {
 		sharer: input.sharer,
 		pin: input.pin === undefined ? undefined : input.pin,
 	};
-}
-
-export function postSetStage(input: SetStageInput): void {
-	postToHost(buildSetStageMessage(input));
 }
