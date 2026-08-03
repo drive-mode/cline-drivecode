@@ -3,6 +3,8 @@ import {
 	SAMPLE_ARCHITECTURE_MERMAID,
 	SAMPLE_ARCHITECTURE_SHOW_ID,
 	buildSampleArchitectureShowItem,
+	buildSampleCaptureShowItem,
+	buildSampleChangeAnimationShowItem,
 	presentSampleArchitectureShow,
 } from "./sampleShowPresent";
 
@@ -65,6 +67,48 @@ describe("sampleShowPresent", () => {
 			type: "driveCommand",
 			command: "drive.show.tick",
 			payload: { roomId: "room-b" },
+		});
+	});
+
+	it("builds a walkthrough.animation the hub can materialize", () => {
+		const item = buildSampleChangeAnimationShowItem();
+		expect(item.artifactKind).toBe("walkthrough.animation");
+		expect(item.mediaClass).toBe("animation");
+		expect(item.produce.tool).toBe("render_change_animation");
+		expect(item.produce.args.rows).toHaveLength(3);
+		expect(item.produce.args.entering).toHaveLength(1);
+		// No uri: the hub produces the still stub, the webview the motion.
+		expect(item.uri).toBeUndefined();
+	});
+
+	it("builds a capture whose bytes stay behind an out-of-band reference", () => {
+		const item = buildSampleCaptureShowItem();
+		expect(item.artifactKind).toBe("capture.screenshot");
+		expect(item.produce.tool).toBe("drive_browser_snapshot");
+		expect(item.produce.args.url).toBe("http://127.0.0.1:8787/drive");
+		// The reference is a URL the browser fetches, never inline bytes.
+		expect(item.uri).toBe("/cline-drive-logo.svg");
+		expect(item.uri?.startsWith("data:")).toBe(false);
+	});
+
+	it("presents both new sample kinds via drive.show.present", async () => {
+		const { postToHost } = await import("../vscode");
+		const { presentSampleChangeAnimationShow, presentSampleCaptureShow } =
+			await import("./sampleShowPresent");
+		presentSampleChangeAnimationShow("room-c");
+		expect(postToHost).toHaveBeenCalledWith({
+			type: "driveCommand",
+			command: "drive.show.present",
+			payload: {
+				roomId: "room-c",
+				showItem: buildSampleChangeAnimationShowItem(),
+			},
+		});
+		presentSampleCaptureShow("room-c");
+		expect(postToHost).toHaveBeenCalledWith({
+			type: "driveCommand",
+			command: "drive.show.present",
+			payload: { roomId: "room-c", showItem: buildSampleCaptureShowItem() },
 		});
 	});
 });

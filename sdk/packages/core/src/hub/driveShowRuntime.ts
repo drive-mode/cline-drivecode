@@ -17,6 +17,7 @@ import {
 	type DriveRoomStore,
 } from "./collaboration";
 import { produceBrowserSnapshotShowArtifact } from "./drive-producers/produceBrowserSnapshot";
+import { produceChangeAnimationShowArtifact } from "./drive-producers/produceChangeAnimation";
 import { produceCodeWalkthroughShowArtifact } from "./drive-producers/produceCodeWalkthrough";
 import { produceMermaidShowArtifact } from "./drive-producers/produceMermaid";
 import { producePlanCardShowArtifact } from "./drive-producers/producePlanCard";
@@ -141,6 +142,42 @@ export function materializeShowItem(
 				startLine,
 				endLine,
 				snippet,
+			});
+			return {
+				...showItem,
+				uri: produced.item.uri,
+				status: "ready",
+				scoreReasons: [
+					...new Set([
+						...showItem.scoreReasons,
+						...produced.item.scoreReasons,
+					]),
+				],
+			};
+		}
+		case "render_change_animation": {
+			const readRows = (key: string): string[] | undefined => {
+				const raw = showItem.produce.args[key];
+				return Array.isArray(raw)
+					? raw.filter((entry): entry is string => typeof entry === "string")
+					: undefined;
+			};
+			const readText = (key: string): string | undefined => {
+				const raw = showItem.produce.args[key];
+				return typeof raw === "string" ? raw : undefined;
+			};
+			const produced = produceChangeAnimationShowArtifact({
+				ownerParticipantId: showItem.ownerParticipantId,
+				title: showItem.title,
+				caption: showItem.caption,
+				templateId: showItem.produce.templateId,
+				beforeLabel: readText("beforeLabel"),
+				afterLabel: readText("afterLabel"),
+				beforeCaption: readText("beforeCaption"),
+				afterCaption: readText("afterCaption"),
+				signal: readText("signal"),
+				rows: readRows("rows"),
+				entering: readRows("entering"),
 			});
 			return {
 				...showItem,

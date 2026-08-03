@@ -616,6 +616,61 @@ describe("handleDriveCommand", () => {
 		expect(room.director.showBacklog[0]?.status).toBe("showing");
 	});
 
+	it("presents a walkthrough.animation, keeping the recipe on the item", async () => {
+		// The renderer lives in the webview and re-renders from produce.args,
+		// so the hub only has to materialize a stub uri — without one
+		// drive.show.present fails closed and the animation never reaches a
+		// screen.
+		const { ctx } = createCtx();
+		const reply = await handleDriveCommand(
+			ctx,
+			envelope("drive.show.present", {
+				roomId: "r-anim",
+				showItem: {
+					id: "show-anim",
+					ownerParticipantId: "agent-1",
+					title: "Feed repaint · before and after",
+					intent: "explain",
+					artifactKind: "walkthrough.animation",
+					mediaClass: "animation",
+					caption: "before and after",
+					produce: {
+						tool: "render_change_animation",
+						templateId: "anim.change",
+						args: {
+							beforeLabel: "Before",
+							afterLabel: "After",
+							signal: "sig ✓ unchanged",
+							rows: ["m0", "m1"],
+							entering: ["m2"],
+						},
+					},
+					priority: 30,
+					status: "ready",
+					scoreReasons: [],
+				},
+			}),
+		);
+		expect(reply.ok).toBe(true);
+		const room = reply.payload?.room as {
+			director: {
+				activeShowId: string;
+				showBacklog: Array<{
+					uri?: string;
+					status: string;
+					produce: { tool: string; args: Record<string, unknown> };
+				}>;
+			};
+		};
+		expect(room.director.activeShowId).toBe("show-anim");
+		const presented = room.director.showBacklog[0];
+		expect(presented?.uri).toMatch(/^data:image\/svg\+xml/);
+		expect(presented?.status).toBe("showing");
+		expect(presented?.produce.tool).toBe("render_change_animation");
+		expect(presented?.produce.args.rows).toEqual(["m0", "m1"]);
+		expect(presented?.produce.args.entering).toEqual(["m2"]);
+	});
+
 	it("skips browser snapshot without demoCapture and leaves backlog planned", async () => {
 		const { ctx } = createCtx();
 		await handleDriveCommand(

@@ -43,6 +43,83 @@ export function buildSampleArchitectureShowItem(input?: {
 	};
 }
 
+export const SAMPLE_ANIMATION_SHOW_ID = "show-sample-change-animation";
+
+/**
+ * Sample `walkthrough.animation` (Sample / dev). Carries the before/after
+ * recipe so hub `materializeShowItem` fills `uri` and the webview re-renders
+ * the motion from the same args.
+ */
+export function buildSampleChangeAnimationShowItem(input?: {
+	ownerParticipantId?: string;
+	id?: string;
+	priority?: number;
+}): ShowBacklogItem {
+	return {
+		id: input?.id ?? SAMPLE_ANIMATION_SHOW_ID,
+		ownerParticipantId:
+			input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
+		title: "Feed repaint · before and after",
+		intent: "Explain a change with motion",
+		artifactKind: "walkthrough.animation",
+		mediaClass: "animation",
+		caption: "Sample / dev — every-beat rebuild vs fingerprint skip",
+		produce: {
+			tool: "render_change_animation",
+			templateId: "anim.change",
+			args: {
+				beforeLabel: "Before · every beat rebuilds",
+				afterLabel: "After · fingerprint match → skip",
+				beforeCaption: "everything re-animates — that's the flash",
+				afterCaption: "nothing re-mounts — only new items animate",
+				signal: "sig ✓ unchanged",
+				rows: ["message · partner", "message · you", "message · partner"],
+				entering: ["message · partner (new)"],
+			},
+		},
+		priority: input?.priority ?? 10,
+		status: "ready",
+		scoreReasons: ["sample_dev"],
+	};
+}
+
+export const SAMPLE_CAPTURE_SHOW_ID = "show-sample-capture";
+
+/**
+ * Sample `capture.screenshot` (Sample / dev).
+ *
+ * `produce.args.url` is the metadata the event log carries; `uri` is the
+ * out-of-band reference the card fetches its pixels from. No bytes travel on
+ * either — which is exactly the constraint the capture card exists to honour.
+ * The reference is a hub-served asset so the sample needs no capture
+ * capability (`demoCapture` is off by default).
+ */
+export function buildSampleCaptureShowItem(input?: {
+	ownerParticipantId?: string;
+	id?: string;
+	priority?: number;
+}): ShowBacklogItem {
+	return {
+		id: input?.id ?? SAMPLE_CAPTURE_SHOW_ID,
+		ownerParticipantId:
+			input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
+		title: "Hub webview · smooth playback",
+		intent: "Show running UI proof",
+		artifactKind: "capture.screenshot",
+		mediaClass: "still",
+		uri: "/cline-drive-logo.svg",
+		caption: "Sample / dev — capture metadata; pixels load from the reference",
+		produce: {
+			tool: "drive_browser_snapshot",
+			templateId: "capture.shot",
+			args: { url: "http://127.0.0.1:8787/drive" },
+		},
+		priority: input?.priority ?? 10,
+		status: "ready",
+		scoreReasons: ["sample_dev"],
+	};
+}
+
 /** Post drive.show.present for the sample architecture diagram. */
 export function presentSampleArchitectureShow(roomId?: string | null): void {
 	postToHost({
@@ -51,6 +128,30 @@ export function presentSampleArchitectureShow(roomId?: string | null): void {
 		payload: {
 			roomId: roomId?.trim() || DRIVE_DEFAULT_ROOM_ID,
 			showItem: buildSampleArchitectureShowItem(),
+		},
+	});
+}
+
+/** Post drive.show.present for the sample before/after animation. */
+export function presentSampleChangeAnimationShow(roomId?: string | null): void {
+	postToHost({
+		type: "driveCommand",
+		command: "drive.show.present",
+		payload: {
+			roomId: roomId?.trim() || DRIVE_DEFAULT_ROOM_ID,
+			showItem: buildSampleChangeAnimationShowItem(),
+		},
+	});
+}
+
+/** Post drive.show.present for the sample capture card. */
+export function presentSampleCaptureShow(roomId?: string | null): void {
+	postToHost({
+		type: "driveCommand",
+		command: "drive.show.present",
+		payload: {
+			roomId: roomId?.trim() || DRIVE_DEFAULT_ROOM_ID,
+			showItem: buildSampleCaptureShowItem(),
 		},
 	});
 }

@@ -24,6 +24,8 @@ import {
 	attachSampleHoldScript,
 	enqueueSampleArchitectureShow,
 	presentSampleArchitectureShow,
+	presentSampleCaptureShow,
+	presentSampleChangeAnimationShow,
 	setShowPlannerMode,
 	tickShowDirector,
 } from "./sampleShowPresent";
@@ -305,6 +307,12 @@ export function DriveRoomChrome({
 								[DRIVE_EARCON_FACET_ID[kind]]: enabled,
 							}),
 						);
+					}}
+					onPresentSampleAnimation={() => {
+						presentSampleChangeAnimationShow(drive.roomId);
+					}}
+					onPresentSampleCapture={() => {
+						presentSampleCaptureShow(drive.roomId);
 					}}
 					onPresentSampleDiagram={() => {
 						presentSampleArchitectureShow(drive.roomId);

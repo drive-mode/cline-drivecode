@@ -5,8 +5,14 @@
  * render something, but it also keeps the source it produced from in
  * `produce.args` (`produceMermaid.ts`: "Webview may re-render from embedded
  * source"). Where that source is present the webview re-renders it live —
- * a real mermaid diagram, a real plan, a real file+range panel — and falls
- * back to the hub's `uri` stub only when it is not.
+ * a real mermaid diagram, a real plan, a real file+range panel, a real
+ * before/after animation, a real capture card — and falls back to the hub's
+ * `uri` stub only when it is not.
+ *
+ * A capture is the one body that reads `uri` as content rather than as a
+ * fallback, and even then only as an out-of-band pointer: the recipe in
+ * `produce.args` is what the event log carries, and `DRIVE_EVENT_FORBIDDEN_KEYS`
+ * keeps bytes out of it.
  *
  * Pure projection so it can be tested without a DOM, the same shape as
  * `showRail.ts`.
@@ -71,6 +77,28 @@ export type WalkthroughLine = {
 	highlighted: boolean;
 };
 
+/**
+ * One row of a before/after animation panel. `entering` rows are the only
+ * thing that moves on the AFTER side — that contrast is the whole artifact.
+ */
+export type AnimationRow = {
+	label: string;
+	entering: boolean;
+};
+
+export type AnimationPanel = {
+	role: "before" | "after";
+	label: string;
+	caption: string;
+	rows: AnimationRow[];
+	/**
+	 * AFTER-side chip naming the check that makes the repaint unnecessary
+	 * (the canvas beat's "sig ✓ unchanged"). Absent when the show does not
+	 * name one.
+	 */
+	signal?: string;
+};
+
 export type ArtifactBody =
 	| { kind: "mermaid"; source: string }
 	| { kind: "plan"; title: string; steps: PlanStep[] }
@@ -81,6 +109,13 @@ export type ArtifactBody =
 			endLine: number;
 			lines: WalkthroughLine[];
 	  }
+	| { kind: "animation"; before: AnimationPanel; after: AnimationPanel }
+	/**
+	 * A capture is metadata plus an out-of-band pointer. `shot` is the
+	 * artifact `uri` — never bytes read off an event, which is why it may be
+	 * null and the card still renders.
+	 */
+	| { kind: "capture"; url: string; shot: string | null }
 	| { kind: "image"; uri: string }
 	| { kind: "empty" };
 
@@ -100,6 +135,16 @@ const PLAN_STEP_LEAD_IN = /^\s*(?:[-*•]\s+)?(?:\d+[.)]\s+)?/;
  */
 const WALKTHROUGH_LINE_CAP = 400;
 
+/**
+ * The frame clips, and a two-up comparison is only legible while both
+ * columns fit without scrolling. Rows past the cap are dropped rather than
+ * scrolled: half a comparison the room cannot see is worse than a short one.
+ * `entering` rows are capped first and kept, because they are the point of
+ * the AFTER panel — the settled rows give way to them.
+ */
+const ANIMATION_ROW_CAP = 8;
+const ANIMATION_ENTERING_CAP = 3;
+
 /** Mermaid source is fenced into markdown to render; a fence inside it would
  * close that block early and turn the rest into arbitrary markdown on a
  * screen the whole room is watching. The hub rejects fences on its own
@@ -110,7 +155,7 @@ const MERMAID_FENCE = /```/;
 function bodyKindFor(
 	artifactKind: string | undefined,
 	tool: string | undefined,
-): "mermaid" | "plan" | "walkthrough" | null {
+): "mermaid" | "plan" | "walkthrough" | "animation" | "capture" | null {
 	switch (artifactKind) {
 		case "diagram.architecture":
 		case "diagram.data_flow":
@@ -121,6 +166,10 @@ function bodyKindFor(
 			return "plan";
 		case "walkthrough.code":
 			return "walkthrough";
+		case "walkthrough.animation":
+			return "animation";
+		case "capture.screenshot":
+			return "capture";
 		default:
 			break;
 	}
@@ -133,6 +182,10 @@ function bodyKindFor(
 			return "plan";
 		case "render_code_walkthrough":
 			return "walkthrough";
+		case "render_change_animation":
+			return "animation";
+		case "drive_browser_snapshot":
+			return "capture";
 		default:
 			return null;
 	}
@@ -141,6 +194,18 @@ function bodyKindFor(
 function readString(args: Record<string, unknown>, key: string): string {
 	const value = args[key];
 	return typeof value === "string" ? value : "";
+}
+
+/** Non-empty trimmed strings from an args array; everything else dropped. */
+function readStringList(args: Record<string, unknown>, key: string): string[] {
+	const value = args[key];
+	if (!Array.isArray(value)) {
+		return [];
+	}
+	return value
+		.filter((entry): entry is string => typeof entry === "string")
+		.map((entry) => entry.trim())
+		.filter((entry) => entry.length > 0);
 }
 
 function readInt(
@@ -290,6 +355,65 @@ export function projectArtifactBody(
 					...line,
 					highlighted: line.number <= endLine,
 				})),
+			};
+		}
+		case "animation": {
+			const entering = readStringList(args, "entering").slice(
+				0,
+				ANIMATION_ENTERING_CAP,
+			);
+			const settled = readStringList(args, "rows").slice(
+				0,
+				Math.max(0, ANIMATION_ROW_CAP - entering.length),
+			);
+			// The artifact IS the comparison: without settled rows the BEFORE
+			// panel is an empty feed with a white flash strobing over nothing,
+			// under a caption claiming everything re-animates. The hub stub says
+			// more than that does.
+			if (settled.length === 0) {
+				return fallback;
+			}
+			const signal = readString(args, "signal").trim();
+			return {
+				kind: "animation",
+				before: {
+					role: "before",
+					label: readString(args, "beforeLabel").trim() || "Before",
+					caption: readString(args, "beforeCaption").trim(),
+					rows: settled.map((label) => ({ label, entering: false })),
+				},
+				after: {
+					role: "after",
+					label: readString(args, "afterLabel").trim() || "After",
+					caption: readString(args, "afterCaption").trim(),
+					rows: [
+						...settled.map((label) => ({ label, entering: false })),
+						...entering.map((label) => ({ label, entering: true })),
+					],
+					...(signal ? { signal } : {}),
+				},
+			};
+		}
+		case "capture": {
+			// The recipe's `url` is what the event log carries; the bytes, if
+			// any, live behind `uri`. Without the url there is no capture card
+			// to draw — a browser frame around an empty address bar claims
+			// nothing, so the hub stub is the better answer.
+			const url = readString(args, "url").trim();
+			if (!url) {
+				return fallback;
+			}
+			// A capture's pixels live out-of-band; a `data:` uri is in-band by
+			// definition. On this kind that is always the hub's placeholder card
+			// (`produceBrowserSnapshot`, whose body reads "Demo capture stub") —
+			// not a picture of the page. Framing it inside browser chrome under
+			// the real address bar would assert it IS the page, so the card
+			// shows its metadata state instead. Nothing else can honestly be
+			// drawn from a recipe that produced no capture.
+			return {
+				kind: "capture",
+				url,
+				shot: uri && !uri.startsWith("data:") ? uri : null,
 			};
 		}
 		default:

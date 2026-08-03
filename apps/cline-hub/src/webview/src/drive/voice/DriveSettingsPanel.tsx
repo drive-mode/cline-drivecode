@@ -41,6 +41,8 @@ export function DriveSettingsPanel({
 	onEarconChange,
 	onHardwareChange,
 	onPresentSampleDiagram,
+	onPresentSampleAnimation,
+	onPresentSampleCapture,
 	onEnqueueSampleDiagram,
 	onTickShowDirector,
 	onAttachSampleScript,
@@ -61,6 +63,10 @@ export function DriveSettingsPanel({
 	onHardwareChange: (patch: Partial<DriveHardwarePrefs>) => void;
 	/** Sample / dev — posts drive.show.present (no LLM). */
 	onPresentSampleDiagram?: () => void;
+	/** Sample / dev — present a walkthrough.animation (before/after motion). */
+	onPresentSampleAnimation?: () => void;
+	/** Sample / dev — present a capture.screenshot (metadata + out-of-band ref). */
+	onPresentSampleCapture?: () => void;
 	/** Sample / dev — enqueue without presenting. */
 	onEnqueueSampleDiagram?: () => void;
 	/** Sample / dev — rank + present top backlog item. */
@@ -371,9 +377,9 @@ export function DriveSettingsPanel({
 						Sample / dev
 					</div>
 					<p className="text-[11px] text-muted-foreground">
-						Present a fixture architecture diagram onto the sticky stage. No
-						LLM credential required. Used to smoke drive.show.present until the
-						planner lands.
+						Present a fixture artifact — diagram, before/after animation, or
+						capture card — onto the sticky stage. No LLM credential required.
+						Used to smoke drive.show.present until the planner lands.
 					</p>
 					<Button
 						data-testid="drive-present-sample-diagram"
@@ -385,6 +391,30 @@ export function DriveSettingsPanel({
 					>
 						Present sample diagram
 					</Button>
+					{onPresentSampleAnimation ? (
+						<Button
+							data-testid="drive-present-sample-animation"
+							disabled={presentSampleDisabled}
+							onClick={onPresentSampleAnimation}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							Present sample animation
+						</Button>
+					) : null}
+					{onPresentSampleCapture ? (
+						<Button
+							data-testid="drive-present-sample-capture"
+							disabled={presentSampleDisabled}
+							onClick={onPresentSampleCapture}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							Present sample capture
+						</Button>
+					) : null}
 					{onEnqueueSampleDiagram ? (
 						<Button
 							data-testid="drive-enqueue-sample-diagram"

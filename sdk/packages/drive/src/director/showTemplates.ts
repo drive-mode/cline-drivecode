@@ -143,6 +143,14 @@ export const SHOW_TEMPLATE_KIT: readonly ShowTemplate[] = [
 		defaultArgs: {},
 	},
 	{
+		templateId: "anim.change",
+		artifactKind: "walkthrough.animation",
+		title: "Before / after",
+		intent: "Explain a change with motion",
+		produceTool: "render_change_animation",
+		defaultArgs: {},
+	},
+	{
 		templateId: "doc.plan",
 		artifactKind: "doc.plan",
 		title: "Plan card",

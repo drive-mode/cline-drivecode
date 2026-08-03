@@ -4392,10 +4392,10 @@
   /** Session artifacts (Artifacts surface). Titles/sticky/maturity mirror the
    *  show object of the beat that presented each one. @type {SessionArtifact[]} */
   // Presented FIRST (a3-bug): the explanatory animation of the bug itself.
-  // walkthrough.animation is a real ShowArtifactKind member
-  // (sdk/packages/shared drive director schema) that the product has not
-  // built yet — beat and artifact both carry the planned badge.
-  const ART_ANIM = { id: "art-anim", kindLabel: "walkthrough.animation", title: "the flash · before and after", presenter: "Cline", act: 3, sticky: "replace", maturity: "planned" };
+  // walkthrough.animation ships: the hub materializes it (render_change_animation
+  // producer, anim.change template) and the webview re-renders the motion from
+  // produce.args inside the Spotlight frame (ScreenArtifact `animation` body).
+  const ART_ANIM = { id: "art-anim", kindLabel: "walkthrough.animation", title: "the flash · before and after", presenter: "Cline", act: 3, sticky: "replace", maturity: "shipped" };
   const ART_PLAN = { id: "art-plan", kindLabel: "doc.plan", title: "Fix plan · demo-polish", presenter: "Cline", act: 3, sticky: "replace" };
   const ART_RENDER = { id: "art-render", kindLabel: "diagram.data_flow", title: "demo render pipeline · where the flash lived", presenter: "Cline", act: 3, sticky: "hold" };
   // The hub architecture stays in the session library as an explorable
@@ -4403,7 +4403,7 @@
   // when a card click asks for it (no scripted beat presents it).
   const ART_ARCH = { id: "art-arch", kindLabel: "diagram.architecture", title: "cline-drive · system architecture", presenter: "Cline", act: 3, sticky: "hold" };
   const ART_WALK = { id: "art-walk", kindLabel: "walkthrough.code", title: "drive-product-demo.html · the guard", presenter: "Cline", act: 4, sticky: "hold" };
-  const ART_CAPTURE = { id: "art-capture", kindLabel: "capture.screenshot", title: "demo-polish · smooth playback", presenter: "Cline", act: 4, sticky: "replace", maturity: "planned" };
+  const ART_CAPTURE = { id: "art-capture", kindLabel: "capture.screenshot", title: "demo-polish · smooth playback", presenter: "Cline", act: 4, sticky: "replace", maturity: "shipped" };
   const ART_HANDOFF = { id: "art-handoff", kindLabel: "doc.plan", title: "Tier-0 handoff · demo-polish", presenter: "Hub", act: 7, sticky: "replace" };
 
   /** Show objects (ShowArtifact) — shared between the presenting beats and
@@ -4411,12 +4411,12 @@
    *  exact object the director staged. State is never mutated, so sharing
    *  the reference is safe. */
   // The bug, explained with motion: buildScreenBody renders FLASH_ANIM_HTML
-  // (a self-contained CSS-animated before/after) for kind "anim".
+  // for kind "anim"; ScreenArtifact lifts these keyframes into the product.
   const SHOW_ANIM = {
     kind: "anim",
     kindLabel: "walkthrough.animation",
     sticky: "replace",
-    maturity: "planned",
+    maturity: "shipped",
     title: "the flash · before and after",
     body: {},
   };
@@ -4475,7 +4475,7 @@
     kind: "capture",
     kindLabel: "capture.screenshot",
     sticky: "replace",
-    maturity: "planned",
+    maturity: "shipped",
     title: "demo-polish · smooth playback",
     body: { url: "drive-product-demo.html", toast: "beats advancing · zero re-mounts" },
   };
@@ -4825,15 +4825,15 @@
     },
     {
       // The director's opening move: EXPLAIN the bug with motion before any
-      // plan or code. walkthrough.animation is a real ShowArtifactKind the
-      // product hasn't built yet — the beat and its artifact wear the
-      // planned badge. No cursor: the director presents, nobody clicks.
+      // plan or code. drive.show.present materializes walkthrough.animation
+      // (render_change_animation) and the Spotlight frame re-renders this
+      // composition. No cursor: the director presents, nobody clicks.
       id: "a3-bug",
       act: 3,
       title: "The bug, animated · before and after",
       caption: "walkthrough.animation — the director explains with motion: every-beat rebuild vs fingerprint skip, side by side.",
       hubOp: "drive.show.present",
-      maturity: "planned",
+      maturity: "shipped",
       dwellMs: 2400,
       // One narration cycle on the bound clock: BEFORE flashes through
       // "watch — every beat…", the focus crossfades on "now the fixed
@@ -5114,9 +5114,9 @@
       id: "a3-demo",
       act: 4,
       title: "Demo card · behavior, proven",
-      caption: "capture.screenshot demo card — metadata in events, bytes out-of-band. Feed UI planned.",
-      hubOp: "drive_demo_frame",
-      maturity: "planned",
+      caption: "capture.screenshot demo card — metadata in events, bytes out-of-band. The feed card draws the browser chrome from the produce recipe and fetches pixels from the artifact reference.",
+      hubOp: "drive.show.present",
+      maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: "#spotlight .screen", action: "move" },
       // v4-10 (4.80s): the capture ticks one beat on "beats advancing"
