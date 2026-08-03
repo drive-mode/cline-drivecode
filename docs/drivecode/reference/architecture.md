@@ -16,7 +16,7 @@ live in the reference README; decisions live in the ADR.
 Non-goals of this architecture:
 
 - Not WebRTC / pixel screen share (human share is a structured Spotlight pin).
-- Not room persistence (Drive rooms are in-memory; hub restart ends the room).
+- Not room *snapshot* persistence. Per [ADR-0013](../plans/cline-drivemode/adr/ADR-0013-state-partition.md) the live `RoomSnapshot` is process memory only — but the room event log is durable and append-only, and `DriveRoomStore.hydrateFromLog` rebuilds the snapshot by folding it, so a hub restart does not end the room.
 - Not a replacement for `sessions.db` lifecycle status (`running` / `ended`).
 
 ## System context
@@ -56,7 +56,7 @@ flowchart TB
 Two collaboration planes share the hub process but not storage (Director bags hang off the room live map — see Director / Show plane below):
 
 1. **Status plane** — durable log; survives hub restart; cross-agent.
-2. **Room plane** — roster, Spotlight/`stage`, mute/deafen; ephemeral Map.
+2. **Room plane** — roster, Spotlight/`stage`, mute/deafen. Derived state is ephemeral; the log it is folded from is durable.
 
 ## Layering
 
@@ -200,7 +200,7 @@ flowchart TB
 ```
 
 - **Status plane** — durable log; survives hub restart.
-- **Room plane** — roster, stage, mute/deafen; ephemeral.
+- **Room plane** — roster, stage, mute/deafen; derived state ephemeral, source log durable.
 - **Director plane** — Do/Show bags + script on `DriveRoomLiveState`; present is event-first (no WebRTC).
 
 Do not conflate Status `DepMap` (team task edges) with `ShowBacklog` sticky diagrams.
