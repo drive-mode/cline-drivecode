@@ -13,9 +13,23 @@ on:
     push:
         branches:
             - main
+    # Deliberately unfiltered by base branch. This repo lands stacked PRs
+    # (see repo-stacked-prs.yml), and a `branches: [main]` filter here means a
+    # PR whose base is the branch below it in the stack runs no Drive job at
+    # all — #153 merged that way and shipped a broken hub webview into main,
+    # which only the `push: main` run caught, after the fact.
+    #
+    # For the same reason drive-ci ignores stack-context's `run_expensive`,
+    # which suppresses mid-stack layers: skipping a middle layer is exactly
+    # what let #153 through. Every layer pays for the required check.
+    #
+    # Types are left at the default [opened, reopened, synchronize]. Adding
+    # `edited` to catch base retargeting was tried and reverted: `edited` also
+    # fires on every title/body tweak (summary bot, ci/* checkbox sync), and
+    # with `cancel-in-progress` each one killed the real in-flight run and
+    # replaced it with a green result. Retarget staleness is the ordinary
+    # moving-base problem and is backstopped by `push: main` above.
     pull_request:
-        branches:
-            - main
     workflow_dispatch:
     workflow_call:
         inputs:
@@ -140,6 +154,14 @@ jobs:
 
             - name: Typecheck hub
               run: bun -F @cline/cline-hub typecheck
+
+            # apps/cline-hub/tsconfig.json excludes src/webview — the webview
+            # needs DOM libs and jsx that the server project must not carry —
+            # so the step above never sees the Drive UI. Check it against its
+            # own tsconfig solution, before the tests, so a type break fails
+            # fast and by name instead of hiding inside `build:webview`.
+            - name: Typecheck hub webview
+              run: bun -F @cline/cline-hub-webview typecheck
 
             - name: Test hub
               run: bun -F @cline/cline-hub test
