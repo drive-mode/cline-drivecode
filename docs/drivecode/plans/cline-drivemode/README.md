@@ -39,6 +39,8 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [17-implementation-backlog-audit.md](research/17-implementation-backlog-audit.md) | Evidence-led reconciliation of shipped Drive work, active backlog, and branch-only candidates |
 | [18-task-as-execution-unit.md](research/18-task-as-execution-unit.md) | Product and implementation direction for `DriveTask` as the durable, verifiable execution unit |
 | [23-agent-first-design.md](research/23-agent-first-design.md) | Agent-first design doctrine; runtime substitutes for code review; Drive audited against it |
+| [24-scale-and-context.md](research/24-scale-and-context.md) | What degrades at scale — context-window engineering, throughput, and the open control loop |
+| [enforced-authority/](initiatives/enforced-authority/) | Wiring declared authority to paths that can refuse; ADR-0025 slices |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | Archive: remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
 | [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |

@@ -410,6 +410,21 @@ retries its way through a budget without ever changing the outcome.
 
 Nothing yet. The table in [The rebuild](#the-rebuild) is offered as the review
 lens for agent-facing work in this repo, in the same way high cohesion and low
-coupling serve for ordinary code. If it survives use, the binding half belongs in
-an ADR that cites this document — the pattern
-[21](21-operator-experience.md) and [22](22-default-posture.md) follow.
+coupling serve for ordinary code.
+
+The binding half is now [ADR-0025](../adr/ADR-0025-enforced-authority.md), which
+cites this document — the pattern [21](21-operator-experience.md) and
+[22](22-default-posture.md) follow. It is deliberately narrower than this
+analysis: ADR-0018, [ADR-0022](../adr/ADR-0022-agent-economics.md), and
+[ADR-0023](../adr/ADR-0023-agent-spawn-governance.md) already decide the
+capability boundary, budgets, and the completion guard, so 0025 decides only the
+rule they share and the two rows none of them covers. Implementation is sequenced
+in [initiatives/enforced-authority](../initiatives/enforced-authority/README.md).
+
+The resource-side twin of this audit is
+[24-scale-and-context](24-scale-and-context.md). Where this document found limits
+that are declared and never enforced, that one finds quantities that are measured
+and never used — the same defect in a different register. Its findings answer
+several of the open questions above, and it corrects one assumption made here:
+the reason durable state is expensive at long horizon is not the `status.db`
+sequence assignment, which is an O(1) index probe.
