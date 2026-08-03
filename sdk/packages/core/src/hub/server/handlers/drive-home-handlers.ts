@@ -20,6 +20,7 @@ import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
 import { getDriveRoomStore } from "../../collaboration";
 import {
 	DriveagentHomeLoadError,
+	listDriveagentHomeDirs,
 	loadDriveagentHome,
 	writeDriveagentHome,
 } from "../../drive-home";
@@ -84,6 +85,8 @@ export async function handleDriveHomeCommand(
 	switch (envelope.command) {
 		case "drive_agent_home_get":
 			return handleDriveAgentHomeGet(envelope);
+		case "drive_agent_home_list":
+			return handleDriveAgentHomeList(envelope);
 		case "drive_agent_home_put":
 			return handleDriveAgentHomePut(envelope);
 		default:
@@ -117,6 +120,42 @@ function handleDriveAgentHomeGet(
 	} catch (error) {
 		return homeErrorReply(envelope, error);
 	}
+}
+
+/**
+ * Every Driveagent home this workspace can open, with its compiled summary.
+ *
+ * A directory scan rather than a registry: `.driveagent/` is the source of
+ * truth for these agents, so anything else would be a second list to keep in
+ * sync. A home whose YAML no longer parses is listed with its slug and no
+ * summary instead of being dropped — it exists, it is just broken, and hiding
+ * it would make the directory disagree with the filesystem.
+ */
+function handleDriveAgentHomeList(
+	envelope: HubCommandEnvelope,
+): HubReplyEnvelope {
+	const workspaceRoot = readString(envelope.payload, "workspaceRoot");
+	if (!workspaceRoot) {
+		return errorReply(envelope, "invalid_payload", "workspaceRoot is required");
+	}
+
+	const homes = listDriveagentHomeDirs({ workspaceRoot }).map((entry) => {
+		try {
+			const loaded = loadDriveagentHome({ workspaceRoot, slug: entry.slug });
+			const compiled = compileDriveagentHome(loaded.home);
+			return {
+				slug: entry.slug,
+				tier: entry.tier,
+				displayName: compiled.name,
+				description: compiled.description,
+				skills: compiled.skills ?? [],
+				editable: loaded.home.agent.editable !== false,
+			};
+		} catch {
+			return { slug: entry.slug, tier: entry.tier };
+		}
+	});
+	return okReply(envelope, { homes });
 }
 
 function handleDriveAgentHomePut(

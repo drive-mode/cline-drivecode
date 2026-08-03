@@ -13,6 +13,7 @@ import {
 	Wrench,
 	Zap,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,8 @@ const sectionDescriptions: Record<CustomizationSection, string> = {
 	Hooks: "Inspect hook configuration and recent execution status.",
 	MCP: "Manage installed MCP servers and add new servers from the marketplace.",
 	Skills: "Manage installed skills and add new skills from the marketplace.",
-	Agents: "Review configured agents discovered from local settings.",
+	Agents:
+		"Driveagent homes with their own profile pages, plus the configured agents discovered from local settings.",
 	Plugins: "Manage installed plugins and add new plugins from the marketplace.",
 	Tools: "Inspect built-in tools and tools contributed by plugins.",
 };
@@ -305,10 +307,20 @@ export function CustomizationSectionView({
 	catalogPrimitive,
 	section = "Rules",
 	showTabs = false,
+	intro,
 }: {
 	catalogPrimitive?: MarketplacePrimitiveType;
 	section?: CustomizationSection;
 	showTabs?: boolean;
+	/**
+	 * Content rendered above this section's list, inside the same scroll frame.
+	 *
+	 * `PageFrame` is an `h-full` scroll container, so a second page stacked next
+	 * to it would produce two competing scrollbars. The Agents route uses this
+	 * to put the Driveagent directory above the `.cline/agents/` list — two
+	 * different registries, one page, visibly separate.
+	 */
+	intro?: ReactNode;
 }) {
 	const [activeTab, setActiveTab] = useState<CustomizationSection>(section);
 	const [isLoading, setIsLoading] = useState(
@@ -1228,6 +1240,8 @@ export function CustomizationSectionView({
 				</div>
 			) : null}
 
+			{intro ? <div className="mb-8">{intro}</div> : null}
+
 			{errorMessage && (
 				<div className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
 					Failed to load configuration lists: {errorMessage}
@@ -1436,9 +1450,11 @@ export function CustomizationSectionView({
 
 			{activeTab === "Agents" && (
 				<div>
+					<h2 className="mb-1 text-sm font-semibold">Configured agents</h2>
 					<p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-						Configured agents discovered from Documents and settings
-						directories.
+						Host settings discovered from Documents and settings directories.
+						These are a separate registry from Driveagent homes — they carry no
+						Drive identity, appearance or profile page.
 					</p>
 
 					<div className="flex flex-col gap-3">

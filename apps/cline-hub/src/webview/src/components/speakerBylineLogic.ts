@@ -25,12 +25,42 @@ export function resolveSpeakerByline(
 	speakerId: string | undefined,
 	participants: readonly Participant[] | undefined,
 ): string | null {
+	return (
+		resolveSpeakerParticipant(speakerId, participants)?.displayName.trim() ??
+		null
+	);
+}
+
+/**
+ * The seated participant a message is attributed to, or null.
+ *
+ * Same resolution as {@link resolveSpeakerByline}, returning the participant so
+ * the avatar and the name come from one lookup and cannot disagree — an avatar
+ * beside a name belonging to someone else is a worse lie than no avatar. A
+ * participant whose display name is blank resolves to null here too: the row it
+ * would produce has nothing to attribute.
+ */
+export function resolveSpeakerParticipant(
+	speakerId: string | undefined,
+	participants: readonly Participant[] | undefined,
+): Participant | null {
 	const id = speakerId?.trim();
 	if (!id || !participants?.length) {
 		return null;
 	}
-	const displayName = participants
-		.find((participant) => participant.id === id)
-		?.displayName?.trim();
-	return displayName ? displayName : null;
+	const participant = participants.find((candidate) => candidate.id === id);
+	return participant?.displayName.trim() ? participant : null;
+}
+
+/**
+ * Inline style carrying a resolved ink, or undefined.
+ *
+ * Undefined rather than `{}` so an unstyled element keeps whatever the theme
+ * gives it: writing `color: undefined` on the byline would still beat the
+ * `text-muted-foreground` class in some React versions.
+ */
+export function inkStyle(
+	color: string | undefined,
+): { color: string } | undefined {
+	return color ? { color } : undefined;
 }

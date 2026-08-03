@@ -9,31 +9,17 @@ import {
 	subscribeToHostMessages,
 } from "../lib/host-message-gateway";
 import { postToHost } from "../vscode";
+import type {
+	DriveagentHomeListing,
+	DriveagentHomeProjection,
+} from "./driveagentHomeTypes";
+
+export type {
+	DriveagentHomeListing,
+	DriveagentHomeProjection,
+} from "./driveagentHomeTypes";
 
 const HOME_TIMEOUT_MS = 3_000;
-
-export type DriveagentHomeProjection = {
-	slug: string;
-	agent: {
-		name: string;
-		description: string;
-		tools?: string[];
-		skills?: string[];
-		editable?: boolean;
-	};
-	permissions: {
-		presetIntent: "readonly" | "standard" | "full";
-		approvalHooks: string[];
-		notes?: string;
-	};
-	compiled: {
-		name: string;
-		slug: string;
-		description: string;
-		tools?: string[];
-		skills?: string[];
-	};
-};
 
 type HomeReplyMessage = HostMessage & {
 	type: "drive_agent_home" | "drive_agent_home_error";
@@ -173,6 +159,110 @@ export function requestDriveagentHome(
 			requestId,
 			workspaceRoot: root,
 			slug: homeSlug,
+		});
+	});
+}
+
+type HomeListReplyMessage = HostMessage & {
+	type: "drive_agent_homes" | "drive_agent_home_error";
+	requestId?: string;
+	homes?: unknown;
+	text?: string;
+};
+
+const HOME_LIST_REPLY_TYPES = [
+	"drive_agent_homes",
+	"drive_agent_home_error",
+] as const;
+
+function isHomeListReplyMessage(
+	message: HostMessage,
+): message is HomeListReplyMessage {
+	return (
+		(message.type === "drive_agent_homes" ||
+			message.type === "drive_agent_home_error") &&
+		isOptionalString(message.requestId) &&
+		isOptionalString(message.text)
+	);
+}
+
+/**
+ * Parse a home listing.
+ *
+ * A row is kept on its slug alone: a home whose YAML stopped compiling still
+ * exists on disk, and dropping it would make the directory quietly disagree
+ * with the filesystem it is a view of.
+ */
+export function parseHomeListingPayload(
+	value: unknown,
+): DriveagentHomeListing[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+	const rows: DriveagentHomeListing[] = [];
+	for (const entry of value) {
+		if (!isRecord(entry) || typeof entry.slug !== "string" || !entry.slug) {
+			continue;
+		}
+		rows.push({
+			slug: entry.slug,
+			tier: entry.tier === "user" ? "user" : "workspace",
+			...(typeof entry.displayName === "string"
+				? { displayName: entry.displayName }
+				: {}),
+			...(typeof entry.description === "string"
+				? { description: entry.description }
+				: {}),
+			...(isStringArray(entry.skills) ? { skills: entry.skills } : {}),
+			...(typeof entry.editable === "boolean"
+				? { editable: entry.editable }
+				: {}),
+		});
+	}
+	return rows;
+}
+
+/** Request hub `drive_agent_home_list` for the agents directory. */
+export function requestDriveagentHomeList(
+	workspaceRoot: string,
+	options?: { timeoutMs?: number },
+): Promise<DriveagentHomeListing[]> {
+	const timeoutMs = options?.timeoutMs ?? HOME_TIMEOUT_MS;
+	const root = workspaceRoot.trim();
+	if (!root) {
+		return Promise.reject(new Error("workspaceRoot is required"));
+	}
+
+	const requestId = `drive-home-list-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
+			unsubscribe();
+			reject(new Error("drive_agent_home_list timed out"));
+		}, timeoutMs);
+
+		const unsubscribe = subscribeToHostMessages({
+			types: HOME_LIST_REPLY_TYPES,
+			guard: isHomeListReplyMessage,
+			onMessage: (message) => {
+				if (message.requestId !== requestId) {
+					return;
+				}
+				clearTimeout(timer);
+				unsubscribe();
+				if (message.type === "drive_agent_home_error") {
+					reject(
+						new Error(message.text?.trim() || "drive_agent_home_list failed"),
+					);
+					return;
+				}
+				resolve(parseHomeListingPayload(message.homes));
+			},
+		});
+		postToHost({
+			type: "drive_agent_home_list",
+			requestId,
+			workspaceRoot: root,
 		});
 	});
 }

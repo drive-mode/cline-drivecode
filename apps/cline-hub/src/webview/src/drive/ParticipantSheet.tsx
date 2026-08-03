@@ -15,13 +15,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { postToHost } from "../vscode";
+import { AgentAppearanceEditor } from "./AgentAppearanceEditor";
+import { AgentAvatar } from "./AgentAvatar";
 import { AgentPolicyEditor } from "./AgentPolicyEditor";
+import { durableAppearanceTarget } from "./agentAppearance";
 import {
-	driveParticipantInk,
 	driveParticipantProfileId,
 	resolveParticipantNameInk,
 	useDriveInkTheme,
 } from "./agentInk";
+import { agentProfilePath } from "./agentProfileRoute";
 import { buildHumanPinDefaults, type HumanPinKind } from "./pinDefaults";
 import {
 	type DriveagentHomeProjection,
@@ -35,7 +38,8 @@ import {
 } from "./rosterHelpers";
 import { buildSetStageMessage } from "./stageSharePin";
 import {
-	applyAgentNameInk,
+	applyAgentInk,
+	applyDurableAgentProfiles,
 	applyPartnerDisplayName,
 	DRIVE_PARTICIPANT_HUMAN,
 	DRIVE_PARTICIPANT_PARTNER,
@@ -420,9 +424,8 @@ function AgentProfileSections({
 
 	// Scoped to the agent whose sheet this is — editing one seat must not
 	// repaint the rest of the roster.
+	const durableTarget = durableAppearanceTarget(participant);
 	const profileId = driveParticipantProfileId(participant);
-	const storedInk = driveParticipantInk(drive, participant, "name");
-	const inkIndex = storedInk?.kind === "palette" ? storedInk.index : null;
 	const inkColor = resolveParticipantNameInk({
 		drive,
 		participant,
@@ -442,7 +445,8 @@ function AgentProfileSections({
 					>
 						Display name
 					</Label>
-					<div className="flex gap-2">
+					<div className="flex items-center gap-2">
+						<AgentAvatar ink={inkColor} participant={participant} size="md" />
 						<Input
 							id="partner-display-name"
 							onChange={(event) => setDisplayNameDraft(event.target.value)}
@@ -457,35 +461,30 @@ function AgentProfileSections({
 						<p className="text-[11px] text-muted-foreground">{saveNote}</p>
 					) : null}
 				</div>
-				<div className="space-y-1.5">
-					<Label
-						className="text-[10px] uppercase tracking-wide text-muted-foreground"
-						htmlFor="partner-name-ink"
+				<AgentAppearanceEditor
+					agentRef={durableTarget?.ref ?? null}
+					displayName={participant.displayName}
+					ink={drive.agentInks[profileId]}
+					onDurableProfiles={(profiles) =>
+						onDriveChange(applyDurableAgentProfiles(drive, profiles))
+					}
+					onInkChange={(next) =>
+						onDriveChange(applyAgentInk(drive, profileId, next))
+					}
+					profileId={profileId}
+					workspaceRoot={workspaceRoot}
+				/>
+				{durableTarget ? (
+					<a
+						className="inline-block text-[11px] underline underline-offset-2 hover:text-foreground"
+						data-testid="open-agent-profile-page"
+						href={agentProfilePath(durableTarget.profileId)}
+						rel="noreferrer"
+						target="_blank"
 					>
-						Name ink (palette)
-					</Label>
-					<select
-						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring"
-						id="partner-name-ink"
-						onChange={(event) => {
-							const raw = event.target.value;
-							const next = raw === "" ? null : Number.parseInt(raw, 10);
-							onDriveChange(applyAgentNameInk(drive, profileId, next));
-						}}
-						value={inkIndex === null ? "" : String(inkIndex)}
-					>
-						<option value="">Default</option>
-						{[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
-							<option key={index} value={String(index)}>
-								Palette {index}
-							</option>
-						))}
-					</select>
-					<p className="text-[11px] text-muted-foreground">
-						Resolved against the active theme and clamped for contrast. Local
-						only — durable facet upsert TBD.
-					</p>
-				</div>
+						Open full profile page
+					</a>
+				) : null}
 			</section>
 
 			<section className="space-y-2">

@@ -1,4 +1,8 @@
-import type { PlanReentryRowModel, RankedRecruit } from "@cline/drive";
+import type {
+	PlanReentryRowModel,
+	RankedRecruit,
+	RecruitCandidate,
+} from "@cline/drive";
 import {
 	applyPlanImproveAccept,
 	buildShippedDigest,
@@ -79,12 +83,14 @@ export function DriveRoster({
 	seatCap = 1,
 	onSeatRecruit,
 	onAddRosterPack,
+	recruitFixtures,
 }: {
 	session: UseDriveSessionResult;
 	disabled?: boolean;
 	seatCap?: number;
 	onSeatRecruit?: (entry: RankedRecruit) => void;
 	onAddRosterPack?: (pack: RosterPack) => void;
+	recruitFixtures?: readonly RecruitCandidate[];
 }) {
 	const { drive, setDrive } = session;
 	if (!drive.active) {
@@ -97,6 +103,7 @@ export function DriveRoster({
 			onAddRosterPack={onAddRosterPack}
 			onDriveChange={setDrive}
 			onSeatRecruit={onSeatRecruit}
+			recruitFixtures={recruitFixtures}
 			onTranscriptFocus={(participantId) => {
 				setDrive((current) => applyTranscriptFocus(current, participantId));
 			}}
@@ -119,6 +126,7 @@ export function DriveRoomChrome({
 	seatCap = 1,
 	onSeatRecruit,
 	onAddRosterPack,
+	recruitFixtures,
 	onCleanDrainContinue,
 	onCleanDrainDismiss,
 	onPlanningImproveResolved,
@@ -131,6 +139,7 @@ export function DriveRoomChrome({
 	seatCap?: number;
 	onSeatRecruit?: (entry: RankedRecruit) => void;
 	onAddRosterPack?: (pack: RosterPack) => void;
+	recruitFixtures?: readonly RecruitCandidate[];
 	onCleanDrainContinue?: () => void;
 	onCleanDrainDismiss?: () => void;
 	/** After accept/reject/mute — parent may mute identical offerKeys. */
@@ -262,6 +271,7 @@ export function DriveRoomChrome({
 					disabled={disabled}
 					onAddRosterPack={onAddRosterPack}
 					onSeatRecruit={onSeatRecruit}
+					recruitFixtures={recruitFixtures}
 					seatCap={seatCap}
 					session={session}
 				/>

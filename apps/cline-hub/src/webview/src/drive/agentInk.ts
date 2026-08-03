@@ -72,6 +72,74 @@ export function resolveParticipantNameInk(input: {
 }
 
 /**
+ * Resolved CSS colour for one channel, with no participant involved.
+ *
+ * The profile page styles an agent that may not be seated anywhere, so it has
+ * a profile id and an ink but no `Participant`. Everything still goes through
+ * the one resolver, so the clamp cannot be bypassed by that call site either.
+ */
+export function resolveChannelInk(input: {
+	ink: InkRef | null;
+	channel: DriveInkChannel;
+	profileId: string;
+	theme: DriveInkTheme;
+}): string {
+	return resolveInk(input).color;
+}
+
+/**
+ * Resolved CSS colour for a participant's message body.
+ *
+ * Independent of the name channel by design — the resolver is asked for `body`
+ * with the body ink, so an agent can carry a loud name and quiet prose, or the
+ * reverse. Humans are left alone, exactly as with names.
+ */
+export function resolveParticipantBodyInk(input: {
+	drive: DriveUiState;
+	participant: Participant;
+	theme: DriveInkTheme;
+}): string | undefined {
+	const { drive, participant, theme } = input;
+	if (participant.kind !== "agent") {
+		return undefined;
+	}
+	return resolveInk({
+		ink: driveParticipantInk(drive, participant, "body"),
+		channel: "body",
+		profileId: driveParticipantProfileId(participant),
+		theme,
+	}).color;
+}
+
+export type SpeakerInk = { name?: string; body?: string };
+
+/**
+ * Both channels for every seated participant, keyed by participant id.
+ *
+ * Built once per render rather than resolved inside the message loop: the feed
+ * can hold hundreds of messages and each resolve walks a contrast search. Keyed
+ * by participant id because that is what `speakerId` carries — the durable
+ * profile id is an implementation detail of where the ink was stored.
+ */
+export function buildSpeakerInkMap(
+	drive: DriveUiState,
+	participants: readonly Participant[],
+	theme: DriveInkTheme,
+): Record<string, SpeakerInk> {
+	const inks: Record<string, SpeakerInk> = {};
+	for (const participant of participants) {
+		if (participant.kind !== "agent") {
+			continue;
+		}
+		inks[participant.id] = {
+			name: resolveParticipantNameInk({ drive, participant, theme }),
+			body: resolveParticipantBodyInk({ drive, participant, theme }),
+		};
+	}
+	return inks;
+}
+
+/**
  * Ink for the agent holding the spotlight.
  *
  * Reads the same roster projection the byline does, so the shared screen's chip
@@ -87,19 +155,34 @@ export function resolveSpotlightSharerInk(
 	theme: DriveInkTheme,
 	participants: readonly Participant[],
 ): string | undefined {
-	const agents = participants.filter(
-		(participant) => participant.kind === "agent",
-	);
-	const sharer =
-		agents.find(
-			(participant) => participant.id === drive.spotlightParticipantId,
-		) ??
-		agents.find((participant) => participant.role === "partner") ??
-		agents[0];
+	const sharer = resolveSpotlightSharer(drive, participants);
 	if (!sharer) {
 		return undefined;
 	}
 	return resolveParticipantNameInk({ drive, participant: sharer, theme });
+}
+
+/**
+ * The agent whose identity the shared screen is presenting under.
+ *
+ * Shared by the chip's ink and the idle avatar so the two cannot disagree — a
+ * screen showing one agent's colour under another agent's mark is worse than
+ * showing neither.
+ */
+export function resolveSpotlightSharer(
+	drive: DriveUiState,
+	participants: readonly Participant[],
+): Participant | undefined {
+	const agents = participants.filter(
+		(participant) => participant.kind === "agent",
+	);
+	return (
+		agents.find(
+			(participant) => participant.id === drive.spotlightParticipantId,
+		) ??
+		agents.find((participant) => participant.role === "partner") ??
+		agents[0]
+	);
 }
 
 function readThemeMode(): "light" | "dark" {

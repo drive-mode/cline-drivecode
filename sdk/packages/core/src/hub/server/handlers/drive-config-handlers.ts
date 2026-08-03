@@ -8,6 +8,7 @@
  * colours — see `upsertAgentProfile`.
  */
 
+import { resolve } from "node:path";
 import type {
 	AgentAppearance,
 	AgentRef,
@@ -21,6 +22,7 @@ import {
 	parseDriveFacetValues,
 	type ResolvedLlmEgress,
 } from "@cline/shared";
+import { getDriveRoomStore } from "../../collaboration";
 import {
 	listAgentProfiles,
 	upsertAgentProfile,
@@ -37,6 +39,47 @@ function readString(
 ): string | undefined {
 	const value = payload?.[key];
 	return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/**
+ * Same workspace, tolerating separator and drive-letter-case differences —
+ * matches `sameWorkspaceRoot` in `drive-home-handlers.ts`.
+ */
+function sameWorkspaceRoot(a: string, b: string): boolean {
+	const normalize = (path: string) => {
+		const resolved = resolve(path);
+		return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+	};
+	return normalize(a) === normalize(b);
+}
+
+/**
+ * An appearance write must land in the workspace this hub is bound to.
+ *
+ * `configParent` arrives in the payload, and since this op became reachable
+ * from the browser it arrives from a page. Unchecked, it names any directory on
+ * the host, and `upsertAgentProfile` creates `<dir>/.cline/drive/` on the way —
+ * so an appearance editor doubles as a writer of that path anywhere on disk.
+ * The Driveagent home lane already refuses this; there is no reason the
+ * appearance lane should be the softer of the two.
+ *
+ * When nothing is bound yet there is no workspace to be outside of, and the
+ * write proceeds. That makes this containment, not authorization — per-peer
+ * authority does not exist at this layer.
+ */
+function assertWorkspaceInBounds(
+	envelope: HubCommandEnvelope,
+	configParent: string,
+): HubReplyEnvelope | undefined {
+	const boundRoot = getDriveRoomStore().getEventLog().configParent;
+	if (boundRoot && !sameWorkspaceRoot(boundRoot, configParent)) {
+		return errorReply(
+			envelope,
+			"workspace_not_bound",
+			"workspaceRoot must be the workspace this hub is bound to",
+		);
+	}
+	return undefined;
 }
 
 function defaultLlm(): ResolvedLlmEgress {
@@ -97,6 +140,10 @@ export function handleDriveConfigCommand(
 			});
 		}
 		case "drive_config_upsert_profile": {
+			const outOfBounds = assertWorkspaceInBounds(envelope, configParent);
+			if (outOfBounds) {
+				return outOfBounds;
+			}
 			const raw = envelope.payload?.profile;
 			if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
 				return errorReply(

@@ -80,6 +80,7 @@ import { DriveView } from "./components/views/drive-view";
 import { PageFrame, PageHeader } from "./components/views/page-layout";
 import type { CustomizationSection } from "./components/views/settings/extensions-view";
 import type { SettingsSection } from "./components/views/settings/settings-view";
+import { parseAgentProfileParam } from "./drive/agentProfileRoute";
 import { ChatForkDemo } from "./drive/ChatForkDemo";
 import type {
 	DriveLaunchRequest,
@@ -146,6 +147,16 @@ const ArtifactsView = lazy(() =>
 const CustomizationSectionView = lazy(() =>
 	import("./components/views/settings/extensions-view").then((module) => ({
 		default: module.CustomizationSectionView,
+	})),
+);
+const AgentDirectory = lazy(() =>
+	import("./drive/AgentDirectory").then((module) => ({
+		default: module.AgentDirectory,
+	})),
+);
+const AgentProfilePage = lazy(() =>
+	import("./drive/AgentProfilePage").then((module) => ({
+		default: module.AgentProfilePage,
 	})),
 );
 
@@ -1417,7 +1428,11 @@ function App() {
 					: "lobby";
 			setView(nextView);
 			setDriveShellMode(nextShell);
-			if (nextView !== "drive" || nextShell === "lobby" || nextShell === "history") {
+			if (
+				nextView !== "drive" ||
+				nextShell === "lobby" ||
+				nextShell === "history"
+			) {
 				setDriveLaunchRequest(null);
 			}
 			if (nextSessionId) {
@@ -1780,12 +1795,31 @@ function App() {
 				/>
 			);
 		}
-		if (
-			view === "rules" ||
-			view === "hooks" ||
-			view === "agents" ||
-			view === "tools"
-		) {
+		if (view === "agents") {
+			// Query-param detail, like `/drive?id=`. `viewFromPath` and
+			// `isWebviewRoute` both key on the pathname, so `/agents?id=…` already
+			// serves and already routes — a path param would have to teach both
+			// lists a prefix rule they do not have.
+			const agentProfileId = parseAgentProfileParam(locationSearch);
+			if (agentProfileId) {
+				return (
+					<AgentProfilePage
+						key={agentProfileId}
+						onBack={() => navigate("agents")}
+						profileId={agentProfileId}
+						workspaceRoot={driveWorkspaceRoot}
+					/>
+				);
+			}
+			return (
+				<CustomizationSectionView
+					intro={<AgentDirectory workspaceRoot={driveWorkspaceRoot} />}
+					key={view}
+					section={CUSTOMIZATION_VIEW_SECTIONS[view]}
+				/>
+			);
+		}
+		if (view === "rules" || view === "hooks" || view === "tools") {
 			return (
 				<CustomizationSectionView
 					key={view}
@@ -1831,6 +1865,7 @@ function App() {
 		selectedSessionId,
 		settingsSection,
 		updateChatSessionRoute,
+		locationSearch,
 		view,
 	]);
 

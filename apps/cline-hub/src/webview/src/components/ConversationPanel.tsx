@@ -37,8 +37,9 @@ import type {
 	WebviewChatMessage,
 	WebviewChatMessageBlock,
 } from "../../../webview-protocol";
+import { AgentAvatar } from "../drive/AgentAvatar";
 import { postToHost } from "../vscode";
-import { resolveSpeakerByline } from "./speakerBylineLogic";
+import { inkStyle, resolveSpeakerParticipant } from "./speakerBylineLogic";
 
 type ChatMessage = WebviewChatMessage;
 type ChatMessageBlock = WebviewChatMessageBlock;
@@ -255,6 +256,14 @@ export type ConversationPanelProps = {
 	onFork: () => void;
 	/** Call roster used to name a message's speaker. Empty outside a call. */
 	participants?: readonly Participant[];
+	/**
+	 * Resolved name/body colours per participant id (DRV-AGENT-PROFILE).
+	 *
+	 * Passed in already resolved rather than derived here: the colour maths and
+	 * its contrast clamp belong to `@cline/drive`, and this panel also renders
+	 * outside a call, where there is no Drive state to resolve against.
+	 */
+	speakerInks?: Readonly<Record<string, { name?: string; body?: string }>>;
 	sending: boolean;
 };
 
@@ -265,6 +274,7 @@ export function ConversationPanel({
 	messages,
 	onFork,
 	participants,
+	speakerInks,
 	sending,
 }: ConversationPanelProps) {
 	return (
@@ -299,12 +309,32 @@ export function ConversationPanel({
 						);
 					}
 
+					const speaker = resolveSpeakerParticipant(
+						message.speakerId,
+						participants,
+					);
+					// Only an attributed message carries an identity colour. An
+					// unattributed one keeps the theme's own foreground: tinting it
+					// with the partner's ink would attribute it by colour after the
+					// byline deliberately declined to attribute it by name.
+					const ink = speaker ? speakerInks?.[speaker.id] : undefined;
+
 					return (
 						<Message from={message.role} key={message.id}>
 							<MessageByline
-								name={resolveSpeakerByline(message.speakerId, participants)}
+								avatar={
+									speaker ? (
+										<AgentAvatar
+											ink={ink?.name}
+											participant={speaker}
+											size="sm"
+										/>
+									) : undefined
+								}
+								name={speaker?.displayName.trim() ?? null}
+								style={inkStyle(ink?.name)}
 							/>
-							<div>
+							<div style={inkStyle(ink?.body)}>
 								{renderMessageBlocks(message, { sending })}
 								{message.role === "user" && message.checkpoint ? (
 									<Checkpoint className="mt-1 justify-end">

@@ -4,8 +4,8 @@ import {
 	allowWorkspaceMutation,
 	type CleanDrainInvite,
 	type DrivePostureOverride,
-	type SdlcFreezeProposal,
 	resolveDriveLoop,
+	type SdlcFreezeProposal,
 } from "@cline/drive";
 import type {
 	BankSnapshot,
@@ -17,8 +17,8 @@ import type {
 	StagePin,
 } from "@cline/shared";
 import {
-	planEditConsequenceBanner,
 	type PlanMutationKind,
+	planEditConsequenceBanner,
 } from "./agencyChrome";
 import { isDriveHumanId } from "./participantIds";
 
@@ -463,6 +463,110 @@ export function applyAgentNameInk(
 			},
 		},
 	};
+}
+
+/**
+ * Set one agent's bodyInk, or clear it back to the resolver's `muted` default.
+ *
+ * Separate from {@link applyAgentNameInk} on purpose: the two channels are
+ * chosen independently, and a single "agent colour" would make the name and the
+ * message body move together, which is precisely what the feature is not.
+ */
+export function applyAgentBodyInk(
+	state: DriveUiState,
+	profileId: string,
+	ink: InkRef | null,
+): DriveUiState {
+	if (!profileId) {
+		return state;
+	}
+	const existing = state.agentInks[profileId];
+	if (ink === null) {
+		if (!existing?.bodyInk) {
+			return state;
+		}
+		const { bodyInk: _dropped, ...rest } = existing;
+		const agentInks = { ...state.agentInks };
+		if (Object.keys(rest).length > 0) {
+			agentInks[profileId] = rest;
+		} else {
+			delete agentInks[profileId];
+		}
+		return { ...state, agentInks };
+	}
+	return {
+		...state,
+		agentInks: {
+			...state.agentInks,
+			[profileId]: { ...existing, bodyInk: ink },
+		},
+	};
+}
+
+/**
+ * Replace both of one agent's ink channels at once.
+ *
+ * The editor changes one channel and carries the other through unchanged, so
+ * it hands back a whole {@link DriveAgentInk}. An entry with neither channel
+ * set is deleted rather than kept as `{}` — "no stored appearance" and "an
+ * appearance that stores nothing" resolve identically, and only one of them
+ * should be written back to the persisted blob.
+ */
+export function applyAgentInk(
+	state: DriveUiState,
+	profileId: string,
+	ink: DriveAgentInk,
+): DriveUiState {
+	if (!profileId) {
+		return state;
+	}
+	const next: DriveAgentInk = {
+		...(ink.nameInk ? { nameInk: ink.nameInk } : {}),
+		...(ink.bodyInk ? { bodyInk: ink.bodyInk } : {}),
+	};
+	const agentInks = { ...state.agentInks };
+	if (Object.keys(next).length === 0) {
+		if (!(profileId in agentInks)) {
+			return state;
+		}
+		delete agentInks[profileId];
+	} else {
+		agentInks[profileId] = next;
+	}
+	return { ...state, agentInks };
+}
+
+/**
+ * Overlay the hub's durable `agent.appearance` map onto local ink state.
+ *
+ * Durable wins. The local map is a cache of the same facet, so a browser whose
+ * localStorage disagrees with disk is stale, not authoritative — the opposite
+ * merge would let one machine's leftover colour outlive a deliberate change
+ * made on another. Agents absent from the durable map keep whatever the browser
+ * had, so an unsaved in-flight edit is not wiped by a background refresh.
+ */
+export function applyDurableAgentProfiles(
+	state: DriveUiState,
+	profiles: readonly {
+		id: string;
+		nameInk: InkRef;
+		bodyInk: InkRef;
+	}[],
+): DriveUiState {
+	if (profiles.length === 0) {
+		return state;
+	}
+	const agentInks: Record<string, DriveAgentInk> = { ...state.agentInks };
+	for (const profile of profiles) {
+		if (!profile.id) {
+			continue;
+		}
+		agentInks[profile.id] = {
+			nameInk: profile.nameInk,
+			bodyInk: profile.bodyInk,
+		};
+	}
+	return { ...state, agentInks };
 }
 
 export function drivePersonaSystemHint(state: DriveUiState): string {

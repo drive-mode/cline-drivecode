@@ -14,6 +14,13 @@ export type DriveAgentHomeWebviewFrame = {
 	[key: string]: unknown;
 };
 
+export type DriveAgentHomeListWebviewFrame = {
+	type: "drive_agent_home_list";
+	workspaceRoot: string;
+	requestId?: string;
+	[key: string]: unknown;
+};
+
 export type DriveAgentHomePutWebviewFrame = {
 	type: "drive_agent_home_put";
 	workspaceRoot: string;
@@ -271,6 +278,120 @@ export async function handleDriveAgentHomeWebviewCommand(
 			type: "drive_agent_home",
 			home,
 			compiled,
+			requestId,
+		});
+	} catch (error) {
+		sendHomeError(
+			ctx,
+			peer,
+			requestId,
+			error instanceof Error ? error.message : String(error),
+			"drive_agent_home_command_failed",
+		);
+	}
+}
+
+type SanitizedHomeListing = {
+	slug: string;
+	tier: "workspace" | "user";
+	displayName?: string;
+	description?: string;
+	skills?: string[];
+	editable?: boolean;
+};
+
+/**
+ * Keep the listing to the fields the directory renders.
+ *
+ * Same rule as the single-home lane: tools and prompts are not on it, so a
+ * future hub that widened the reply cannot widen what a browser sees.
+ */
+function sanitizeHomeListing(value: unknown): SanitizedHomeListing[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+	const rows: SanitizedHomeListing[] = [];
+	for (const entry of value) {
+		if (!entry || typeof entry !== "object") {
+			continue;
+		}
+		const record = entry as Record<string, unknown>;
+		const slug = typeof record.slug === "string" ? record.slug.trim() : "";
+		if (!slug) {
+			continue;
+		}
+		const displayName =
+			typeof record.displayName === "string"
+				? record.displayName.trim()
+				: undefined;
+		const description =
+			typeof record.description === "string"
+				? record.description.trim()
+				: undefined;
+		const skills = asStringArray(record.skills);
+		rows.push({
+			slug,
+			tier: record.tier === "user" ? "user" : "workspace",
+			...(displayName ? { displayName } : {}),
+			...(description ? { description } : {}),
+			...(skills ? { skills } : {}),
+			...(typeof record.editable === "boolean"
+				? { editable: record.editable }
+				: {}),
+		});
+	}
+	return rows;
+}
+
+/** Bridges the agents directory to hub `drive_agent_home_list`. */
+export async function handleDriveAgentHomeListWebviewCommand(
+	ctx: HubContext,
+	peer: BrowserPeer,
+	frame: DriveAgentHomeListWebviewFrame,
+): Promise<void> {
+	const requestId =
+		typeof frame.requestId === "string" ? frame.requestId : undefined;
+	if (!ctx.uiClient) {
+		sendHomeError(
+			ctx,
+			peer,
+			requestId,
+			"Hub is not connected.",
+			"hub_disconnected",
+		);
+		return;
+	}
+	const workspaceRoot =
+		typeof frame.workspaceRoot === "string" ? frame.workspaceRoot.trim() : "";
+	if (!workspaceRoot) {
+		sendHomeError(
+			ctx,
+			peer,
+			requestId,
+			"workspaceRoot is required.",
+			"invalid_payload",
+		);
+		return;
+	}
+
+	try {
+		const reply = await ctx.uiClient.command(
+			"drive_agent_home_list" as HubCommandName,
+			{ workspaceRoot },
+		);
+		if (!reply.ok) {
+			sendHomeError(
+				ctx,
+				peer,
+				requestId,
+				reply.error?.message ?? "Drive agent home list failed.",
+				reply.error?.code,
+			);
+			return;
+		}
+		ctx.send(peer, {
+			type: "drive_agent_homes",
+			homes: sanitizeHomeListing(reply.payload?.homes),
 			requestId,
 		});
 	} catch (error) {

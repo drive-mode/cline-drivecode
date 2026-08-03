@@ -47,9 +47,11 @@ import {
 	isDrivePartnerId,
 	toggleDriveSpotlightId,
 } from "./participantIds";
+import { requestDriveAgentProfiles } from "./requestDriveAgentProfiles";
 import { resolveNarratorParticipantId } from "./rosterHelpers";
 import {
 	applyBankSnapshot,
+	applyDurableAgentProfiles,
 	applyRoomSnapshot,
 	applySubModeIntent,
 	clearPostureOverride,
@@ -560,6 +562,37 @@ export function useDriveSession(
 		},
 		[],
 	);
+
+	/**
+	 * Hydrate per-agent appearance from the durable facet (DRV-AGENT-PROFILE).
+	 *
+	 * Without this the inks are whatever *this* browser last stored, which is
+	 * why a colour set on one machine used to be invisible on another and why a
+	 * cleared profile lost it. The hub's `agent.appearance` map is the source of
+	 * truth; the local map is a cache of it, so durable wins on arrival.
+	 *
+	 * Failures are swallowed on purpose: an agent with no stored appearance
+	 * still resolves to a real colour through the stable default hash, so a
+	 * hub that cannot answer is a missing override, not a broken roster.
+	 */
+	useEffect(() => {
+		const root = args.workspaceRoot?.trim();
+		if (!args.workspaceRootReady || !root) {
+			return;
+		}
+		let cancelled = false;
+		void requestDriveAgentProfiles(root)
+			.then((profiles) => {
+				if (cancelled || profiles.length === 0) {
+					return;
+				}
+				setDrive((current) => applyDurableAgentProfiles(current, profiles));
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [args.workspaceRoot, args.workspaceRootReady]);
 
 	/** Replays a join deferred because workspaceRoot had not resolved yet. */
 	useEffect(() => {

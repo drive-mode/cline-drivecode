@@ -4,7 +4,7 @@
  * First-match-by-slug: workspace tier, then optional user tier under `~/.driveagent/`.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -65,4 +65,62 @@ export function resolveDriveagentHomeDir(input: {
 	}
 
 	return null;
+}
+
+/** Slugs are the directory name, and the loader only accepts this shape. */
+const SLUG_PATTERN = /^[a-z0-9-]+$/;
+
+function readSlugsIn(parentDir: string): string[] {
+	let entries: string[];
+	try {
+		entries = readdirSync(parentDir, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name);
+	} catch {
+		// A workspace with no `.driveagent/` is the normal case, not an error.
+		return [];
+	}
+	return entries.filter(
+		(name) => SLUG_PATTERN.test(name) && hasAgentYaml(join(parentDir, name)),
+	);
+}
+
+/**
+ * Every Driveagent home reachable from this workspace, workspace tier first.
+ *
+ * Mirrors {@link resolveDriveagentHomeDir}'s first-match-by-slug rule: a slug
+ * present in both tiers is listed once, as `workspace`, because that is the one
+ * a read would actually open. Directories without an `agent.yaml` are skipped —
+ * a folder is not a home, and listing one would produce a profile page that
+ * cannot load.
+ */
+export function listDriveagentHomeDirs(input: {
+	workspaceRoot: string;
+	/** Override for tests; defaults to `os.homedir()`. */
+	userHomeDir?: string;
+}): Array<ResolvedDriveagentHomeDir & { slug: string }> {
+	const workspaceParent = join(input.workspaceRoot, DRIVEAGENT_DIRECTORY_NAME);
+	const userParent = join(
+		input.userHomeDir ?? homedir(),
+		DRIVEAGENT_DIRECTORY_NAME,
+	);
+	const seen = new Set<string>();
+	const homes: Array<ResolvedDriveagentHomeDir & { slug: string }> = [];
+
+	for (const slug of readSlugsIn(workspaceParent)) {
+		seen.add(slug);
+		homes.push({
+			slug,
+			path: join(workspaceParent, slug),
+			tier: "workspace",
+		});
+	}
+	for (const slug of readSlugsIn(userParent)) {
+		if (seen.has(slug)) {
+			continue;
+		}
+		seen.add(slug);
+		homes.push({ slug, path: join(userParent, slug), tier: "user" });
+	}
+	return homes.sort((a, b) => a.slug.localeCompare(b.slug));
 }

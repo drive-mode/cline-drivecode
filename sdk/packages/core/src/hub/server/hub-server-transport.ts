@@ -502,6 +502,7 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_session_rollups":
 				return await handleDriveSessionRollupsCommand(this.ctx, envelope);
 			case "drive_agent_home_get":
+			case "drive_agent_home_list":
 			case "drive_agent_home_put":
 				return await handleDriveHomeCommand(this.ctx, envelope);
 			case "call_join":

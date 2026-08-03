@@ -6,15 +6,15 @@ import { HandIcon, MicOffIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-	AddPackMenu,
-	type AddPackMenuPanel,
-} from "./AddPackMenu";
+import { AddPackMenu, type AddPackMenuPanel } from "./AddPackMenu";
+import { AgentAvatar } from "./AgentAvatar";
+import { resolveParticipantNameInk, useDriveInkTheme } from "./agentInk";
 import {
 	ParticipantSheet,
 	type ParticipantSheetMode,
 } from "./ParticipantSheet";
 import { RecruitAddPicker } from "./RecruitAddPicker";
+import { RosterPackLibrary } from "./RosterPackLibrary";
 import { collectRecruitCandidates } from "./recruitAddNeed";
 import {
 	isRosterParticipantHandRaised,
@@ -22,9 +22,7 @@ import {
 	participantStatusLabel,
 	resolveRosterParticipants,
 } from "./rosterHelpers";
-import { RosterPackLibrary } from "./RosterPackLibrary";
 import type { DriveUiState } from "./types";
-import { resolveParticipantNameInk, useDriveInkTheme } from "./agentInk";
 
 export function Roster({
 	drive,
@@ -35,6 +33,7 @@ export function Roster({
 	seatCap = 1,
 	onSeatRecruit,
 	onAddRosterPack,
+	recruitFixtures,
 }: {
 	drive: DriveUiState;
 	workspaceRoot?: string;
@@ -46,6 +45,12 @@ export function Roster({
 	seatCap?: number;
 	onSeatRecruit?: (entry: RankedRecruit) => void;
 	onAddRosterPack?: (pack: RosterPack) => void;
+	/**
+	 * Recruitable agents beyond the seated roster. Defaults to the built-in
+	 * fixtures; the call surface passes the workspace's real Driveagent homes,
+	 * which are the entries whose seat can carry an honest `ref`.
+	 */
+	recruitFixtures?: readonly RecruitCandidate[];
 }) {
 	const participants = resolveRosterParticipants(drive);
 	const inkTheme = useDriveInkTheme();
@@ -59,8 +64,11 @@ export function Roster({
 			: (participants.find((entry) => entry.id === selectedId) ?? null);
 
 	const recruitCandidates: RecruitCandidate[] = useMemo(
-		() => collectRecruitCandidates(participants),
-		[participants],
+		() =>
+			recruitFixtures
+				? collectRecruitCandidates(participants, recruitFixtures)
+				: collectRecruitCandidates(participants),
+		[participants, recruitFixtures],
 	);
 
 	const openChooser = (participant: Participant) => {
@@ -82,10 +90,7 @@ export function Roster({
 				</span>
 				{participants.map((participant) => {
 					const muted = isRosterParticipantMuted(drive, participant);
-					const handRaised = isRosterParticipantHandRaised(
-						drive,
-						participant,
-					);
+					const handRaised = isRosterParticipantHandRaised(drive, participant);
 					const focused = drive.focusedParticipantId === participant.id;
 					const speaking = participant.status === "speaking";
 					const inkColor = resolveParticipantNameInk({
@@ -101,21 +106,18 @@ export function Roster({
 								"inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors",
 								"border-amber-500/30 bg-background/80 hover:bg-amber-500/10",
 								focused && "ring-1 ring-amber-500/60",
-								speaking && "border-amber-500 shadow-[0_0_0_1px_rgba(245,158,11,0.35)]",
+								speaking &&
+									"border-amber-500 shadow-[0_0_0_1px_rgba(245,158,11,0.35)]",
 							)}
 							key={participant.id}
 							onClick={() => openChooser(participant)}
 							type="button"
 						>
-							<span
-								aria-hidden
-								className={cn(
-									"inline-block size-2 shrink-0 rounded-full",
-									participant.kind === "human"
-										? "bg-sky-500"
-										: "bg-amber-500",
-									speaking && "animate-pulse",
-								)}
+							<AgentAvatar
+								className={cn(speaking && "animate-pulse")}
+								ink={inkColor}
+								participant={participant}
+								size="sm"
 							/>
 							<span
 								className="max-w-[8rem] truncate font-medium"

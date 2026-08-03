@@ -2,7 +2,12 @@
 
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
+import type {
+	ComponentProps,
+	HTMLAttributes,
+	ReactElement,
+	ReactNode,
+} from "react";
 import {
 	createContext,
 	memo,
@@ -38,9 +43,20 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
 	/>
 );
 
-export type MessageBylineProps = HTMLAttributes<HTMLDivElement> & {
+export type MessageBylineProps = Omit<
+	HTMLAttributes<HTMLDivElement>,
+	"children"
+> & {
 	/** Resolved speaker name. Null renders nothing — never a placeholder. */
 	name: string | null;
+	/**
+	 * The speaker's avatar, when one is known.
+	 *
+	 * Rendered only alongside a name: an avatar on its own would be attribution
+	 * without a subject, and the whole point of the null rule below is that a
+	 * byline never claims more than the room data supports.
+	 */
+	avatar?: ReactNode;
 };
 
 /**
@@ -54,6 +70,7 @@ export type MessageBylineProps = HTMLAttributes<HTMLDivElement> & {
 export const MessageByline = ({
 	className,
 	name,
+	avatar,
 	...props
 }: MessageBylineProps) => {
 	if (!name) {
@@ -63,13 +80,14 @@ export const MessageByline = ({
 	return (
 		<div
 			className={cn(
-				"font-medium text-muted-foreground text-xs",
+				"flex items-center gap-1.5 font-medium text-muted-foreground text-xs",
 				"group-[.is-user]:ml-auto",
 				className,
 			)}
 			data-slot="message-byline"
 			{...props}
 		>
+			{avatar}
 			{name}
 		</div>
 	);

@@ -24,9 +24,14 @@ import {
 } from "./server/deps";
 import { handleDesktopCommand } from "./server/desktop-commands";
 import {
+	handleDriveAgentHomeListWebviewCommand,
 	handleDriveAgentHomePutWebviewCommand,
 	handleDriveAgentHomeWebviewCommand,
 } from "./server/drive-agent-home";
+import {
+	handleDriveAgentProfilePutWebviewCommand,
+	handleDriveAgentProfilesGetWebviewCommand,
+} from "./server/drive-agent-profiles";
 import { handleDriveArtifactsWebviewCommand } from "./server/drive-artifacts";
 import { handleDriveBankWebviewCommand } from "./server/drive-bank";
 import { handleCallCommand } from "./server/drive-calls";
@@ -431,8 +436,14 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						await handleDrivePlanImproveWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_agent_home_get") {
 						await handleDriveAgentHomeWebviewCommand(ctx, peer, frame);
+					} else if (frame.type === "drive_agent_home_list") {
+						await handleDriveAgentHomeListWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_agent_home_put") {
 						await handleDriveAgentHomePutWebviewCommand(ctx, peer, frame);
+					} else if (frame.type === "drive_agent_profiles_get") {
+						await handleDriveAgentProfilesGetWebviewCommand(ctx, peer, frame);
+					} else if (frame.type === "drive_agent_profile_put") {
+						await handleDriveAgentProfilePutWebviewCommand(ctx, peer, frame);
 					} else if (
 						frame.type === "status_query" ||
 						frame.type === "status_board" ||

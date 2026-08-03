@@ -386,6 +386,14 @@ export type WebviewInboundMessage =
 				id: string;
 				displayName: string;
 				role?: "partner" | "specialist" | "recorder";
+				/**
+				 * Identity spine, sent only when this browser actually knows it —
+				 * a Driveagent home the user picked, or the builtin pair partner.
+				 * Omitted otherwise: the hub records `ref` verbatim into an
+				 * append-only join event, so a guess would be a durable false
+				 * claim, and absent is the honest reading.
+				 */
+				ref?: import("@cline/shared").AgentRef;
 			};
 			seatCap?: number;
 	  }
@@ -537,6 +545,34 @@ export type WebviewInboundMessage =
 			workspaceRoot: string;
 			slug: string;
 			patch: import("@cline/drive").DriveagentHomePatch;
+			requestId?: string;
+	  }
+	| {
+			/** Every `.driveagent/<slug>/` home the workspace can open. */
+			type: "drive_agent_home_list";
+			workspaceRoot: string;
+			requestId?: string;
+	  }
+	| {
+			/**
+			 * Read the durable per-agent appearance map (`agent.appearance` in
+			 * `catalog-facets.v1.json`). Without this the webview's inks are
+			 * browser-local and a different machine sees different colours.
+			 */
+			type: "drive_agent_profiles_get";
+			workspaceRoot: string;
+			requestId?: string;
+	  }
+	| {
+			/** Durably write one agent's appearance. Whole-profile, not a patch. */
+			type: "drive_agent_profile_put";
+			workspaceRoot: string;
+			profile: {
+				ref: import("@cline/shared").AgentRef;
+				displayName?: string;
+				nameInk: import("@cline/shared").InkRef;
+				bodyInk: import("@cline/shared").InkRef;
+			};
 			requestId?: string;
 	  }
 	| {
@@ -893,6 +929,44 @@ export type WebviewOutboundMessage =
 			text: string;
 			code?: string;
 			requestId?: string;
+	  }
+	| {
+			/**
+			 * Durable appearance for every agent the workspace has ever styled.
+			 * Sent for both the read and the write lane so a save and a reload
+			 * hydrate from exactly the same shape.
+			 */
+			type: "drive_agent_profiles";
+			requestId?: string;
+			profiles: Array<{
+				id: string;
+				ref: import("@cline/shared").AgentRef;
+				displayName?: string;
+				nameInk: import("@cline/shared").InkRef;
+				bodyInk: import("@cline/shared").InkRef;
+			}>;
+	  }
+	| {
+			type: "drive_agent_profiles_error";
+			text: string;
+			code?: string;
+			requestId?: string;
+	  }
+	| {
+			/**
+			 * The workspace's Driveagent homes. A row with no `displayName` is a
+			 * home whose YAML did not compile — listed, because it exists.
+			 */
+			type: "drive_agent_homes";
+			requestId?: string;
+			homes: Array<{
+				slug: string;
+				tier: "workspace" | "user";
+				displayName?: string;
+				description?: string;
+				skills?: string[];
+				editable?: boolean;
+			}>;
 	  }
 	| {
 			type: "status_page";

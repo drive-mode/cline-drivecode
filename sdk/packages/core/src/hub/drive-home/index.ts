@@ -10,6 +10,7 @@ export {
 	DRIVEAGENT_ENV_YAML,
 	DRIVEAGENT_PERMISSIONS_YAML,
 	type DriveagentHomeTier,
+	listDriveagentHomeDirs,
 	type ResolvedDriveagentHomeDir,
 	resolveDriveagentHomeDir,
 	resolveUserDriveagentHomeDir,

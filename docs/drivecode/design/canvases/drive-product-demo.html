@@ -3948,11 +3948,11 @@
         </div>
       </div>
 
-      <!-- Agents & teams: call a whole team at once instead of one by one -->
+      <!-- Agents: a profile page each. Teams below are a roster list. -->
       <div class="surface" id="surface-agents">
         <div class="rooms-page">
-          <h2>Agents <span class="badge planned">planned</span></h2>
-          <p class="lead">Every agent you can seat — and the teams that call them together.</p>
+          <h2>Agents <span class="badge shipped">shipped</span></h2>
+          <p class="lead">Every agent you can seat, each with its own profile page — policies as code, skills, teams, icon and colours.</p>
           <div class="agents-grid">
             <div class="agent-card">
               <div class="agent-id">
@@ -3995,7 +3995,9 @@
               <div class="agent-teams"><span class="team-chip none">no team yet</span></div>
             </div>
           </div>
-          <div class="teams-eyebrow">Teams</div>
+          <!-- Calling a team seats its members' roster metadata; no member
+               gets a runtime of its own, so the spawn side stays PLANNED. -->
+          <div class="teams-eyebrow">Teams <span class="badge planned">planned</span></div>
           <div class="teams-grid">
             <div class="team-card">
               <div class="team-head">
@@ -4003,7 +4005,7 @@
                 <span class="team-members" aria-hidden="true"><span class="agent-av">C</span><span class="agent-av">R</span></span>
               </div>
               <div class="team-desc">Cline + Riley · ships the polish</div>
-              <button type="button" class="call-team" title="Seats the whole team in one call">
+              <button type="button" class="call-team" title="Seats every member's roster metadata in one call - it does not start them">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Call team
               </button>
@@ -4014,7 +4016,7 @@
                 <span class="team-members" aria-hidden="true"><span class="agent-av">R</span><span class="agent-av">S</span></span>
               </div>
               <div class="team-desc">Riley + Sam · keeps the battery green</div>
-              <button type="button" class="call-team" title="Seats the whole team in one call">
+              <button type="button" class="call-team" title="Seats every member's roster metadata in one call - it does not start them">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Call team
               </button>
@@ -4453,7 +4455,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L7216–L7219",
+      range: "L7221–L7224",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through (s3 is the
       // "remember the new one" assignment), ghost/ret are inline-value
@@ -4463,10 +4465,10 @@
       // true.
       debug: true,
       lines: [
-        { n: 7216, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 7217, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 7218, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
-        { n: 7219, t: '      feed.innerHTML = "";' },
+        { n: 7221, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 7222, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 7223, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
+        { n: 7224, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4760,9 +4762,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '7219:      feed.innerHTML = "";', cls: "dim" },
-              { t: '7258:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '7294:      spot.innerHTML = "";', cls: "dim" },
+              { t: '7224:      feed.innerHTML = "";', cls: "dim" },
+              { t: '7263:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '7299:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -5644,9 +5646,12 @@
     {
       id: "a10-agents",
       act: 10,
-      title: "Agents · call a whole team",
-      caption: "Agents and teams: call Core once — the whole team seats itself. Riley is on two teams.",
-      maturity: "planned",
+      title: "Agents · a profile page each",
+      // The old caption said "call Core once — the whole team seats itself",
+      // which reads as each member starting work. A pack seats roster
+      // metadata; nothing spawns a runtime. Corrected rather than flipped over.
+      caption: "Agents: each gets a profile page — policies as code, skills, teams, its own icon and colours. Teams seat, not spawn.",
+      maturity: "shipped",
       dwellMs: 1800,
       cursor: { target: "#rail-agents", action: "click" },
       // Deliberately silent — clears the a9-approved line the fold would carry.

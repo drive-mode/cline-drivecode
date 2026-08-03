@@ -4,7 +4,7 @@
  * `stage` on the wire is the hub-side name for the same thing.
  */
 
-import type { StageCard, StagePin } from "@cline/shared";
+import type { Participant, StageCard, StagePin } from "@cline/shared";
 import { PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import {
@@ -38,6 +38,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { agentAvatarInitial, agentAvatarKind } from "./agentMark";
 import type { SpotlightProduce } from "./artifactBody";
 import { ScreenArtifact } from "./ScreenArtifact";
 import {
@@ -77,8 +78,14 @@ export type SpotlightViewProps = {
 	cards: readonly StageCard[];
 	/** Who holds the spotlight (agent partner or You). */
 	sharerLabel: string;
-	/** True when the primary agent (Cline) holds the spotlight, for the idle avatar mark. */
-	sharerIsAgent?: boolean;
+	/**
+	 * The sharer itself, when an agent holds the spotlight.
+	 *
+	 * The idle avatar used to gate on a boolean, which handed Cline's bot mark
+	 * to whichever agent happened to be sharing. The participant carries `ref`,
+	 * so the mark can be decided by identity instead of by "is an agent".
+	 */
+	sharerParticipant?: Participant | null;
 	/**
 	 * Resolved name ink for that agent (DRV-AGENT-PROFILE), already clamped
 	 * against this screen's fixed-dark well. Undefined falls back to the room's
@@ -348,36 +355,42 @@ function HumanPinContent({ pin }: { pin: SpotlightHumanPin }) {
 function ScreenIdle({
 	hint,
 	sharerInk,
-	sharerIsAgent,
+	sharerParticipant,
 	sharerLabel,
 }: {
 	hint?: string;
 	/** Resolved, contrast-clamped ink for the sharing agent. */
 	sharerInk?: string;
-	/** The primary agent (Cline) gets its bot mark; every human keeps an initial. */
-	sharerIsAgent?: boolean;
+	/** Present when an agent is sharing; its `ref` decides the mark. */
+	sharerParticipant?: Participant | null;
 	sharerLabel: string;
 }) {
 	// Match ScreenFrame: "You are sharing", everyone else "Riley is sharing".
 	const sharingVerb = sharerLabel === "You" ? "are" : "is";
+	const avatarKind = sharerParticipant
+		? agentAvatarKind(sharerParticipant)
+		: "initial";
 	return (
 		<div className="flex max-h-full flex-col items-center gap-2 overflow-auto text-center">
 			<span
 				aria-hidden
 				className={cn(
 					"grid size-11 shrink-0 place-items-center rounded-full border",
-					sharerIsAgent
-						? "border-current/45 bg-current/15"
+					sharerParticipant
+						? "border-current/45 bg-current/15 font-mono text-base font-bold"
 						: "border-amber-500/45 bg-amber-500/15 font-mono text-base font-bold text-amber-300",
 				)}
+				data-agent-avatar={sharerParticipant ? avatarKind : undefined}
 				style={
-					sharerIsAgent
+					sharerParticipant
 						? { color: sharerInk ?? "var(--drive-ink-2)" }
 						: undefined
 				}
 			>
-				{sharerIsAgent ? (
+				{avatarKind === "cline-mark" ? (
 					<ClineMarkIcon className="size-5" />
+				) : sharerParticipant ? (
+					agentAvatarInitial(sharerParticipant)
 				) : (
 					sharerLabel.slice(0, 1).toUpperCase()
 				)}
@@ -563,7 +576,7 @@ export function Spotlight({
 	cards,
 	sharerLabel,
 	sharerInk,
-	sharerIsAgent,
+	sharerParticipant,
 	demo,
 	humanPin,
 	humanSharing,
@@ -663,7 +676,7 @@ export function Spotlight({
 					<ScreenIdle
 						hint={cards.length === 0 ? emptyHint : undefined}
 						sharerInk={sharerInk}
-						sharerIsAgent={sharerIsAgent}
+						sharerParticipant={sharerParticipant}
 						sharerLabel={sharerLabel}
 					/>
 				)}

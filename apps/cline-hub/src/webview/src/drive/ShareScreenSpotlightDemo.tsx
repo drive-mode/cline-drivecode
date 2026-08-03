@@ -1,3 +1,4 @@
+import type { Participant } from "@cline/shared";
 import {
 	PauseIcon,
 	PlayIcon,
@@ -18,6 +19,7 @@ import {
 	SHARE_SCREEN_DEMO_FIXTURE,
 } from "./demoFixture";
 import { Spotlight } from "./Spotlight";
+import { DRIVE_PARTICIPANT_PARTNER } from "./types";
 
 const LOOP_TICK_MS = 2200;
 
@@ -59,6 +61,20 @@ export function ShareScreenSpotlightDemo() {
 	}, [playing, projection.totalBeats]);
 
 	const stageSharer = projection.stage.sharer?.kind ?? "agent";
+	/**
+	 * The demo script has one agent and it is Cline, so the mark is stated
+	 * rather than inferred — a synthetic ref here is a fixture, not a guess
+	 * about a live room.
+	 */
+	const demoSharer: Participant = {
+		id: DRIVE_PARTICIPANT_PARTNER,
+		kind: "agent",
+		displayName: "Cline",
+		role: "partner",
+		status: "idle",
+		ref: { kind: "builtin", id: "pair_partner" },
+		seatSources: [],
+	};
 	const sharerLabel =
 		stageSharer === "human"
 			? SHARE_SCREEN_DEMO_FIXTURE.humanLabel
@@ -190,7 +206,7 @@ export function ShareScreenSpotlightDemo() {
 					narration={projection.narration}
 					nextLabel={projection.nextLabel}
 					nowLabel={projection.nowLabel}
-					sharerIsAgent={stageSharer === "agent"}
+					sharerParticipant={stageSharer === "agent" ? demoSharer : null}
 					sharerLabel={sharerLabel}
 					className="h-full"
 				/>

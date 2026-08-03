@@ -58,6 +58,13 @@ import {
 } from "./components/PendingApprovalsPanel";
 import { PlanEditor } from "./components/PlanEditor";
 import { hasNowLastFailure, steerAppliedBanner } from "./drive/agencyChrome";
+import {
+	buildSpeakerInkMap,
+	DRIVE_SCREEN_INK_THEME,
+	resolveSpotlightSharer,
+	resolveSpotlightSharerInk,
+	useDriveInkTheme,
+} from "./drive/agentInk";
 import { resolvePresentedArtifact } from "./drive/artifactBody";
 import {
 	listPlanTasks,
@@ -81,18 +88,18 @@ import {
 } from "./drive/DriveRoomChrome";
 import { buildRaiseHandFrame } from "./drive/driveCallOps";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
+import { GateFeedCard, type GateFeedResponse } from "./drive/GateFeedCard";
 import { resolveIncomingApprovalBypass } from "./drive/gateApproval";
-import {
-	GateFeedCard,
-	type GateFeedResponse,
-} from "./drive/GateFeedCard";
-import { collectRecruitCandidates } from "./drive/recruitAddNeed";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
 import {
-	DRIVE_SCREEN_INK_THEME,
-	resolveSpotlightSharerInk,
-} from "./drive/agentInk";
+	collectRecruitCandidates,
+	RECRUIT_FIXTURE_CANDIDATES,
+} from "./drive/recruitAddNeed";
+import {
+	type DriveagentHomeListing,
+	requestDriveagentHomeList,
+} from "./drive/requestDriveagentHome";
 import { resolveRosterParticipants } from "./drive/rosterHelpers";
 import {
 	type RouterUiMode,
@@ -102,6 +109,7 @@ import {
 import { SdlcFreezeAcceptChip } from "./drive/SdlcFreezeAcceptChip";
 import { Spotlight, type SpotlightArtifact } from "./drive/Spotlight";
 import { StuckRecoveryFork } from "./drive/StuckRecoveryFork";
+import { homeRecruitCandidates, resolveSeatRef } from "./drive/seatRef";
 import {
 	planRecoveryAccept,
 	type RecoveryOptionKind,
@@ -346,10 +354,86 @@ export default function Chat({
 	 * Ink for the shared screen's sharing chip. The screen is fixed-dark in both
 	 * host themes, so it clamps against the screen well rather than the host one.
 	 */
+	/**
+	 * Slugs the hub confirmed have a `.driveagent/<slug>/agent.yaml`.
+	 *
+	 * A ref is only sent for a slug in here, so the seat's identity is read off
+	 * disk rather than inferred from a picker label. A ref held in a ref (not
+	 * state) because the seat handler is a stable callback and a stale closure
+	 * would silently stop sending refs after the first listing.
+	 */
+	const driveagentHomeSlugsRef = useRef<ReadonlySet<string>>(new Set());
+	const [driveagentHomes, setDriveagentHomes] = useState<
+		readonly DriveagentHomeListing[]
+	>([]);
+	useEffect(() => {
+		const root = defaults.workspaceRoot?.trim();
+		if (!root) {
+			return;
+		}
+		let cancelled = false;
+		void requestDriveagentHomeList(root)
+			.then((homes) => {
+				if (cancelled) {
+					return;
+				}
+				driveagentHomeSlugsRef.current = new Set(
+					homes.map((home) => home.slug),
+				);
+				setDriveagentHomes(homes);
+			})
+			.catch(() => {
+				// No listing means no evidence, which means no ref is sent — the
+				// pre-existing behaviour, not a broken one.
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [defaults.workspaceRoot]);
+
+	/**
+	 * Real homes first, then the shipped fixtures. A home and a fixture that
+	 * share a slug resolve to the home, because only the home is on disk.
+	 */
+	const recruitFixtures = useMemo(
+		() => [
+			...homeRecruitCandidates(driveagentHomes),
+			...RECRUIT_FIXTURE_CANDIDATES.filter(
+				(fixture) =>
+					!driveagentHomes.some((home) => home.slug === fixture.slug),
+			),
+		],
+		[driveagentHomes],
+	);
+
+	/**
+	 * Memoized: the feed's ink map is derived from this, and resolving an ink
+	 * walks a contrast search per agent. A fresh array identity every render
+	 * would defeat that memo on a surface that re-renders per token.
+	 */
+	const rosterParticipants = useMemo(
+		() => resolveRosterParticipants(drive),
+		[drive],
+	);
 	const spotlightSharerInk = resolveSpotlightSharerInk(
 		drive,
 		DRIVE_SCREEN_INK_THEME,
-		resolveRosterParticipants(drive),
+		rosterParticipants,
+	);
+	/**
+	 * The agent behind the shared screen. Resolved from the same roster the
+	 * chip's ink comes from, so the mark and the colour name one participant.
+	 */
+	const spotlightSharer = resolveSpotlightSharer(drive, rosterParticipants);
+	const feedInkTheme = useDriveInkTheme();
+	/**
+	 * Both ink channels per seated agent, for the feed. Resolved once here
+	 * rather than per message — the contrast clamp walks a search, and a long
+	 * transcript would run it on every row.
+	 */
+	const speakerInks = useMemo(
+		() => buildSpeakerInkMap(drive, rosterParticipants, feedInkTheme),
+		[drive, rosterParticipants, feedInkTheme],
 	);
 	const feedRoomKey = drive.roomId ?? DRIVE_DEFAULT_ROOM_ID;
 	const [feedCollapsed, setFeedCollapsed] = useState(false);
@@ -526,6 +610,11 @@ export default function Chat({
 	const seatRecruitCandidate = useCallback(
 		(entry: RankedRecruit) => {
 			const roomId = driveRef.current.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID;
+			// Sent only when this browser has evidence for it — a slug the hub
+			// listed as a real `.driveagent/` home, or the builtin partner. The
+			// hub writes `ref` verbatim into an append-only join event, so an
+			// omitted ref is preferable to a guessed one.
+			const ref = resolveSeatRef(entry.slug, driveagentHomeSlugsRef.current);
 			postToHost({
 				type: "call_seat",
 				roomId,
@@ -537,6 +626,7 @@ export default function Chat({
 						entry.slug === "pair-partner"
 							? "partner"
 							: "specialist",
+					...(ref ? { ref } : {}),
 				},
 			});
 			setDrive((current) => ({
@@ -1743,8 +1833,13 @@ export default function Chat({
 		setStatus(approved ? "Approval sent." : "Rejection sent.");
 	};
 
-	const respondToGateFeed = (approvalId: string, response: GateFeedResponse) => {
-		const approval = pendingApprovals.find((item) => item.approvalId === approvalId);
+	const respondToGateFeed = (
+		approvalId: string,
+		response: GateFeedResponse,
+	) => {
+		const approval = pendingApprovals.find(
+			(item) => item.approvalId === approvalId,
+		);
 		if (!approval) {
 			return;
 		}
@@ -1757,7 +1852,8 @@ export default function Chat({
 				allowGateClassForSession(current, response.actionClass),
 			);
 		}
-		const approved = response.kind === "approve" || response.kind === "allow_session";
+		const approved =
+			response.kind === "approve" || response.kind === "allow_session";
 		const reason =
 			response.kind === "allow_session"
 				? `Allow-for-session (${response.actionClass}) in Drive feed.`
@@ -1894,6 +1990,7 @@ export default function Chat({
 						}
 					}}
 					onSeatRecruit={seatRecruitCandidate}
+					recruitFixtures={recruitFixtures}
 					providerId={provider}
 					seatCap={1}
 					session={driveSession}
@@ -1949,7 +2046,9 @@ export default function Chat({
 							}
 							onToggleFeed={toggleFeedCollapsed}
 							sharerInk={spotlightSharerInk}
-							sharerIsAgent={drive.stageSharer === "agent"}
+							sharerParticipant={
+								drive.stageSharer === "agent" ? (spotlightSharer ?? null) : null
+							}
 							sharerLabel={
 								drive.stageSharer === "you" ? "You" : drive.partnerName
 							}
@@ -2205,6 +2304,7 @@ export default function Chat({
 								disabled={isHydrating}
 								onAddRosterPack={addRosterPack}
 								onSeatRecruit={seatRecruitCandidate}
+								recruitFixtures={recruitFixtures}
 								seatCap={1}
 								session={driveSession}
 							/>
@@ -2221,6 +2321,7 @@ export default function Chat({
 							}}
 							participants={drive.participants}
 							sending={sending}
+							speakerInks={speakerInks}
 						/>
 						{drive.active ? null : (
 							<PendingApprovalsPanel
