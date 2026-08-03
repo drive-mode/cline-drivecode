@@ -37,6 +37,7 @@ Rules:
 - `shared` stays low-level and reusable
 - `agents` stays stateless — no session/storage/config concerns
 - `core` owns stateful orchestration, including the shared-hub daemon, server, and client adapters under `src/hub/`
+- Internal modules under `packages/core/src` must not import the package root (`from "../.."`, `from "../../.."`, or `@cline/core`) — deep-import the leaf module instead. Prefer deep imports over `types.ts` when a second public surface needs isolation.
 
 ## Change Routing
 

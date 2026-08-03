@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { basename, dirname } from "node:path";
 import { resolveProviderSettingsPath } from "@cline/shared/storage";
-import { getLiveModelsCatalog } from "../..";
+import { getLiveModelsCatalog } from "../llms/provider-defaults";
 import { getProviderAuthHandler } from "../../auth/provider-auth-registry";
 import { hashSecret, sdkDebug } from "../../logging/early-logger";
 import {
