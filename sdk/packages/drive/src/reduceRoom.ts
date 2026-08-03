@@ -75,13 +75,15 @@ export function createEmptyRoomSnapshot(input: {
 	roomId: string;
 	createdAt: string;
 	host?: RoomSnapshot["participants"][number];
+	/** Seeded once from drive.defaults.subMode at room create (ADR-0013). */
+	subMode?: RoomSnapshot["subMode"];
 }): RoomSnapshot {
 	return {
 		schemaVersion: 1,
 		roomId: input.roomId,
 		createdAt: input.createdAt,
 		driveActive: false,
-		subMode: "plan",
+		subMode: input.subMode ?? "plan",
 		participants: input.host ? [input.host] : [],
 		stage: { sharer: null, pin: null, cards: [] },
 		addressSet: { mode: "everyone" },

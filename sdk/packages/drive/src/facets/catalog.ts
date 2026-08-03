@@ -27,7 +27,9 @@ export const DRIVE_FACET_CATALOG = {
 		privacy: "public",
 		conflict: "workspace_over_user",
 		phase: 0,
-		defaultValue: "plan",
+		// Annotated so DriveFacetValue widens to the union; `satisfies` alone
+		// checks the literal without widening it, pinning the value type to "plan".
+		defaultValue: "plan" as DriveSubMode,
 	} satisfies FacetDefMeta<DriveSubMode>,
 
 	"agent.appearance": {
@@ -55,7 +57,9 @@ export const DRIVE_FACET_CATALOG = {
 		privacy: "public",
 		conflict: "live_wins",
 		phase: 0,
-		defaultValue: "plan",
+		// Annotated so DriveFacetValue widens to the union; `satisfies` alone
+		// checks the literal without widening it, pinning the value type to "plan".
+		defaultValue: "plan" as DriveSubMode,
 	} satisfies FacetDefMeta<DriveSubMode>,
 
 	/**

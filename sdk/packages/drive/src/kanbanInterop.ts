@@ -1,16 +1,12 @@
 /**
- * Narrow DrivePlan–Kanban Interop stub (ADR-0018 §7).
- * Full wire shapes defer to ADR-0019.
- *
- * TODO(ADR-0019): expand beyond getCapabilities / applyProjection / observe —
- * execute(allowedCommand) + collectReceipt() host wire lives in initiative
- * docs/drivecode/plans/cline-drivemode/initiatives/driveplan-agent-runtime/.
+ * Narrow DrivePlan–Kanban Interop (ADR-0018 §7 + ADR-0019).
  *
  * Parses at the host boundary: callers pass a typed `DriveRun` (from
  * `@cline/shared` parse helpers). This package stays type-only on shared.
+ * `execute` / `collectReceipt` require a `KanbanInteropHost` — drive stays pure.
  */
 
-import type { DriveRun, DriveRunWorkItem } from "@cline/shared";
+import type { DriveRun, DriveRunWorkItem, Receipt, WorkLease } from "@cline/shared";
 
 export const DRIVEPLAN_KANBAN_SYSTEM = "driveplan" as const;
 
@@ -24,9 +20,14 @@ export type DriveplanExternalRef = {
 export type KanbanInteropCapabilities = {
 	protocol: "driveplan-kanban-interop";
 	version: 0;
-	supports: readonly ["getCapabilities", "applyProjection", "observe"];
-	/** Full execute / collectReceipt land in ADR-0019. */
-	deferred: readonly ["execute", "collectReceipt"];
+	supports: readonly [
+		"getCapabilities",
+		"applyProjection",
+		"observe",
+		"execute",
+		"collectReceipt",
+	];
+	deferred: readonly [];
 };
 
 export type ProjectedKanbanCard = {
@@ -56,12 +57,61 @@ export type ObserveResult = {
 	projectionDiverged: boolean;
 };
 
+/** Host-owned side of ADR-0019 — sessions, board IO, evidence collection. */
+export type KanbanInteropHost = {
+	executeAllowedCommand: (input: {
+		lease: WorkLease;
+		command: string;
+		args?: Record<string, unknown>;
+	}) => Promise<{
+		ok: boolean;
+		result?: Record<string, unknown>;
+		error?: string;
+	}>;
+	collectReceiptEvidence: (input: {
+		lease: WorkLease;
+		run: DriveRun;
+	}) => Promise<{
+		evidenceRefs: string[];
+		decision?: Receipt["decision"];
+		decidedBy?: string;
+	}>;
+};
+
+export type ExecuteInput = {
+	host: KanbanInteropHost;
+	lease: WorkLease;
+	command: string;
+	args?: Record<string, unknown>;
+};
+
+export type ExecuteResult =
+	| { ok: true; result?: Record<string, unknown> }
+	| { ok: false; code: string; message: string };
+
+export type CollectReceiptInput = {
+	host: KanbanInteropHost;
+	lease: WorkLease;
+	run: DriveRun;
+	receiptId?: string;
+};
+
+export type CollectReceiptResult =
+	| { ok: true; receipt: Receipt }
+	| { ok: false; code: string; message: string };
+
 export function getCapabilities(): KanbanInteropCapabilities {
 	return {
 		protocol: "driveplan-kanban-interop",
 		version: 0,
-		supports: ["getCapabilities", "applyProjection", "observe"],
-		deferred: ["execute", "collectReceipt"],
+		supports: [
+			"getCapabilities",
+			"applyProjection",
+			"observe",
+			"execute",
+			"collectReceipt",
+		],
+		deferred: [],
 	};
 }
 
@@ -138,4 +188,80 @@ export function observe(run: DriveRun, cursor?: ObserveCursor): ObserveResult {
 		})),
 		projectionDiverged: false,
 	};
+}
+
+function assertLeaseMatchesRun(lease: WorkLease, run: DriveRun): string | null {
+	if (lease.driveRunId !== run.id) {
+		return `lease ${lease.id} is for run ${lease.driveRunId}, not ${run.id}`;
+	}
+	if (lease.driveTaskId !== run.driveTaskId) {
+		return `lease ${lease.id} is for task ${lease.driveTaskId}, not ${run.driveTaskId}`;
+	}
+	if (lease.runSpecRevision !== run.spec.revision) {
+		return `lease ${lease.id} revision ${lease.runSpecRevision} ≠ run revision ${run.spec.revision}`;
+	}
+	return null;
+}
+
+/**
+ * Lease-scoped allowed command (ADR-0019). Host enforces allowlist + workspace.
+ */
+export async function execute(input: ExecuteInput): Promise<ExecuteResult> {
+	const allowed = input.lease.allowedActions;
+	if (allowed.length > 0 && !allowed.includes(input.command)) {
+		return {
+			ok: false,
+			code: "command_not_allowed",
+			message: `Command ${input.command} is not in lease allowedActions`,
+		};
+	}
+	const result = await input.host.executeAllowedCommand({
+		lease: input.lease,
+		command: input.command,
+		args: input.args,
+	});
+	if (!result.ok) {
+		return {
+			ok: false,
+			code: "host_execute_failed",
+			message: result.error ?? "host execute failed",
+		};
+	}
+	return { ok: true, result: result.result };
+}
+
+/**
+ * Collect a Receipt draft from host evidence (ADR-0019).
+ * Does not archive the DriveTask — bank complete still requires the receipt.
+ */
+export async function collectReceipt(
+	input: CollectReceiptInput,
+): Promise<CollectReceiptResult> {
+	const mismatch = assertLeaseMatchesRun(input.lease, input.run);
+	if (mismatch) {
+		return { ok: false, code: "lease_run_mismatch", message: mismatch };
+	}
+	const evidence = await input.host.collectReceiptEvidence({
+		lease: input.lease,
+		run: input.run,
+	});
+	if (evidence.evidenceRefs.length === 0) {
+		return {
+			ok: false,
+			code: "evidence_required",
+			message: "collectReceipt requires at least one evidence ref",
+		};
+	}
+	const decision = evidence.decision ?? "accepted";
+	const receipt: Receipt = {
+		id: input.receiptId ?? `receipt_${input.lease.id}`,
+		driveTaskId: input.lease.driveTaskId,
+		driveRunId: input.lease.driveRunId,
+		workItemId: input.lease.workItemId,
+		decision,
+		evidenceRefs: [...evidence.evidenceRefs],
+		createdAt: new Date().toISOString(),
+		...(evidence.decidedBy ? { decidedBy: evidence.decidedBy } : {}),
+	};
+	return { ok: true, receipt };
 }

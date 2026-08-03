@@ -1,6 +1,13 @@
-import type { DriveRun } from "@cline/shared";
+import type { DriveRun, WorkLease } from "@cline/shared";
 import { describe, expect, it } from "vitest";
-import { applyProjection, getCapabilities, observe } from "./kanbanInterop.js";
+import {
+	applyProjection,
+	collectReceipt,
+	execute,
+	getCapabilities,
+	observe,
+	type KanbanInteropHost,
+} from "./kanbanInterop.js";
 
 const fixtureRun = {
 	id: "run_auth_retry_v1",
@@ -45,11 +52,29 @@ const fixtureRun = {
 	},
 } as DriveRun;
 
-describe("kanbanInterop stub", () => {
-	it("advertises narrow capabilities", () => {
+const fixtureLease = {
+	id: "lease_1",
+	driveTaskId: "auth-retry-race",
+	driveRunId: "run_auth_retry_v1",
+	workItemId: "patch_retry",
+	runSpecRevision: 1,
+	idempotencyKey: "idem-1",
+	objective: "Patch retry",
+	acceptanceCriteria: [],
+	evidenceRequirements: ["diff:retry.ts"],
+	isolation: "worktree_isolated",
+	writeClaims: ["src/services/auth/retry.ts"],
+	allowedActions: ["apply_patch"],
+	expiresAt: "2099-01-01T00:00:00.000Z",
+} as WorkLease;
+
+describe("kanbanInterop", () => {
+	it("advertises execute and collectReceipt", () => {
 		const caps = getCapabilities();
 		expect(caps.supports).toContain("applyProjection");
-		expect(caps.deferred).toContain("execute");
+		expect(caps.supports).toContain("execute");
+		expect(caps.supports).toContain("collectReceipt");
+		expect(caps.deferred).toEqual([]);
 	});
 
 	it("projects one run into managed cards with externalRef", () => {
@@ -70,7 +95,52 @@ describe("kanbanInterop stub", () => {
 	it("observes work item statuses", () => {
 		const obs = observe(fixtureRun);
 		expect(obs.status).toBe("running");
-		expect(obs.workItemStatuses.map((w) => w.id)).toEqual(["read_router", "patch_retry"]);
+		expect(obs.workItemStatuses.map((w) => w.id)).toEqual([
+			"read_router",
+			"patch_retry",
+		]);
 		expect(obs.projectionDiverged).toBe(false);
+	});
+
+	it("executes allowed commands via host", async () => {
+		const host: KanbanInteropHost = {
+			executeAllowedCommand: async ({ command }) => ({
+				ok: true,
+				result: { command },
+			}),
+			collectReceiptEvidence: async () => ({ evidenceRefs: [] }),
+		};
+		const ok = await execute({
+			host,
+			lease: fixtureLease,
+			command: "apply_patch",
+		});
+		expect(ok.ok).toBe(true);
+		const denied = await execute({
+			host,
+			lease: fixtureLease,
+			command: "force_push",
+		});
+		expect(denied.ok).toBe(false);
+	});
+
+	it("collects a receipt from host evidence", async () => {
+		const host: KanbanInteropHost = {
+			executeAllowedCommand: async () => ({ ok: true }),
+			collectReceiptEvidence: async () => ({
+				evidenceRefs: ["diff:retry.ts"],
+				decision: "accepted",
+			}),
+		};
+		const result = await collectReceipt({
+			host,
+			lease: fixtureLease,
+			run: fixtureRun,
+		});
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.receipt.evidenceRefs).toEqual(["diff:retry.ts"]);
+			expect(result.receipt.decision).toBe("accepted");
+		}
 	});
 });

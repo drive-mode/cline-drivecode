@@ -123,12 +123,20 @@ export class DriveRoomStore {
 		return bumped;
 	}
 
-	create(roomId: string, createdAt = nowIso()): RoomSnapshot {
+	create(
+		roomId: string,
+		createdAt = nowIso(),
+		options?: { subMode?: RoomSnapshot["subMode"] },
+	): RoomSnapshot {
 		const existing = this.rooms.get(roomId);
 		if (existing) {
 			return existing;
 		}
-		const snapshot = createEmptyRoomSnapshot({ roomId, createdAt });
+		const snapshot = createEmptyRoomSnapshot({
+			roomId,
+			createdAt,
+			subMode: options?.subMode,
+		});
 		this.rooms.set(roomId, snapshot);
 		this.getOrCreateLive(roomId);
 		return snapshot;

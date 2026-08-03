@@ -13,6 +13,7 @@ import { appendBankLogEvent } from "../../collaboration/bankEventLog";
 import { getDriveRoomStore } from "../../collaboration/room";
 import { openWorkspaceBankStore } from "../../collaboration/workspaceBankStore";
 import { errorReply, type HubTransportContext, okReply } from "./context";
+import { readCompletionGuardPayload } from "./drive-driveplan-handlers";
 
 function readString(
 	payload: Record<string, unknown> | undefined,
@@ -207,14 +208,16 @@ export async function handleDriveBankCommand(
 			}
 			const agentId = readString(envelope.payload, "agentId");
 			try {
+				const guard = readCompletionGuardPayload(envelope.payload);
 				const store = openLoggedBankStore(
 					workspaceRoot,
 					envelope.payload,
 				);
-				await store.completeTask(
-					taskId,
-					agentId ? { agentId } : undefined,
-				);
+				await store.completeTask(taskId, {
+					...(agentId ? { agentId } : {}),
+					...(guard.boundRun ? { boundRun: guard.boundRun } : {}),
+					...(guard.receipt ? { receipt: guard.receipt } : {}),
+				});
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, { snapshot });
 			} catch (error) {

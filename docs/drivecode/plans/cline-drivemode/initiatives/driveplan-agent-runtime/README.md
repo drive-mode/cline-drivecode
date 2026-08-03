@@ -19,10 +19,10 @@ Ship the agent-first execution contract: `DriveTask` → `DriveRun` → `DriveRu
 |---|---|---|
 | Hub brand tokens on state plane | done | `cline-canvas-tokens.css` |
 | Shared schemas (`DriveRun`, lease, receipt) | done | `@cline/shared` `drive/run.ts` — `DriveRunWorkItem` ≠ wave `DriveWorkItem` |
-| Read-only one-task/one-run projection | done | Kanban `externalRef` + `@cline/drive` `kanbanInterop` stub |
-| Agent Control tools | done | `@cline/drive` `driveplan/agentControl` — list/claim/progress propose-only |
-| Completion guard | done | `assertCompletionReceipt` wired into `bankStore.completeTask` |
-| ADR-0019 Interop wire | later | full host protocol — stub TODO only in `kanbanInterop` |
+| Read-only one-task/one-run projection | done | Kanban `externalRef` + `@cline/drive` `kanbanInterop` stub + hub `driveplan.project_to_kanban` artifact |
+| Agent Control tools | done | Hub: `driveplan.list_eligible_work` / `claim_work` / `report_progress` (+ `put_run` / `get_run`); lease/run persist under `.drive/bank/` |
+| Completion guard | done | `assertCompletionReceipt` via `bankStore.completeTask`; hub `drive_bank_complete_task` accepts `boundRun` + `receipt` |
+| ADR-0019 Interop wire | partial | `execute` / `collectReceipt` + `KanbanInteropHost` in `@cline/drive`; live Kanban host adapter still open |
 
 ## Non-goals
 

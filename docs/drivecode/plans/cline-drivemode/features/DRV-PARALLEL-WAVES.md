@@ -68,9 +68,14 @@ const result = await new DriveWaveRunner({
 ]);
 ```
 
+## Host binding (landed)
+
+Hub command `drive.wave.run` in `@cline/core` binds `DriveWaveRunner` to chat-fork spawn/promote via `createHubWaveExecutor` (`reason: "wave_item"`). Optional `call_record_work` payload `waveMode: true` runs a wave instead of the sequential fork tick. Events: `drive.wave.started` / `drive.wave.completed`.
+
 ## Verification
 
 ```sh
 bun -F @cline/drive test
 bun -F @cline/drive build
+bun -F @cline/core test:unit -- drive-wave
 ```

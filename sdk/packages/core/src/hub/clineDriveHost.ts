@@ -28,6 +28,7 @@ import {
 	presentShowOnStore,
 	tickShowOnStore,
 } from "./driveDirectorOps";
+import { getCatalogDefaultSubMode } from "./drive-config/driveCatalogFacetStore";
 import {
 	loadOrSeedDriveFacets,
 	writeDriveFacetsFile,
@@ -207,7 +208,10 @@ export function createClineDriveHost(
 		async commitRoomOp(op: RoomOp): Promise<RoomSnapshot> {
 			switch (op.type) {
 				case "create": {
-					store.create(op.roomId);
+					const subMode = options.configParent
+						? getCatalogDefaultSubMode(options.configParent)
+						: undefined;
+					store.create(op.roomId, undefined, { subMode });
 					return store.getOrThrow(op.roomId);
 				}
 				case "join": {

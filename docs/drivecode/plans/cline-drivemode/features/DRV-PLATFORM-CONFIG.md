@@ -48,11 +48,11 @@ This feature is the mechanism, not a facet. It ships with exactly two entries (`
   - Files likely: `sdk/packages/drive/src/facets/catalog.ts`, `store.ts`, tests
   - Verify: `bun -F @cline/drive test`
   - Done when: `get` returns declared defaults for an empty snapshot, `reload` is idempotent, and the package imports nothing from `@cline/core`.
-- [ ] Implement the hub-side store: load both scopes, migrate, merge, atomic write, broadcast `CONFIG_SNAPSHOT`.
+- [x] Implement the hub-side store: load both scopes, migrate, merge, atomic write, broadcast `CONFIG_SNAPSHOT`.
   - Owner package: `@cline/core`
-  - Files likely: `sdk/packages/core/src/hub/drive-config/drive-config-store.ts`, op handlers, tests
+  - Files likely: `sdk/packages/core/src/hub/drive-config/driveCatalogFacetStore.ts`, `drive_catalog_*` handlers, tests
   - Verify: `bun -F @cline/core test:unit`
-  - Done when: a crash between write and rename leaves the previous file intact in a test, and a `live_wins` facet survives a disk reload during an open room.
+  - Done when: durable catalog IO uses `createFacetStore`; `live_wins` survives reload; room create seeds `drive.defaults.subMode`; live-lane puts are rejected. Voice `driveFacetsStore` / `drive_config_*` remain unchanged.
 
 ## Risks
 

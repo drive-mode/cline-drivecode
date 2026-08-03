@@ -53,10 +53,13 @@ import {
 import { handleDriveBankCommand } from "./handlers/drive-bank-handlers";
 import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollups-handlers";
 import { handleDriveConfigCommand } from "./handlers/drive-config-handlers";
+import { handleDriveCatalogCommand } from "./handlers/drive-catalog-handlers";
 import { handleDriveCommand } from "./handlers/drive-handlers";
 import { handleDrivePrivacyCommand } from "./handlers/drive-privacy-handlers";
 import { handleDriveForkCommand } from "./handlers/drive-fork-handlers";
 import { handleDriveForkTickCommand } from "./handlers/drive-fork-tick";
+import { handleDriveWaveCommand } from "./handlers/drive-wave-handlers";
+import { handleDrivePlanCommand } from "./handlers/drive-driveplan-handlers";
 import { handleDriveHomeCommand } from "./handlers/drive-home-handlers";
 import { handleDriveRoomCommand } from "./handlers/drive-room-handlers";
 import {
@@ -467,9 +470,21 @@ export class HubServerTransport implements NativeHubTransport {
 				return await handleDriveForkCommand(this.ctx, envelope);
 			case "drive.fork.tick":
 				return await handleDriveForkTickCommand(this.ctx, envelope);
+			case "drive.wave.run":
+				return await handleDriveWaveCommand(this.ctx, envelope);
+			case "driveplan.put_run":
+			case "driveplan.get_run":
+			case "driveplan.list_eligible_work":
+			case "driveplan.claim_work":
+			case "driveplan.report_progress":
+			case "driveplan.project_to_kanban":
+				return await handleDrivePlanCommand(this.ctx, envelope);
 			case "drive_config_get":
 			case "drive_config_put":
 				return handleDriveConfigCommand(this.ctx, envelope);
+			case "drive_catalog_get":
+			case "drive_catalog_put":
+				return handleDriveCatalogCommand(this.ctx, envelope);
 			case "drive_privacy_put":
 				return handleDrivePrivacyCommand(this.ctx, envelope);
 			case "drive_bank_get":

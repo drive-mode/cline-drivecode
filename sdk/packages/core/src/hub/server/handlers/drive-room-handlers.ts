@@ -20,6 +20,7 @@ import type {
 	RoomSnapshot,
 	StageSharer,
 } from "@cline/shared";
+import { handleDriveWaveCommand } from "./drive-wave-handlers";
 import {
 	AddressSetSchema,
 	DriveSubModeSchema,
@@ -42,6 +43,7 @@ import {
 	captureHubRoomCommit,
 	getHubDriveHarness,
 } from "../../driveHarnessBinding";
+import { getCatalogDefaultSubMode } from "../../drive-config/driveCatalogFacetStore";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 import { runChatForkDirectorTick } from "./drive-fork-tick";
 
@@ -50,6 +52,18 @@ function linkedSessionIds(
 	roomId: string,
 ): string[] {
 	return [...(store.roomToSessions.get(roomId) ?? [])];
+}
+
+/** Ensure room exists; seed subMode from catalog once when workspace is known. */
+function ensureRoomCreated(
+	store: ReturnType<typeof getDriveRoomStore>,
+	roomId: string,
+	workspaceRoot?: string,
+): void {
+	const subMode = workspaceRoot
+		? getCatalogDefaultSubMode(workspaceRoot)
+		: undefined;
+	store.create(roomId, undefined, { subMode });
 }
 
 const RoomIdSchema = z.object({
@@ -193,6 +207,8 @@ const CallRecordWorkPayloadSchema = z
 		roomId: z.string().min(1).optional(),
 		sessionId: z.string().min(1).optional(),
 		actorId: z.string().min(1).optional(),
+		/** When true, run DriveWaveRunner over queued Do items instead of sequential fork tick. */
+		waveMode: z.boolean().optional(),
 		work: z
 			.union([WorkEditSchema, WorkCommandSchema, WorkTestSchema])
 			.optional(),
@@ -472,7 +488,7 @@ export async function handleDriveRoomCommand(
 
 				let result: { snapshot: RoomSnapshot; seq: number };
 				if (payload.participant) {
-					store.create(payload.roomId);
+					ensureRoomCreated(store, payload.roomId, payload.workspaceRoot);
 					const committed = store.join({
 						roomId: payload.roomId,
 						participant: payload.participant as Participant,
@@ -894,29 +910,48 @@ export async function handleDriveRoomCommand(
 						);
 					}
 				}
-				void runChatForkDirectorTick(ctx, {
-					roomId,
-					parentSessionId: payload.sessionId,
-				})
-					.then((result) => {
-						// Best-effort tick: claim refusals (e.g. depth_exceeded) are
-						// already recorded on the room's chatForks trail by
-						// handleForkClaim. Still surface them in server logs so a
-						// human watching the hub — not just the Workers panel — sees
-						// suppressed work instead of unexplained silence.
-						if (result.errors.length > 0) {
-							console.warn(
-								`runChatForkDirectorTick refused claim(s) for room ${roomId}: ${result.errors.join("; ")}`,
-							);
-						}
-					})
-					.catch((error) => {
-						// tick is best-effort; claim failures must not fail work record
+				if (payload.waveMode === true && payload.sessionId) {
+					void handleDriveWaveCommand(ctx, {
+						version: "v1",
+						command: "drive.wave.run",
+						requestId: `wave-after-work-${roomId}`,
+						payload: {
+							roomId,
+							parentSessionId: payload.sessionId,
+							assigneeParticipantId: ownerParticipantId,
+							syncComplete: false,
+						},
+					}).catch((error) => {
 						console.warn(
-							`runChatForkDirectorTick threw for room ${roomId}:`,
+							`drive.wave.run after call_record_work threw for room ${roomId}:`,
 							error,
 						);
 					});
+				} else {
+					void runChatForkDirectorTick(ctx, {
+						roomId,
+						parentSessionId: payload.sessionId,
+					})
+						.then((result) => {
+							// Best-effort tick: claim refusals (e.g. depth_exceeded) are
+							// already recorded on the room's chatForks trail by
+							// handleForkClaim. Still surface them in server logs so a
+							// human watching the hub — not just the Workers panel — sees
+							// suppressed work instead of unexplained silence.
+							if (result.errors.length > 0) {
+								console.warn(
+									`runChatForkDirectorTick refused claim(s) for room ${roomId}: ${result.errors.join("; ")}`,
+								);
+							}
+						})
+						.catch((error) => {
+							// tick is best-effort; claim failures must not fail work record
+							console.warn(
+								`runChatForkDirectorTick threw for room ${roomId}:`,
+								error,
+							);
+						});
+				}
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -990,7 +1025,7 @@ export async function handleDriveRoomCommand(
 					envelope.payload ?? {},
 				);
 				ensureEventLog(store, payload.workspaceRoot, payload.roomId);
-				store.create(payload.roomId);
+				ensureRoomCreated(store, payload.roomId, payload.workspaceRoot);
 				const configParent = payload.workspaceRoot;
 				const beforeIds = new Set(
 					(store.get(payload.roomId)?.participants ?? []).map((p) => p.id),
@@ -1034,7 +1069,7 @@ export async function handleDriveRoomCommand(
 					envelope.payload ?? {},
 				);
 				ensureEventLog(store, payload.workspaceRoot, payload.roomId);
-				store.create(payload.roomId);
+				ensureRoomCreated(store, payload.roomId, payload.workspaceRoot);
 				const configParent = payload.workspaceRoot;
 				const { harness } = getHubDriveHarness({
 					store,
