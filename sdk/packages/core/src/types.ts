@@ -1,3 +1,4 @@
+// ponytail: types.ts aggregator kept; split when a second public surface needs isolation
 export type {
 	AgentRunResult,
 	AgentRunStatus,
