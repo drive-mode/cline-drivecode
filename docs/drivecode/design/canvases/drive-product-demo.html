@@ -4121,7 +4121,6 @@
       <div class="pip" id="pip">
         <div class="pip-head">
           <span class="name" id="pip-name">Cline</span>
-          <span class="badge planned">planned</span>
         </div>
         <div class="narr" id="pip-narr"></div>
         <div class="pip-actions">
@@ -4454,7 +4453,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L7217–L7220",
+      range: "L7216–L7219",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through (s3 is the
       // "remember the new one" assignment), ghost/ret are inline-value
@@ -4464,10 +4463,10 @@
       // true.
       debug: true,
       lines: [
-        { n: 7217, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 7218, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 7219, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
-        { n: 7220, t: '      feed.innerHTML = "";' },
+        { n: 7216, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 7217, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 7218, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
+        { n: 7219, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4761,9 +4760,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '7220:      feed.innerHTML = "";', cls: "dim" },
-              { t: '7259:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '7295:      spot.innerHTML = "";', cls: "dim" },
+              { t: '7219:      feed.innerHTML = "";', cls: "dim" },
+              { t: '7258:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '7294:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
@@ -5279,8 +5278,8 @@
       id: "a6-status",
       act: 6,
       title: "Navigate to Status; PiP pops",
-      caption: "Still in call. PiP companion (planned) keeps mute, hand, leave, expand.",
-      maturity: "planned",
+      caption: "Still in call. The PiP companion keeps mute, hand, leave, expand.",
+      maturity: "shipped",
       dwellMs: 1600,
       cursor: { target: "#rail-status", action: "click" },
       // v4-12 (5.28s): you have navigated away, so the caption's home on

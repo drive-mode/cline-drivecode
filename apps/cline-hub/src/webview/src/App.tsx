@@ -85,6 +85,7 @@ import type {
 	DriveLaunchRequest,
 	DriveOpenCallRequest,
 } from "./drive/driveLaunch";
+import { PipPartner } from "./drive/PipPartner";
 import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
 import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import { useDriveCallPresence } from "./drive/useDriveCallPresence";
@@ -436,11 +437,14 @@ function sessionFilterDetails(session: WebviewSessionSummary): string[] {
 
 function Shell({
 	children,
+	onExpandCall,
 	onNavigate,
 	version,
 	view,
 }: {
 	children: ReactNode;
+	/** PiP Expand — focus the room the user is already in (DRV-PIP). */
+	onExpandCall: (roomId: string) => void;
 	onNavigate: (view: View) => void;
 	version?: string;
 	view: View;
@@ -655,18 +659,12 @@ function Shell({
 			<main className="min-h-0 overflow-hidden bg-background [&>.h-screen]:h-full">
 				{children}
 			</main>
-			{/* Observable seam for the shell-level presence reader until the PiP
-				companion consumes it — no chrome, no controls, no writes. */}
-			<span
-				aria-hidden="true"
-				data-active={String(callPresence.active)}
-				data-drive-call-presence=""
-				data-hand-raised={String(callPresence.handRaised)}
-				data-muted={String(callPresence.muted)}
-				data-narration={callPresence.narration ?? ""}
-				data-partner-name={callPresence.partnerName ?? ""}
-				data-room-id={callPresence.roomId ?? ""}
-				hidden
+			{/* The consumer of the shell-level presence reader: call chrome that
+				outlives the call route (DRV-PIP). */}
+			<PipPartner
+				onCallRoute={view === "drive"}
+				onExpand={onExpandCall}
+				presence={callPresence}
 			/>
 		</div>
 	);
@@ -1540,6 +1538,19 @@ function App() {
 		setLocationSearch(window.location.search);
 	}, []);
 
+	/**
+	 * PiP Expand (DRV-PIP): focus the room the user is already seated in.
+	 * `action: "focus"` is deliberate — the remounted `Chat` seeds
+	 * `connectionPhase` "on" from persisted state, so the launch effect refreshes
+	 * the room (`call_get_room`) instead of posting a second `call_join`.
+	 */
+	const expandDriveCall = useCallback(
+		(roomId: string) => {
+			openDriveCall({ action: "focus", roomId });
+		},
+		[openDriveCall],
+	);
+
 	const acknowledgeDriveLaunch = useCallback((requestId: number) => {
 		setDriveLaunchRequest((current) =>
 			current?.id === requestId ? null : current,
@@ -1824,7 +1835,12 @@ function App() {
 	]);
 
 	return (
-		<Shell onNavigate={navigate} version={hubState.coreVersion} view={view}>
+		<Shell
+			onExpandCall={expandDriveCall}
+			onNavigate={navigate}
+			version={hubState.coreVersion}
+			view={view}
+		>
 			<Suspense fallback={<ViewLoading />}>{content}</Suspense>
 		</Shell>
 	);

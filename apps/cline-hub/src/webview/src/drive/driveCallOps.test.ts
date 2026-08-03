@@ -9,6 +9,7 @@ import {
 } from "./driveCallOps";
 import driveCallOpsSource from "./driveCallOps.ts?raw";
 import participantSheetSource from "./ParticipantSheet.tsx?raw";
+import pipPartnerSource from "./PipPartner.tsx?raw";
 import { buildSetStageMessage } from "./stageSharePin";
 import {
 	DRIVE_DEFAULT_ROOM_ID,
@@ -229,6 +230,11 @@ describe("call ops have exactly one writer", () => {
 		// The roster sheet reaches call_set_stage through the shared builder in
 		// stageSharePin, which driveCallOps re-exports rather than duplicating.
 		["ParticipantSheet.tsx", participantSheetSource, "buildSetStageMessage("],
+		// The surface this module was written for. All three of its room ops go
+		// through builders — the sweep above only proves it inlines nothing.
+		["PipPartner.tsx", pipPartnerSource, "buildMuteFrame("],
+		["PipPartner.tsx", pipPartnerSource, "buildRaiseHandFrame("],
+		["PipPartner.tsx", pipPartnerSource, "buildLeaveFrame("],
 	] as const;
 
 	for (const [label, source, builderCall] of callers) {
