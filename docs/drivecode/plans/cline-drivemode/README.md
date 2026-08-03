@@ -38,6 +38,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [16-task-as-unit-models.md](research/16-task-as-unit-models.md) | Task-as-unit doctrine; next-task proposers vs deterministic cursor |
 | [17-implementation-backlog-audit.md](research/17-implementation-backlog-audit.md) | Evidence-led reconciliation of shipped Drive work, active backlog, and branch-only candidates |
 | [18-task-as-execution-unit.md](research/18-task-as-execution-unit.md) | Product and implementation direction for `DriveTask` as the durable, verifiable execution unit |
+| [23-agent-first-design.md](research/23-agent-first-design.md) | Agent-first design doctrine; runtime substitutes for code review; Drive audited against it |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | Archive: remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
 | [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
