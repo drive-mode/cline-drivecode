@@ -28,6 +28,12 @@ export class HubContext {
 	readonly events: WebviewHubEvent[] = [];
 	/** toolCallId → input captured at content_start for Drive work bridge. */
 	readonly pendingToolInputs = new Map<string, unknown>();
+	/**
+	 * sessionId → Drive participant id the in-flight assistant turn belongs to.
+	 * Only set when the room address resolved to exactly one seated agent;
+	 * a missing entry means the turn is unattributed (DRV-ADDRESS).
+	 */
+	readonly turnSpeakerBySessionId = new Map<string, string>();
 
 	hubUrl = "";
 	hubAuthToken = "";

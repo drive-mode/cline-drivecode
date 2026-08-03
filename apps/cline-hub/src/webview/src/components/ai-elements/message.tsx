@@ -38,6 +38,43 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
 	/>
 );
 
+export type MessageBylineProps = HTMLAttributes<HTMLDivElement> & {
+	/** Resolved speaker name. Null renders nothing — never a placeholder. */
+	name: string | null;
+};
+
+/**
+ * Speaker attribution above a message.
+ *
+ * Renders nothing at all when the name is null, which is the common case:
+ * the feed only knows a speaker for a turn the hub tied to a single
+ * addressed agent. A blank or guessed byline would read as a real
+ * attribution, so absence is the honest rendering.
+ */
+export const MessageByline = ({
+	className,
+	name,
+	...props
+}: MessageBylineProps) => {
+	if (!name) {
+		return null;
+	}
+
+	return (
+		<div
+			className={cn(
+				"font-medium text-muted-foreground text-xs",
+				"group-[.is-user]:ml-auto",
+				className,
+			)}
+			data-slot="message-byline"
+			{...props}
+		>
+			{name}
+		</div>
+	);
+};
+
 export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
 
 export const MessageContent = ({

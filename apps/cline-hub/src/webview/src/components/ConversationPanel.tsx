@@ -1,5 +1,6 @@
 "use client";
 
+import type { Participant } from "@cline/shared";
 import { GitBranchIcon, Loader2Icon } from "lucide-react";
 import type { ReactElement } from "react";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/components/ai-elements/conversation";
 import {
 	Message,
+	MessageByline,
 	MessageContent,
 	MessageResponse,
 } from "@/components/ai-elements/message";
@@ -36,6 +38,7 @@ import type {
 	WebviewChatMessageBlock,
 } from "../../../webview-protocol";
 import { postToHost } from "../vscode";
+import { resolveSpeakerByline } from "./speakerBylineLogic";
 
 type ChatMessage = WebviewChatMessage;
 type ChatMessageBlock = WebviewChatMessageBlock;
@@ -250,6 +253,8 @@ export type ConversationPanelProps = {
 	isHydrating: boolean;
 	messages: ChatMessage[];
 	onFork: () => void;
+	/** Call roster used to name a message's speaker. Empty outside a call. */
+	participants?: readonly Participant[];
 	sending: boolean;
 };
 
@@ -259,6 +264,7 @@ export function ConversationPanel({
 	isHydrating,
 	messages,
 	onFork,
+	participants,
 	sending,
 }: ConversationPanelProps) {
 	return (
@@ -295,6 +301,9 @@ export function ConversationPanel({
 
 					return (
 						<Message from={message.role} key={message.id}>
+							<MessageByline
+								name={resolveSpeakerByline(message.speakerId, participants)}
+							/>
 							<div>
 								{renderMessageBlocks(message, { sending })}
 								{message.role === "user" && message.checkpoint ? (

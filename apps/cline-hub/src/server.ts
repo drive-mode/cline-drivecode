@@ -4,6 +4,7 @@ import {
 	isNonLocalBindHost,
 	rebasePublicUrlForListenPort,
 } from "./options";
+import { resolveAvailablePort } from "./port";
 import {
 	handleToolApprovalResponse,
 	rejectOrphanedApprovals,
@@ -25,12 +26,12 @@ import { handleDesktopCommand } from "./server/desktop-commands";
 import { handleDriveAgentHomeWebviewCommand } from "./server/drive-agent-home";
 import { handleDriveArtifactsWebviewCommand } from "./server/drive-artifacts";
 import { handleDriveBankWebviewCommand } from "./server/drive-bank";
-import { handleDrivePlanImproveWebviewCommand } from "./server/drive-plan-improve";
-import { handleDriveSessionRollupsWebviewCommand } from "./server/drive-session-rollups";
 import { handleCallCommand } from "./server/drive-calls";
 import { handleDriveWebviewCommand } from "./server/drive-commands";
-import { handleDriveRoomsWebviewCommand } from "./server/drive-rooms";
 import { rejectVoiceSendIfMuted } from "./server/drive-mute-gate";
+import { handleDrivePlanImproveWebviewCommand } from "./server/drive-plan-improve";
+import { handleDriveRoomsWebviewCommand } from "./server/drive-rooms";
+import { handleDriveSessionRollupsWebviewCommand } from "./server/drive-session-rollups";
 import {
 	createJsonResponse,
 	isWebviewRoute,
@@ -60,11 +61,15 @@ import {
 	selectSession,
 	sendMessage,
 } from "./server/sessions";
+import {
+	clearTurnSpeaker,
+	readAddressedSpeakerId,
+	setTurnSpeaker,
+} from "./server/speaker-attribution";
 import { HubContext } from "./server/state";
 import { broadcastHubState, hubStatusPayload } from "./server/state-payloads";
 import { handleStatusCommand } from "./server/status-calls";
 import type { BrowserFrame, BrowserPeer } from "./server/types";
-import { resolveAvailablePort } from "./port";
 import { rejectOversizedWebSocketPayload } from "./server/websocket-transport";
 
 export interface ClineHubDashboardServer {
@@ -97,6 +102,26 @@ function isPublicStaticAssetPath(pathname: string): boolean {
 
 function isPublicBrowserRoute(_req: Request, url: URL): boolean {
 	return isWebviewRoute(url.pathname) || isPublicStaticAssetPath(url.pathname);
+}
+
+/**
+ * Is another peer already mid-turn on this peer's session?
+ *
+ * `sending` is per-peer but the turn speaker is per-session, so two browsers
+ * attached to one session would let the second send relabel the first's
+ * in-flight reply. Attribution belongs to the turn that is actually running.
+ */
+function isSessionBusyElsewhere(ctx: HubContext, peer: BrowserPeer): boolean {
+	for (const other of ctx.peers) {
+		if (
+			other !== peer &&
+			other.sending &&
+			other.selectedSessionId === peer.selectedSessionId
+		) {
+			return true;
+		}
+	}
+	return false;
 }
 
 export async function startClineHubDashboardServer(): Promise<ClineHubDashboardServer> {
@@ -285,8 +310,7 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 						if (peer.sending) {
 							// Mid-turn: enqueue as steer (DRV-FELT-AGENCY / DRV-STEER-QUEUE).
 							// Core pending-prompt path already exists; do not hard-reject.
-							const delivery =
-								frame.delivery === "queue" ? "queue" : "steer";
+							const delivery = frame.delivery === "queue" ? "queue" : "steer";
 							try {
 								await sendMessage(
 									ctx,
@@ -306,10 +330,7 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 							} catch (error) {
 								ctx.send(peer, {
 									type: "status",
-									text:
-										error instanceof Error
-											? error.message
-											: String(error),
+									text: error instanceof Error ? error.message : String(error),
 								});
 							}
 							return;
@@ -320,18 +341,39 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 								return;
 							}
 						}
+						// Claim the turn before the room lookup awaits, so a second
+						// send cannot slip past the `peer.sending` guard above and
+						// start a competing turn during the round trip.
 						peer.sending = true;
+						const turnSessionId = peer.selectedSessionId;
 						try {
+							// Attribute the turn before it starts, so its deltas carry
+							// the addressed agent (DRV-ADDRESS). Resolves to undefined
+							// outside a Drive call, and whenever the address covers
+							// more or fewer than one seated agent.
+							if (turnSessionId && !isSessionBusyElsewhere(ctx, peer)) {
+								setTurnSpeaker(
+									ctx,
+									turnSessionId,
+									await readAddressedSpeakerId(ctx, turnSessionId),
+								);
+							}
 							await sendMessage(
 								ctx,
 								peer,
 								frame.prompt,
 								frame.config,
 								frame.attachments,
-								frame.delivery
-									? { delivery: frame.delivery }
-									: undefined,
+								frame.delivery ? { delivery: frame.delivery } : undefined,
 							);
+						} catch (error) {
+							// No turn started, so no done/error event will arrive to
+							// clear this. Leaving it would attribute a later turn to
+							// an agent this one never reached.
+							if (turnSessionId) {
+								clearTurnSpeaker(ctx, turnSessionId);
+							}
+							throw error;
 						} finally {
 							peer.sending = false;
 						}
@@ -381,17 +423,9 @@ export async function startClineHubDashboardServer(): Promise<ClineHubDashboardS
 					} else if (frame.type === "drive_artifacts_list") {
 						await handleDriveArtifactsWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_session_rollups") {
-						await handleDriveSessionRollupsWebviewCommand(
-							ctx,
-							peer,
-							frame,
-						);
+						await handleDriveSessionRollupsWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_plan_improve_resolve") {
-						await handleDrivePlanImproveWebviewCommand(
-							ctx,
-							peer,
-							frame,
-						);
+						await handleDrivePlanImproveWebviewCommand(ctx, peer, frame);
 					} else if (frame.type === "drive_agent_home_get") {
 						await handleDriveAgentHomeWebviewCommand(ctx, peer, frame);
 					} else if (

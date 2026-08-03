@@ -118,7 +118,9 @@ export function isChatHostMessage(
 				message.messages.every(isHydratedMessagePayload)
 			);
 		case "assistant_delta":
-			return typeof message.text === "string";
+			return (
+				typeof message.text === "string" && isOptionalString(message.speakerId)
+			);
 		case "reasoning_delta":
 			return (
 				typeof message.text === "string" &&

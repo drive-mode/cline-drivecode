@@ -2,6 +2,7 @@ import type { CoreSessionEvent } from "@cline/core";
 import type { AgentEvent } from "@cline/shared";
 import type { WebviewToolEvent } from "../webview-protocol";
 import { rejectPendingApprovalsForSession } from "./approvals";
+import { clearTurnSpeaker } from "./speaker-attribution";
 import type { HubContext } from "./state";
 import { broadcastHubState } from "./state-payloads";
 import {
@@ -85,13 +86,26 @@ function agentEventText(event: AgentEvent): string {
 	return "";
 }
 
+/**
+ * `speakerId` is passed in rather than read here on purpose.
+ *
+ * The raw `chunk` stream carries teammate output with its `teamRole` marker
+ * stripped, so a caller on that path cannot tell whose text it is holding and
+ * must send nothing. Only `forwardAgentEvent`, which its caller has already
+ * filtered to non-teammates, may attribute.
+ */
 function sendChunkToSelectedPeers(
 	ctx: HubContext,
 	sessionId: string,
 	text: string,
+	speakerId?: string,
 ): void {
 	if (!text) return;
-	ctx.sendToSelectedPeers(sessionId, { type: "assistant_delta", text });
+	ctx.sendToSelectedPeers(sessionId, {
+		type: "assistant_delta",
+		text,
+		speakerId,
+	});
 }
 
 function forwardAgentEvent(
@@ -125,7 +139,15 @@ function forwardAgentEvent(
 			return;
 		}
 		const text = agentEventText(event);
-		if (text) sendChunkToSelectedPeers(ctx, sessionId, text);
+		if (text) {
+			// Absent unless this turn resolved to exactly one addressed agent.
+			sendChunkToSelectedPeers(
+				ctx,
+				sessionId,
+				text,
+				ctx.turnSpeakerBySessionId.get(sessionId),
+			);
+		}
 		return;
 	}
 	if (event.type === "content_update" && event.contentType === "tool") {
@@ -182,6 +204,7 @@ function forwardAgentEvent(
 		return;
 	}
 	if (event.type === "done") {
+		clearTurnSpeaker(ctx, sessionId);
 		ctx.sendToSelectedPeers(sessionId, {
 			type: "turn_done",
 			finishReason: event.reason,
@@ -199,6 +222,7 @@ function forwardAgentEvent(
 		return;
 	}
 	if (event.type === "error") {
+		clearTurnSpeaker(ctx, sessionId);
 		ctx.sendToSelectedPeers(sessionId, {
 			type: "error",
 			text: event.error.message,
@@ -238,6 +262,7 @@ export function handleSessionEvent(
 		broadcastHubState(ctx);
 	} else if (event.type === "ended") {
 		usageBudgetHandlers.delete(sessionId);
+		clearTurnSpeaker(ctx, sessionId);
 		rejectPendingApprovalsForSession(
 			ctx,
 			sessionId,

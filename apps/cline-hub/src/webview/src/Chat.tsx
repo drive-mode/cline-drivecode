@@ -1123,7 +1123,12 @@ export default function Chat({
 					return;
 				case "assistant_delta":
 					setMessages((current) =>
-						appendAssistantDelta(current, message.text, activeAssistantIdRef),
+						appendAssistantDelta(
+							current,
+							message.text,
+							activeAssistantIdRef,
+							message.speakerId,
+						),
 					);
 					return;
 				case "reasoning_delta":
@@ -2197,6 +2202,7 @@ export default function Chat({
 								setForkError(null);
 								postToHost({ type: "forkSession" });
 							}}
+							participants={drive.participants}
 							sending={sending}
 						/>
 						{drive.active ? null : (
