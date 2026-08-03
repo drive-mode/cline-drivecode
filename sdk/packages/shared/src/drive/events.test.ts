@@ -10,6 +10,15 @@ import {
 	type DriveEvent,
 } from "./index";
 
+const MEDIA_BYTE_KEYS = [
+	"uri",
+	"dataUri",
+	"svg",
+	"image",
+	"bytes",
+	"thumbnail",
+];
+
 const base = {
 	schemaVersion: DRIVE_SCHEMA_VERSION,
 	id: "evt_1",
@@ -137,6 +146,8 @@ describe("DriveEvent schemas", () => {
 				case "presence.typing":
 				case "presence.status":
 					return "presence";
+				case "media.artifact":
+					return "media";
 				default: {
 					const _exhaustive: never = e;
 					return _exhaustive;
@@ -201,7 +212,87 @@ describe("Room / address schemas", () => {
 	});
 });
 
+describe("media.artifact", () => {
+	const artifact = {
+		...base,
+		id: "evt_artifact",
+		type: "media.artifact",
+		track: "media",
+		showItemId: "show-abc123",
+		artifactKind: "diagram.architecture",
+		mediaClass: "still",
+		title: "Cline drive topology",
+		caption: "Hub daemon is the single writer",
+		ownerParticipantId: "agent_partner",
+		produce: {
+			tool: "render_mermaid",
+			templateId: "kit.arch.cline_drive",
+			args: { mermaidSource: "flowchart LR\n  A --> B" },
+		},
+		tags: ["architecture", "hub"],
+		status: "shown",
+	} as const;
+
+	it("parses a bytes-free artifact record", () => {
+		const event = parseDriveEvent(artifact);
+		expect(event.type).toBe("media.artifact");
+		if (event.type !== "media.artifact") {
+			throw new Error("expected media.artifact");
+		}
+		expect(event.track).toBe("media");
+		expect(event.showItemId).toBe("show-abc123");
+		expect(event.artifactKind).toBe("diagram.architecture");
+		expect(event.tags).toEqual(["architecture", "hub"]);
+		expect(event.produce.args).toEqual({
+			mermaidSource: "flowchart LR\n  A --> B",
+		});
+	});
+
+	it("round-trips through JSON", () => {
+		const original = parseDriveEvent(artifact);
+		expect(parseDriveEvent(JSON.parse(JSON.stringify(original)))).toEqual(
+			original,
+		);
+	});
+
+	it("rejects the data-uri field the producers build", () => {
+		const result = DriveEventSchema.safeParse({
+			...artifact,
+			uri: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects artifact bytes smuggled through produce.args", () => {
+		const result = DriveEventSchema.safeParse({
+			...artifact,
+			produce: {
+				...artifact.produce,
+				args: {
+					mermaidSource: "flowchart LR\n  A --> B",
+					dataUri: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+				},
+			},
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts a tagless artifact but rejects an empty tag", () => {
+		const { tags: _tags, ...untagged } = artifact;
+		expect(DriveEventSchema.safeParse(untagged).success).toBe(true);
+		expect(
+			DriveEventSchema.safeParse({ ...artifact, tags: [""] }).success,
+		).toBe(false);
+	});
+});
+
 describe("privacy gate", () => {
+	it("forbids the media byte keys the producers populate", () => {
+		for (const key of MEDIA_BYTE_KEYS) {
+			expect(DRIVE_EVENT_FORBIDDEN_KEYS).toContain(key);
+		}
+	});
+
 	it("does not accept forbidden audio / transcript payload fields", () => {
 		for (const key of DRIVE_EVENT_FORBIDDEN_KEYS) {
 			const result = DriveEventSchema.safeParse({

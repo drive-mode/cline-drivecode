@@ -269,6 +269,32 @@ describe("reduceRoom", () => {
 		expect(next).toBe(room);
 	});
 
+	it("records media.artifact as applied without touching the stage", () => {
+		const room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		const next = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "m1",
+			roomId: "room_1",
+			at,
+			type: "media.artifact",
+			track: "media",
+			showItemId: "show-1",
+			artifactKind: "diagram.architecture",
+			mediaClass: "still",
+			title: "Topology",
+			caption: "Hub is the single writer",
+			ownerParticipantId: "agent_partner",
+			produce: {
+				tool: "render_mermaid",
+				args: { mermaidSource: "flowchart LR\n  A --> B" },
+			},
+			status: "shown",
+		});
+		expect(next.appliedEventIds).toEqual(["m1"]);
+		expect(projectStage(next)).toEqual(projectStage(room));
+		expect(projectRoster(next)).toEqual(projectRoster(room));
+	});
+
 	it("prefers work.command and work.test_result summary when present", () => {
 		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
 		room = reduceRoom(room, {

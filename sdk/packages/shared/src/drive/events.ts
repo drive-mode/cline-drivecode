@@ -1,12 +1,13 @@
 /**
  * Versioned DriveEvent union (DRV-EVENTS).
  *
- * Five tracks: control, conversation, work, presence, media (reserved — no
- * members yet). No event carries raw audio or full transcripts.
+ * Five tracks: control, conversation, work, presence, media. No event carries
+ * raw audio, full transcripts, or artifact bytes.
  */
 
 import { z } from "zod";
 import { AddressSetSchema } from "./address";
+import { MediaClassSchema, ShowArtifactKindSchema } from "./director";
 import {
 	DRIVE_SCHEMA_VERSION,
 	DriveSubModeSchema,
@@ -28,6 +29,30 @@ const IsoTimestampSchema = z.preprocess(
 	(value) => (value instanceof Date ? value.toISOString() : value),
 	z.string().datetime(),
 );
+
+/**
+ * Forbidden payload keys — privacy gate for DRV-PRIVACY / DRV-EVENTS.
+ *
+ * Audio/transcript keys keep speech out of the log; the media keys keep
+ * artifact bytes (base64 data URIs, raw SVG) out of it. Producers hold those
+ * in memory; the log carries only the recipe needed to reproduce them.
+ */
+export const DRIVE_EVENT_FORBIDDEN_KEYS = [
+	"audio",
+	"rawAudio",
+	"pcm",
+	"wav",
+	"transcript",
+	"fullTranscript",
+	"rawTranscript",
+	"speechAudio",
+	"uri",
+	"dataUri",
+	"svg",
+	"image",
+	"bytes",
+	"thumbnail",
+] as const;
 
 const DriveEventBaseSchema = z.object({
 	schemaVersion: z.literal(DRIVE_SCHEMA_VERSION),
@@ -192,7 +217,54 @@ export const PresenceStatusEventSchema = DriveEventBaseSchema.extend({
 	status: z.enum(["idle", "working", "speaking", "away"]),
 }).strict();
 
-// Media track is reserved — no members in schemaVersion 1.
+// ── media ────────────────────────────────────────────────────────────────
+
+export const MediaArtifactStatusSchema = z.enum([
+	"planned",
+	"ready",
+	"showing",
+	"shown",
+	"cancelled",
+]);
+export type MediaArtifactStatus = z.infer<typeof MediaArtifactStatusSchema>;
+
+const MediaArtifactProduceSchema = z
+	.object({
+		tool: z.string().min(1),
+		templateId: z.string().min(1).optional(),
+		args: z.record(z.string(), z.unknown()).superRefine((args, ctx) => {
+			for (const key of Object.keys(args)) {
+				if ((DRIVE_EVENT_FORBIDDEN_KEYS as readonly string[]).includes(key)) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: [key],
+						message: `produce.args must not include forbidden key "${key}"`,
+					});
+				}
+			}
+		}),
+	})
+	.strict();
+
+/**
+ * Durable artifact record (DRV-ARTIFACTS). Bytes-free by construction: the
+ * produce recipe reproduces the artifact, so `uri` / `svg` and friends are
+ * rejected by `.strict()` rather than persisted into the JSONL event log.
+ */
+export const MediaArtifactEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("media.artifact"),
+	track: z.literal("media"),
+	/** Show backlog item this artifact was produced for. */
+	showItemId: z.string().min(1),
+	artifactKind: ShowArtifactKindSchema,
+	mediaClass: MediaClassSchema,
+	title: z.string().min(1),
+	caption: z.string(),
+	ownerParticipantId: z.string().min(1),
+	produce: MediaArtifactProduceSchema,
+	tags: z.array(z.string().min(1)).optional(),
+	status: MediaArtifactStatusSchema,
+}).strict();
 
 export const DriveEventSchema = z.discriminatedUnion("type", [
 	ControlJoinEventSchema,
@@ -214,22 +286,11 @@ export const DriveEventSchema = z.discriminatedUnion("type", [
 	PresenceSpeakingEventSchema,
 	PresenceTypingEventSchema,
 	PresenceStatusEventSchema,
+	MediaArtifactEventSchema,
 ]);
 
 export type DriveEvent = z.infer<typeof DriveEventSchema>;
 export type DriveEventType = DriveEvent["type"];
-
-/** Forbidden payload keys — privacy gate for DRV-PRIVACY / DRV-EVENTS. */
-export const DRIVE_EVENT_FORBIDDEN_KEYS = [
-	"audio",
-	"rawAudio",
-	"pcm",
-	"wav",
-	"transcript",
-	"fullTranscript",
-	"rawTranscript",
-	"speechAudio",
-] as const;
 
 export function parseDriveEvent(input: unknown): DriveEvent {
 	return DriveEventSchema.parse(input);

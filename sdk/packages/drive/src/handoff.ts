@@ -26,6 +26,12 @@ const DRIVE_EVENT_FORBIDDEN_KEYS = [
 	"fullTranscript",
 	"rawTranscript",
 	"speechAudio",
+	"uri",
+	"dataUri",
+	"svg",
+	"image",
+	"bytes",
+	"thumbnail",
 ] as const;
 
 /** Keys that must never appear on a Tier-0 handoff packet (privacy gate). */
@@ -257,6 +263,7 @@ export function assembleHandoffPacket(
 			case "presence.speaking":
 			case "presence.typing":
 			case "presence.status":
+			case "media.artifact":
 				break;
 			default: {
 				const _exhaustive: never = event;

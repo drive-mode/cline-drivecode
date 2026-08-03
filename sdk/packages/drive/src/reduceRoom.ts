@@ -250,6 +250,8 @@ export function reduceRoom(
 		case "conversation.message":
 		case "conversation.narration":
 		case "presence.typing":
+		// Artifacts fold into the artifact directory, not the room snapshot.
+		case "media.artifact":
 			return base;
 		default: {
 			const _exhaustive: never = event;

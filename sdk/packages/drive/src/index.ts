@@ -410,6 +410,13 @@ export {
 	type SpotlightReject,
 } from "./room/participantControls.js";
 export {
+	artifactDirectoryTags,
+	type DriveArtifactDirectoryEntry,
+	filterArtifactDirectory,
+	projectArtifactDirectory,
+	sortArtifactDirectory,
+} from "./room/artifactDirectory.js";
+export {
 	type DriveRoomDirectoryEntry,
 	type DriveRoomStatus,
 	projectRoomDirectoryEntry,

@@ -12,6 +12,15 @@ import {
 	HANDOFF_FORBIDDEN_KEYS,
 } from "./handoff.js";
 
+const MEDIA_BYTE_KEYS = [
+	"uri",
+	"dataUri",
+	"svg",
+	"image",
+	"bytes",
+	"thumbnail",
+];
+
 const roomId = "room_handoff";
 const baseAt = "2026-07-30T10:00:00.000Z";
 
@@ -169,6 +178,58 @@ describe("assembleHandoffPacket", () => {
 		).toThrow(/forbidden key "transcript"/);
 		expect(HANDOFF_FORBIDDEN_KEYS).toContain("utterance");
 		expect(HANDOFF_FORBIDDEN_KEYS).toContain("audio");
+	});
+
+	it("forbids artifact byte keys on packets", () => {
+		const packet = assembleHandoffPacket({
+			roomEvents: [],
+			bankSnapshot: emptyBank(),
+		});
+		expect(() =>
+			assertNoForbiddenHandoffKeys({
+				...packet,
+				evidence: {
+					...packet.evidence,
+					uri: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+				},
+			}),
+		).toThrow(/forbidden key "uri"/);
+		for (const key of MEDIA_BYTE_KEYS) {
+			expect(HANDOFF_FORBIDDEN_KEYS).toContain(key);
+		}
+	});
+
+	it("draws no evidence from media.artifact events", () => {
+		const packet = assembleHandoffPacket({
+			roomEvents: [
+				workEdit("src/parser.ts", "e1"),
+				{
+					schemaVersion: 1,
+					id: "m1",
+					roomId,
+					at: baseAt,
+					type: "media.artifact",
+					track: "media",
+					showItemId: "show-1",
+					artifactKind: "diagram.architecture",
+					mediaClass: "still",
+					title: "Topology",
+					caption: "Hub is the single writer",
+					ownerParticipantId: "agent_partner",
+					produce: {
+						tool: "render_mermaid",
+						args: { mermaidSource: "flowchart LR\n  A --> B" },
+					},
+					status: "shown",
+				},
+			],
+			bankSnapshot: emptyBank(),
+		});
+		expect(packet.evidence.editPaths).toEqual(["src/parser.ts"]);
+		expect(packet.evidence.commands).toEqual([]);
+		expect(packet.evidence.decisions).toEqual([]);
+		expect(packet.done).toEqual([]);
+		expect(formatHandoffNarration(packet)).not.toContain("Topology");
 	});
 
 	it("scopes evidence to sinceAt for while-away catch-up", () => {
