@@ -1844,7 +1844,7 @@ export default function Chat({
 							// roomId, so onClick would pass the MouseEvent as one.
 							onJoinDrive={() => joinDrive()}
 							onLeaveDrive={leaveDrive}
-							onToggleSpotlight={toggleStage}
+							onToggleStageLayout={toggleStage}
 						/>
 						<Button
 							disabled={isHydrating}

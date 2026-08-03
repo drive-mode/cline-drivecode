@@ -2,6 +2,7 @@ import {
 	type ChatForkRecord,
 	type RoomSnapshot,
 	type ShowBacklogItem,
+	type StagePin,
 	topologyCacheKey,
 } from "@cline/shared";
 import {
@@ -41,6 +42,7 @@ import {
 	toggleDriveSpotlightId,
 } from "./participantIds";
 import { resolveNarratorParticipantId } from "./rosterHelpers";
+import { postSetStage } from "./stageSharePin";
 import {
 	applyBankSnapshot,
 	applyRoomSnapshot,
@@ -269,7 +271,9 @@ export type UseDriveSessionResult = {
 		onToggleCaptions: () => void;
 		onTogglePartnerDeafen: () => void;
 		onTogglePartnerMute: () => void;
-		onToggleSpotlight: () => void;
+		/** Changes who is sharing. Not `toggleStage`, which flips the layout. */
+		onMoveSpotlight: () => void;
+		onSharePin: (pin: StagePin) => void;
 		onToggleWorkers?: () => void;
 		onSubModeChange: (mode: DriveUiState["subMode"]) => void;
 	};
@@ -1459,15 +1463,22 @@ export function useDriveSession(
 					},
 				});
 			},
-			onToggleSpotlight: () => {
+			onMoveSpotlight: () => {
 				const nextId = toggleDriveSpotlightId(drive.spotlightParticipantId);
 				const kind = isDriveHumanId(nextId) ? "human" : "agent";
 				// call_set_stage is authoritative; live spotlight syncs from sharer.
-				postToHost({
-					type: "call_set_stage",
-					roomId: drive.roomId ?? DRIVE_DEFAULT_ROOM_ID,
+				postSetStage({
+					roomId: drive.roomId,
 					sharer: { kind, participantId: nextId },
 					pin: null,
+				});
+			},
+			onSharePin: (pin: StagePin) => {
+				// The roster sheet's Share pin op, reached from the strip.
+				postSetStage({
+					roomId: drive.roomId,
+					sharer: { kind: "human", participantId: DRIVE_PARTICIPANT_HUMAN },
+					pin,
 				});
 			},
 			onToggleWorkers: toggleWorkersPanel,

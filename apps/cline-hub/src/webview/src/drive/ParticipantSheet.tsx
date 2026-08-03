@@ -1,6 +1,6 @@
 /** Participant sheet chooser + profile sections (DRV-PARTICIPANT-SHEET). */
 
-import type { Participant, StagePin } from "@cline/shared";
+import type { Participant } from "@cline/shared";
 import { HandIcon, MicOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -29,10 +29,10 @@ import {
 	participantStatusLabel,
 	resolveAgentHomeSlug,
 } from "./rosterHelpers";
+import { postSetStage } from "./stageSharePin";
 import {
 	applyPartnerDisplayName,
 	applyPartnerNameInk,
-	DRIVE_DEFAULT_ROOM_ID,
 	DRIVE_PARTICIPANT_HUMAN,
 	DRIVE_PARTICIPANT_PARTNER,
 	type DriveUiState,
@@ -40,19 +40,6 @@ import {
 } from "./types";
 
 export type ParticipantSheetMode = "chooser" | "profile";
-
-function postSetStage(input: {
-	roomId: string | null;
-	sharer: { kind: "human" | "agent"; participantId: string } | null;
-	pin?: StagePin | null;
-}): void {
-	postToHost({
-		type: "call_set_stage",
-		roomId: input.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID,
-		sharer: input.sharer,
-		pin: input.pin === undefined ? undefined : input.pin,
-	});
-}
 
 function StageShareChooser({
 	drive,

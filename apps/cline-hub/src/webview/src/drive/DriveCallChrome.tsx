@@ -1,4 +1,4 @@
-import type { StageCard } from "@cline/shared";
+import type { StageCard, StagePin } from "@cline/shared";
 import {
 	ApertureIcon,
 	CaptionsIcon,
@@ -11,9 +11,9 @@ import {
 	MicIcon,
 	MicOffIcon,
 	PhoneIcon,
-	PhoneOffIcon,
+	PinIcon,
 	RotateCcwIcon,
-	Settings2Icon,
+	SlidersHorizontalIcon,
 	UsersIcon,
 	VolumeXIcon,
 } from "lucide-react";
@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
@@ -39,6 +40,7 @@ import {
 	resolveInterruptPhase,
 } from "./agencyChrome";
 import { isDriveHumanId } from "./participantIds";
+import { buildHumanPinDefaults, type HumanPinKind } from "./pinDefaults";
 import type { DriveSubMode, DriveUiState } from "./types";
 import type { DriveConnectionPhase } from "./useDriveSession";
 import { driveOutputSilenced } from "./voice/driveEarcons";
@@ -56,16 +58,18 @@ export function DriveHeaderControls({
 	onJoinDrive,
 	onLeaveDrive,
 	onEndDrive,
-	onToggleSpotlight,
+	onToggleStageLayout,
 }: {
 	connectionPhase: DriveConnectionPhase;
 	drive: DriveUiState;
 	disabled?: boolean;
 	onJoinDrive: () => void;
+	/** Cancels a join in flight. Leaving an established call is strip-only. */
 	onLeaveDrive: () => void;
 	/** End closes the session with Tier-0 handoff (distinct from Leave). */
 	onEndDrive?: () => void;
-	onToggleSpotlight: () => void;
+	/** Flips the Spotlight/feed split layout — not who is sharing. */
+	onToggleStageLayout: () => void;
 }) {
 	const joining = connectionPhase === "joining";
 	const onCall = connectionPhase === "on";
@@ -109,7 +113,7 @@ export function DriveHeaderControls({
 					<Button
 						aria-pressed={drive.stageLayout}
 						disabled={disabled}
-						onClick={onToggleSpotlight}
+						onClick={onToggleStageLayout}
 						size="sm"
 						type="button"
 						variant={drive.stageLayout ? "default" : "outline"}
@@ -131,36 +135,31 @@ export function DriveHeaderControls({
 					End call
 				</Button>
 			) : null}
-			<Button
-				aria-label={joining ? "Cancel joining Drive call" : undefined}
-				disabled={disabled}
-				onClick={onCall || joining ? onLeaveDrive : onJoinDrive}
-				size="sm"
-				title={
-					onCall
-						? "Leave call (work continues; rejoin to catch up)"
-						: undefined
-				}
-				type="button"
-				variant={onCall ? "default" : "outline"}
-			>
-				{onCall ? (
-					<>
-						<PhoneOffIcon className="size-3.5" />
-						Leave call
-					</>
-				) : joining ? (
-					<>
-						<Loader2Icon className="size-3.5 animate-spin" />
-						Joining…
-					</>
-				) : (
-					<>
-						<PhoneIcon className="size-3.5" />
-						Join call
-					</>
-				)}
-			</Button>
+			{/* No Leave here: the strip already carries it, and two Leave buttons
+			    on one screen is the duplication this header used to create. End
+			    stays because it is a Tier-0 close with no strip equivalent. */}
+			{onCall ? null : (
+				<Button
+					aria-label={joining ? "Cancel joining Drive call" : undefined}
+					disabled={disabled}
+					onClick={joining ? onLeaveDrive : onJoinDrive}
+					size="sm"
+					type="button"
+					variant="outline"
+				>
+					{joining ? (
+						<>
+							<Loader2Icon className="size-3.5 animate-spin" />
+							Joining…
+						</>
+					) : (
+						<>
+							<PhoneIcon className="size-3.5" />
+							Join call
+						</>
+					)}
+				</Button>
+			)}
 		</div>
 	);
 }
@@ -281,6 +280,69 @@ function StripVolume({
 }
 
 /**
+ * Share pin on the strip — the one call control the roster sheet had and the
+ * strip did not, two clicks deep behind a participant row. It hands the caller
+ * a {@link StagePin} that goes out through the same `postSetStage` the sheet's
+ * chooser uses (`stageSharePin.ts`), never a second payload.
+ *
+ * Defaults are read here, at render, exactly as the sheet reads them, so the
+ * `selection` pin still sees the live browser selection.
+ */
+function StripSharePin({
+	disabled,
+	drive,
+	onSharePin,
+}: {
+	disabled?: boolean;
+	drive: DriveUiState;
+	onSharePin: (pin: StagePin) => void;
+}) {
+	const defaults = buildHumanPinDefaults(drive.stageCards);
+	const label =
+		"Share pin (take Spotlight with a selection, file, or terminal)";
+	return (
+		<DropdownMenu>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<DropdownMenuTrigger
+							render={
+								<Button
+									aria-label={label}
+									className="size-[30px] shrink-0 [&_svg]:size-[15px]"
+									data-testid="drive-strip-share-pin"
+									disabled={disabled}
+									size="icon-sm"
+									type="button"
+									variant="outline"
+								/>
+							}
+						/>
+					}
+				>
+					<PinIcon />
+				</TooltipTrigger>
+				<TooltipContent>{label}</TooltipContent>
+			</Tooltip>
+			<DropdownMenuContent align="start" className="min-w-44">
+				{(Object.keys(defaults) as HumanPinKind[]).map((kind) => (
+					<DropdownMenuItem
+						data-testid={`drive-strip-share-pin-${kind}`}
+						key={kind}
+						onClick={() => onSharePin(defaults[kind])}
+					>
+						<span className="capitalize">Pin {kind}</span>
+						<span className="ml-auto max-w-[10rem] truncate text-[10px] text-muted-foreground">
+							{defaults[kind].label}
+						</span>
+					</DropdownMenuItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/**
  * The strip's single piece of text status. The canvas cycles modes on click;
  * a menu is used here so every mode stays one action away, as it was when the
  * strip carried four mode buttons.
@@ -357,7 +419,8 @@ export function DriveCallStrip({
 	onClearOverride,
 	onLeaveDrive,
 	onOpenSettings,
-	onToggleSpotlight,
+	onMoveSpotlight,
+	onSharePin,
 	onTogglePartnerMute,
 	onTogglePartnerDeafen,
 	onToggleWorkers,
@@ -383,7 +446,10 @@ export function DriveCallStrip({
 	/** Hang up: leaves the call, work continues. Never the Tier-0 End. */
 	onLeaveDrive?: () => void;
 	onOpenSettings?: () => void;
-	onToggleSpotlight?: () => void;
+	/** Changes who is sharing — not the split layout the header toggles. */
+	onMoveSpotlight?: () => void;
+	/** Take Spotlight with a pin. Same op as the roster sheet's Share pin. */
+	onSharePin?: (pin: StagePin) => void;
 	onTogglePartnerMute?: () => void;
 	onTogglePartnerDeafen?: () => void;
 	onToggleWorkers?: () => void;
@@ -494,10 +560,17 @@ export function DriveCallStrip({
 			<StripButton
 				disabled={disabled}
 				label={`Move Spotlight to ${nextSpotlightLabel}`}
-				onClick={() => onToggleSpotlight?.()}
+				onClick={() => onMoveSpotlight?.()}
 			>
 				<ApertureIcon />
 			</StripButton>
+			{onSharePin ? (
+				<StripSharePin
+					disabled={disabled}
+					drive={drive}
+					onSharePin={onSharePin}
+				/>
+			) : null}
 			<StripButton
 				disabled={disabled}
 				label={
@@ -578,12 +651,15 @@ export function DriveCallStrip({
 					</span>
 				</StripButton>
 			) : null}
+			{/* Sliders, not a gear: the composer's gear opens the provider/model
+			    panel, and two identical gears on one screen read as one control
+			    rendered twice. Different panel, different glyph. */}
 			<StripButton
 				disabled={disabled}
 				label="Call settings"
 				onClick={() => onOpenSettings?.()}
 			>
-				<Settings2Icon />
+				<SlidersHorizontalIcon />
 			</StripButton>
 			{onLeaveDrive ? (
 				<StripButton

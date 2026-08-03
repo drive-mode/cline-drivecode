@@ -407,6 +407,11 @@ export function DriveRoomChrome({
  * not before, and this is the one surface whose height every layout below it
  * already budgets for regardless of order. Split out of {@link DriveRoomChrome}
  * so the caller can place it at the bottom of the page.
+ *
+ * Constraint for whoever moves this next: it has to stay a *sibling* of the
+ * Spotlight/feed split, never a child of the feed column. That column goes
+ * `w-0` + `inert` when the feed folds (Chat.tsx), so a strip parented to it
+ * would take every call control — Leave included — down with the fold.
  */
 export function DriveCallStripDock({
 	session,

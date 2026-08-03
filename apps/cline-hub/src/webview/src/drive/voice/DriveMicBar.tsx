@@ -9,6 +9,12 @@ import {
 import type { SpeechInputMode } from "./speechInputModeForBackend";
 import { LocalSttError, transcribeAudioBlob } from "./transcribeAudioBlob";
 
+/** Why the STT mic is inert while the room mic is muted. */
+const MUTED_MIC_HINT =
+	"Mic muted. Unmute on the call strip to speak to the partner.";
+/** The mic is icon-only, so it needs a name in the state it still works in. */
+const LIVE_MIC_LABEL = "Voice input (speak a task)";
+
 export function DriveMicBar({
 	disabled,
 	forceMode,
@@ -50,16 +56,6 @@ export function DriveMicBar({
 		}
 	}, [muted]);
 
-	// Unmounting the SpeechInput is what revokes capture: its teardown stops the
-	// recogniser / recorder and drops any partial utterance.
-	if (muted) {
-		return (
-			<div className="border-t bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-				Mic muted. Unmute on the call strip to speak to the partner.
-			</div>
-		);
-	}
-
 	const capabilities = readSpeechInputCapabilities();
 	const resolvedMode = resolveSpeechInputMode({
 		requested: forceMode,
@@ -72,10 +68,20 @@ export function DriveMicBar({
 
 	return (
 		<div className="flex items-start gap-3 border-t bg-background px-3 py-2">
+			{/*
+			 * Muting keeps the mic on screen but inert — a control that vanishes
+			 * teaches users it does not exist. `muted` rides the key so the flip
+			 * still unmounts the live SpeechInput: its teardown is what revokes
+			 * capture and drops any partial utterance, which `disabled` alone
+			 * would not do to a recording already in flight.
+			 */}
 			<SpeechInput
+				aria-label={muted ? MUTED_MIC_HINT : LIVE_MIC_LABEL}
 				deviceId={micDeviceId}
-				disabled={disabled}
+				disabled={disabled || muted}
 				forceMode={resolvedMode}
+				key={muted ? "muted" : "live"}
+				title={muted ? MUTED_MIC_HINT : LIVE_MIC_LABEL}
 				onCaptureError={reportCaptureError}
 				onAudioRecorded={async (blob) => {
 					try {
@@ -106,7 +112,9 @@ export function DriveMicBar({
 				}}
 			/>
 			<div className="min-w-0 flex-1">
-				{caption.trim() ? (
+				{/* No draft editor while muted: the Send row is muted-gated too, so
+				    an editable draft here would be one nothing can send. */}
+				{!muted && caption.trim() ? (
 					<textarea
 						aria-label="Edit spoken caption before send"
 						className="min-h-[2.5rem] w-full resize-y rounded-md border bg-background px-2 py-1.5 text-xs text-foreground"
@@ -118,10 +126,12 @@ export function DriveMicBar({
 					/>
 				) : (
 					<p className="text-xs text-muted-foreground">
-						{unavailable ??
-							(resolvedMode === "media-recorder"
-								? "Speak a task. Local STT posts the utterance to a loopback whisper server."
-								: "Speak a task. The browser transcribes it; nothing is recorded to disk.")}
+						{muted
+							? MUTED_MIC_HINT
+							: (unavailable ??
+								(resolvedMode === "media-recorder"
+									? "Speak a task. Local STT posts the utterance to a loopback whisper server."
+									: "Speak a task. The browser transcribes it; nothing is recorded to disk."))}
 					</p>
 				)}
 				{captureError ? (
