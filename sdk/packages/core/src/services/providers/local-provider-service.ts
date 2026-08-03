@@ -74,6 +74,17 @@ function resolveVisibleApiKey(settings: {
 	return settings.apiKey ?? settings.auth?.apiKey;
 }
 
+// The provider catalog is broadcast to every connected peer (webview,
+// desktop-command callers, remote hub clients over a tunnel). It must never
+// carry the raw secret — only whether one is configured. Callers that need
+// the real value use the settings manager directly (server-side only).
+function hasApiKey(settings: {
+	apiKey?: string;
+	auth?: { apiKey?: string };
+}): boolean {
+	return (resolveVisibleApiKey(settings)?.trim() ?? "").length > 0;
+}
+
 function hasOAuthAccessToken(settings: {
 	auth?: { accessToken?: string };
 }): boolean {
@@ -274,6 +285,13 @@ function resolveConfigValues(
 
 	const values: Record<string, ProviderConfigFieldPrimitive> = {};
 	for (const field of fields) {
+		// Secret fields (apiKey, and per-provider credentials such as the
+		// Bedrock access/secret/session keys) are write-only: their persisted
+		// value must never round-trip through the catalog that gets sent to
+		// every connected peer. Presence is exposed separately (apiKeyPresent).
+		if (field.type === "password" || field.secret) {
+			continue;
+		}
 		const persistedValue = toConfigPrimitive(
 			field.path === "baseUrl" && settings?.baseUrl === undefined
 				? info?.baseUrl
@@ -706,8 +724,8 @@ export async function listLocalProviders(
 						color: stableColor(id),
 						letter: createLetter(name),
 						enabled: Boolean(directSettings),
-						apiKey: persistedSettings
-							? resolveVisibleApiKey(persistedSettings)
+						apiKeyPresent: persistedSettings
+							? hasApiKey(persistedSettings)
 							: undefined,
 						oauthAccessTokenPresent: persistedSettings
 							? hasOAuthAccessToken(persistedSettings)

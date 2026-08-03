@@ -140,7 +140,7 @@ export type ClinePassSubscriptionStatus =
 export interface ProviderCatalogItem {
 	id: string;
 	name: string;
-	apiKey?: string;
+	apiKeyPresent?: boolean;
 	oauthAccessTokenPresent?: boolean;
 	capabilities?: readonly string[];
 	models: number | null;
@@ -165,7 +165,8 @@ export function toProviderEntry(provider: ProviderCatalogItem): ProviderEntry {
 		isOAuth: isOAuthProvider(provider.id),
 		isLocalAuth: isOpenAICodexCliProvider(provider.id),
 		hasAuth:
-			Boolean(provider.apiKey) || provider.oauthAccessTokenPresent === true,
+			provider.apiKeyPresent === true ||
+			provider.oauthAccessTokenPresent === true,
 		...(provider.capabilities ? { capabilities: provider.capabilities } : {}),
 		models: provider.models,
 		defaultModelId: provider.defaultModelId,

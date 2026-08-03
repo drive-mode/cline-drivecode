@@ -1,7 +1,10 @@
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+	NativeSelect,
+	NativeSelectOption,
+} from "@/components/ui/native-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { desktopClient } from "@/lib/desktop-client";
@@ -286,7 +289,7 @@ export function SettingsView({
 		try {
 			const result = await desktopClient.invoke<{
 				provider: string;
-				accessToken: string;
+				accessTokenPresent: boolean;
 			}>("run_provider_oauth_login", {
 				provider: id,
 			});
@@ -296,7 +299,7 @@ export function SettingsView({
 						? {
 								...provider,
 								enabled: true,
-								oauthAccessTokenPresent: result.accessToken.trim().length > 0,
+								oauthAccessTokenPresent: result.accessTokenPresent,
 							}
 						: provider,
 				),
@@ -736,11 +739,7 @@ function GeneralSettingsContent() {
 						disabled={compactionLoading || compactionSaving}
 						onChange={(event) => {
 							const next = event.target.value as CompactionMode;
-							if (
-								next === "off" ||
-								next === "basic" ||
-								next === "agentic"
-							) {
+							if (next === "off" || next === "basic" || next === "agentic") {
 								void updateCompactionMode(next);
 							}
 						}}

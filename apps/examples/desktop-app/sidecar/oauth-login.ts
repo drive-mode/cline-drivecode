@@ -49,7 +49,7 @@ export async function runCancellableProviderOAuthLogin(
 	openUrl: (url: string) => void,
 	options: { owner?: object } = {},
 	dependencies: OAuthLoginDependencies = defaultDependencies,
-): Promise<{ provider: string; accessToken: string }> {
+): Promise<{ provider: string; accessTokenPresent: boolean }> {
 	const storageProviderId = getProviderAuthStorageId(providerId) ?? providerId;
 	const existing = manager.getProviderSettings(storageProviderId);
 
@@ -86,7 +86,9 @@ export async function runCancellableProviderOAuthLogin(
 		}
 		return {
 			provider: providerId,
-			accessToken: saved.auth?.accessToken ?? saved.apiKey ?? "",
+			accessTokenPresent:
+				(saved.auth?.accessToken?.trim() ?? saved.apiKey?.trim() ?? "").length >
+				0,
 		};
 	} finally {
 		if (pendingOAuthLoginsByProvider.get(providerId) === entry) {

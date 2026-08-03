@@ -36,12 +36,13 @@ import { cn } from "@/lib/utils";
 function getInitialConfigValues(
 	provider: Provider,
 ): Record<string, ProviderConfigFieldPrimitive> {
+	// Secret fields (apiKey and friends) are write-only: the server never
+	// echoes their persisted value back, so there is nothing to prefill here.
+	// The form starts blank and shows a "saved" placeholder instead — see
+	// apiKeyPresent below.
 	const values: Record<string, ProviderConfigFieldPrimitive> = {
 		...(provider.configValues ?? {}),
 	};
-	if (provider.apiKey !== undefined && values.apiKey === undefined) {
-		values.apiKey = provider.apiKey;
-	}
 	if (provider.baseUrl !== undefined && values.baseUrl === undefined) {
 		values.baseUrl = provider.baseUrl;
 	}
@@ -267,6 +268,12 @@ export function ProviderDetailContent({
 		providerId: string;
 	} | null>(null);
 	const copiedModelTimeoutRef = useRef<number | undefined>(undefined);
+	// Secret fields no longer arrive prefilled with their real value (the
+	// server only ever sends presence, never the secret). Blurring a field the
+	// user never actually typed into must not resend an empty value and wipe
+	// a previously saved credential, so only fields the user has edited this
+	// session are eligible to commit on blur.
+	const dirtySecretFieldsRef = useRef<Set<string>>(new Set());
 
 	const configFields = provider.configFields ?? [];
 	const apiKeyValue = fieldValueToString(localConfigValues.apiKey);
@@ -379,6 +386,10 @@ export function ProviderDetailContent({
 								const valueText = fieldValueToString(value);
 								const isSecret = field.type === "password" || field.secret;
 								const isShown = shownSecrets[field.path] ?? false;
+								const isSavedApiKey =
+									field.path === "apiKey" &&
+									provider.apiKeyPresent === true &&
+									!valueText;
 								return (
 									<div
 										className="grid min-h-18 grid-cols-[minmax(12rem,0.55fr)_minmax(16rem,0.45fr)] items-center gap-6 border-b py-4 max-[900px]:grid-cols-1 max-[900px]:gap-3"
@@ -431,14 +442,32 @@ export function ProviderDetailContent({
 												) : null}
 												<Input
 													className="h-7 flex-1 border-0 bg-transparent px-0 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-													onBlur={() => commitField(field, valueText)}
-													onChange={(event) =>
+													onBlur={() => {
+														if (
+															isSecret &&
+															!dirtySecretFieldsRef.current.has(field.path)
+														) {
+															// Untouched secret field: nothing to save, and
+															// committing the blank placeholder would clear
+															// the credential already stored server-side.
+															return;
+														}
+														commitField(field, valueText);
+													}}
+													onChange={(event) => {
+														if (isSecret) {
+															dirtySecretFieldsRef.current.add(field.path);
+														}
 														setLocalConfigValues((current) => ({
 															...current,
 															[field.path]: event.target.value,
-														}))
+														}));
+													}}
+													placeholder={
+														isSavedApiKey
+															? "•••••••• (saved — enter a new key to replace)"
+															: field.placeholder
 													}
-													placeholder={field.placeholder}
 													spellCheck={false}
 													type={
 														isSecret && !isShown
@@ -493,7 +522,10 @@ export function ProviderDetailContent({
 					</section>
 				) : null}
 
-				{!apiKeyValue && !provider.oauthAccessTokenPresent && onOAuthLogin ? (
+				{!apiKeyValue &&
+				!provider.apiKeyPresent &&
+				!provider.oauthAccessTokenPresent &&
+				onOAuthLogin ? (
 					<div className="mb-8">
 						<Button
 							className="inline-flex items-center gap-2 w-full"

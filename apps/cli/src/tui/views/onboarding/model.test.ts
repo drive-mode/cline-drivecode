@@ -30,7 +30,7 @@ describe("onboarding model helpers", () => {
 			toProviderEntry({
 				id: "cline",
 				name: "Cline",
-				apiKey: "",
+				apiKeyPresent: false,
 				oauthAccessTokenPresent: true,
 				models: 12,
 				defaultModelId: "openai/gpt-5.3-codex",
@@ -51,7 +51,7 @@ describe("onboarding model helpers", () => {
 			toProviderEntry({
 				id: "anthropic",
 				name: "Anthropic",
-				apiKey: "sk-test",
+				apiKeyPresent: true,
 				models: null,
 			}),
 		).toMatchObject({

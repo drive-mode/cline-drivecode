@@ -184,7 +184,7 @@ export interface ProviderListItem {
 	color: string;
 	letter: string;
 	enabled: boolean;
-	apiKey?: string;
+	apiKeyPresent?: boolean;
 	oauthAccessTokenPresent?: boolean;
 	baseUrl?: string;
 	defaultModelId?: string;

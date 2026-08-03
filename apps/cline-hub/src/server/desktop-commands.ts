@@ -193,7 +193,9 @@ export async function handleDesktopCommand(
 		}
 		return {
 			provider: providerId,
-			accessToken: saved.auth?.accessToken ?? saved.apiKey ?? "",
+			accessTokenPresent:
+				(saved.auth?.accessToken?.trim() ?? saved.apiKey?.trim() ?? "").length >
+				0,
 		};
 	}
 	if (command === "cline_account") {

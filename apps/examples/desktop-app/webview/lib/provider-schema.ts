@@ -40,7 +40,7 @@ export interface Provider {
 	color: string;
 	letter: string;
 	enabled: boolean;
-	apiKey?: string;
+	apiKeyPresent?: boolean;
 	oauthAccessTokenPresent?: boolean;
 	baseUrl?: string;
 	docUrl?: string;

@@ -50,7 +50,7 @@ describe("runCancellableProviderOAuthLogin", () => {
 		);
 
 		expect(save).toHaveBeenCalledTimes(1);
-		expect(result).toEqual({ provider: "cline", accessToken: "saved-token" });
+		expect(result).toEqual({ provider: "cline", accessTokenPresent: true });
 	});
 
 	it("rejects promptly on cancel and never persists a late completion", async () => {
@@ -120,7 +120,7 @@ describe("runCancellableProviderOAuthLogin", () => {
 		await expect(first).rejects.toBeInstanceOf(OAuthLoginCancelledError);
 		await expect(second).resolves.toEqual({
 			provider: "cline",
-			accessToken: "saved-token",
+			accessTokenPresent: true,
 		});
 
 		// The first attempt's late completion is discarded.

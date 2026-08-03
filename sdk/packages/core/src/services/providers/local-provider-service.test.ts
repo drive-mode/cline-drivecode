@@ -1430,6 +1430,61 @@ describe("listLocalProviders", () => {
 		).toBe(true);
 	});
 
+	it("never echoes the raw API key in the provider catalog", async () => {
+		manager.saveProviderSettings(
+			{
+				provider: "anthropic",
+				apiKey: "sk-super-secret-value",
+				model: "claude-sonnet-4-6",
+			},
+			{ setLastUsed: false },
+		);
+
+		const { providers } = await listLocalProviders(manager);
+		const anthropic = providers.find((provider) => provider.id === "anthropic");
+
+		expect(anthropic?.apiKeyPresent).toBe(true);
+		expect(anthropic).not.toHaveProperty("apiKey");
+		expect(anthropic?.configValues?.apiKey).toBeUndefined();
+		expect(JSON.stringify(anthropic)).not.toContain("sk-super-secret-value");
+	});
+
+	it("reports apiKeyPresent as falsy when no key is configured", async () => {
+		const { providers } = await listLocalProviders(manager);
+		const anthropic = providers.find((provider) => provider.id === "anthropic");
+
+		expect(anthropic?.apiKeyPresent).toBeFalsy();
+	});
+
+	it("never echoes secret provider-specific config fields (e.g. Bedrock credentials)", async () => {
+		manager.saveProviderSettings(
+			{
+				provider: "bedrock",
+				aws: {
+					accessKey: "AKIASECRETVALUE",
+					secretKey: "aws-secret-key-value",
+					sessionToken: "aws-session-token-value",
+					region: "us-east-1",
+				},
+				model: "anthropic.claude-sonnet-4-6",
+			},
+			{ setLastUsed: false },
+		);
+
+		const { providers } = await listLocalProviders(manager);
+		const bedrock = providers.find((provider) => provider.id === "bedrock");
+
+		expect(bedrock?.configValues?.["aws.accessKey"]).toBeUndefined();
+		expect(bedrock?.configValues?.["aws.secretKey"]).toBeUndefined();
+		expect(bedrock?.configValues?.["aws.sessionToken"]).toBeUndefined();
+		// Non-secret config in the same object is unaffected.
+		expect(bedrock?.configValues?.["aws.region"]).toBe("us-east-1");
+		const serialized = JSON.stringify(bedrock);
+		expect(serialized).not.toContain("AKIASECRETVALUE");
+		expect(serialized).not.toContain("aws-secret-key-value");
+		expect(serialized).not.toContain("aws-session-token-value");
+	});
+
 	it("exposes provider-specific config fields for Vertex", async () => {
 		manager.saveProviderSettings(
 			{
