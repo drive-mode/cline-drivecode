@@ -287,6 +287,10 @@ export function bootstrapAgentTeams(
 		requesterId: leadAgentId,
 		teammateConfigProvider: options.teammateConfigProvider,
 		createBaseTools: options.createBaseTools,
+		// The lead's own tool set, so this is the path `team_spawn_teammate`
+		// runs on. Omitting it here would leave the common case uncapped while
+		// only the restore path was covered.
+		parentAuthority: options.parentAuthority,
 		allowSpawn: true,
 		includeSpawnTool: options.includeLeadSpawnTool,
 		includeManagementTools: options.includeLeadManagementTools,
