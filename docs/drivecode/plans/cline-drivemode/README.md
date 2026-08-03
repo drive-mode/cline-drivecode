@@ -33,6 +33,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [12-performance.md](research/12-performance.md) | Drive compute/memory measurement and optimization architecture |
 | [13-deps-inventory.md](research/13-deps-inventory.md) | Dependency inventory and compatible upgrade matrix (U0) |
 | [14-primitives-audit.md](research/14-primitives-audit.md) | Primitives misuse / dead-code audit (P0) |
+| [15-agent-first-design.md](research/15-agent-first-design.md) | Agent-first design doctrine stress-tested against the Drive runtime; gaps, diagnostic, where Drive stands |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | **Active:** remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
 | [show-backlog-director/](initiatives/show-backlog-director/) | Implementable Show backlog + director slices (deps mapped) |
