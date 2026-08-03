@@ -266,6 +266,14 @@ Four more, briefly:
 - **A label and its grant disagree.** The `plan` preset is documented *"read-only,
   no shell access"* and ships `enableBash: true`
   ([presets.ts:40-46](../../../../../sdk/packages/core/src/extensions/tools/presets.ts)).
+  Here the *grant* is the deliberate half and the label is stale:
+  [prompt/cline.ts:25-31](../../../../../sdk/packages/shared/src/prompt/cline.ts)
+  states that `run_commands` "intentionally stays available in plan mode — it is
+  essential for read-only investigation … the mitigation for plan-mode mutations
+  is prompting plus mode-switch notices, not tool removal," and
+  `cline.test.ts:36-44` locks it as an explicit product decision. Worth reading as
+  a caution about this whole audit: a disagreement between a declaration and an
+  enforcement says one of them is wrong, never which one.
 
 ### The write-only state loop
 

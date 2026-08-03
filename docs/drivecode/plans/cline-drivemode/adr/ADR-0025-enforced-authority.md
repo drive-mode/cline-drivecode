@@ -199,9 +199,15 @@ forbidden-key scanners it must not become a transcript read-back by another name
   when its global auto-approve flag is set, and `beforeTool` hook overrides are
   spread *after* the resolved policy, so a hook can currently widen as well as
   narrow. Both need a decision or the ceiling leaks.
-- **`ToolPresets.plan` is documented "read-only, no shell access" and ships
-  `enableBash: true`.** Any preset→policy table that trusts the existing preset
-  names inherits that bug. Fix the preset first.
+- **A preset→policy table must not trust preset *names*.** `ToolPresets.plan` is
+  documented "read-only, no shell access" and ships `enableBash: true` — and the
+  grant is the correct half. `prompt/cline.ts:25-31` records the decision that
+  `run_commands` "intentionally stays available in plan mode … the mitigation for
+  plan-mode mutations is prompting plus mode-switch notices, not tool removal,"
+  and `cline.test.ts:36-44` locks it. Fix the stale comment, not the flag, and
+  build any preset ceiling from the flags rather than from what a preset is
+  called. Capping a *child's* shell authority is a per-delegation policy
+  question, not a global preset change.
 
 ## Alternatives rejected
 
