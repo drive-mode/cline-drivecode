@@ -79,6 +79,27 @@ const MODE_LABELS: Record<StatusViewMode, string> = {
 	"dependency-map": "dependency-map",
 };
 
+/**
+ * Keep `?statusMode=` in step with the active lens.
+ *
+ * The deep link was boot-only: `?statusMode=dependency-map` opened the map,
+ * but switching lens left the URL claiming the lens you started on, so
+ * copying the address bar handed someone else the wrong view. Replace rather
+ * than push — a lens tab is a filter over one page, not a new destination,
+ * and Back should leave the Status Hub instead of walking the tabs.
+ */
+function syncStatusModeQuery(mode: StatusViewMode): void {
+	if (typeof window === "undefined") return;
+	const params = new URLSearchParams(window.location.search);
+	if (params.get("statusMode") === mode) return;
+	params.set("statusMode", mode);
+	window.history.replaceState(
+		null,
+		"",
+		`${window.location.pathname}?${params.toString()}`,
+	);
+}
+
 function StatTile({
 	label,
 	count,
@@ -355,7 +376,10 @@ export function StatusView(props: {
 							)}
 							aria-pressed={mode === value}
 							key={value}
-							onClick={() => setMode(value)}
+							onClick={() => {
+								setMode(value);
+								syncStatusModeQuery(value);
+							}}
 							type="button"
 						>
 							{MODE_LABELS[value]}
