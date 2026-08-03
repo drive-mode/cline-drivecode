@@ -16,6 +16,7 @@ import {
 	Folder,
 	FunnelIcon,
 	HomeIcon,
+	LayersIcon,
 	LinkIcon,
 	MessageSquareIcon,
 	MoreHorizontal,
@@ -70,6 +71,8 @@ import type {
 	WebviewSessionSummary,
 } from "../../webview-protocol";
 import { APP_HOST_MESSAGE_TYPES, isAppHostMessage } from "./appHostMessages";
+import type { DriveArtifactsSource } from "./artifacts/drive-artifacts-source";
+import { HubDriveArtifactsSource } from "./artifacts/hub-drive-artifacts-source";
 import { DriveMarkIcon } from "./components/icons/drive-mark";
 import { DriveView } from "./components/views/drive-view";
 import { PageFrame, PageHeader } from "./components/views/page-layout";
@@ -124,6 +127,11 @@ const RoomsView = lazy(() =>
 		default: module.RoomsView,
 	})),
 );
+const ArtifactsView = lazy(() =>
+	import("./components/views/artifacts-view").then((module) => ({
+		default: module.ArtifactsView,
+	})),
+);
 const CustomizationSectionView = lazy(() =>
 	import("./components/views/settings/extensions-view").then((module) => ({
 		default: module.CustomizationSectionView,
@@ -136,6 +144,7 @@ type View =
 	| "status"
 	| "analytics"
 	| "rooms"
+	| "artifacts"
 	| "models"
 	| "rules"
 	| "hooks"
@@ -154,6 +163,7 @@ const VIEW_PATHS: Record<View, string> = {
 	status: "/status",
 	analytics: "/analytics",
 	rooms: "/rooms",
+	artifacts: "/artifacts",
 	models: "/models",
 	rules: "/rules",
 	hooks: "/hooks",
@@ -203,6 +213,7 @@ function viewFromPath(pathname: string): View {
 	if (pathname === VIEW_PATHS.status) return "status";
 	if (pathname === VIEW_PATHS.analytics) return "analytics";
 	if (pathname === VIEW_PATHS.rooms) return "rooms";
+	if (pathname === VIEW_PATHS.artifacts) return "artifacts";
 	if (pathname === VIEW_PATHS.models) return "models";
 	if (
 		pathname === VIEW_PATHS.rules ||
@@ -445,6 +456,7 @@ function Shell({
 			| "status"
 			| "analytics"
 			| "rooms"
+			| "artifacts"
 			| "rules"
 			| "hooks"
 			| "mcp"
@@ -459,10 +471,14 @@ function Shell({
 	const driveNavItems = [
 		{ view: "drive", label: "Drive", icon: DriveMarkIcon },
 		{ view: "rooms", label: "Rooms", icon: DoorOpenIcon },
+		{ view: "artifacts", label: "Artifacts", icon: LayersIcon },
 		{ view: "status", label: "Status Hub", icon: ActivityIcon },
 		{ view: "analytics", label: "Analytics", icon: ChartNoAxesColumnIcon },
 	] satisfies Array<{
-		view: Extract<View, "drive" | "rooms" | "status" | "analytics">;
+		view: Extract<
+			View,
+			"drive" | "rooms" | "artifacts" | "status" | "analytics"
+		>;
 		label: string;
 		// Wider than the lucide icons elsewhere: the Drive mark is a plain
 		// function component, and renderNavButton only needs `className`.
@@ -1330,7 +1346,12 @@ function App() {
 		(): DriveRoomsSource => new HubDriveRoomsSource(),
 		[],
 	);
-	const roomsWorkspaceRoot = useMemo(
+	/** Same reasoning as `roomsSource`: stateless, so one instance is enough. */
+	const artifactsSource = useMemo(
+		(): DriveArtifactsSource => new HubDriveArtifactsSource(),
+		[],
+	);
+	const driveWorkspaceRoot = useMemo(
 		() => resolveWorkspaceRoot(),
 		[resolveWorkspaceRoot],
 	);
@@ -1600,7 +1621,15 @@ function App() {
 				<RoomsView
 					onOpenRoom={openRoom}
 					roomsSource={roomsSource}
-					workspaceRoot={roomsWorkspaceRoot}
+					workspaceRoot={driveWorkspaceRoot}
+				/>
+			);
+		}
+		if (view === "artifacts") {
+			return (
+				<ArtifactsView
+					artifactsSource={artifactsSource}
+					workspaceRoot={driveWorkspaceRoot}
 				/>
 			);
 		}
@@ -1716,13 +1745,14 @@ function App() {
 		demoHub.useChatForkDemo,
 		demoHub.useShareScreenSpotlightDemo,
 		acknowledgeDriveLaunch,
+		artifactsSource,
 		driveLaunchRequest,
 		driveShellMode,
 		openRoom,
 		openStatusSessionRoom,
 		openDriveHistory,
 		roomsSource,
-		roomsWorkspaceRoot,
+		driveWorkspaceRoot,
 		statusSessionSource,
 		statusTeamsSource,
 		hubState,

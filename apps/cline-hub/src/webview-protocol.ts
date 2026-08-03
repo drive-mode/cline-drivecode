@@ -490,6 +490,16 @@ export type WebviewInboundMessage =
 			workspaceRoot?: string;
 	  }
 	| {
+			/**
+			 * Read-only artifact corpus for the Artifacts page (DRV-ARTIFACTS).
+			 * `workspaceRoot` is required by the hub — the corpus is owned by a
+			 * workspace and the command refuses to read any other directory's.
+			 */
+			type: "drive_artifacts_list";
+			workspaceRoot: string;
+			requestId?: string;
+	  }
+	| {
 			/** Gated plan-improve accept | reject | mute (DRV-PLAN-IMPROVE). */
 			type: "drive_plan_improve_resolve";
 			workspaceRoot: string;
@@ -763,6 +773,21 @@ export type WebviewOutboundMessage =
 	  }
 	| {
 			type: "drive_rooms_error";
+			text: string;
+			code?: string;
+			requestId?: string;
+	  }
+	| {
+			/**
+			 * Bytes-free artifact entries — the produce recipe travels, the
+			 * rendered data URI never does (DRV-PRIVACY).
+			 */
+			type: "drive_artifacts";
+			artifacts: unknown[];
+			requestId?: string;
+	  }
+	| {
+			type: "drive_artifacts_error";
 			text: string;
 			code?: string;
 			requestId?: string;

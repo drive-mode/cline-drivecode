@@ -8,6 +8,7 @@ describe("isWebviewRoute", () => {
 		"/sessions",
 		"/drive",
 		"/rooms",
+		"/artifacts",
 		"/status",
 		"/analytics",
 		"/models",
