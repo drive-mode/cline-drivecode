@@ -17,6 +17,98 @@ export interface ToolPolicy {
 	autoApprove?: boolean;
 }
 
+/** Wildcard key: the default applied to every tool with no explicit entry. */
+export const TOOL_POLICY_WILDCARD = "*";
+
+/**
+ * Resolve the effective policy for one tool.
+ *
+ * The wildcard is a *default*, not a ceiling — the per-tool entry shadows it
+ * field by field and in both directions, so a per-tool entry may be more
+ * permissive than `"*"`. The interactive CLI relies on exactly that: it writes
+ * `{"*": {autoApprove: false}}` plus per-tool `{autoApprove: true}` for a
+ * safe-tool list.
+ *
+ * Lives here rather than beside a consumer because the enforcement path in
+ * `@cline/agents` and the delegation cap below must agree bit for bit, and
+ * `@cline/agents` cannot import `@cline/core`.
+ */
+export function resolveToolPolicy(
+	toolName: string,
+	policies: Record<string, ToolPolicy> | undefined,
+): ToolPolicy {
+	return {
+		...(policies?.[TOOL_POLICY_WILDCARD] ?? {}),
+		...(policies?.[toolName] ?? {}),
+	};
+}
+
+/**
+ * Intersect two policy records so the result grants no more than either side.
+ *
+ * Used to cap a delegated child's authority by its parent's: the child may
+ * narrow itself, never widen beyond what the parent holds.
+ *
+ * Both fields default to `true`, so an absent key is an *allow* and the
+ * intersection has to be computed over resolved effective booleans rather than
+ * over the raw records. Intersecting raw records per key is a privilege
+ * escalation: a parent holding `{"*": {autoApprove: false}}` has no
+ * `read_files` key at all, so a naive merge lets a child asking for
+ * `{read_files: {autoApprove: true}}` keep it.
+ *
+ * Every entry in the result spells both fields out. Omitting a field would mean
+ * `true`, but an omitted field also fails to shadow the wildcard it sits under:
+ * a per-tool `{}` beneath `{"*": {autoApprove: false}}` resolves to denied, so a
+ * tool the parent explicitly allowed would come back capped.
+ */
+export function intersectToolPolicies(
+	parent: Record<string, ToolPolicy> | undefined,
+	child: Record<string, ToolPolicy> | undefined,
+): Record<string, ToolPolicy> | undefined {
+	if (!parent) {
+		return child;
+	}
+
+	const toolNames = new Set<string>([
+		...Object.keys(parent),
+		...Object.keys(child ?? {}),
+	]);
+	toolNames.delete(TOOL_POLICY_WILDCARD);
+
+	const out: Record<string, ToolPolicy> = {
+		// Mandatory: without it every tool named by neither side would escape
+		// the parent's wildcard.
+		[TOOL_POLICY_WILDCARD]: capPolicy(
+			parent[TOOL_POLICY_WILDCARD],
+			child?.[TOOL_POLICY_WILDCARD],
+		),
+	};
+
+	for (const toolName of toolNames) {
+		out[toolName] = capPolicy(
+			resolveToolPolicy(toolName, parent),
+			resolveToolPolicy(toolName, child),
+		);
+	}
+
+	return out;
+}
+
+/**
+ * AND two already-resolved policies, spelling both fields out so the entry
+ * fully describes its own effective policy and does not depend on what it sits
+ * under.
+ */
+function capPolicy(
+	parent: ToolPolicy | undefined,
+	child: ToolPolicy | undefined,
+): ToolPolicy {
+	return {
+		enabled: parent?.enabled !== false && child?.enabled !== false,
+		autoApprove: parent?.autoApprove !== false && child?.autoApprove !== false,
+	};
+}
+
 // =============================================================================
 // Tool Call Record
 // =============================================================================

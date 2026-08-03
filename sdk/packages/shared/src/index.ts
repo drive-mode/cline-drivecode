@@ -232,7 +232,12 @@ export type {
 	ToolCallRecord,
 	ToolPolicy,
 } from "./llms/tools";
-export { ToolCallRecordSchema } from "./llms/tools";
+export {
+	intersectToolPolicies,
+	resolveToolPolicy,
+	TOOL_POLICY_WILDCARD,
+	ToolCallRecordSchema,
+} from "./llms/tools";
 export {
 	type BasicLogger,
 	type BasicLogMetadata,

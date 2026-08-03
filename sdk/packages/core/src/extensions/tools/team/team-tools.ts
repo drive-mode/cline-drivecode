@@ -1,4 +1,9 @@
-import type { AgentResult } from "@cline/shared";
+import type {
+	AgentResult,
+	ToolApprovalRequest,
+	ToolApprovalResult,
+	ToolPolicy,
+} from "@cline/shared";
 import {
 	type AgentTool,
 	createTool,
@@ -163,6 +168,20 @@ function assertAwaitedRunSucceeded(run: TeamRunRecord): void {
 
 export type TeamTeammateRuntimeConfig = DelegatedAgentRuntimeConfig;
 
+/**
+ * The lead's authority, threaded down to every teammate so a teammate cannot
+ * hold tool permissions the lead does not. Both travel together: capping
+ * policies without also handing over the approval callback turns every
+ * non-auto-approved tool into a hard deny, because the runtime refuses when it
+ * has approval to request and nowhere to request it.
+ */
+export interface TeamParentAuthority {
+	toolPolicies?: Record<string, ToolPolicy>;
+	requestToolApproval?: (
+		request: ToolApprovalRequest,
+	) => Promise<ToolApprovalResult> | ToolApprovalResult;
+}
+
 export interface CreateAgentTeamsToolsOptions {
 	runtime: AgentTeamsRuntime;
 	requesterId: string;
@@ -172,6 +191,7 @@ export interface CreateAgentTeamsToolsOptions {
 	includeSpawnTool?: boolean;
 	includeManagementTools?: boolean;
 	onLeadToolsUnlocked?: (tools: AgentTool[]) => void;
+	parentAuthority?: TeamParentAuthority;
 }
 
 export interface BootstrapAgentTeamsOptions {
@@ -184,6 +204,7 @@ export interface BootstrapAgentTeamsOptions {
 	includeLeadSpawnTool?: boolean;
 	includeLeadManagementTools?: boolean;
 	onLeadToolsUnlocked?: (tools: AgentTool[]) => void;
+	parentAuthority?: TeamParentAuthority;
 }
 
 export interface BootstrapAgentTeamsResult {
@@ -229,6 +250,9 @@ function spawnTeamTeammate(
 			requesterId: options.spec.agentId,
 			teammateConfigProvider: options.teammateConfigProvider,
 			createBaseTools: options.createBaseTools,
+			// Threaded through the recursion, or a teammate-spawned agent would
+			// escape the cap its parent is under.
+			parentAuthority: options.parentAuthority,
 			allowSpawn: false,
 			// Spawning is lead-only; exposing the tool to teammates just
 			// makes them burn turns on "Only the lead agent can manage
@@ -246,6 +270,8 @@ function spawnTeamTeammate(
 			tools: teammateTools,
 			maxIterations: options.spec.maxIterations,
 			cwd: options.teammateConfigProvider.getRuntimeConfig().cwd,
+			parentToolPolicies: options.parentAuthority?.toolPolicies,
+			requestToolApproval: options.parentAuthority?.requestToolApproval,
 		}),
 	});
 }
@@ -277,6 +303,7 @@ export function bootstrapAgentTeams(
 			requesterId: leadAgentId,
 			teammateConfigProvider: options.teammateConfigProvider,
 			createBaseTools: options.createBaseTools,
+			parentAuthority: options.parentAuthority,
 			spec,
 		});
 		restoredTeammates.push(spec.agentId);
@@ -323,6 +350,7 @@ export function createAgentTeamsTools(
 						requesterId: options.requesterId,
 						teammateConfigProvider: options.teammateConfigProvider,
 						createBaseTools: options.createBaseTools,
+						parentAuthority: options.parentAuthority,
 						spec,
 					});
 					if (!includeManagementTools) {

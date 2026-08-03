@@ -99,6 +99,13 @@ export interface SpawnAgentToolConfig {
 	 */
 	toolPolicies?: Record<string, ToolPolicy>;
 	/**
+	 * The spawning agent's own policies, read per spawn so a mid-session change
+	 * (the interactive CLI rewrites its record when auto-approve is toggled)
+	 * reaches children. The child's effective policies are the intersection of
+	 * this and `toolPolicies`.
+	 */
+	getParentToolPolicies?: () => Record<string, ToolPolicy> | undefined;
+	/**
 	 * Optional approval callback for spawned sub-agent tool calls.
 	 */
 	requestToolApproval?: (
@@ -137,6 +144,7 @@ export function createSpawnAgentTool(
 				onEvent: config.onSubAgentEvent,
 				hookErrorMode: config.hookErrorMode,
 				toolPolicies: config.toolPolicies,
+				parentToolPolicies: config.getParentToolPolicies?.(),
 				requestToolApproval: config.requestToolApproval,
 			});
 			const subAgentId = subAgent.getAgentId();

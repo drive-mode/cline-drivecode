@@ -631,6 +631,12 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 					leadAgentId: config.sessionId || "lead",
 					restoredFromPersistence: Boolean(restoredTeamState),
 					restoredTeammates: restoredTeammateSpecs,
+					// Same pair the configured-agent path already passes. Without it a
+					// teammate ran with no policies and no approval callback at all.
+					parentAuthority: {
+						toolPolicies: effectiveToolPolicies,
+						requestToolApproval: input.requestToolApproval,
+					},
 					includeLeadSpawnTool: true,
 					includeLeadManagementTools: true,
 					onLeadToolsUnlocked: (teamTools) => {

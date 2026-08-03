@@ -539,6 +539,15 @@ export class LocalRuntimeHost implements RuntimeHost {
 					bootstrap.config,
 					sessionId,
 					sessionToolExecutors,
+					{
+						// Read from the bootstrap rather than `bootstrap.config`:
+						// prepareLocalRuntimeBootstrap resolves policies from the start
+						// input or the host default and never writes the result back to
+						// config, so config.toolPolicies is undefined in exactly the
+						// host-configured case -- which would under-cap children.
+						getToolPolicies: () => bootstrap.toolPolicies,
+						requestToolApproval: bootstrap.requestToolApproval,
+					},
 				),
 			createSubAgentLifecycleCallbacks: (config) =>
 				createSessionSubAgentLifecycleCallbacks(

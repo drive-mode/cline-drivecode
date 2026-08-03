@@ -1,4 +1,11 @@
-import type { AgentEvent, AgentTool } from "@cline/shared";
+import type {
+	AgentConfig,
+	AgentEvent,
+	AgentTool,
+	ToolApprovalRequest,
+	ToolApprovalResult,
+} from "@cline/shared";
+import { resolveToolPolicy } from "@cline/shared";
 import {
 	createBuiltinTools,
 	resolveToolPresetName,
@@ -118,11 +125,25 @@ export function createSessionSubAgentLifecycleCallbacks(
 	};
 }
 
+/**
+ * The spawning session's authority, read lazily so children see the posture in
+ * force when they spawn rather than the one captured at tool-construction time.
+ * Threaded verbatim through the recursion below, so generation N is capped by
+ * the root session and not merely by its immediate parent.
+ */
+export interface SpawnParentAuthority {
+	getToolPolicies: () => AgentConfig["toolPolicies"];
+	requestToolApproval?: (
+		request: ToolApprovalRequest,
+	) => Promise<ToolApprovalResult> | ToolApprovalResult;
+}
+
 export function createSessionSpawnTool(
 	deps: SpawnToolDeps,
 	config: CoreSessionConfig,
 	rootSessionId: string,
 	toolExecutors?: Partial<ToolExecutors>,
+	parentAuthority?: SpawnParentAuthority,
 ): AgentTool {
 	const lifecycle = createSessionSubAgentLifecycleCallbacks(
 		deps,
@@ -140,10 +161,22 @@ export function createSessionSpawnTool(
 			: [];
 		if (config.enableSpawnAgent) {
 			tools.push(
-				createSessionSpawnTool(deps, config, rootSessionId, toolExecutors),
+				createSessionSpawnTool(
+					deps,
+					config,
+					rootSessionId,
+					toolExecutors,
+					parentAuthority,
+				),
 			);
 		}
-		return filterDisabledTools(tools);
+		// Policy filter as well as the disabled-tool filter: without it a tool the
+		// parent disabled still reaches the child's schema and is only refused at
+		// call time, which spends a turn and tells the model it may retry.
+		const parentPolicies = parentAuthority?.getToolPolicies();
+		return filterDisabledTools(tools).filter(
+			(tool) => resolveToolPolicy(tool.name, parentPolicies).enabled !== false,
+		);
 	};
 
 	return createSpawnAgentTool({
@@ -183,6 +216,8 @@ export function createSessionSpawnTool(
 			updateConnectionDefaults: () => {},
 		},
 		createSubAgentTools,
+		getParentToolPolicies: () => parentAuthority?.getToolPolicies(),
+		requestToolApproval: parentAuthority?.requestToolApproval,
 		...lifecycle,
 	}) as AgentTool;
 }

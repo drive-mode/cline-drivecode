@@ -9,6 +9,7 @@ import type {
 	ToolApprovalRequest,
 	ToolApprovalResult,
 } from "@cline/shared";
+import { intersectToolPolicies } from "@cline/shared";
 import { SessionRuntime } from "../../../runtime/orchestration/session-runtime-orchestrator";
 import {
 	buildSubAgentSystemPrompt,
@@ -69,6 +70,16 @@ export interface BuildDelegatedAgentConfigOptions {
 	onEvent?: (event: AgentEvent) => void;
 	hookErrorMode?: HookErrorMode;
 	toolPolicies?: AgentConfig["toolPolicies"];
+	/**
+	 * The delegating agent's own policies. The child's effective policies are
+	 * the intersection of these and `toolPolicies`, so a child can narrow itself
+	 * but never widen past the agent that spawned it.
+	 *
+	 * Callers that omit this hand the child whatever `toolPolicies` says, which
+	 * is how a child of a parent running `{"*": {autoApprove: false}}` ended up
+	 * auto-approving everything.
+	 */
+	parentToolPolicies?: AgentConfig["toolPolicies"];
 	requestToolApproval?: (
 		request: ToolApprovalRequest,
 	) => Promise<ToolApprovalResult> | ToolApprovalResult;
@@ -127,7 +138,10 @@ export function buildDelegatedAgentConfig(
 		hooks: runtimeConfig.hooks,
 		extensions: runtimeConfig.extensions,
 		hookErrorMode: options.hookErrorMode,
-		toolPolicies: options.toolPolicies,
+		toolPolicies: intersectToolPolicies(
+			options.parentToolPolicies,
+			options.toolPolicies,
+		),
 		requestToolApproval: options.requestToolApproval,
 		logger: runtimeConfig.logger,
 		role: options.role,

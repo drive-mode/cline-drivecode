@@ -40,6 +40,45 @@ describe("createSpawnAgentTool", () => {
 		vi.clearAllMocks();
 	});
 
+	it("caps the child's policies by the spawning agent's", async () => {
+		// Regression: this path passed neither toolPolicies nor
+		// requestToolApproval, so a child of a parent requiring approval for
+		// everything ran with {} -- every tool enabled and auto-approved.
+		const { createSpawnAgentTool } = await import("./spawn-agent-tool.js");
+		runMock.mockResolvedValue({
+			text: "ok",
+			iterations: 1,
+			finishReason: "completed",
+			usage: { inputTokens: 1, outputTokens: 1 },
+		});
+		const requestToolApproval = vi.fn();
+
+		const tool = createSpawnAgentTool({
+			configProvider: createDelegatedAgentConfigProvider({
+				providerId: "anthropic",
+				modelId: "mock-model",
+			}),
+			createSubAgentTools: vi.fn().mockResolvedValue([]),
+			// The child asks for auto-approval on one tool; the parent denies it
+			// globally. The parent wins.
+			toolPolicies: { read_files: { autoApprove: true } },
+			getParentToolPolicies: () => ({ "*": { autoApprove: false } }),
+			requestToolApproval,
+		});
+
+		await tool.execute(
+			{ systemPrompt: "You are focused", task: "Do delegated work" },
+			{ agentId: "parent-agent", iteration: 0 },
+		);
+
+		const childConfig = agentConstructorSpy.mock.calls[0]?.[0] as AgentConfig;
+		expect(childConfig.toolPolicies?.["*"]?.autoApprove).toBe(false);
+		expect(childConfig.toolPolicies?.read_files?.autoApprove).toBe(false);
+		// Policies and the approval callback must travel together: capping
+		// without a callback turns every non-auto-approved tool into a hard deny.
+		expect(childConfig.requestToolApproval).toBe(requestToolApproval);
+	});
+
 	it("creates a sub-agent, forwards callbacks, and returns normalized output", async () => {
 		const { createSpawnAgentTool } = await import("./spawn-agent-tool.js");
 		runMock.mockResolvedValue({
