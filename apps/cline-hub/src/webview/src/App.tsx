@@ -87,7 +87,7 @@ import type {
 } from "./drive/driveLaunch";
 import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
 import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
-import { subscribeToHostMessages } from "./lib/host-message-gateway";
+import { useDriveCallPresence } from "./drive/useDriveCallPresence";
 import {
 	type DriveShellMode,
 	drivePath,
@@ -95,6 +95,7 @@ import {
 	parseDriveSessionId,
 	parseDriveShellMode,
 } from "./lib/drive-shell";
+import { subscribeToHostMessages } from "./lib/host-message-gateway";
 import {
 	readStoredNavRailCollapsed,
 	setStoredNavRailCollapsed,
@@ -447,6 +448,9 @@ function Shell({
 	const [railCollapsed, setRailCollapsed] = useState(
 		readStoredNavRailCollapsed,
 	);
+	// Mounted here, not in a view: the shell outlives every route change, which
+	// is what lets call presence survive leaving the call route (DRV-PIP).
+	const callPresence = useDriveCallPresence();
 
 	const toggleRail = () => {
 		const next = !railCollapsed;
@@ -651,6 +655,19 @@ function Shell({
 			<main className="min-h-0 overflow-hidden bg-background [&>.h-screen]:h-full">
 				{children}
 			</main>
+			{/* Observable seam for the shell-level presence reader until the PiP
+				companion consumes it — no chrome, no controls, no writes. */}
+			<span
+				aria-hidden="true"
+				data-active={String(callPresence.active)}
+				data-drive-call-presence=""
+				data-hand-raised={String(callPresence.handRaised)}
+				data-muted={String(callPresence.muted)}
+				data-narration={callPresence.narration ?? ""}
+				data-partner-name={callPresence.partnerName ?? ""}
+				data-room-id={callPresence.roomId ?? ""}
+				hidden
+			/>
 		</div>
 	);
 }
