@@ -94,6 +94,7 @@ bun -F @cline/drivecode-demo typecheck && bun -F @cline/drivecode-demo test
 bun -F @cline/cli build && bun -F @cline/cli typecheck && bun -F @cline/cli test:unit
 ```
 
+`check:drivecode-docs` runs nest structure **and** ADR-0026 Done claims (`check-drivecode-done.ts`). Cold-start surfaces must cite `claim:<id>` next to Shipped/Landed/Partial; `verified_shipped` needs existing evidence paths. Docs-link-check and sdk-test omit `pull_request.branches: [main]` so mid-stack layers still wake (same lesson as drive-ci / #171).
 `check:drivecode-docs` / `test:drivecode-docs` enforce the `docs/drivecode/` skeleton ([STRUCTURE.md](STRUCTURE.md)); both also run in the docs-link-check workflow.
 
 ## Release identity (publish / deploy traceability)

@@ -9,9 +9,10 @@ on:
             - ".github/workflows/sdk-test.yml"
             - ".github/actions/setup-bun-workspace/**"
     workflow_dispatch:
+    # Deliberately unfiltered by base branch (same as drive-ci / #171).
+    # `branches: [main]` skips mid-stack PRs whose base is another feature
+    # branch — ADR-0026 §4 / stacked-PR hole.
     pull_request:
-        branches:
-            - main
         paths:
             - "sdk/**"
             - ".github/workflows/sdk-test.yml"

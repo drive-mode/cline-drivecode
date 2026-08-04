@@ -2,9 +2,11 @@
 
 ## How Actions behave
 
-GitHub runs `pull_request` workflows that target the **stack base** (e.g. `main`) for **every** PR in the stack — including mid-stack PRs whose git base is another feature branch. Existing `on.pull_request.branches: [main]` workflows do not need a trigger change.
+GitHub evaluates `pull_request` workflows against the PR's **git base branch**. A mid-stack PR whose base is another feature branch (not `main`) **does not** match `on.pull_request.branches: [main]`, so those jobs never run on that layer. That is how `#153` shipped a broken hub webview — only `push: main` caught it after merge.
 
-Branch protection, required checks, and CODEOWNERS are evaluated against the stack base for every layer. Merging requires linear history and that the target PR **and all below it** meet those rules.
+For required or path-scoped product CI in this repo (`drive-ci`, `sdk-test`, `docs-link-check`), **omit** `pull_request.branches: [main]` (keep `paths:` filters). See `drive-ci.yml` comments and ADR-0026 §4. Do not teach mid-stack required-check skips for Drive/sdk/docs.
+
+Branch protection, required checks, and CODEOWNERS are still evaluated against the stack base for every layer. Merging requires linear history and that the target PR **and all below it** meet those rules.
 
 Docs: [Optimizing CI for stacked PRs](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/optimizing-ci-for-stacked-pull-requests) · [Rules reference](https://docs.github.com/en/pull-requests/reference/stacked-pull-requests)
 
@@ -78,8 +80,11 @@ Keep the **gatekeeper / required check** green on every layer. Put cost inside o
 | Job class | Stack policy |
 |-----------|----------------|
 | Lint / typecheck / unit (cheap) | Every layer |
+| Drive/docs/sdk **required** gates (`drive-ci`, docs-link-check, sdk-test) | Every layer — do **not** gate these on `run_expensive` (see `drive-ci.yml`; ADR-0026) |
 | Integration / e2e / full matrix (expensive) | `run_expensive` only |
 | Publish / deploy | Never on mid-stack; trunk only |
+
+`run_expensive` is annotation-only for Drive product suites today. Do not use it to skip mid-stack `drive-ci` / docs / sdk required work.
 
 Example job:
 
