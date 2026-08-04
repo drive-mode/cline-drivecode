@@ -16,7 +16,7 @@ import {
 } from "@cline/drive";
 import type { AddressSet, GateSessionState, RosterPack } from "@cline/shared";
 import {
-	allowGateClassForSession,
+	allowGateToolForSession,
 	classifyToolNameForGate,
 	clearGateSession,
 	createGateSessionState,
@@ -1077,6 +1077,11 @@ export default function Chat({
 					onSessionSelectedRef.current?.(message.sessionId);
 					setTitleEditing(false);
 					setSessionTitleDraft("");
+					// Session allows are per session, but the approval hook they
+					// bypass is ClineCore's global one — without this, a grant made
+					// in one session auto-approves the next session's tool calls
+					// for as long as Drive stays active.
+					setGateSession(clearGateSession());
 					return;
 				case "session_hydrated":
 					if (
@@ -1747,11 +1752,15 @@ export default function Chat({
 		}
 		const actionClass = classifyToolNameForGate(approval.toolName);
 		if (response.kind === "deny") {
-			setGateSession((current) => recordGateDenial(current, actionClass));
+			setGateSession((current) =>
+				recordGateDenial(current, actionClass, approval.toolName),
+			);
 		}
 		if (response.kind === "allow_session") {
+			// Scoped to this tool, not to response.actionClass — the class is a
+			// catch-all bucket that would carry run_commands along with it.
 			setGateSession((current) =>
-				allowGateClassForSession(current, response.actionClass),
+				allowGateToolForSession(current, response.actionClass, approval.toolName),
 			);
 		}
 		const approved = response.kind === "approve" || response.kind === "allow_session";

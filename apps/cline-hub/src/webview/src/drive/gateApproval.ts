@@ -16,9 +16,12 @@ import {
  * Whether an *incoming* approval request may be auto-approved instead of
  * queuing a new gate card. Session-allow is only ever granted from the gate
  * feed, so it only ever applies while Drive is active — matching
- * clearGateSession() firing on Drive leave/end. Scope is exactly the class
- * classified from the request's tool name, the same classifier used to grant
- * the original "allow for session".
+ * clearGateSession() firing on Drive leave/end.
+ *
+ * Scope is the **exact tool name**, never the gate class. The class is only
+ * consulted to reject `policy.hard`. `classifyToolNameForGate` falls back to
+ * `shell.unchecked` for any unmatched name, so class-scoping would let an
+ * approval given to `search_codebase` auto-approve `run_commands`.
  */
 export function resolveIncomingApprovalBypass(input: {
 	driveActive: boolean;
@@ -31,7 +34,10 @@ export function resolveIncomingApprovalBypass(input: {
 	}
 	return {
 		actionClass,
-		bypass: resolveGateBypass({ actionClass, state: input.gateSession })
-			.proceed,
+		bypass: resolveGateBypass({
+			actionClass,
+			state: input.gateSession,
+			toolName: input.toolName,
+		}).proceed,
 	};
 }
