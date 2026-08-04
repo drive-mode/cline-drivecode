@@ -145,7 +145,7 @@ export async function createOpenAICompatibleProviderModule(
 		// on origin/main).
 		model: (modelId) =>
 			wrapLanguageModel({
-				model: provider(modelId) as unknown as LanguageModelV4,
+				model: provider(modelId) as LanguageModelV4,
 				middleware: splitToolImagesMiddleware,
 			}),
 	};

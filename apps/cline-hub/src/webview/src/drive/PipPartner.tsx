@@ -36,6 +36,7 @@ import {
 import {
 	type PointerEvent as ReactPointerEvent,
 	type ReactNode,
+	useCallback,
 	useEffect,
 	useRef,
 	useState,
@@ -134,10 +135,13 @@ function usePipPosition(roomId: string): {
 		);
 	});
 
-	const measure = () => ({
-		width: cardEl.current?.offsetWidth ?? 240,
-		height: cardEl.current?.offsetHeight ?? 140,
-	});
+	const measure = useCallback(
+		() => ({
+			width: cardEl.current?.offsetWidth ?? 240,
+			height: cardEl.current?.offsetHeight ?? 140,
+		}),
+		[],
+	);
 
 	const setPosition = (next: DrivePipPosition) => {
 		const clamped = clampPipPosition(next, viewportSize(), measure());
@@ -153,7 +157,7 @@ function usePipPosition(roomId: string): {
 		};
 		window.addEventListener("resize", onResize);
 		return () => window.removeEventListener("resize", onResize);
-	}, []);
+	}, [measure]);
 
 	return {
 		position,

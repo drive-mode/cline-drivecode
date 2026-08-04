@@ -30,7 +30,7 @@ export async function createAnthropicProviderModule(
 			const model = provider(modelId);
 			return isMiniMax
 				? wrapLanguageModel({
-						model: model as unknown as LanguageModelV4,
+						model: model as LanguageModelV4,
 						middleware: miniMaxThinkingDisabledMiddleware,
 					})
 				: model;

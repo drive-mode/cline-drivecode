@@ -1,4 +1,8 @@
-import { createGateway, type GatewayProviderSettings } from "@cline/llms";
+import {
+	classifyProviderError,
+	createGateway,
+	type GatewayProviderSettings,
+} from "@cline/llms";
 import type {
 	AgentAfterToolResult,
 	AgentBeforeModelResult,
@@ -22,6 +26,7 @@ import type {
 	AgentUsage,
 	AgentRuntimeConfig as BaseAgentRuntimeConfig,
 	CaptureTaskLifecycleEventInput,
+	ProviderErrorClass,
 	TelemetryProperties,
 	ToolApprovalResult,
 	ToolPolicy,
@@ -48,6 +53,40 @@ const MAX_TOKENS_INCOMPLETE_TURN_MESSAGE =
 
 /** Abort reason when `shouldPauseAfterTool` fires mid-batch (Drive raise-hand). */
 export const PAUSE_AFTER_TOOL_REASON = "Paused after tool";
+
+/**
+ * Terminal message when a context-window overflow cannot be recovered because
+ * there is no conversation history to compact — the system prompt, tools, and
+ * current input alone exceed the window.
+ */
+export const CONTEXT_WINDOW_OVERFLOW_NOTHING_TO_COMPACT_MESSAGE =
+	"The request exceeds the model's context window and there is no conversation history to compact — the system prompt, tools, and current input alone are too large. Reduce attached content or switch to a model with a larger context window.";
+
+/**
+ * Terminal message when a context-window overflow persists after the runtime
+ * already compacted the conversation and retried once.
+ */
+export const CONTEXT_WINDOW_OVERFLOW_RECOVERY_FAILED_MESSAGE =
+	"The conversation still exceeds the model's context window after compacting it. Start a new session or switch to a model with a larger context window.";
+
+/**
+ * Terminal message when no compaction pipeline is available to recover from a
+ * context-window overflow (e.g. compaction disabled).
+ */
+export const CONTEXT_WINDOW_OVERFLOW_NO_RECOVERY_MESSAGE =
+	"The conversation exceeds the model's context window. Compact the conversation, start a new session, or switch to a model with a larger context window.";
+
+/** Thrown when overflow recovery cannot proceed; carries the terminal text. */
+class ContextWindowOverflowError extends Error {
+	constructor(message: string, providerError: string | undefined) {
+		super(
+			providerError?.trim()
+				? `${message} (provider reported: ${providerError.trim()})`
+				: message,
+		);
+		this.name = "ContextWindowOverflowError";
+	}
+}
 
 // Local `createUID` helper. The clinee source imports this from
 // `@cline/shared` (see `packages/shared/dist/identifier.ts`), but
@@ -427,9 +466,12 @@ export class AgentRuntime {
 		pendingToolCalls: [] as string[],
 		usage: cloneUsage(DEFAULT_USAGE),
 		lastError: undefined as string | undefined,
+		lastErrorClass: undefined as ProviderErrorClass | undefined,
 	};
 	/** Set when shouldPauseAfterTool fires; cleared when the run aborts. */
 	private pauseAfterToolReason?: string;
+	/** One automatic overflow-recovery attempt per run. */
+	private overflowRecoveryAttempted = false;
 	private initialization?: Promise<void>;
 	private abortController?: AbortController;
 	private readonly telemetryProviderId?: string;
@@ -505,6 +547,7 @@ export class AgentRuntime {
 		this.state.pendingToolCalls = [];
 		this.state.usage = cloneUsage(DEFAULT_USAGE);
 		this.state.lastError = undefined;
+		this.state.lastErrorClass = undefined;
 		this.state.messages = cloneMessages(messages);
 		this.config = {
 			...this.config,
@@ -525,6 +568,7 @@ export class AgentRuntime {
 			pendingToolCalls: [...this.state.pendingToolCalls],
 			usage: cloneUsage(this.state.usage),
 			lastError: this.state.lastError,
+			lastErrorClass: this.state.lastErrorClass,
 		};
 	}
 
@@ -635,7 +679,9 @@ export class AgentRuntime {
 		this.state.iteration = 0;
 		this.state.pendingToolCalls = [];
 		this.state.lastError = undefined;
+		this.state.lastErrorClass = undefined;
 		this.state.usage = cloneUsage(DEFAULT_USAGE);
+		this.overflowRecoveryAttempted = false;
 
 		try {
 			await this.callBeforeRunHooks();
@@ -670,7 +716,8 @@ export class AgentRuntime {
 					iteration: this.state.iteration,
 				});
 
-				const { message, finishReason } = await this.generateAssistantMessage();
+				const { message, finishReason } =
+					await this.generateAssistantMessageWithOverflowRecovery();
 				if (finishReason === "aborted") {
 					throw this.normalizeAbortError();
 				}
@@ -784,8 +831,17 @@ export class AgentRuntime {
 			const isControlledStop = normalized instanceof ControlledStopError;
 			const isAborted = this.abortController.signal.aborted || isControlledStop;
 			const status = isAborted ? "aborted" : "failed";
+			// Read before overwriting lastError below: the class only applies
+			// when the run failed on the provider error it was recorded for.
+			const errorClass =
+				normalized instanceof ContextWindowOverflowError
+					? ("context_window_exceeded" as const)
+					: normalized.message === this.state.lastError
+						? this.state.lastErrorClass
+						: undefined;
 			this.state.status = status;
 			this.state.lastError = normalized.message;
+			this.state.lastErrorClass = errorClass;
 			const lastAssistantMessage = this.findLastAssistantMessage();
 			const result: AgentRunResult = {
 				agentId: this.state.agentId,
@@ -815,6 +871,7 @@ export class AgentRuntime {
 					type: "run-failed",
 					snapshot: this.snapshot(),
 					error: normalized,
+					errorClass,
 				});
 			} else {
 				await this.emit({
@@ -845,7 +902,75 @@ export class AgentRuntime {
 		}
 	}
 
-	private async generateAssistantMessage(): Promise<{
+	/**
+	 * Run a model turn, recovering once per run from a provider-rejected
+	 * context-window overflow: force a compaction through `prepareTurn` and
+	 * retry the request. Terminal (unrecoverable) overflow states throw with
+	 * an actionable message instead of the raw provider error.
+	 */
+	private async generateAssistantMessageWithOverflowRecovery(): Promise<{
+		message: AgentMessage;
+		finishReason: AgentModelFinishReason;
+	}> {
+		const first = await this.generateAssistantMessage();
+		if (!this.isRecoverableOverflowTurn(first)) {
+			return first;
+		}
+		this.overflowRecoveryAttempted = true;
+		const providerError = this.state.lastError;
+		if (!this.config.prepareTurn) {
+			throw new ContextWindowOverflowError(
+				CONTEXT_WINDOW_OVERFLOW_NO_RECOVERY_MESSAGE,
+				providerError,
+			);
+		}
+		await this.emit({
+			type: "status-notice",
+			snapshot: this.snapshot(),
+			message: "context window exceeded — compacting and retrying",
+			metadata: {
+				kind: "context_overflow_recovery",
+				reason: "context_overflow_recovery",
+				phase: "started",
+				iteration: this.state.iteration,
+				providerError,
+			},
+		});
+		const retry = await this.generateAssistantMessage({
+			overflowRecovery: true,
+		});
+		if (
+			retry.finishReason === "error" &&
+			this.state.lastErrorClass === "context_window_exceeded"
+		) {
+			throw new ContextWindowOverflowError(
+				CONTEXT_WINDOW_OVERFLOW_RECOVERY_FAILED_MESSAGE,
+				this.state.lastError,
+			);
+		}
+		return retry;
+	}
+
+	private isRecoverableOverflowTurn(turn: {
+		message: AgentMessage;
+		finishReason: AgentModelFinishReason;
+	}): boolean {
+		if (
+			turn.finishReason !== "error" ||
+			this.state.lastErrorClass !== "context_window_exceeded" ||
+			this.overflowRecoveryAttempted
+		) {
+			return false;
+		}
+		// An errored stream that still produced tool calls proceeds through the
+		// normal loop (matching existing behavior); a retry would discard that
+		// partial work.
+		return !turn.message.content.some((part) => part.type === "tool-call");
+	}
+
+	private async generateAssistantMessage(options?: {
+		overflowRecovery?: boolean;
+	}): Promise<{
 		message: AgentMessage;
 		finishReason: AgentModelFinishReason;
 	}> {
@@ -888,7 +1013,7 @@ export class AgentRuntime {
 			}
 		}
 
-		request = await this.prepareTurnForModelRequest(request);
+		request = await this.prepareTurnForModelRequest(request, options);
 		this.throwIfAborted();
 
 		for (const hook of this.hooks.beforeModel) {
@@ -1045,6 +1170,13 @@ export class AgentRuntime {
 					finishReason = event.reason;
 					if (event.error) {
 						this.state.lastError = event.error;
+						// Models that classify at their own error boundary (where the
+						// raw provider error is still structured) win. Anything else —
+						// custom `AgentModel` implementations, adapters that carry only
+						// a flattened message — is classified from the message so it
+						// stays eligible for overflow recovery.
+						this.state.lastErrorClass =
+							event.errorClass ?? classifyProviderError(event.error);
 					}
 					break;
 				}
@@ -1172,6 +1304,7 @@ export class AgentRuntime {
 		this.captureTaskLifecycle(TASK_PROVIDER_STREAM_FAILED_EVENT, {
 			durationMs,
 			error,
+			errorClass: classifyProviderError(error),
 			phase,
 		});
 	}
@@ -1244,11 +1377,13 @@ export class AgentRuntime {
 
 	private async prepareTurnForModelRequest(
 		request: AgentModelRequest,
+		options?: { overflowRecovery?: boolean },
 	): Promise<AgentModelRequest> {
 		if (!this.config.prepareTurn) {
 			return request;
 		}
 
+		const overflowRecovery = options?.overflowRecovery === true;
 		const result = await this.config.prepareTurn({
 			agentId: this.state.agentId,
 			conversationId: this.config.conversationId,
@@ -1262,6 +1397,7 @@ export class AgentRuntime {
 				provider: this.config.messageModelInfo?.provider,
 			},
 			signal: request.signal,
+			overflowRecovery: overflowRecovery || undefined,
 			emitStatusNotice: (message, metadata) => {
 				void this.emit({
 					type: "status-notice",
@@ -1271,6 +1407,30 @@ export class AgentRuntime {
 				});
 			},
 		});
+		if (overflowRecovery) {
+			// Only retry a provider-rejected overflow with a request that is
+			// actually smaller — anything else is guaranteed to fail again.
+			//
+			// Serialized length is a coarse proxy for tokens, which is all this
+			// backstop needs: it answers "did anything get removed at all" for
+			// arbitrary `prepareTurn` implementations, and the shared estimator
+			// is itself linear in character count, so switching units would not
+			// change the verdict. Authoritative token budgeting (against the
+			// model's limit) happens inside the compaction pipeline.
+			// TODO: have `prepareTurn` report the token estimates it already
+			// computed (before/after) so this decision can use real numbers
+			// instead of re-deriving a proxy here.
+			const shrunk =
+				result?.messages !== undefined &&
+				JSON.stringify(result.messages).length <
+					JSON.stringify(request.messages).length;
+			if (!shrunk) {
+				throw new ContextWindowOverflowError(
+					CONTEXT_WINDOW_OVERFLOW_NOTHING_TO_COMPACT_MESSAGE,
+					this.state.lastError,
+				);
+			}
+		}
 		if (!result) {
 			return request;
 		}

@@ -1,21 +1,20 @@
-// LanguageModelV4 middleware that recovers file/image bytes from
+// LanguageModelV4 middleware that recovers image bytes from
 // `role:"tool"` messages whose content arrays the downstream chat-completions
 // converter would otherwise destroy.
 //
-// Background: AI SDK 7's `LanguageModelV4ToolResultOutput` of type `'content'`
-// may contain canonical `{ type: 'file', data: SharedV4FileData, mediaType }`
-// parts (replacing the V3 `image-data` / `image-url` / `file-data` /
-// `file-url` / `image-file-id` variants). The OpenAI Chat Completions wire
-// format does NOT support multimodal tool messages — `role:"tool"` content
-// must be a single string. The `@ai-sdk/openai-compatible` chat-messages
-// converter therefore just `JSON.stringify`s the parts array. The image
-// bytes survive as escaped base64 inside a string, which the model treats
-// as ~50KB of opaque text and hallucinates the image's actual contents.
+// Background: AI SDK's `LanguageModelV4ToolResultOutput` of type `'content'`
+// may contain `image-data`, `image-url`, `file-data`, `file-url`, or
+// `image-file-id` parts. The OpenAI Chat Completions wire format does NOT
+// support multimodal tool messages — `role:"tool"` content must be a single
+// string. The `@ai-sdk/openai-compatible` chat-messages converter therefore
+// just `JSON.stringify`s the parts array. The image bytes survive as escaped
+// base64 inside a string, which the model treats as ~50KB of opaque text and
+// hallucinates the image's actual contents.
 //
 // This middleware operates on the typed `LanguageModelV4Prompt` BEFORE the
 // downstream converter runs. For every `role:"tool"` message containing
-// extractable file parts inside a tool-result `output.type === 'content'`
-// value, it:
+// image/file parts inside a tool-result `output.type === 'content'` value,
+// it:
 //
 //   1. Replaces the media parts inside the tool-result with placeholder
 //      text parts: `(see following user message for image)`. The
@@ -27,11 +26,6 @@
 // downstream converter — Chat Completions, Mistral, Anthropic, Bedrock,
 // etc. — translates it to its own native multimodal user-content shape
 // without further help.
-//
-// Provider file references (`data.type === 'reference'`) and inline text
-// documents (`data.type === 'text'`) are left in the tool-result: references
-// have no bytes to recover via a sibling user message, and text documents
-// are already safe as tool content.
 //
 // This pattern is documented in the OpenAI Chat Completions spec
 // (consecutive `user` messages are concatenated by the model) and is a
@@ -76,50 +70,34 @@ type ContentOutput = Extract<
 	{ type: "content" }
 >;
 type ContentPart = ContentOutput["value"][number];
-type FileContentPart = Extract<ContentPart, { type: "file" }>;
 
-function isImageMediaType(mediaType: string): boolean {
-	return mediaType === "image" || mediaType.startsWith("image/");
+function isMediaContentPart(
+	part: ContentPart,
+): part is Extract<ContentPart, { type: "file" }> {
+	return part.type === "file";
 }
 
 /**
- * Extractable media: inline `data` or `url` file parts. References and
- * inline text documents stay in the tool-result (see file-level comment).
+ * Convert a media content-part from a `ToolResultOutput` of type `'content'`
+ * into the equivalent `LanguageModelV4FilePart` for use in a user message.
+ * Returns `null` for `image-file-id` parts because `LanguageModelV4FilePart`
+ * has no provider-file-id slot — those parts are left in place inside the
+ * tool-result and pass through to the converter as-is. (Image-file-id is
+ * an OpenAI-specific reference; if a caller is using it they are already
+ * on a multimodal-aware path and don't need this rewrite.)
  */
-function isExtractableMediaPart(part: ContentPart): part is FileContentPart {
-	if (part.type !== "file") {
-		return false;
+function mediaPartToFilePart(
+	part: Extract<ContentPart, { type: "file" }>,
+): LanguageModelV4FilePart | null {
+	if (part.data.type === "reference") {
+		return null;
 	}
-	switch (part.data.type) {
-		case "data":
-		case "url":
-			return true;
-		case "reference":
-		case "text":
-			return false;
-		default: {
-			const _exhaustive: never = part.data;
-			void _exhaustive;
-			return false;
-		}
-	}
-}
-
-/**
- * Tool-result content `file` parts share the `LanguageModelV4FilePart`
- * shape, so promotion into a synthetic user message is a structural copy.
- */
-function contentFilePartToUserFilePart(
-	part: FileContentPart,
-): LanguageModelV4FilePart {
 	return {
 		type: "file",
 		data: part.data,
 		mediaType: part.mediaType,
 		...(part.filename ? { filename: part.filename } : {}),
-		...(part.providerOptions
-			? { providerOptions: part.providerOptions }
-			: {}),
+		...(part.providerOptions ? { providerOptions: part.providerOptions } : {}),
 	};
 }
 
@@ -136,20 +114,26 @@ function imageOmittedTextPart(): LanguageModelV4TextPart {
 }
 
 function reserveUnknownUrlMediaBudget(
-	url: URL,
+	url: string,
 	mediaState: MediaBudgetState,
 ): boolean {
-	if (url.protocol === "data:") {
-		const href = url.href;
-		const commaIndex = href.indexOf(",");
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return false;
+	}
+
+	if (parsed.protocol === "data:") {
+		const commaIndex = url.indexOf(",");
 		if (commaIndex === -1) {
 			return false;
 		}
-		const metadata = href.slice("data:".length, commaIndex).toLowerCase();
+		const metadata = url.slice("data:".length, commaIndex).toLowerCase();
 		if (!metadata.endsWith(";base64")) {
 			return false;
 		}
-		const base64 = href.slice(commaIndex + 1);
+		const base64 = url.slice(commaIndex + 1);
 		if (!isCanonicalBase64(base64)) {
 			return false;
 		}
@@ -166,7 +150,7 @@ function reserveUnknownUrlMediaBudget(
 		);
 	}
 
-	if (url.protocol !== "http:" && url.protocol !== "https:") {
+	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
 		return false;
 	}
 
@@ -185,6 +169,14 @@ function reserveUnknownUrlMediaBudget(
 	);
 }
 
+function isDataUrl(url: string): boolean {
+	try {
+		return new URL(url).protocol === "data:";
+	} catch {
+		return false;
+	}
+}
+
 function estimateMediaDataEncodedBytes(data: unknown): number {
 	if (typeof data === "string") {
 		return data.length;
@@ -196,17 +188,6 @@ function estimateMediaDataEncodedBytes(data: unknown): number {
 		return data.byteLength;
 	}
 	return Number.POSITIVE_INFINITY;
-}
-
-/**
- * `validateAndReserveImageMedia` accepts base64 (or data-URL) strings.
- * V4 file data may also be raw `Uint8Array` bytes — convert those first.
- */
-function fileDataToBase64OrString(data: string | Uint8Array): string {
-	if (typeof data === "string") {
-		return data;
-	}
-	return Buffer.from(data).toString("base64");
 }
 
 function reserveGenericMediaDataBudget(
@@ -227,86 +208,8 @@ function reserveGenericMediaDataBudget(
 }
 
 /**
- * Validate / budget-check an extractable file part. Returns the (possibly
- * normalized) part to promote, or `null` when the part should be replaced
- * with an omission placeholder.
- */
-function prepareExtractableFilePart(
-	part: FileContentPart,
-	mediaState: MediaBudgetState,
-): FileContentPart | null {
-	switch (part.data.type) {
-		case "data": {
-			if (isImageMediaType(part.mediaType)) {
-				const validation = validateAndReserveImageMedia(
-					part.mediaType === "image" ? undefined : part.mediaType,
-					fileDataToBase64OrString(part.data.data),
-					{
-						maxImageEncodedBytes: DEFAULT_MAX_IMAGE_ENCODED_BYTES,
-						maxImageDecodedBytes: DEFAULT_MAX_IMAGE_DECODED_BYTES,
-					},
-					mediaState,
-				);
-				if (!validation.ok) {
-					return null;
-				}
-				return {
-					...part,
-					data: { type: "data", data: validation.base64 },
-					mediaType: validation.mediaType,
-				};
-			}
-			if (!reserveGenericMediaDataBudget(part.data.data, mediaState)) {
-				return null;
-			}
-			return part;
-		}
-		case "url": {
-			const url = part.data.url;
-			if (url.protocol === "data:" && isImageMediaType(part.mediaType)) {
-				const validation = validateAndReserveImageMedia(
-					part.mediaType === "image" ? undefined : part.mediaType,
-					url.href,
-					{
-						maxImageEncodedBytes: DEFAULT_MAX_IMAGE_ENCODED_BYTES,
-						maxImageDecodedBytes: DEFAULT_MAX_IMAGE_DECODED_BYTES,
-					},
-					mediaState,
-				);
-				if (!validation.ok) {
-					return null;
-				}
-				return {
-					...part,
-					data: {
-						type: "url",
-						url: new URL(
-							`data:${validation.mediaType};base64,${validation.base64}`,
-						),
-					},
-					mediaType: validation.mediaType,
-				};
-			}
-			if (!reserveUnknownUrlMediaBudget(url, mediaState)) {
-				return null;
-			}
-			return part;
-		}
-		case "reference":
-		case "text":
-			// Not extractable — callers should not reach here.
-			return part;
-		default: {
-			const _exhaustive: never = part.data;
-			void _exhaustive;
-			return null;
-		}
-	}
-}
-
-/**
  * Split a tool-result `output` of type `'content'` into:
- *   - a `stripped` output where every extractable media part is replaced by a
+ *   - a `stripped` output where every media part is replaced by a
  *     placeholder text part, and
  *   - the list of media parts converted to `LanguageModelV4FilePart`.
  *
@@ -324,17 +227,97 @@ function splitContentOutputMedia(
 	const newValue: ContentOutput["value"] = [];
 	let mutated = false;
 	for (const part of output.value) {
-		if (!isExtractableMediaPart(part)) {
+		if (!isMediaContentPart(part)) {
 			newValue.push(part);
 			continue;
 		}
-		const prepared = prepareExtractableFilePart(part, mediaState);
-		if (!prepared) {
-			newValue.push(imageOmittedTextPart());
-			mutated = true;
+		let currentPart = part;
+		if (
+			currentPart.mediaType.startsWith("image/") &&
+			currentPart.data.type === "data" &&
+			typeof currentPart.data.data === "string"
+		) {
+			const validation = validateAndReserveImageMedia(
+				currentPart.mediaType,
+				currentPart.data.data,
+				{
+					maxImageEncodedBytes: DEFAULT_MAX_IMAGE_ENCODED_BYTES,
+					maxImageDecodedBytes: DEFAULT_MAX_IMAGE_DECODED_BYTES,
+				},
+				mediaState,
+			);
+			if (!validation.ok) {
+				newValue.push({
+					type: "text",
+					text: IMAGE_OMITTED_PLACEHOLDER,
+				});
+				mutated = true;
+				continue;
+			}
+			currentPart = {
+				...currentPart,
+				data: { type: "data", data: validation.base64 },
+				mediaType: validation.mediaType,
+			};
+		} else if (
+			currentPart.mediaType.startsWith("image/") &&
+			currentPart.data.type === "url"
+		) {
+			const url = currentPart.data.url.toString();
+			if (isDataUrl(url)) {
+				const validation = validateAndReserveImageMedia(
+					undefined,
+					url,
+					{
+						maxImageEncodedBytes: DEFAULT_MAX_IMAGE_ENCODED_BYTES,
+						maxImageDecodedBytes: DEFAULT_MAX_IMAGE_DECODED_BYTES,
+					},
+					mediaState,
+				);
+				if (!validation.ok) {
+					newValue.push(imageOmittedTextPart());
+					mutated = true;
+					continue;
+				}
+				currentPart = {
+					...currentPart,
+					data: {
+						type: "url",
+						url: new URL(
+							`data:${validation.mediaType};base64,${validation.base64}`,
+						),
+					},
+				};
+			} else if (!reserveUnknownUrlMediaBudget(url, mediaState)) {
+				newValue.push(imageOmittedTextPart());
+				mutated = true;
+				continue;
+			}
+		} else if (currentPart.data.type === "url") {
+			if (
+				!reserveUnknownUrlMediaBudget(
+					currentPart.data.url.toString(),
+					mediaState,
+				)
+			) {
+				newValue.push(imageOmittedTextPart());
+				mutated = true;
+				continue;
+			}
+		} else if (currentPart.data.type === "data") {
+			if (!reserveGenericMediaDataBudget(currentPart.data.data, mediaState)) {
+				newValue.push(imageOmittedTextPart());
+				mutated = true;
+				continue;
+			}
+		}
+		const filePart = mediaPartToFilePart(currentPart);
+		if (!filePart) {
+			// Unhandled media kind (image-file-id) — pass through unchanged.
+			newValue.push(currentPart);
 			continue;
 		}
-		media.push(contentFilePartToUserFilePart(prepared));
+		media.push(filePart);
 		mutated = true;
 		const placeholder: LanguageModelV4TextPart = {
 			type: "text",

@@ -24,7 +24,7 @@ export async function createMistralProviderModule(
 		// converter runs. See `middleware/split-tool-images.ts`.
 		model: (modelId) =>
 			wrapLanguageModel({
-				model: provider(modelId) as unknown as LanguageModelV4,
+				model: provider(modelId) as LanguageModelV4,
 				middleware: splitToolImagesMiddleware,
 			}),
 	};

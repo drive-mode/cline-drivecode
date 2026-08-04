@@ -13,30 +13,6 @@ const OMITTED_PLACEHOLDER = "[media omitted: invalid or exceeds size limit]";
 const imageData = (byteLength: number, fill = 1) =>
 	Buffer.alloc(byteLength, fill).toString("base64");
 
-function fileDataPart(
-	data: string,
-	mediaType: string,
-	extra?: { filename?: string; providerOptions?: Record<string, unknown> },
-) {
-	return {
-		type: "file" as const,
-		mediaType,
-		data: { type: "data" as const, data },
-		...(extra?.filename ? { filename: extra.filename } : {}),
-		...(extra?.providerOptions
-			? { providerOptions: extra.providerOptions }
-			: {}),
-	};
-}
-
-function fileUrlPart(url: string, mediaType: string) {
-	return {
-		type: "file" as const,
-		mediaType,
-		data: { type: "url" as const, url: new URL(url) },
-	};
-}
-
 describe("rewritePromptToolImages", () => {
 	it("leaves prompts without tool messages unchanged", () => {
 		const prompt: LanguageModelV4Message[] = [
@@ -89,7 +65,7 @@ describe("rewritePromptToolImages", () => {
 		expect(out.prompt).toHaveLength(1);
 	});
 
-	it("splits inline image file parts into a synthetic user message", () => {
+	it("splits image-data parts into a synthetic user message", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -102,7 +78,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "Successfully read image" },
-								fileDataPart("QkFTRTY0SU1BR0VCWVRFUw==", "image/jpeg"),
+								{
+									type: "file",
+									data: { type: "data", data: "QkFTRTY0SU1BR0VCWVRFUw==" },
+									mediaType: "image/jpeg",
+								},
 							],
 						},
 					},
@@ -117,7 +97,7 @@ describe("rewritePromptToolImages", () => {
 
 		const [toolMsg, syntheticUser] = out.prompt;
 		expect(toolMsg.role).toBe("tool");
-		// Tool-result should now have placeholder text instead of the file part.
+		// Tool-result should now have placeholder text instead of image-data.
 		const toolResult = (
 			toolMsg as Extract<LanguageModelV4Message, { role: "tool" }>
 		).content[0];
@@ -145,7 +125,7 @@ describe("rewritePromptToolImages", () => {
 		});
 	});
 
-	it("preserves filename and provider options on file data parts", () => {
+	it("preserves filename and provider options on file-data parts", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -157,12 +137,15 @@ describe("rewritePromptToolImages", () => {
 						output: {
 							type: "content",
 							value: [
-								fileDataPart("QkFTRTY0UERGQllURVM=", "application/pdf", {
+								{
+									type: "file",
+									data: { type: "data", data: "QkFTRTY0UERGQllURVM=" },
+									mediaType: "application/pdf",
 									filename: "spec.pdf",
 									providerOptions: {
 										openai: { detail: "high" },
 									},
-								}),
+								},
 							],
 						},
 					},
@@ -189,7 +172,7 @@ describe("rewritePromptToolImages", () => {
 		});
 	});
 
-	it("converts file URL parts to user file parts", () => {
+	it("converts image-url parts to file parts", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -200,7 +183,16 @@ describe("rewritePromptToolImages", () => {
 						toolName: "read_files",
 						output: {
 							type: "content",
-							value: [fileUrlPart("https://example.com/cat.png", "image")],
+							value: [
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("https://example.com/cat.png"),
+									},
+									mediaType: "image/*",
+								},
+							],
 						},
 					},
 				],
@@ -215,14 +207,17 @@ describe("rewritePromptToolImages", () => {
 			content: [
 				{
 					type: "file",
-					data: { type: "url", url: new URL("https://example.com/cat.png") },
-					mediaType: "image",
+					data: {
+						type: "url",
+						url: new URL("https://example.com/cat.png"),
+					},
+					mediaType: "image/*",
 				},
 			],
 		});
 	});
 
-	it("omits file URL parts that exceed the aggregate media budget", () => {
+	it("omits image-url parts that exceed the aggregate media budget", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -234,8 +229,22 @@ describe("rewritePromptToolImages", () => {
 						output: {
 							type: "content",
 							value: [
-								fileUrlPart("https://example.com/a.png", "image"),
-								fileUrlPart("https://example.com/b.png", "image"),
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("https://example.com/a.png"),
+									},
+									mediaType: "image/*",
+								},
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("https://example.com/b.png"),
+									},
+									mediaType: "image/*",
+								},
 							],
 						},
 					},
@@ -252,8 +261,11 @@ describe("rewritePromptToolImages", () => {
 			content: [
 				{
 					type: "file",
-					data: { type: "url", url: new URL("https://example.com/a.png") },
-					mediaType: "image",
+					data: {
+						type: "url",
+						url: new URL("https://example.com/a.png"),
+					},
+					mediaType: "image/*",
 				},
 			],
 		});
@@ -263,7 +275,7 @@ describe("rewritePromptToolImages", () => {
 		);
 	});
 
-	it("omits invalid data URL file parts instead of splitting them", () => {
+	it("omits invalid data URL image-url parts instead of splitting them", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -275,7 +287,14 @@ describe("rewritePromptToolImages", () => {
 						output: {
 							type: "content",
 							value: [
-								fileUrlPart("data:image/png;base64,not-base64", "image/png"),
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("data:image/png;base64,not-base64"),
+									},
+									mediaType: "image/*",
+								},
 							],
 						},
 					},
@@ -291,7 +310,7 @@ describe("rewritePromptToolImages", () => {
 		expect(JSON.stringify(out.prompt[0])).not.toContain("not-base64");
 	});
 
-	it("omits unsupported uppercase data URL file parts before splitting", () => {
+	it("omits unsupported uppercase data URL image-url parts before splitting", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -303,7 +322,14 @@ describe("rewritePromptToolImages", () => {
 						output: {
 							type: "content",
 							value: [
-								fileUrlPart("DATA:image/svg+xml;base64,PHN2Zz4=", "image/svg+xml"),
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("DATA:image/svg+xml;base64,PHN2Zz4="),
+									},
+									mediaType: "image/*",
+								},
 							],
 						},
 					},
@@ -319,7 +345,7 @@ describe("rewritePromptToolImages", () => {
 		expect(JSON.stringify(out.prompt[0])).not.toContain("PHN2Zz4=");
 	});
 
-	it("omits non-image file URL parts that exceed the aggregate media budget", () => {
+	it("omits file-url parts that exceed the aggregate media budget", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -331,8 +357,22 @@ describe("rewritePromptToolImages", () => {
 						output: {
 							type: "content",
 							value: [
-								fileUrlPart("https://example.com/a.pdf", "application/pdf"),
-								fileUrlPart("https://example.com/b.pdf", "application/pdf"),
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("https://example.com/a.pdf"),
+									},
+									mediaType: "application/octet-stream",
+								},
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("https://example.com/b.pdf"),
+									},
+									mediaType: "application/octet-stream",
+								},
 							],
 						},
 					},
@@ -349,8 +389,11 @@ describe("rewritePromptToolImages", () => {
 			content: [
 				{
 					type: "file",
-					data: { type: "url", url: new URL("https://example.com/a.pdf") },
-					mediaType: "application/pdf",
+					data: {
+						type: "url",
+						url: new URL("https://example.com/a.pdf"),
+					},
+					mediaType: "application/octet-stream",
 				},
 			],
 		});
@@ -360,7 +403,7 @@ describe("rewritePromptToolImages", () => {
 		);
 	});
 
-	it("omits malformed non-image file URL data URLs instead of splitting them", () => {
+	it("omits malformed file-url data URLs instead of splitting them", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -372,10 +415,14 @@ describe("rewritePromptToolImages", () => {
 						output: {
 							type: "content",
 							value: [
-								fileUrlPart(
-									"data:application/pdf;base64,not-base64",
-									"application/pdf",
-								),
+								{
+									type: "file",
+									data: {
+										type: "url",
+										url: new URL("data:application/pdf;base64,not-base64"),
+									},
+									mediaType: "application/octet-stream",
+								},
 							],
 						},
 					},
@@ -391,7 +438,7 @@ describe("rewritePromptToolImages", () => {
 		expect(JSON.stringify(out.prompt[0])).not.toContain("not-base64");
 	});
 
-	it("omits oversized file data parts instead of splitting them", () => {
+	it("omits oversized file-data parts instead of splitting them", () => {
 		const oversizedFile = "A".repeat(6 * 1024 * 1024);
 		const prompt: LanguageModelV4Message[] = [
 			{
@@ -403,7 +450,13 @@ describe("rewritePromptToolImages", () => {
 						toolName: "read_files",
 						output: {
 							type: "content",
-							value: [fileDataPart(oversizedFile, "application/pdf")],
+							value: [
+								{
+									type: "file",
+									data: { type: "data", data: oversizedFile },
+									mediaType: "application/pdf",
+								},
+							],
 						},
 					},
 				],
@@ -418,7 +471,7 @@ describe("rewritePromptToolImages", () => {
 		expect(JSON.stringify(out.prompt[0])).not.toContain(oversizedFile);
 	});
 
-	it("replaces invalid image file data with a text placeholder instead of splitting it", () => {
+	it("replaces invalid image-data with a text placeholder instead of splitting it", () => {
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -429,7 +482,13 @@ describe("rewritePromptToolImages", () => {
 						toolName: "read_files",
 						output: {
 							type: "content",
-							value: [fileDataPart("not-base64", "image/png")],
+							value: [
+								{
+									type: "file",
+									data: { type: "data", data: "not-base64" },
+									mediaType: "image/png",
+								},
+							],
 						},
 					},
 				],
@@ -457,10 +516,11 @@ describe("rewritePromptToolImages", () => {
 		});
 	});
 
-	it("leaves provider reference file parts in place (no byte recovery needed)", () => {
-		// Provider references identify files already hosted by the provider.
-		// There are no inline bytes to recover via a sibling user message, so
-		// they stay inside the tool-result (same rationale as V3 image-file-id).
+	it("leaves image-file-id parts in place (no FilePart equivalent)", () => {
+		// image-file-id is an OpenAI-specific provider reference. It can't
+		// be expressed as a `LanguageModelV4FilePart`, so we leave it inside
+		// the tool-result. That path is already multimodal-aware and doesn't
+		// need the rewrite.
 		const prompt: LanguageModelV4Message[] = [
 			{
 				role: "tool",
@@ -475,11 +535,11 @@ describe("rewritePromptToolImages", () => {
 								{ type: "text", text: "Successfully read image" },
 								{
 									type: "file",
-									mediaType: "image",
 									data: {
 										type: "reference",
 										reference: { openai: "file_abc" },
 									},
+									mediaType: "image/*",
 								},
 							],
 						},
@@ -497,17 +557,15 @@ describe("rewritePromptToolImages", () => {
 		if (toolResult.type !== "tool-result") {
 			throw new Error("expected tool-result");
 		}
+		// Output is unchanged when only image-file-id is present.
 		expect(toolResult.output).toEqual({
 			type: "content",
 			value: [
 				{ type: "text", text: "Successfully read image" },
 				{
 					type: "file",
-					mediaType: "image",
-					data: {
-						type: "reference",
-						reference: { openai: "file_abc" },
-					},
+					data: { type: "reference", reference: { openai: "file_abc" } },
+					mediaType: "image/*",
 				},
 			],
 		});
@@ -530,7 +588,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "image 1" },
-								fileDataPart("QUFB", "image/jpeg"),
+								{
+									type: "file",
+									data: { type: "data", data: "QUFB" },
+									mediaType: "image/jpeg",
+								},
 							],
 						},
 					},
@@ -542,7 +604,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "image 2" },
-								fileDataPart("QkJC", "image/png"),
+								{
+									type: "file",
+									data: { type: "data", data: "QkJC" },
+									mediaType: "image/png",
+								},
 							],
 						},
 					},
@@ -586,7 +652,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "image 1" },
-								fileDataPart(firstImage, "image/png"),
+								{
+									type: "file",
+									data: { type: "data", data: firstImage },
+									mediaType: "image/png",
+								},
 							],
 						},
 					},
@@ -598,7 +668,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "image 2" },
-								fileDataPart(secondImage, "image/png"),
+								{
+									type: "file",
+									data: { type: "data", data: secondImage },
+									mediaType: "image/png",
+								},
 							],
 						},
 					},
@@ -656,7 +730,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "first" },
-								fileDataPart("QUFB", "image/jpeg"),
+								{
+									type: "file",
+									data: { type: "data", data: "QUFB" },
+									mediaType: "image/jpeg",
+								},
 							],
 						},
 					},
@@ -684,7 +762,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "second" },
-								fileDataPart("QkJC", "image/png"),
+								{
+									type: "file",
+									data: { type: "data", data: "QkJC" },
+									mediaType: "image/png",
+								},
 							],
 						},
 					},
@@ -714,7 +796,11 @@ describe("rewritePromptToolImages", () => {
 							type: "content",
 							value: [
 								{ type: "text", text: "before" },
-								fileDataPart("QUFB", "image/jpeg"),
+								{
+									type: "file",
+									data: { type: "data", data: "QUFB" },
+									mediaType: "image/jpeg",
+								},
 							],
 						},
 					},
@@ -770,7 +856,11 @@ describe("splitToolImagesMiddleware", () => {
 								type: "content",
 								value: [
 									{ type: "text", text: "ok" },
-									fileDataPart("QUFB", "image/jpeg"),
+									{
+										type: "file",
+										data: { type: "data", data: "QUFB" },
+										mediaType: "image/jpeg",
+									},
 								],
 							},
 						},
@@ -802,7 +892,13 @@ describe("splitToolImagesMiddleware", () => {
 							toolName: "read_files",
 							output: {
 								type: "content",
-								value: [fileDataPart("QUFB", "image/jpeg")],
+								value: [
+									{
+										type: "file",
+										data: { type: "data", data: "QUFB" },
+										mediaType: "image/jpeg",
+									},
+								],
 							},
 						},
 					],
