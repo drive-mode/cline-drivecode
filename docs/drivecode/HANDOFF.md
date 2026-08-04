@@ -37,8 +37,8 @@ Leadership planning wave entry. [cline-drivemode/LEADERSHIP-BRIEF.md](plans/clin
 | Hub join / raise-hand / address / stage / mode / show via harness | **On main** (merged #58) |
 | Phase-2 pure helpers + durable pack registry + DirectorOps | **On main** — see [06-sdk-leverage.md](plans/drivecode-sdk/delivery/06-sdk-leverage.md) |
 | Task-satisfaction + session moments (W0–W4 + retention caps) | **On main** (merged #80); residuals in REMAINING |
-| Pack library UI / Add→Pack | **Shipped** (`RosterPackLibrary` / `AddPackMenu`; optional `/pack` composer still open) |
-| DRV-GATES feed UI + reconnect UX + recruit Add path | **Shipped** — GateFeedCard + session allow; RecruitAddPicker; reconnect empty states |
+| Pack library UI / Add→Pack | **Partial** (claim:drv-roster-pack-library) — `RosterPackLibrary` / `AddPackMenu`; optional `/pack` composer still open |
+| DRV-GATES feed UI + reconnect UX + recruit Add path | **Partial** (claim:drv-gates-feed) — GateFeedCard + session allow; RecruitAddPicker; reconnect empty states; taxonomy gate ACs open |
 
 Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session notes: [07-agent-handoff.md](plans/drivecode-sdk/delivery/07-agent-handoff.md) (superseded).
 

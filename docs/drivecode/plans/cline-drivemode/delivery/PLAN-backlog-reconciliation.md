@@ -2,6 +2,7 @@
 
 **Status:** proposed cleanup plan; no backlog item has been closed by this document<br>
 **Decision basis:** [implementation/backlog audit](../research/17-implementation-backlog-audit.md) and its [evidence ledger](../research/17-implementation-backlog-evidence.md)<br>
+**Refusal plane:** [ADR-0026](../adr/ADR-0026-evidence-backed-done.md) — [claims-registry.yaml](claims-registry.yaml) is the Done SoT; `BACKLOG.md` may render it later and must not replace it.<br>
 **Scope:** Drive Mode, Drive task/session work, Spotlight, Status Hub, and their Drive documentation corpus<br>
 **Outcome:** one trustworthy place to select unfinished product work, while retaining delivered plans as useful history.
 
@@ -52,7 +53,7 @@ The goal is not to delete history or compress every plan into a single tracker. 
 | Need | Canonical source | Rule |
 |---|---|---|
 | Actual behavior | code and scoped tests, summarized in `leadership/SYSTEMS-ANALYSIS.md` | A checklist is not implementation evidence. |
-| General unfinished work | proposed `delivery/BACKLOG.md` | Every selectable item names its acceptance boundary, evidence link, and status class. |
+| General unfinished work | [claims-registry.yaml](claims-registry.yaml) (ADR-0026); optional `BACKLOG.md` render | Every selectable item is a claim with status + evidence. Do not invent a parallel markdown SoT. |
 | Task-satisfaction residuals | `delivery/REMAINING-task-satisfaction.md` | Keep it as the detailed specialized source; link one residual package from the general backlog. |
 | Architecture / product decision | `adr/` and the decision-status board | An unresolved choice is decision-gated, not an engineering task. |
 | Feature intent / acceptance | DRV, PRD, and active initiative documents | Reconcile their status headers against the backlog. |

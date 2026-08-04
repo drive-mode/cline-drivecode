@@ -95,29 +95,29 @@ MVP is phases 0 through 3. Future is phases 4 and 5.
 | [DRV-NARRATION](features/DRV-NARRATION.md) | Narration messages in the feed | 1 | MVP |
 | [DRV-MODE-OVERLAY](features/DRV-MODE-OVERLAY.md) | Drive mode + Ask/Agent/Plan/Debug postures | 1 | MVP |
 | [DRV-TASK-BANK](features/DRV-TASK-BANK.md) | Task bank; plans ref tasks; auto Plan↔Agent | 1–2 | MVP |
-| [DRV-CALL-SESSION](features/DRV-CALL-SESSION.md) | Call session binding for task metrics | 2+ | Landed (main #80) |
-| [DRV-TASK-METRICS](features/DRV-TASK-METRICS.md) | Local session rollups (tasks / plan quality) | 2+ | Landed (main #80) |
-| [DRV-PLAN-IMPROVE](features/DRV-PLAN-IMPROVE.md) | Gated planning improve from session diagnosis | 2+ | Landed; host skill compile residual |
-| [DRV-STUCK-RECOVERY](features/DRV-STUCK-RECOVERY.md) | In-call recovery fork on stuck tasks | 2+ | Landed (manual + auto stall) |
-| [DRV-FELT-AGENCY](features/DRV-FELT-AGENCY.md) | Visible plan control after steer/interrupt/edit | 2+ | Landed; W1.1 narration residual |
-| [DRV-CLEAN-DRAIN](features/DRV-CLEAN-DRAIN.md) | Clean-drain ritual → next-goal invite | 2+ | Landed (main #80) |
-| [DRV-RETURN-LOOP](features/DRV-RETURN-LOOP.md) | Leave/End handoff + while-away return | 2+ | Landed (main #80) |
-| [DRV-PLAN-REENTRY](features/DRV-PLAN-REENTRY.md) | Drive tab unfinished-plan re-entry | 2+ | Landed (main #80) |
-| [DRV-STATUS-SESSIONS](features/DRV-STATUS-SESSIONS.md) | Session accomplishment lens (migrating to Analytics) | 2+ | Landed (main #80); home → Analytics |
-| [DRV-ANALYTICS](features/DRV-ANALYTICS.md) | Hub Analytics (rollups + digest) | 2+ | Landed |
-| [DRV-SHIPPED-DIGEST](features/DRV-SHIPPED-DIGEST.md) | Opt-in “what Drive shipped” digest | 2+ | Landed (main #80) |
-| [DRV-RECRUIT-STALL](features/DRV-RECRUIT-STALL.md) | Recruit on stuck task | 2+ | Landed (stall path; general Add open) |
+| [DRV-CALL-SESSION](features/DRV-CALL-SESSION.md) | Call session binding for task metrics | 2+ | **Landed** (claim:drv-call-session) (main #80) |
+| [DRV-TASK-METRICS](features/DRV-TASK-METRICS.md) | Local session rollups (tasks / plan quality) | 2+ | **Partial** (claim:drv-task-metrics) (main #80; evidence TBD) |
+| [DRV-PLAN-IMPROVE](features/DRV-PLAN-IMPROVE.md) | Gated planning improve from session diagnosis | 2+ | **Partial** (claim:drv-plan-improve); host skill compile residual |
+| [DRV-STUCK-RECOVERY](features/DRV-STUCK-RECOVERY.md) | In-call recovery fork on stuck tasks | 2+ | **Landed** (claim:drv-stuck-recovery) (manual + auto stall) |
+| [DRV-FELT-AGENCY](features/DRV-FELT-AGENCY.md) | Visible plan control after steer/interrupt/edit | 2+ | **Partial** (claim:drv-felt-agency); W1.1 narration residual |
+| [DRV-CLEAN-DRAIN](features/DRV-CLEAN-DRAIN.md) | Clean-drain ritual → next-goal invite | 2+ | **Partial** (claim:drv-clean-drain) (main #80; evidence TBD) |
+| [DRV-RETURN-LOOP](features/DRV-RETURN-LOOP.md) | Leave/End handoff + while-away return | 2+ | **Partial** (claim:drv-return-loop) (main #80; evidence TBD) |
+| [DRV-PLAN-REENTRY](features/DRV-PLAN-REENTRY.md) | Drive tab unfinished-plan re-entry | 2+ | **Partial** (claim:drv-plan-reentry) (main #80; evidence TBD) |
+| [DRV-STATUS-SESSIONS](features/DRV-STATUS-SESSIONS.md) | Session accomplishment lens (migrating to Analytics) | 2+ | **Partial** (claim:drv-status-sessions); home → Analytics |
+| [DRV-ANALYTICS](features/DRV-ANALYTICS.md) | Hub Analytics (rollups + digest) | 2+ | **Landed** (claim:drv-analytics) |
+| [DRV-SHIPPED-DIGEST](features/DRV-SHIPPED-DIGEST.md) | Opt-in “what Drive shipped” digest | 2+ | **Partial** (claim:drv-shipped-digest) (main #80; evidence TBD) |
+| [DRV-RECRUIT-STALL](features/DRV-RECRUIT-STALL.md) | Recruit on stuck task | 2+ | **Partial** (claim:drv-recruit-stall) (stall path; general Add open) |
 | [DRV-LEAVE-END](features/DRV-LEAVE-END.md) | Leave the call, end the session | 1 | MVP |
 | [DRV-PARTNER-MVP](features/DRV-PARTNER-MVP.md) | One pair partner, end to end (phase gate) | 1 | MVP |
 | [DRV-GATES](features/DRV-GATES.md) | High-impact approval + policy blocks | 1 | MVP |
 | [DRV-STAGE](features/DRV-STAGE.md) | The Call Stage (agent work projection) | 2 | MVP |
 | [DRV-SHARE](features/DRV-SHARE.md) | Bidirectional stage share (human \| agent) | 2 | MVP |
 | [DRV-TRANSCRIPT](features/DRV-TRANSCRIPT.md) | Room transcript vs per-agent focus | 2 | MVP |
-| [DRV-CHAT-FORK](features/DRV-CHAT-FORK.md) | Invisible auditable worker forks + PromotePacket | 2+ | Landed |
+| [DRV-CHAT-FORK](features/DRV-CHAT-FORK.md) | Invisible auditable worker forks + PromotePacket | 2+ | **Landed** (claim:drv-chat-fork) |
 | [DRV-ADDRESS](features/DRV-ADDRESS.md) | Address set (one / many / everyone / pack) | 2 | MVP |
-| [DRV-ROSTER-PACK](features/DRV-ROSTER-PACK.md) | Curated roster presets, added in one action | 2 | Partial (hub seat path; library UI open) |
+| [DRV-ROSTER-PACK](features/DRV-ROSTER-PACK.md) | Curated roster presets, added in one action | 2 | **Partial** (claim:drv-roster-pack) (hub seat path; library UI open) |
 | [DRV-AGENT-GRAPH](features/DRV-AGENT-GRAPH.md) | Per-agent portfolio knowledge graph | 2 | MVP |
-| [DRV-RECRUIT](features/DRV-RECRUIT.md) | Rank agents / suggest packs for a need | 2 | Partial (scoreNeed + stall path; Add UI open) |
+| [DRV-RECRUIT](features/DRV-RECRUIT.md) | Rank agents / suggest packs for a need | 2 | **Partial** (claim:drv-recruit) (scoreNeed + stall path; Add UI open) |
 | [DRV-PARALLEL-WAVES](features/DRV-PARALLEL-WAVES.md) | Parallel wave execution helpers | — | Archive / research (not MVP-indexed) |
 | [DRV-CALL-STRIP](features/DRV-CALL-STRIP.md) | Pinned call controls | 2 | MVP |
 | [DRV-NOWNEXT](features/DRV-NOWNEXT.md) | Now/next plan cursor strip | 2 | MVP |

@@ -1,0 +1,148 @@
+# Evidence-backed Done claims (ADR-0026).
+# Source of truth for delivery status. HANDOFF / README cite claim:<id>.
+
+claims:
+  - id: drv-gates-feed
+    status: active_partial
+    title: GATES feed UI + reconnect + recruit Add
+    note: Feed cards exist; taxonomy-gated execution ACs still open on DRV-GATES.
+    acs:
+      - id: ac-gate-feed-card
+        evidence:
+          - kind: test
+            path: apps/cline-hub/src/webview/src/drive/GateFeedCard.test.ts
+            command: bun -F @cline/cline-hub-webview test -- GateFeedCard
+    consumers:
+      - apps/cline-hub/src/webview/src/drive/GateFeedCard.tsx
+
+  - id: drv-roster-pack-library
+    status: active_partial
+    title: RosterPack library / Add→Pack
+    note: Library UI on tip; full DRV-ROSTER-PACK ACs still open.
+    acs:
+      - id: ac-roster-pack-add
+        evidence:
+          - kind: test
+            path: apps/cline-hub/src/webview/src/drive/rosterPackAdd.test.ts
+            command: bun -F @cline/cline-hub-webview test -- rosterPackAdd
+    consumers:
+      - apps/cline-hub/src/webview/src/drive/RosterPackLibrary.tsx
+
+  - id: drv-roster-pack
+    status: active_partial
+    title: DRV-ROSTER-PACK feature scope
+    acs: []
+    consumers: []
+
+  - id: drv-recruit
+    status: active_partial
+    title: DRV-RECRUIT feature scope
+    acs: []
+    consumers: []
+
+  - id: drv-call-session
+    status: verified_shipped
+    title: Call session binding for task metrics
+    acs:
+      - id: ac-call-session
+        evidence:
+          - kind: test
+            path: sdk/packages/core/src/hub/collaboration/room.test.ts
+            command: bun -F @cline/core test:unit -- room.test
+    consumers: []
+
+  - id: drv-task-metrics
+    status: active_partial
+    title: Local session rollups
+    note: Landed on main #80; claim kept partial until a dedicated evidence path is named.
+    acs: []
+    consumers: []
+
+  - id: drv-plan-improve
+    status: active_partial
+    title: Gated planning improve
+    note: Host skill compile residual.
+    acs: []
+    consumers: []
+
+  - id: drv-stuck-recovery
+    status: verified_shipped
+    title: Stuck-task recovery fork
+    acs:
+      - id: ac-stuck-recovery
+        evidence:
+          - kind: test
+            path: sdk/packages/drive/src/director/chatForkPolicy.test.ts
+            command: bun -F @cline/drive test -- chatForkPolicy
+    consumers: []
+
+  - id: drv-felt-agency
+    status: active_partial
+    title: Felt agency / plan control
+    note: W1.1 narration residual.
+    acs: []
+    consumers: []
+
+  - id: drv-clean-drain
+    status: active_partial
+    title: Clean-drain ritual
+    note: Landed on main #80; dedicated evidence path TBD.
+    acs: []
+    consumers: []
+
+  - id: drv-return-loop
+    status: active_partial
+    title: Leave/End handoff + return
+    note: Landed on main #80; dedicated evidence path TBD.
+    acs: []
+    consumers: []
+
+  - id: drv-plan-reentry
+    status: active_partial
+    title: Unfinished-plan re-entry
+    note: Landed on main #80; dedicated evidence path TBD.
+    acs: []
+    consumers: []
+
+  - id: drv-status-sessions
+    status: active_partial
+    title: Session accomplishment lens
+    note: Migrating home to Analytics.
+    acs: []
+    consumers: []
+
+  - id: drv-analytics
+    status: verified_shipped
+    title: Hub Analytics
+    acs:
+      - id: ac-analytics-bootstrap
+        evidence:
+          - kind: test
+            path: apps/drivecode-demo/src/drivecode-demo.test.ts
+            command: bun -F @cline/drivecode-demo test -- drivecode-demo
+    consumers: []
+
+  - id: drv-shipped-digest
+    status: active_partial
+    title: Opt-in shipped digest
+    note: Landed on main #80; dedicated evidence path TBD.
+    acs: []
+    consumers: []
+
+  - id: drv-recruit-stall
+    status: active_partial
+    title: Recruit on stuck task
+    note: Stall path landed; general Add open.
+    acs: []
+    consumers: []
+
+  - id: drv-chat-fork
+    status: verified_shipped
+    title: Chat-fork workers + PromotePacket
+    acs:
+      - id: ac-chat-fork
+        evidence:
+          - kind: test
+            path: sdk/packages/shared/src/drive/chatFork.test.ts
+            command: bun -F @cline/shared test -- chatFork
+    consumers: []
