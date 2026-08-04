@@ -11,6 +11,7 @@ export {
 	DriveagentPermissionPresetIntentSchema,
 	DriveagentPermissionsYamlSchema,
 	DriveagentSecretRefEntrySchema,
+	isForbiddenPlaintextSecretKey,
 	parseDriveagentAgentYaml,
 	parseDriveagentDerivedGraph,
 	parseDriveagentEnvYaml,

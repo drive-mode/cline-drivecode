@@ -30,7 +30,8 @@ import YAML from "yaml";
  * Plaintext secret keys refused in `env.yaml` values.
  *
  * Duplicated from `@cline/shared`'s `DRIVE_ENV_FORBIDDEN_SECRET_KEYS`; the two
- * copies are pinned equal by a cross-package test.
+ * copies are pinned equal by a cross-package test. Value-imports from shared
+ * are forbidden in this package (`import-boundary.test.ts`).
  */
 export const DRIVE_ENV_FORBIDDEN_SECRET_KEYS = [
 	"apiKey",
@@ -49,14 +50,31 @@ const FORBIDDEN_SECRET_KEYS_LOWER = new Set<string>(
 /**
  * Whether `key` names a credential this path refuses to store in plaintext.
  *
- * Compared case-insensitively, which is stricter than the shared schema's
- * exact-match list: a user typing `APIKEY` into an editor means the same thing
- * as `apiKey`, and the write path is the last place to say no. The exported
- * list stays byte-identical to the shared one so the cross-package pin holds —
- * this only ever refuses more, never fewer.
+ * Exact list match (case-insensitive), plus env-style shapes so
+ * `OPENAI_API_KEY` / `HF_TOKEN` refuse the same way as `apiKey`. Must stay
+ * behavior-identical to `@cline/shared`'s helper (pinned in `write.test.ts`).
  */
 export function isForbiddenPlaintextSecretKey(key: string): boolean {
-	return FORBIDDEN_SECRET_KEYS_LOWER.has(key.toLowerCase());
+	const lower = key.toLowerCase();
+	if (FORBIDDEN_SECRET_KEYS_LOWER.has(lower)) {
+		return true;
+	}
+	if (/api[_-]?key/.test(lower)) {
+		return true;
+	}
+	if (/(^|_)(access[_-]?)?token$/.test(lower)) {
+		return true;
+	}
+	if (/(^|_)(client[_-]?)?secret$/.test(lower)) {
+		return true;
+	}
+	if (/(^|_)password$/.test(lower)) {
+		return true;
+	}
+	if (/private[_-]?key/.test(lower)) {
+		return true;
+	}
+	return false;
 }
 
 /**

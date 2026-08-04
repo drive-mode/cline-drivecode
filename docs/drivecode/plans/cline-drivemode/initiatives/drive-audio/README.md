@@ -14,6 +14,7 @@ and a derived CC transcript — voice-first without being voice-required.
 | File | What |
 |---|---|
 | [overview.md](overview.md) | Slices 1–7 (speaking presence → narrator → chimes → volume/prefs → CC transcript → engine → dead-air design), Kokoro engine decision, demo/product reconciliation |
+| [28-huggingface-speech-to-speech.md](../../research/28-huggingface-speech-to-speech.md) | HF speech-to-speech cascade evaluated — **not adopted** as a Drive daemon; VAD/port harvest only |
 
 ### Feature ids
 

@@ -1,5 +1,8 @@
 import type { DriveagentHome } from "@cline/shared";
-import { DRIVE_ENV_FORBIDDEN_SECRET_KEYS as SHARED_FORBIDDEN_SECRET_KEYS } from "@cline/shared";
+import {
+	DRIVE_ENV_FORBIDDEN_SECRET_KEYS as SHARED_FORBIDDEN_SECRET_KEYS,
+	isForbiddenPlaintextSecretKey as sharedIsForbiddenPlaintextSecretKey,
+} from "@cline/shared";
 import { describe, expect, it } from "vitest";
 import YAML from "yaml";
 import {
@@ -68,6 +71,24 @@ describe("DRIVE_ENV_FORBIDDEN_SECRET_KEYS", () => {
 		expect([...DRIVE_ENV_FORBIDDEN_SECRET_KEYS]).toEqual([
 			...SHARED_FORBIDDEN_SECRET_KEYS,
 		]);
+	});
+
+	it("matches the shared isForbiddenPlaintextSecretKey helper", () => {
+		const samples = [
+			"apiKey",
+			"OPENAI_API_KEY",
+			"HF_TOKEN",
+			"MY_TOKEN_PATH",
+			"notes",
+			"baseUrl",
+			"APIKEY",
+			"client_secret",
+		];
+		for (const key of samples) {
+			expect(isForbiddenPlaintextSecretKey(key)).toBe(
+				sharedIsForbiddenPlaintextSecretKey(key),
+			);
+		}
 	});
 });
 
@@ -158,9 +179,25 @@ describe("assertDriveagentHomePatch", () => {
 		},
 	);
 
+	it.each(["OPENAI_API_KEY", "anthropic_api_key", "HF_TOKEN"])(
+		"refuses env-style plaintext secret key %s",
+		(key) => {
+			expect(
+				writeErrorCode(() =>
+					assertDriveagentHomePatch({
+						env: { values: { [key]: "sk-live-not-a-real-credential" } },
+					}),
+				),
+			).toBe("plaintext_secret");
+		},
+	);
+
 	it("distinguishes a forbidden key from one that merely contains the word", () => {
 		expect(isForbiddenPlaintextSecretKey("MY_TOKEN_PATH")).toBe(false);
+		expect(isForbiddenPlaintextSecretKey("notes")).toBe(false);
+		expect(isForbiddenPlaintextSecretKey("baseUrl")).toBe(false);
 		expect(isForbiddenPlaintextSecretKey("token")).toBe(true);
+		expect(isForbiddenPlaintextSecretKey("OPENAI_API_KEY")).toBe(true);
 	});
 
 	/**

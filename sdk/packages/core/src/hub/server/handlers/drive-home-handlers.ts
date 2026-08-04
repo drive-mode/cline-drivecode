@@ -6,8 +6,8 @@
  * names a field the read path strips is refused rather than merged, because
  * the browser it came from was never shown that field's value.
  *
- * `workspaceRoot` on the put lane is pinned to the workspace this hub is bound
- * to — see `assertWorkspaceInBounds`.
+ * `workspaceRoot` on get / list / put is pinned to the workspace this hub is
+ * bound to — see `assertWorkspaceInBounds`.
  */
 
 import { resolve } from "node:path";
@@ -47,21 +47,21 @@ function sameWorkspaceRoot(a: string, b: string): boolean {
 }
 
 /**
- * The write must land in the workspace this hub is bound to.
+ * The home path must stay inside the workspace this hub is bound to.
  *
  * `workspaceRoot` arrives in the payload, and on the browser lane it arrives
  * from a page. Unchecked, it names any directory on the host that already
  * holds a `.driveagent/<slug>/agent.yaml`, which turns a config editor into a
- * writer for other people's repositories. The bound root is the same anchor
- * `drive_artifacts_list` uses to keep a *read* inside the workspace.
+ * reader/writer for other people's repositories. The bound root is the same
+ * anchor `drive_artifacts_list` uses to keep a *read* inside the workspace.
  *
  * When nothing is bound yet there is no workspace to be outside of, and the
- * write proceeds — refusing instead would break every save made before a room
- * is joined, and the browser cannot influence whether the hub is bound. That
- * makes this a containment check rather than an authorization one; per-peer
- * authority does not exist at this layer yet.
+ * call proceeds — refusing instead would break every save/list made before a
+ * room is joined, and the browser cannot influence whether the hub is bound.
+ * That makes this a containment check rather than an authorization one;
+ * per-peer authority does not exist at this layer yet.
  *
- * Returns an error reply, or undefined when the write may proceed.
+ * Returns an error reply, or undefined when the call may proceed.
  */
 function assertWorkspaceInBounds(
 	envelope: HubCommandEnvelope,
@@ -109,6 +109,10 @@ function handleDriveAgentHomeGet(
 	if (!slug) {
 		return errorReply(envelope, "invalid_payload", "slug is required");
 	}
+	const outOfBounds = assertWorkspaceInBounds(envelope, workspaceRoot);
+	if (outOfBounds) {
+		return outOfBounds;
+	}
 
 	try {
 		const loaded = loadDriveagentHome({ workspaceRoot, slug });
@@ -137,6 +141,10 @@ function handleDriveAgentHomeList(
 	const workspaceRoot = readString(envelope.payload, "workspaceRoot");
 	if (!workspaceRoot) {
 		return errorReply(envelope, "invalid_payload", "workspaceRoot is required");
+	}
+	const outOfBounds = assertWorkspaceInBounds(envelope, workspaceRoot);
+	if (outOfBounds) {
+		return outOfBounds;
 	}
 
 	const homes = listDriveagentHomeDirs({ workspaceRoot }).map((entry) => {

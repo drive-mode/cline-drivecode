@@ -42,6 +42,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [25-role-tiers-and-delegation.md](research/25-role-tiers-and-delegation.md) | A three-tier agent hierarchy audited against the team subsystem; depth is governed, authority is not |
 | [26-request-latency-playbook.md](research/26-request-latency-playbook.md) | A six-fix API latency ladder scored fix-by-fix against a loopback hub ([canvas](../../design/canvases/request-latency-ladder.html)) |
 | [27-agent-compute-substrate.md](research/27-agent-compute-substrate.md) | `@cloudflare/computer` evaluated as an execution substrate against the self-hosted beta |
+| [28-huggingface-speech-to-speech.md](research/28-huggingface-speech-to-speech.md) | HF speech-to-speech evaluated for Drive — not adopted; harvest notes for VAD/ports |
 | [enforced-authority/](initiatives/enforced-authority/) | Wiring declared authority to paths that can refuse; ADR-0025 slices |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | Archive: remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |

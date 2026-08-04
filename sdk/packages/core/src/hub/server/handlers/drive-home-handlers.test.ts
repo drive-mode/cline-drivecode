@@ -64,6 +64,7 @@ describe("handleDriveHomeCommand", () => {
 	const dirs: string[] = [];
 
 	afterEach(async () => {
+		resetDriveRoomStoreForTests();
 		for (const dir of dirs.splice(0)) {
 			await rm(dir, { recursive: true, force: true });
 		}
@@ -170,6 +171,58 @@ describe("handleDriveHomeCommand", () => {
 		expect(
 			(reply.payload?.compiled as { systemPrompt?: string }).systemPrompt,
 		).toMatch(/Workspace-tier/i);
+	});
+
+	/**
+	 * Get/list share put's bound-root gate: a page-supplied workspaceRoot must
+	 * not read another checkout's `.driveagent/` once the hub is bound.
+	 */
+	it("refuses get and list for a workspaceRoot outside the bound workspace", async () => {
+		const mine = await mkdtemp(join(tmpdir(), "drive-home-bound-"));
+		const theirs = await mkdtemp(join(tmpdir(), "drive-home-foreign-"));
+		dirs.push(mine, theirs);
+		await seedPairPartnerHome(mine);
+		await seedPairPartnerHome(theirs);
+		getDriveRoomStore().attachEventLog(new JsonlRoomEventLog(mine));
+
+		const getForeign = await handleDriveHomeCommand(
+			ctx(),
+			command("drive_agent_home_get", {
+				workspaceRoot: theirs,
+				slug: "pair-partner",
+			}),
+		);
+		expect(getForeign.ok).toBe(false);
+		expect(getForeign.error?.code).toBe("workspace_not_bound");
+
+		const listForeign = await handleDriveHomeCommand(
+			ctx(),
+			command("drive_agent_home_list", { workspaceRoot: theirs }),
+		);
+		expect(listForeign.ok).toBe(false);
+		expect(listForeign.error?.code).toBe("workspace_not_bound");
+
+		const getMine = await handleDriveHomeCommand(
+			ctx(),
+			command("drive_agent_home_get", {
+				workspaceRoot: mine,
+				slug: "pair-partner",
+			}),
+		);
+		expect(getMine.ok).toBe(true);
+
+		const listMine = await handleDriveHomeCommand(
+			ctx(),
+			command("drive_agent_home_list", { workspaceRoot: mine }),
+		);
+		expect(listMine.ok).toBe(true);
+		expect(listMine.payload?.homes).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ slug: "pair-partner" }),
+			]),
+		);
+
+		resetDriveRoomStoreForTests();
 	});
 });
 

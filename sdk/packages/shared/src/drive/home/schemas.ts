@@ -18,6 +18,40 @@ export const DRIVE_ENV_FORBIDDEN_SECRET_KEYS = [
 	"clientSecret",
 ] as const;
 
+const FORBIDDEN_SECRET_KEYS_LOWER = new Set<string>(
+	DRIVE_ENV_FORBIDDEN_SECRET_KEYS.map((key) => key.toLowerCase()),
+);
+
+/**
+ * Whether `key` names a credential that must not live in env.yaml `values`.
+ *
+ * Exact list match (case-insensitive), plus env-style shapes so
+ * `OPENAI_API_KEY` / `HF_TOKEN` refuse the same way as `apiKey`. Segment
+ * anchors keep `MY_TOKEN_PATH` and `notes` allowed.
+ */
+export function isForbiddenPlaintextSecretKey(key: string): boolean {
+	const lower = key.toLowerCase();
+	if (FORBIDDEN_SECRET_KEYS_LOWER.has(lower)) {
+		return true;
+	}
+	if (/api[_-]?key/.test(lower)) {
+		return true;
+	}
+	if (/(^|_)(access[_-]?)?token$/.test(lower)) {
+		return true;
+	}
+	if (/(^|_)(client[_-]?)?secret$/.test(lower)) {
+		return true;
+	}
+	if (/(^|_)password$/.test(lower)) {
+		return true;
+	}
+	if (/private[_-]?key/.test(lower)) {
+		return true;
+	}
+	return false;
+}
+
 const DriveagentToolIdSchema = z.string().min(1);
 const DriveagentSkillIdSchema = z.string().min(1);
 
@@ -91,11 +125,7 @@ export const DriveagentEnvYamlSchema = z
 	.strict()
 	.superRefine((env, ctx) => {
 		for (const key of Object.keys(env.values)) {
-			if (
-				(DRIVE_ENV_FORBIDDEN_SECRET_KEYS as readonly string[]).includes(
-					key,
-				)
-			) {
+			if (isForbiddenPlaintextSecretKey(key)) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					message: `plaintext secret key '${key}' is forbidden in env.yaml values; use secretRefs`,

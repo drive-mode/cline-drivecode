@@ -169,6 +169,27 @@ describe("Driveagent home schemas", () => {
 		}
 	});
 
+	it.each(["OPENAI_API_KEY", "anthropic_api_key", "HF_TOKEN"])(
+		"rejects env-style plaintext secret key %s",
+		(key) => {
+			expect(() =>
+				parseDriveagentEnvYaml({
+					values: { [key]: "leaked" },
+					secretRefs: [],
+				}),
+			).toThrow(/secret/);
+		},
+	);
+
+	it("allows non-credential env value keys", () => {
+		expect(
+			parseDriveagentEnvYaml({
+				values: { baseUrl: "https://example.test", notes: "ok" },
+				secretRefs: [],
+			}).values.baseUrl,
+		).toBe("https://example.test");
+	});
+
 	it("accepts secretRef entries", () => {
 		const parsed = parseDriveagentEnvYaml({
 			values: {},
