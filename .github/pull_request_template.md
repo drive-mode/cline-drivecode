@@ -42,6 +42,16 @@ Please walk us through your testing approach and thought process. This helps rev
 We're not looking for exhaustive documentation - just evidence that you've thought through the implications of your changes and tested accordingly.
 -->
 
+**Done claim (ADR-0026)** — required:
+
+- `claim:<id>`: … *(or `no-claim-effect` with one-line reason)*
+- Status delta: … *(e.g. `active_partial` → same / → `verified_shipped`)*
+- Evidence command(s) run: …
+
+**Fix-class matrix** — required when Type of Change includes Bug fix:
+
+- [ ] Matrix filled (`docs/drivecode/plans/cline-drivemode/delivery/templates/fix-class-matrix.md`) **or** N/A with reason: …
+
 ### Type of Change
 
 <!-- Put an 'x' in all boxes that apply -->

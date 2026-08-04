@@ -4,13 +4,30 @@ Back to [README](../../../design/wireframes/README.md).
 
 ## How to pick work
 
-1. Open [TASK-GRAPH.md](TASK-GRAPH.md). Find the lowest phase whose gate is not yet green.
-2. Inside that phase, pick a feature whose dependencies (listed in its file) are complete.
+Delivery status is the claims registry ([claims-registry.yaml](claims-registry.yaml), ADR-0026) — not HANDOFF prose, not Kanban, not a generated BACKLOG. Cold-start tables must cite `claim:<id>`.
+
+1. Open [claims-registry.yaml](claims-registry.yaml). Prefer claims with status `scaffold` or `active_partial` that have empty or incomplete `acs`.
+2. Cross-check [TASK-GRAPH.md](TASK-GRAPH.md): lowest phase whose gate is not yet green, then a feature whose dependencies are complete.
 3. Inside that feature, execute the agent-task checklist top to bottom. Tasks are ordered so read-and-map tasks come before write tasks.
 4. Check off tasks in the feature file as they complete, with a one-line note if reality diverged from the plan.
-5. When a feature's acceptance criteria all hold, mark it in the README status table.
+5. Advance the matching claim in the registry (status / `acs` / evidence). Cite `claim:<id>` wherever HANDOFF or the product README status table is touched.
 
-Never start a task whose feature dependencies are red. Never start a phase whose predecessor gate is red.
+Never start a task whose feature dependencies are red. Never start a phase whose predecessor gate is red. Never report Done without a registry advance.
+
+## When work is Done
+
+A feature or fix is Done only when all of the following hold:
+
+1. The claim in [claims-registry.yaml](claims-registry.yaml) moved honestly (`active_partial` → `verified_shipped` only with real evidence).
+2. Every `verified_shipped` AC has an existing evidence `path` and a non-empty `command`.
+3. That evidence command is green locally (and in CI when the path wakes docs/sdk/drive gates).
+4. Cold-start cites use `claim:<id>` next to status adjectives — bare `**Shipped**` / `**Landed**` fails `bun run check:drivecode-docs`.
+
+Bugfixes: before the first fix PR, fill a [fix-class matrix](templates/fix-class-matrix.md) and record in-scope cells as claim ACs (or attach the matrix in the PR). Skipping the matrix needs an explicit `N/A` reason on the PR.
+
+## Shipping shape
+
+Execution grain stays this runbook (one feature / one claim). Multi-PR delivery uses the [stacked-pull-requests](../../../../../.agents/skills/stacked-pull-requests/SKILL.md) skill — stack-safe CI is required (no mid-stack skip of Drive/docs/sdk gates).
 
 ## Spawning agents
 
