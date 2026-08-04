@@ -1,6 +1,6 @@
 # ADR-0025 · Declared authority must be enforced authority
 
-**Status:** Proposed (2026-08-03)
+**Status:** Accepted (2026-08-03)
 **Owner:** Drivecode SE lead
 **Constrained by:** [ADR-0018](ADR-0018-agent-runtime-contract.md) (runtime
 contract, `WorkLease`, receipts), [ADR-0022](ADR-0022-agent-economics.md)
@@ -11,6 +11,9 @@ hub-side, `.driveagent/` stays intent),
 **Evidence:** [research/23-agent-first-design.md](../research/23-agent-first-design.md).
 **Companions:** [defaults-delivery.md](../delivery/defaults-delivery.md) (task
 D1), [initiatives/enforced-authority](../initiatives/enforced-authority/README.md).
+**Impl:** `partial` — E1 refusal consumer locks Finding 2 / L1 delegation
+threading (`sdk/packages/core/src/runtime/enforced-authority-consumer.test.ts`).
+Remaining Finding 1 rows and initiative slices stay open.
 
 ## Context
 
@@ -46,34 +49,15 @@ fix that one. Fixing instances one at a time is what produced six of them.
 
 ### Finding 2 — two delegation paths drop authority entirely
 
-This is a live hole, not a missing feature.
+This was a live hole: `createSessionSpawnTool` and `spawnTeamTeammate` once
+skipped `toolPolicies` / `requestToolApproval` while
+`buildDelegatedAgentConfig` already accepted both.
 
-`buildDelegatedAgentConfig` accepts `toolPolicies` and `requestToolApproval`
-(`delegated-agent.ts:71-74`) and copies both onto the child's `AgentConfig`
-(`:130-131`). `SpawnAgentToolConfig` declares both (`spawn-agent-tool.ts:100`,
-`:104`) and forwards them (`:139-140`). The configured-agent path passes them
-(`configured-agent-tool.ts:179-180`).
-
-Two callers do not:
-
-- `createSessionSpawnTool` (`runtime/host/local/spawn-tool.ts`) calls
-  `createSpawnAgentTool({ configProvider, createSubAgentTools, ...lifecycle })`
-  — neither field. Its `createSubAgentTools` builds the child's tools from
-  `ToolPresets[...]` and applies `filterDisabledTools` only, with no policy
-  filter.
-- `spawnTeamTeammate` (`extensions/tools/team/team-tools.ts`) calls
-  `buildDelegatedAgentConfig({ kind, prompt, role, configProvider, tools,
-  maxIterations, cwd })` — neither field, and neither is declared on its options
-  type.
-
-So a parent running with `{"*": {autoApprove: false}}` spawns a child with `{}`:
-every tool enabled, every tool auto-approved, and no approval callback, because
-`AgentRuntime.requestToolApproval` only fails closed once `autoApprove: false`
-is already set. **A child agent is currently the cheapest way to escape a
-parent's approval posture, and no policy has to be misconfigured for it to
-happen.**
-
-The plumbing is complete. This is three call sites, not a new abstraction.
+**Closed for L1 (wiring + E1 consumer).** Host spawn, team bootstrap, and
+`buildDelegatedAgentConfig` now thread parent authority and intersect policies.
+`enforced-authority-consumer.test.ts` refuses a merge that removes those
+consumers. Remaining Finding 1 rows (preset→policy, `presetIntent`, receipts,
+…) are still open initiative slices.
 
 ### Finding 3 — the base runtime fails open, and that is a published contract
 

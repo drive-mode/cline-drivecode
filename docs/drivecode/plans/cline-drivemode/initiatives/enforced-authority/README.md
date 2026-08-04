@@ -1,8 +1,9 @@
 # Enforced authority
 
-**Status:** proposed
-**ADR:** [ADR-0025](../../adr/ADR-0025-enforced-authority.md) (Proposed — declared
-authority must be enforced authority), implementing decisions already taken in
+**Status:** Accepted (2026-08-03) — Impl `partial`
+**ADR:** [ADR-0025](../../adr/ADR-0025-enforced-authority.md) (Accepted —
+declared authority must be enforced authority), implementing decisions already
+taken in
 [ADR-0018](../../adr/ADR-0018-agent-runtime-contract.md),
 [ADR-0022](../../adr/ADR-0022-agent-economics.md), and
 [ADR-0023](../../adr/ADR-0023-agent-spawn-governance.md)
@@ -38,7 +39,7 @@ being implemented.
 
 | Slice | Status | Notes |
 |---|---|---|
-| **L1** · Delegation must not widen authority | proposed | `createSessionSpawnTool` and `spawnTeamTeammate` pass neither `toolPolicies` nor `requestToolApproval`, so a child of a parent running `{"*":{autoApprove:false}}` gets `{}` — every tool enabled and auto-approved. The plumbing is complete (`delegated-agent.ts:71-74`, `:130-131`); three call sites do not use it. Cap in `buildDelegatedAgentConfig`, the funnel all paths share. Mirror `runtime-builder.configured-agent-execution.test.ts`, which already asserts the correct threading |
+| **L1** · Delegation must not widen authority | **done** | Parent authority threaded through `createSessionSpawnTool`, `spawnTeamTeammate`, and `buildDelegatedAgentConfig` (`intersectToolPolicies`). Locked by `sdk/packages/core/src/runtime/enforced-authority-consumer.test.ts` (ADR-0025 E1 slice for this hole). |
 | **L2** · Bound spawn depth and concurrency | proposed | ADR-0023 §1 for chat forks. Separately, `spawn-agent-tool.ts` has no concurrency, queue, or depth construct at all, and the runtime executes tool calls in parallel — one turn emitting N spawns starts N sub-agents, each able to spawn. Team runs already have an admission scheduler to route through |
 | **L3** · Room fold survives retention | proposed | Correctness, not performance. Retention trims oldest records while `hydrateFromLog` replays from seq 0 with no checkpoint, so a room past 2 048 events cannot be correctly rebuilt. `appliedEventIds` is never cleared and causes replay skips. See [research/24](../../research/24-scale-and-context.md) |
 | **L4** · Stop persisting team state per token delta | proposed | `onTeamEvent` calls `persistRuntime(exportState())` with no event-type filter; `exportState` copies every run including its `AgentResult`. Cost grows with session length times agent count. Filter, debounce, and stop storing a full result in a per-event-serialized record |
@@ -47,7 +48,7 @@ being implemented.
 
 | Slice | Status | Notes |
 |---|---|---|
-| **E1** · Enforcement-consumer test | proposed | ADR-0025 §1. Asserts every declared authority type has ≥1 non-test consumer on a refusal path. Will fail on landing — that is the point; ship it with the instances it catches already listed here |
+| **E1** · Enforcement-consumer test | **partial** | L1 / Finding 2 consumers locked (`enforced-authority-consumer.test.ts`). Broad “every declared authority type” matrix still open — ship remaining rows with their wiring slices, not as a red suite. |
 | **E2** · `effectivePreset` → `ToolPolicy` | proposed | ADR-0023 §3. Already tracked as **D1** in [defaults-delivery.md](../../delivery/defaults-delivery.md) ("wire `capPreset = min(parent, child)` into `call_seat`"). The preset→tool-name table must live in `@cline/core`; `sdk/packages/drive/src/import-boundary.test.ts` forbids value imports from `@cline/shared` in drive source. Needs an optional field on `AgentParticipantSchema`, which is `.strict()` — a schema rev |
 | **E3** · Make `ToolPresets.plan` say what it grants | proposed | Documented "read-only, no shell access", ships `enableBash: true` — **the grant is correct and the comment is stale.** `prompt/cline.ts:25-31` records that `run_commands` stays available in plan mode for read-only investigation and `cline.test.ts:36-44` locks it. Fix the comment; add the missing `presets.test.ts` assertion, since nothing currently pins the tool *present*. Blocks E2 only in the sense that a preset ceiling must read flags, never preset names |
 | **E4** · Deny-by-default posture | proposed | ADR-0025 §3. Opt-in at the SDK boundary — inverting `resolveToolPolicy` changes a documented `@default true` and the tool-list filters read `enabled` without `autoApprove`, so a naive flip empties the tool list rather than prompting. Product surfaces select the closed posture separately. Also closes the CLI approval-controller short-circuit and decides whether `beforeTool` hooks may widen |

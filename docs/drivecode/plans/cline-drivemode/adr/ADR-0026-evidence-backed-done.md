@@ -44,5 +44,7 @@ contract, not the Done ledger.
 
 ## Status
 
-**Accepted.** Impl: `partial` until stack-safe docs CI, runbook contracts, and
-ADR-0025 E1 land.
+**Accepted.** Impl: `partial` — registry + done checker, stack-safe docs/sdk CI,
+runbook/PR claim contracts, and ADR-0025 E1 L1 consumer are on tip of this
+stack. Remaining: full Finding 1 consumer matrix, BACKLOG render, consumer-path
+grep v2.
