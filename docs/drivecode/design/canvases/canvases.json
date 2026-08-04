@@ -49,6 +49,10 @@
     "session-satisfaction-moments-canvas": {
       "file": "session-satisfaction-moments-canvas.html",
       "title": "Drive · session satisfaction moments"
+    },
+    "request-latency-ladder": {
+      "file": "request-latency-ladder.html",
+      "title": "Drive · request latency ladder"
     }
   }
 }

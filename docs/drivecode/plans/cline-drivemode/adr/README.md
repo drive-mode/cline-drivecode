@@ -32,6 +32,9 @@
 | [ADR-0022](ADR-0022-agent-economics.md) | Agent economics — context, model, spend per agent | **Proposed** | [DRV-PLATFORM-CONFIG](../features/DRV-PLATFORM-CONFIG.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md) |
 | [ADR-0023](ADR-0023-agent-spawn-governance.md) | Agent spawn governance (consult vs delegate) | **Proposed** | [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md), [DRV-GATES](../features/DRV-GATES.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md) |
 | [ADR-0024](ADR-0024-drive-web-runtime.md) | Drive web runtime — conformant browser host behind a transport port | **Proposed** | [DRV-KERNEL](../features/DRV-KERNEL.md), [DRV-DEMO-SHARE](../features/DRV-DEMO-SHARE.md) |
+| [ADR-0025](ADR-0025-enforced-authority.md) | Declared authority must be enforced authority | **Accepted** | [DRV-GATES](../features/DRV-GATES.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md) |
+| [ADR-0026](ADR-0026-evidence-backed-done.md) | Evidence-backed Done needs a refusal path | **Accepted** | — |
+| [ADR-0027](ADR-0027-role-tiers.md) | A role tier is a permission ceiling, or it is a prompt | **Proposed** | [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 

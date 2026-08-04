@@ -6,15 +6,64 @@ Back to [README](../../../design/wireframes/README.md). Related: [share-and-rout
 
 Measure Drive compute/memory cost, then optimize via architecture (cache, batch, async, parallel, bounds) — not micro-guesses.
 
-## Baseline probes (fill during execution)
+## Baseline probes
+
+Measured 2026-08-04 on the tip (`c4bd276`), bun 1.3.11 / node v24.3.0, after
+`bun run build:sdk`. Method and caveats in
+[Probe method](#probe-method) below. "After" stays empty until an optimization
+actually lands against a baseline — that is the point of the column.
 
 | Probe | Method | Baseline | After |
 |---|---|---|---|
-| Hub heap after join | `process.memoryUsage().heapUsed` | TBD | TBD |
-| Mermaid produce cold | `produceMermaidShowArtifact` ms | TBD | TBD |
-| Mermaid produce warm | cache hit ms | TBD | TBD |
-| Director rank 100 shows | `rankShowBacklog` ms | TBD | TBD |
-| Webview messages[] growth | count after N turns | TBD | TBD |
+| Hub heap after join | `process.memoryUsage().heapUsed` | **~102 MB** resident after server start; **+0.6 MB** first join, **~12 KB** amortized per additional room (100 rooms) | — |
+| Mermaid produce cold | `produceMermaidShowArtifact` ms | **0.0076 ms** median (p95 0.052) | — |
+| Mermaid produce warm | cache hit ms | **0.0062 ms** median (p95 0.030) | — |
+| Director rank 100 shows | `rankShowBacklog` ms | **0.0235 ms** median (p95 0.059) | — |
+| Webview messages[] growth | count after N turns | **not measured** — needs live agent turns, which need a funded LLM credential; none available in this environment | — |
+
+### What the numbers say
+
+**The SVG cache currently buys 1.2×, not an order of magnitude.** Cold 0.0076 ms
+versus warm 0.0062 ms is close to noise. This is not a bug in the cache; it is a
+consequence of what the cache elides. `produceMermaidShowArtifact` hashes the
+source, then base64-encodes the SVG into a data URI and rebuilds the
+`ShowBacklogItem` **unconditionally** — the cache short-circuits only
+`buildStubSvg`, and that is a *stub* wrapper, not a mermaid render
+(`produceMermaid.ts:34` "deterministic SVG wrapper (no mermaid runtime required
+in core)"). The comment at `showTemplates.ts:59` anticipates a real renderer
+landing later.
+
+So the cache is correctly placed for a cost that does not exist yet. When a real
+renderer lands the ratio should move sharply; until then, listing the SVG cache
+under "Implemented so far" overstates what it currently does. Worth re-running
+this probe as the first check after any renderer work.
+
+**Nothing in the measured set is a bottleneck.** Ranking 100 shows costs ~24
+microseconds. At these magnitudes the ordered optimization list below is not yet
+justified by measurement — which is what this document said would decide it.
+
+### Probe method
+
+Probes 2–4 are pure functions and were driven directly, 200 iterations after 20
+warmup iterations, reporting median / p95 / min. Cold-versus-warm is separated
+by giving each iteration a unique `mermaidSource` (the cache is keyed by sha256
+of the source) and then repeating that exact source; the harness asserts
+`cacheHit === false` then `true`, so a silent cache change would fail the run
+rather than quietly flatten the result.
+
+Probe 1 boots a real hub via `ensureHubWebSocketServer` in-process, connects a
+real client with `connectToHub` over the wire, and issues real `call_join`
+commands, reading `heapUsed` from the hosting process after a forced GC. The
+per-room figure is marginal cost and is dominated by a fixed first-join
+allocation, hence the spread between 1 room (~592 KB) and 100 rooms (~12 KB).
+Resident heap after start was stable at ~102 MB across runs.
+
+Probe 5 is honestly unmeasured rather than estimated. It requires real agent
+turns; `AGENTS.md` notes that an unfunded key authenticates but fails the turn,
+and this environment has no provider credential set at all. Filling it in from a
+guess would make it exactly the kind of number
+[24-scale-and-context](24-scale-and-context.md) warns about — one that governs
+nothing because nobody verified it.
 
 ## Implemented so far
 

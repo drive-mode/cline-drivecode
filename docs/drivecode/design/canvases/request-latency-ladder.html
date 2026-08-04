@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drive · request latency ladder</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'self' file:" />
+<style>
+  /* Self-hosted fonts: variable-weight latin woff2 committed under
+     ../../assets/fonts/ — no request ever leaves the page. */
+  @font-face {
+    font-family: "Schibsted Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/schibsted-grotesk-latin-wght.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "DM Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/dm-sans-latin-wght.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../../assets/fonts/space-grotesk-latin-wght.woff2") format("woff2");
+  }
+
+  /* Cline brand tokens — hex SoT: design/brand/cline-canvas-tokens.css */
+  :root {
+    --brand-purple: #9F58FA;
+    --brand-purple-text: #B98AFF;
+    --brand-green: #2BCC28;
+    --brand-green-live: #4ADE80;
+    --brand-pink: #F53969;
+    --brand-blue: #5487C8;
+    --bg: #0A0A0A;
+    --panel: #101013;
+    --raised: #12131A;
+    --text: #FFFFFF;
+    --text-2: #9CA3AF;
+    --text-3: #6B7280;
+    --line: rgba(255, 255, 255, 0.10);
+    --r: 9px;
+    --ui: "Schibsted Grotesk", system-ui, sans-serif;
+    --display: "DM Sans", system-ui, sans-serif;
+    --grotesk: "Space Grotesk", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1000px 500px at 10% -10%, color-mix(in srgb, var(--brand-purple) 20%, transparent), transparent 60%),
+      radial-gradient(800px 400px at 90% 0%, color-mix(in srgb, var(--brand-blue) 14%, transparent), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.55 var(--ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { max-width: 1000px; margin: 0 auto; padding: 30px 18px 56px; }
+
+  .eyebrow {
+    font: 600 11px/1 var(--grotesk);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before {
+    content: ""; width: 26px; height: 1px; background: var(--text-3);
+  }
+  h1 {
+    font: 700 40px/1.05 var(--display);
+    letter-spacing: -.02em;
+    margin: 14px 0 8px;
+  }
+  h1 .to { color: var(--text-3); margin: 0 6px; }
+  h1 .win { color: var(--brand-green-live); }
+  .sub { color: var(--text-2); max-width: 62ch; margin-bottom: 4px; }
+  .note { color: var(--text-3); font-size: 12.5px; max-width: 68ch; margin-top: 10px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    margin-top: 26px;
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,.02);
+  }
+  .endpoint { font: 500 13px/1 var(--grotesk); color: var(--text-2); }
+  .total { font: 700 15px/1 var(--grotesk); color: var(--brand-purple-text); }
+  .total.done { color: var(--brand-green-live); }
+
+  .rows { padding: 6px 0; }
+  .row {
+    display: grid;
+    grid-template-columns: 150px 92px 1fr 210px;
+    gap: 14px; align-items: center;
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.045);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row-name {
+    font: 600 11px/1.2 var(--grotesk);
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .row.applied .row-name { color: var(--text); }
+
+  .nums { font: 500 13px/1 var(--grotesk); white-space: nowrap; }
+  .before { color: var(--brand-pink); }
+  .row.applied .before { text-decoration: line-through; opacity: .55; }
+  /* Arrow and target stay hidden until the fix is applied, so an unapplied
+     row reads as a plain cost ("540") rather than a dangling "540 →". */
+  .arrow { color: var(--text-3); margin: 0 5px; opacity: 0; transition: opacity .35s ease; }
+  .row.applied .arrow { opacity: 1; }
+  .after { color: var(--text-3); opacity: 0; transition: opacity .35s ease; }
+  .row.applied .after { color: var(--brand-blue); opacity: 1; }
+
+  .bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.05); overflow: hidden; }
+  .bar span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--brand-pink), color-mix(in srgb, var(--brand-pink) 55%, var(--brand-purple)));
+    transition: width .55s cubic-bezier(.4,0,.2,1), background .35s ease;
+  }
+  .row.applied .bar span {
+    background: linear-gradient(90deg, var(--brand-blue), var(--brand-green-live));
+  }
+
+  .fix { color: var(--text-2); font-size: 13px; }
+  .row.applied .fix { color: var(--text); }
+
+  .totals {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--line);
+  }
+  .tot { padding: 18px 16px; }
+  .tot + .tot { border-left: 1px solid var(--line); }
+  .tot .k {
+    font: 600 10.5px/1 var(--grotesk); letter-spacing: .16em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  .tot .v {
+    font: 700 34px/1.1 var(--display); margin-top: 8px;
+    color: var(--brand-blue);
+  }
+  .tot .v.repeat { color: var(--brand-green-live); }
+  .tot .v.pending { color: var(--text-3); }
+
+  .controls { display: flex; gap: 10px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+  button {
+    font: 600 12.5px/1 var(--ui);
+    color: var(--text);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease;
+  }
+  button:hover:not(:disabled) { border-color: var(--brand-purple); background: rgba(159,88,250,.12); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--brand-purple); border-color: var(--brand-purple); }
+  button.primary:hover:not(:disabled) { background: #8f4bea; }
+  .step { color: var(--text-3); font: 500 12px/1 var(--grotesk); }
+
+  h2 {
+    font: 700 20px/1.2 var(--display);
+    margin: 40px 0 6px; letter-spacing: -.01em;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.06); vertical-align: top; }
+  th {
+    font: 600 10.5px/1 var(--grotesk); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  td.verdict { white-space: nowrap; font-weight: 600; }
+  .no { color: var(--brand-pink); }
+  .yes { color: var(--brand-green-live); }
+  .already { color: var(--brand-blue); }
+  td.why { color: var(--text-2); }
+
+  .callout {
+    margin-top: 22px; padding: 16px;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--brand-purple);
+    border-radius: var(--r);
+  }
+  .callout .k {
+    font: 600 10.5px/1 var(--grotesk); letter-spacing: .16em;
+    text-transform: uppercase; color: var(--brand-purple-text);
+  }
+  .callout p { margin-top: 9px; color: var(--text-2); }
+  .callout strong { color: var(--text); }
+  code {
+    font: 500 12.5px/1.4 var(--grotesk);
+    color: var(--brand-purple-text);
+    background: rgba(159,88,250,.10);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  footer {
+    margin-top: 34px; padding-top: 16px;
+    border-top: 1px solid var(--line);
+    color: var(--text-3); font-size: 12px;
+  }
+  @media (max-width: 760px) {
+    h1 { font-size: 30px; }
+    .row { grid-template-columns: 1fr; gap: 6px; }
+    .bar { display: none; }
+    .totals { grid-template-columns: 1fr; }
+    .tot + .tot { border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="eyebrow">The fixed request</div>
+  <h1><span>2,400ms</span><span class="to">→</span><span class="win">90ms</span></h1>
+  <p class="sub">Same endpoint, same data — six fixes, applied in order. A latency
+  ladder is only as good as the profile that produced it: these six numbers were
+  measured before any fix was chosen.</p>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="endpoint">GET /api/orders</span>
+      <span class="total" id="total">2,400 ms</span>
+    </div>
+    <div class="rows" id="rows"></div>
+    <div class="totals">
+      <div class="tot">
+        <div class="k">First request</div>
+        <div class="v pending" id="first">2,400 ms</div>
+      </div>
+      <div class="tot">
+        <div class="k">Every repeat</div>
+        <div class="v pending" id="repeat">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="next">Apply next fix</button>
+    <button id="all">Apply all</button>
+    <button id="reset">Reset</button>
+    <span class="step" id="step">0 / 6 applied</span>
+  </div>
+
+  <h2>Scored against Drive</h2>
+  <p class="sub">The ladder describes a tiered web service: browser → edge → app
+  server → pool → SQL → downstream services. Drive's hot path is a single-writer
+  daemon on <code>127.0.0.1</code> speaking one persistent WebSocket, folding an
+  append-only event log in memory. Most of these cost centres are not there.</p>
+
+  <table>
+    <thead>
+      <tr><th>Fix</th><th>Transfers?</th><th>Why</th></tr>
+    </thead>
+    <tbody id="verdicts"></tbody>
+  </table>
+
+  <div class="callout">
+    <div class="k">The measured one</div>
+    <p>Fix 6 is the only rung Drive already built, so it is the only one that can
+    be <strong>scored rather than reasoned about</strong>. The mermaid content-hash
+    SVG cache measures <strong>1.2×</strong> — cold 0.0076 ms, warm 0.0062 ms —
+    because the warm path still hashes, base64-encodes and rebuilds the item, and
+    elides only a stub SVG wrapper. The cache is correctly placed for a cost that
+    does not exist yet.</p>
+    <p>Which is the ladder's real lesson, and it is not one of its six slides:
+    <strong>the power comes from the profile, not the fixes.</strong></p>
+  </div>
+
+  <footer>
+    Drive design canvas · brand tokens from
+    <code>design/brand/cline-canvas-tokens.css</code> · analysis in
+    <code>research/26-request-latency-playbook.md</code>, measurements in
+    <code>research/12-performance.md</code>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // The ladder. `before` sums to 2,400; `after` sums to 90.
+  var LADDER = [
+    { name: "The long haul",  before: 540, after: 6,  fix: "serve cacheable GETs from the edge" },
+    { name: "The cold connect", before: 150, after: 0,  fix: "borrow from a connection pool", afterLabel: "≈0" },
+    { name: "The full scan",  before: 900, after: 2,  fix: "index what you filter on" },
+    { name: "The N+1",        before: 600, after: 12, fix: "one JOIN, not one query per row" },
+    { name: "The chatty hops", before: 210, after: 70, fix: "call independent services at once" },
+    { name: "The re-do",      before: null, after: 2,  fix: "cache the read path",
+      beforeLabel: "every time", repeatPath: true }
+  ];
+
+  var VERDICTS = [
+    { fix: "Serve cacheable GETs from the edge", cls: "no", verdict: "No — hub",
+      why: "The hub is loopback; there is no wide-area RTT to shorten. The surface that has one — drivemode.ai — is already static on Cloudflare Pages." },
+    { fix: "Borrow from a connection pool", cls: "no", verdict: "No",
+      why: "One persistent WebSocket, not per-request connections. Connect cost is paid once: +0.2 MB, measured." },
+    { fix: "Index what you filter on", cls: "already", verdict: "Largely already",
+      why: "idx_team_events_name_ts and idx_team_runs_status in the team store, nine indices in the cron store. Three team tables carry no secondary index — an audit item, not a defect." },
+    { fix: "One JOIN, not one query per row", cls: "no", verdict: "No",
+      why: "Read paths are in-memory folds over the event log, not per-row queries. There is no ORM to produce the N+1 shape." },
+    { fix: "Call independent services at once", cls: "already", verdict: "Partly, already",
+      why: "The scheduler already runs one lane per teammate with team-wide parallelism. Remaining candidates are provider-bound — LLM, STT, TTS." },
+    { fix: "Cache the read path", cls: "yes", verdict: "Already — measured",
+      why: "Three caches shipped. The mermaid SVG cache measures 1.2×, not an order of magnitude. See the callout below." }
+  ];
+
+  var TOTAL_BEFORE = 2400;
+  var applied = 0;
+
+  var rowsEl = document.getElementById("rows");
+  var totalEl = document.getElementById("total");
+  var firstEl = document.getElementById("first");
+  var repeatEl = document.getElementById("repeat");
+  var stepEl = document.getElementById("step");
+  var nextBtn = document.getElementById("next");
+  var allBtn = document.getElementById("all");
+  var resetBtn = document.getElementById("reset");
+
+  function fmt(n) { return n.toLocaleString("en-US"); }
+
+  // Build rows once.
+  LADDER.forEach(function (item, i) {
+    var row = document.createElement("div");
+    row.className = "row";
+    row.dataset.index = String(i);
+
+    var name = document.createElement("div");
+    name.className = "row-name";
+    name.textContent = item.name;
+
+    var nums = document.createElement("div");
+    nums.className = "nums";
+    var before = document.createElement("span");
+    before.className = "before";
+    before.textContent = item.beforeLabel || fmt(item.before);
+    var arrow = document.createElement("span");
+    arrow.className = "arrow";
+    arrow.textContent = "→";
+    var after = document.createElement("span");
+    after.className = "after";
+    after.textContent = item.afterLabel || fmt(item.after);
+    nums.appendChild(before); nums.appendChild(arrow); nums.appendChild(after);
+
+    var bar = document.createElement("div");
+    bar.className = "bar";
+    var fill = document.createElement("span");
+    // Width is proportional to the largest rung so the shape reads at a glance.
+    var basis = item.before === null ? 300 : item.before;
+    fill.style.width = ((basis / 900) * 100).toFixed(1) + "%";
+    fill.dataset.full = fill.style.width;
+    fill.dataset.small = ((item.after / 900) * 100).toFixed(1) + "%";
+    bar.appendChild(fill);
+
+    var fix = document.createElement("div");
+    fix.className = "fix";
+    fix.textContent = item.fix;
+
+    row.appendChild(name); row.appendChild(nums); row.appendChild(bar); row.appendChild(fix);
+    rowsEl.appendChild(row);
+  });
+
+  // Verdict table.
+  var tbody = document.getElementById("verdicts");
+  VERDICTS.forEach(function (v) {
+    var tr = document.createElement("tr");
+    var a = document.createElement("td"); a.textContent = v.fix;
+    var b = document.createElement("td"); b.className = "verdict " + v.cls; b.textContent = v.verdict;
+    var c = document.createElement("td"); c.className = "why"; c.textContent = v.why;
+    tr.appendChild(a); tr.appendChild(b); tr.appendChild(c);
+    tbody.appendChild(tr);
+  });
+
+  function render() {
+    var running = TOTAL_BEFORE;
+    for (var i = 0; i < applied; i++) {
+      var item = LADDER[i];
+      if (!item.repeatPath) running -= (item.before - item.after);
+    }
+
+    var rows = rowsEl.querySelectorAll(".row");
+    for (var j = 0; j < rows.length; j++) {
+      var on = j < applied;
+      rows[j].classList.toggle("applied", on);
+      var fill = rows[j].querySelector(".bar span");
+      fill.style.width = on ? fill.dataset.small : fill.dataset.full;
+    }
+
+    totalEl.textContent = fmt(running) + " ms";
+    totalEl.classList.toggle("done", applied >= 5);
+
+    firstEl.textContent = fmt(running) + " ms";
+    firstEl.classList.toggle("pending", applied < 5);
+
+    var repeatOn = applied >= LADDER.length;
+    repeatEl.textContent = repeatOn ? "2 ms" : "—";
+    repeatEl.classList.toggle("pending", !repeatOn);
+    repeatEl.classList.toggle("repeat", repeatOn);
+
+    // The headline states the claim and does not mutate — mutating it ends at
+    // a redundant "90ms → 90ms". The panel total carries the live number.
+    stepEl.textContent = applied + " / " + LADDER.length + " applied";
+    nextBtn.disabled = applied >= LADDER.length;
+    allBtn.disabled = applied >= LADDER.length;
+    resetBtn.disabled = applied === 0;
+  }
+
+  // A single in-flight animation timer. Every control that changes `applied`
+  // out of band cancels it first — otherwise Reset leaves a pending step that
+  // fires 420ms later and restarts the ladder from zero, and a second
+  // "Apply all" runs a parallel chain that advances two rungs per tick.
+  var timer = null;
+
+  function stopAnimation() {
+    if (timer !== null) { clearTimeout(timer); timer = null; }
+  }
+
+  nextBtn.addEventListener("click", function () {
+    stopAnimation();
+    if (applied < LADDER.length) { applied++; render(); }
+  });
+  allBtn.addEventListener("click", function () {
+    stopAnimation();
+    (function stepOnce() {
+      if (applied >= LADDER.length) { timer = null; return; }
+      applied++; render();
+      timer = setTimeout(stepOnce, 420);
+    })();
+  });
+  resetBtn.addEventListener("click", function () {
+    stopAnimation();
+    applied = 0;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

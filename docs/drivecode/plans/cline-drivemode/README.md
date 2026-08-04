@@ -39,6 +39,9 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [18-task-as-execution-unit.md](research/18-task-as-execution-unit.md) | Product and implementation direction for `DriveTask` as the durable, verifiable execution unit |
 | [23-agent-first-design.md](research/23-agent-first-design.md) | Agent-first design doctrine; runtime substitutes for code review; Drive audited against it |
 | [24-scale-and-context.md](research/24-scale-and-context.md) | What degrades at scale — context-window engineering, throughput, and the open control loop |
+| [25-role-tiers-and-delegation.md](research/25-role-tiers-and-delegation.md) | A three-tier agent hierarchy audited against the team subsystem; depth is governed, authority is not |
+| [26-request-latency-playbook.md](research/26-request-latency-playbook.md) | A six-fix API latency ladder scored fix-by-fix against a loopback hub ([canvas](../../design/canvases/request-latency-ladder.html)) |
+| [27-agent-compute-substrate.md](research/27-agent-compute-substrate.md) | `@cloudflare/computer` evaluated as an execution substrate against the self-hosted beta |
 | [enforced-authority/](initiatives/enforced-authority/) | Wiring declared authority to paths that can refuse; ADR-0025 slices |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | Archive: remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
