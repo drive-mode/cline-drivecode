@@ -21,7 +21,8 @@
  *
  * Hide ≠ leave. Minimising collapses to a restore pill and persists per room
  * through `lib/drive-pip-hidden`; the call keeps running and Leave stays the
- * only way out.
+ * only way out. Visibility is `shouldShowPip` (E5). Strip position is
+ * session-scoped drag (PIP-06) via `lib/drive-pip-position`.
  */
 
 import {
@@ -32,7 +33,13 @@ import {
 	PhoneIcon,
 	ScanIcon,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import {
+	type PointerEvent as ReactPointerEvent,
+	type ReactNode,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -43,6 +50,13 @@ import {
 	readDrivePipHidden,
 	writeDrivePipHidden,
 } from "@/lib/drive-pip-hidden";
+import {
+	clampPipPosition,
+	defaultPipPosition,
+	type DrivePipPosition,
+	readDrivePipPosition,
+	writeDrivePipPosition,
+} from "@/lib/drive-pip-position";
 import { cn } from "@/lib/utils";
 import { postToHost } from "../vscode";
 import {
@@ -51,6 +65,7 @@ import {
 	buildRaiseHandFrame,
 } from "./driveCallOps";
 import type { DriveCallPresence } from "./driveCallPresence";
+import { shouldShowPip } from "./shouldShowPip";
 import { DRIVE_DEFAULT_ROOM_ID, DRIVE_PARTICIPANT_HUMAN } from "./types";
 
 function PipButton({
@@ -96,6 +111,59 @@ function PipButton({
 	);
 }
 
+function viewportSize(): { width: number; height: number } {
+	if (typeof window === "undefined") {
+		return { width: 1280, height: 720 };
+	}
+	return { width: window.innerWidth, height: window.innerHeight };
+}
+
+function usePipPosition(roomId: string): {
+	position: DrivePipPosition;
+	setPosition: (next: DrivePipPosition) => void;
+	bindCardRef: (el: HTMLElement | null) => void;
+} {
+	const cardEl = useRef<HTMLElement | null>(null);
+	const [position, setPositionState] = useState<DrivePipPosition>(() => {
+		const stored = readDrivePipPosition(roomId);
+		const size = { width: 240, height: 140 };
+		return clampPipPosition(
+			stored ?? defaultPipPosition(viewportSize(), size),
+			viewportSize(),
+			size,
+		);
+	});
+
+	const measure = () => ({
+		width: cardEl.current?.offsetWidth ?? 240,
+		height: cardEl.current?.offsetHeight ?? 140,
+	});
+
+	const setPosition = (next: DrivePipPosition) => {
+		const clamped = clampPipPosition(next, viewportSize(), measure());
+		setPositionState(clamped);
+		writeDrivePipPosition(roomId, clamped);
+	};
+
+	useEffect(() => {
+		const onResize = () => {
+			setPositionState((prev) =>
+				clampPipPosition(prev, viewportSize(), measure()),
+			);
+		};
+		window.addEventListener("resize", onResize);
+		return () => window.removeEventListener("resize", onResize);
+	}, []);
+
+	return {
+		position,
+		setPosition,
+		bindCardRef: (el) => {
+			cardEl.current = el;
+		},
+	};
+}
+
 function PipCard({
 	onExpand,
 	presence,
@@ -109,6 +177,14 @@ function PipCard({
 	// Keyed by room in `PipPartner`, so the initialiser re-runs per call and no
 	// effect is needed to follow the room.
 	const [hidden, setHidden] = useState(() => readDrivePipHidden(roomId));
+	const { position, setPosition, bindCardRef } = usePipPosition(roomId);
+	const dragRef = useRef<{
+		pointerId: number;
+		originX: number;
+		originY: number;
+		startLeft: number;
+		startTop: number;
+	} | null>(null);
 
 	const setHiddenPersisted = (next: boolean) => {
 		setHidden(next);
@@ -116,16 +192,65 @@ function PipCard({
 	};
 
 	const partnerName = presence.partnerName?.trim() || "Drive call";
+	const style = {
+		left: position.left,
+		top: position.top,
+	} as const;
+
+	const onDragPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+		if (event.button !== 0) {
+			return;
+		}
+		event.currentTarget.setPointerCapture(event.pointerId);
+		dragRef.current = {
+			pointerId: event.pointerId,
+			originX: event.clientX,
+			originY: event.clientY,
+			startLeft: position.left,
+			startTop: position.top,
+		};
+	};
+
+	const onDragPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+		const drag = dragRef.current;
+		if (!drag || drag.pointerId !== event.pointerId) {
+			return;
+		}
+		setPosition({
+			left: drag.startLeft + (event.clientX - drag.originX),
+			top: drag.startTop + (event.clientY - drag.originY),
+		});
+	};
+
+	const onDragPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
+		if (dragRef.current?.pointerId === event.pointerId) {
+			dragRef.current = null;
+		}
+	};
 
 	// z-40, not z-50: dialogs, sheets and this widget's own tooltips sit at
 	// z-50, and the companion must never cover a modal.
-	if (hidden) {
+	if (
+		!shouldShowPip({
+			active: true,
+			onCallRoute: false,
+			optedOut: hidden,
+		})
+	) {
 		return (
-			<div className="fixed bottom-4 right-4 z-40" data-drive-pip="minimised">
+			<div
+				className="fixed z-40"
+				data-drive-pip="minimised"
+				ref={bindCardRef}
+				style={style}
+			>
 				<Button
 					aria-label={`Show the ${partnerName} call companion`}
 					className="h-8 gap-2 rounded-full border-amber-500/45 bg-background/95 px-3 shadow-lg backdrop-blur dark:border-amber-400/45"
 					onClick={() => setHiddenPersisted(false)}
+					onPointerDown={onDragPointerDown}
+					onPointerMove={onDragPointerMove}
+					onPointerUp={onDragPointerUp}
 					size="sm"
 					type="button"
 					variant="outline"
@@ -143,15 +268,22 @@ function PipCard({
 	return (
 		<aside
 			aria-label={`${partnerName} call companion`}
-			className="fixed bottom-4 right-4 z-40 w-60 rounded-lg border border-amber-500/40 bg-background/95 p-3 shadow-lg backdrop-blur dark:border-amber-400/40"
+			className="fixed z-40 w-60 rounded-lg border border-amber-500/40 bg-background/95 p-3 shadow-lg backdrop-blur dark:border-amber-400/40"
 			// Presence facts as data, so a runtime smoke can read what the widget
 			// is actually showing rather than inferring it from icon glyphs.
 			data-drive-pip="open"
 			data-hand-raised={String(presence.handRaised)}
 			data-muted={String(presence.muted)}
 			data-room-id={presence.roomId ?? ""}
+			ref={bindCardRef}
+			style={style}
 		>
-			<div className="flex items-center gap-2">
+			<div
+				className="flex cursor-grab items-center gap-2 active:cursor-grabbing"
+				onPointerDown={onDragPointerDown}
+				onPointerMove={onDragPointerMove}
+				onPointerUp={onDragPointerUp}
+			>
 				<span
 					aria-hidden="true"
 					className="size-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400"
@@ -163,6 +295,7 @@ function PipCard({
 					aria-label="Minimise the call companion (stays in the call)"
 					className="size-6 shrink-0 text-muted-foreground [&_svg]:size-[13px]"
 					onClick={() => setHiddenPersisted(true)}
+					onPointerDown={(event) => event.stopPropagation()}
 					size="icon-sm"
 					type="button"
 					variant="ghost"
@@ -247,15 +380,20 @@ export function PipPartner({
 }: {
 	/**
 	 * The Drive call route already renders the strip and the roster, so the
-	 * companion stands down there. This — plus `presence.active` — is the whole
-	 * visibility rule for this unit; the full predicate (`shouldShowPip`, with
-	 * opt-out and strip position) is E5's.
+	 * companion stands down there. Full rule: {@link shouldShowPip}.
 	 */
 	onCallRoute: boolean;
 	onExpand: (roomId: string) => void;
 	presence: DriveCallPresence;
 }) {
-	if (!presence.active || onCallRoute) {
+	// Mount gate ignores opt-out so the restore pill can still appear.
+	if (
+		!shouldShowPip({
+			active: presence.active,
+			onCallRoute,
+			optedOut: false,
+		})
+	) {
 		return null;
 	}
 	const roomId = presence.roomId ?? DRIVE_DEFAULT_ROOM_ID;
