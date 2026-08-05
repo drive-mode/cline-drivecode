@@ -43,24 +43,17 @@ The same features ship in two clients against one hub:
 
 | Surface | Where |
 |---|---|
-| **Hub UI** | Drive tab in the Cline Hub dashboard |
+| **Hub UI** | Drive rail in the Cline Hub dashboard |
 | **CLI (TUI)** | Interactive OpenTUI (`bun run cli -i`) |
 
-Everything Drive adds lives together — today under one **Drive** tab in the
-hub, headed toward a customizable rail of Drive surfaces (resize, reorder,
-hide) rather than submenus buried across the app. The CLI auto-spawns the same
-hub daemon.
-
-![The Drive tab](docs/drivecode/assets/hub/drive-tab.png)
-
-> Hub screenshots are light theme. The hub ships light and dark and follows your
-> theme choice. TUI screenshots are the dark terminal surface.
+> Hub screenshots below are light theme (the hub ships light and dark). TUI
+> screenshots are the dark terminal surface.
 
 ## Contents
 
-- [Drive Mode](#drive-mode) — Hub call + TUI join/leave
-- [Spotlight](#spotlight) — shared surface (Hub + demo)
-- [Status Hub](#status-hub) — Board, Changelog, Dependency map, Sessions (Hub + TUI)
+- [Hub tour](#hub-tour) — Drive · Rooms · Artifacts · Tasks · Status · Analytics
+- [Spotlight](#spotlight) — shared surface inside a call
+- [CLI (TUI)](#cli-tui) — Drive join/leave + Status Hub
 - [`report_status`](#the-report_status-tool) — how agents publish
 - [Quickstart](#quickstart)
 - [How it fits together](#how-it-fits-together)
@@ -68,26 +61,165 @@ hub daemon.
 
 ---
 
-## Drive Mode
+## Hub tour
 
-**Pair with an agent instead of prompting it.**
+Everything Drive adds lives under one **Drive** section in the hub sidebar —
+lobby, rooms, artifacts, tasks, Status Hub, Analytics — rather than tools
+scattered across the app. The CLI auto-spawns the same hub daemon.
+
+### Drive lobby
+
+Pairing home: turn Drive on, see attention counts, jump into Status Hub, and
+scan which agents are reporting.
+
+![Drive lobby](docs/drivecode/assets/hub/drive-lobby.png)
+
+### In a call
 
 A Drive call is a room. You are in it, and so is at least one agent. The agent
 narrates decisions rather than keystrokes — what it is about to try and why —
 and you steer without waiting for a turn to end. Raise a hand to interrupt, mute
-or deafen the partner, or take over the shared surface yourself.
+or deafen the partner, or take the Spotlight yourself.
 
-### Hub UI
-
-![A Drive call, with the Spotlight open](docs/drivecode/assets/hub/drive-call.png)
+![A Drive call with Spotlight and task bank](docs/drivecode/assets/hub/drive-call.png)
 
 **Drive Settings** (in the call chrome) pick a runtime profile —
-`local` / `cloud` / `hybrid` — and BYOK speech providers for STT and TTS. The
-hub resolves a legal topology from those choices so voice input and narration
-stay compatible with how the LLM is reached. Bring your own keys; nothing
-Drive-specific is locked to a single vendor.
+`local` / `cloud` / `hybrid` — and BYOK speech providers for STT and TTS. Bring
+your own keys; nothing Drive-specific is locked to a single vendor.
 
-### CLI (TUI)
+Four sub-modes shape how the agent behaves. They map onto Cline's native
+plan/act:
+
+| Sub-mode | The agent… | Native mode |
+|---|---|---|
+| **Plan** | thinks out loud before touching anything | `plan` |
+| **Agent** | does the work, narrating as it goes | `act` |
+| **Ask** | answers questions without editing | `plan` |
+| **Debug** | investigates a specific failure | `act` |
+
+Rooms are owned by the hub — the single writer for roster, Spotlight holder,
+mute flags, and sub-mode. Every client renders a projection of that state, so
+the same room looks the same from Hub and TUI. Drive today is one developer
+driving many agents; multi-human rooms are an explicit non-goal for now.
+
+### Rooms
+
+Every Drive session you have run, resumable. Stopping a room ends the call and
+saves a handoff — configuration and history stay put, so **Start** picks up
+where you left off.
+
+![Rooms](docs/drivecode/assets/hub/drive-rooms.png)
+
+### Artifacts
+
+Plans, diagrams, walkthroughs, and captures produced in a call — kept across
+rooms, filterable by kind and tag.
+
+![Artifacts](docs/drivecode/assets/hub/drive-artifacts.png)
+
+### Tasks
+
+What blocks what, across every active team. A read-only dependency map of hub
+team tasks (not an editor). Open with `?demoPlans=1` to walk the current Drive
+plan set as a fixture.
+
+![Tasks dependency map](docs/drivecode/assets/hub/drive-tasks.png)
+
+### Status Hub
+
+**A changelog for every agent.** Humans want status often. Agents should
+volunteer it rather than be asked. Most updates land quietly here — and where
+*other agents* read them to understand the project. Only genuinely urgent
+updates interrupt you.
+
+Three lenses over the same surface:
+
+| Lens | Question |
+|---|---|
+| **Board** | Where is everything, and what needs me? |
+| **Changelog** | What happened? |
+| **Dependency map** | What blocks what? |
+
+**Board** — one row per piece of work, attention order (blocked → failed →
+running). Counts at the top are computed across every live row, not just what
+is on screen.
+
+![Status Hub board](docs/drivecode/assets/hub/status-board.png)
+
+**Changelog** — flat and chronological, including superseded updates and
+transitions (`running → blocked`). A `running` item that has not moved in 30
+minutes is flagged **stale**.
+
+![Status Hub changelog](docs/drivecode/assets/hub/status-changelog.png)
+
+**Dependency map** — the team task graph from `status.tasks_snapshot`, laid out
+by dependency layer. Select a task to see what blocks it and what it unblocks.
+Screenshots use the Drive plan set
+([`docs/drivecode/plans/cline-drivemode/`](docs/drivecode/plans/cline-drivemode/))
+as the fixture (`/status?demoPlans=1&statusMode=dependency-map`).
+
+![Status Hub dependency map](docs/drivecode/assets/hub/status-dependency-map.png)
+
+![Selected plan task with blockers and dependents](docs/drivecode/assets/hub/status-dependency-map-selected.png)
+
+Storage and cursor semantics live in
+[docs/drivecode/README.md](docs/drivecode/README.md) (`~/.cline/db/status.db`,
+append-only, keyset pagination by `seq`).
+
+### Analytics
+
+Did Drive sessions get work done? Local session rollups and shipped digests —
+not live agent ops, and nothing phones home. Demo fixture:
+`/analytics?demoSessions=1`.
+
+![Analytics](docs/drivecode/assets/hub/drive-analytics.png)
+
+---
+
+## Spotlight
+
+**See who is sharing, and what.**
+
+The Spotlight is the shared surface inside a call. It always names who holds it.
+
+When the **agent** holds it, work streams onto the surface as cards — file
+edits, commands and their output, test results, plan steps, decisions. You are
+watching the work, not reading a transcript afterwards.
+
+When **you** hold it, you pin something concrete for the agent to look at:
+
+| Pin | What you share |
+|---|---|
+| **Selection** | a block of code, pasted as text |
+| **File** | a path in the workspace |
+| **Terminal** | command output |
+
+Handing the Spotlight back and forth is one control: **Spotlight agent** /
+**Spotlight me**. While you hold it, the agent's card deck dims rather than
+disappearing.
+
+The Spotlight is derived entirely from a versioned event stream — last event
+wins. There is no screen capture to configure and no second connection to
+babysit; a client that joins late replays the room snapshot and catches up.
+
+Simulated share-screen beats (no credentials required) exercise the same
+surface — open `/drive?demoShareScreen=1`:
+
+![Spotlight demo — scripted share-screen loop](docs/drivecode/assets/hub/drive-spotlight-demo.png)
+
+![Spotlight demo — agent beat](docs/drivecode/assets/demos/share-screen-spotlight-demo-beat-1.png)
+
+![Spotlight demo — human pin](docs/drivecode/assets/demos/share-screen-spotlight-demo-human-pin.png)
+
+![Spotlight demo — test beat](docs/drivecode/assets/demos/share-screen-spotlight-demo-beat-3.png)
+
+> The hub wire protocol still calls this surface `stage` (`StageState`,
+> `call_set_stage`). Renaming it is a breaking change across every client, so
+> the UI name and the protocol name differ for now.
+
+---
+
+## CLI (TUI)
 
 The interactive TUI is the same agent core in the terminal: OpenTUI chat,
 plan/act, slash commands, file mentions, live tool approvals, and headless
@@ -106,6 +238,16 @@ partner persona; the product demo's partner persona is Cline.
 
 ![TUI with Drive on — partner Adam in agent sub-mode](docs/drivecode/assets/tui/tui-drive-on.png)
 
+**Status Hub in the TUI** — `/status` (or **Opt+T** / the command palette).
+Tab switches Board ↔ Dependency map. Live data comes from a
+`StatusSnapshotSource` (hub ops). Demo plans:
+`CLINE_DEMO_STATUS_PLANS=1` (optional lens / auto-open via
+`CLINE_DEMO_STATUS_LENS` / `CLINE_DEMO_OPEN_STATUS`).
+
+![TUI Status Hub — board](docs/drivecode/assets/tui/tui-status-board.png)
+
+![TUI Status Hub — dependency map](docs/drivecode/assets/tui/tui-status-dependency-map.png)
+
 ```bash
 bun run cli -i                                    # interactive TUI
 bun run cli -P anthropic -m claude-sonnet-4-5 "…" # one-shot
@@ -116,193 +258,12 @@ Configure providers with `cline auth` or env vars (`ANTHROPIC_API_KEY`,
 `CLINE_API_KEY`, `OPENROUTER_API_KEY`, …). Full CLI docs:
 [apps/cli/README.md](apps/cli/README.md).
 
-### Sub-modes
-
-Four sub-modes shape how the agent behaves. They map onto Cline's native
-plan/act, so nothing about the underlying agent changes:
-
-| Sub-mode | The agent… | Native mode |
-|---|---|---|
-| **Plan** | thinks out loud before touching anything | `plan` |
-| **Agent** | does the work, narrating as it goes | `act` |
-| **Ask** | answers questions without editing | `plan` |
-| **Debug** | investigates a specific failure | `act` |
-
-### Room ownership
-
-Rooms are owned by the hub, which is the single writer for room state — roster,
-who holds the Spotlight, mute flags, sub-mode. Every client of your hub renders
-a projection of that state rather than keeping its own copy, so the same room
-looks the same from every surface you open — Hub tab, TUI, a client that
-reconnects late. Drive today is one developer driving many agents; multi-human
-rooms are an explicit non-goal for now.
-
-Room truth is partitioned into three lanes ([ADR-0013](docs/drivecode/plans/cline-drivemode/adr/ADR-0013-state-partition.md)):
-an append-only event log (survives hub restart), one live `RoomSnapshot` in
-memory, and durable Drive facets on disk. Clients reconnect with a snapshot plus
-gap events by sequence cursor. There is still no WebRTC or pixel capture —
-human sharing is a structured pin (see Spotlight).
-
----
-
-## Spotlight
-
-**See who is sharing, and what.**
-
-The Spotlight is the shared surface inside a call. It always names who holds it.
-
-### Hub UI
-
-When the **agent** holds it, its work streams onto the surface as cards — file
-edits, commands and their output, test results, plan steps, decisions. You are
-watching the work, not reading a transcript of it afterwards.
-
-When **you** hold it, you pin something concrete for the agent to look at:
-
-| Pin | What you share |
+| In the TUI | How |
 |---|---|
-| **Selection** | a block of code, pasted as text |
-| **File** | a path in the workspace |
-| **Terminal** | command output |
-
-Handing the Spotlight back and forth is one control: **Spotlight agent** /
-**Spotlight me**. While you hold it, the agent's card deck dims rather than
-disappearing, so nothing is lost.
-
-The Spotlight is derived entirely from a versioned event stream — last event
-wins. There is no screen capture to configure and no second connection to
-babysit; a client that joins late replays the room snapshot and catches up.
-
-Simulated share-screen beats (no credentials required) exercise the same
-Spotlight surface:
-
-![Spotlight demo — agent beat](docs/drivecode/assets/demos/share-screen-spotlight-demo-beat-1.png)
-
-![Spotlight demo — human pin](docs/drivecode/assets/demos/share-screen-spotlight-demo-human-pin.png)
-
-![Spotlight demo — test beat](docs/drivecode/assets/demos/share-screen-spotlight-demo-beat-3.png)
-
-> The hub wire protocol still calls this surface `stage` (`StageState`,
-> `call_set_stage`). Renaming it is a breaking change across every client, so
-> the UI name and the protocol name differ for now.
-
-### In the TUI
-
-Drive on means you are in the same room the Hub Spotlight is projecting.
-Join/leave and sub-mode live on the status bar
-([Drive Mode → CLI](#cli-tui)); work cards and pins are the Hub Spotlight
-surface today.
+| Drive join / leave | `Ctrl+Shift+D` or status-bar Drive line |
+| Status Hub | `/status` · **Opt+T** · command palette |
 
 ---
-
-## Status Hub
-
-**A changelog for every agent.**
-
-Humans want status often. Agents should volunteer it rather than be asked. Most
-updates land quietly in the Hub, where they are found on demand — and where
-*other agents* read them to understand the state of the project. Only genuinely
-urgent updates interrupt you.
-
-Four lenses over the same status surface. Each lens below shows **Hub UI** and,
-where the TUI ships it, **CLI (TUI)**.
-
-### Board — "where is everything, and what needs me?"
-
-One row per piece of work, grouped by state in **attention order**: blocked
-first, then failed, then running. The counts at the top are computed across every
-live row, not across the rows on screen — a board that says "3 blocked" when 40
-are blocked is worse than no board. Narrow the board with a filter and the
-headings switch to counting what you are actually looking at, so they can never
-contradict the rows beneath them.
-
-**Hub UI**
-
-![Status Hub board](docs/drivecode/assets/hub/status-board.png)
-
-**CLI (TUI)** — `/status` (or **Opt+T** / the command palette). Tab switches
-Board ↔ Dependency map. Live data comes from a `StatusSnapshotSource` (hub ops).
-
-![TUI Status Hub — board](docs/drivecode/assets/tui/tui-status-board.png)
-
-### Changelog — "what happened?"
-
-Flat and chronological, including superseded updates, showing transitions
-(`running → blocked`) rather than a bare current state.
-
-**Hub UI**
-
-![Status Hub changelog](docs/drivecode/assets/hub/status-changelog.png)
-
-Every row answers what the work is, who did it, how it got there, and when:
-subject, how many updates that subject has, the agent, the publisher it came
-through, the workspace, a link to the originating session, and relative time with
-the exact instant on hover. A `running` item that has not moved in 30 minutes is
-flagged **stale**, which is usually the thing worth noticing.
-
-### Dependency map — "what blocks what?"
-
-The third lens is the **team task graph**, not another view of `status.db`. It
-loads active multi-agent team tasks from the hub (`status.tasks_snapshot`), lays
-them out by dependency layer, and flags cycles or missing references. Select a
-task to see what blocks it and what it unblocks. The map stays empty until a
-team session with tasks is live.
-
-The screenshots below use the current Drive plan set
-([`docs/drivecode/plans/cline-drivemode/`](docs/drivecode/plans/cline-drivemode/)) as the task
-graph — each `DRV-*` feature is a node, edges follow the
-[TASK-GRAPH](docs/drivecode/plans/cline-drivemode/delivery/TASK-GRAPH.md) dependency sketch — so
-you can see how the map reads with a real plan. In the hub, open
-`/status?demoPlans=1&statusMode=dependency-map` for the same fixture.
-
-**Hub UI**
-
-![Status Hub dependency map — Drive plans](docs/drivecode/assets/hub/status-dependency-map.png)
-
-![Selected plan task with blockers and dependents](docs/drivecode/assets/hub/status-dependency-map-selected.png)
-
-**CLI (TUI)**
-
-![TUI Status Hub — dependency map (Drive plans)](docs/drivecode/assets/tui/tui-status-dependency-map.png)
-
-Docs demos can compose a separate adapter from `@cline/drivecode-demo` at the CLI
-root when `CLINE_DEMO_STATUS_PLANS=1` (optional lens / auto-open via
-`CLINE_DEMO_STATUS_LENS` / `CLINE_DEMO_OPEN_STATUS`).
-
-### Sessions — "did Drive sessions get work done?"
-
-The fourth lens lists recent Drive call sessions as one row each — duration,
-tasks completed, mid-plan churn — computed from local room and bank event logs
-only. Nothing phones home; select a session to drill into its room and plan.
-Hub UI only for now.
-
-### How it works
-
-- **Storage.** `~/.cline/db/status.db` — its own SQLite file, separate from
-  `sessions.db` and `cron.db`, so a hot append path never contends with session
-  storage. Override with `CLINE_STATUS_DB_PATH`.
-- **Append-only, one current row per subject.** History is never rewritten,
-  only stamped as superseded. A partial unique index makes "two current rows for
-  one subject" impossible to represent, rather than something the code has to
-  police.
-- **Subjects are free-form**, `/`-delimited by convention — `drive-room/abc`,
-  `migration/auth`, `review/pr-42` — so prefix queries work. Session, agent, and
-  workspace are attribution, not identity: work that spans sessions, or that is
-  not a Cline session at all, still gets a subject.
-- **Keyset pagination.** A cursor is the sequence number of the last row you
-  hold, never an offset. Offset paging rescans everything it skips, so deep
-  scrolls of a long changelog get slower the further you go; this stays flat.
-  On the Board, where rows are ordered by attention rather than by sequence,
-  the cursor spans both — so **Load more** walks into the next attention band
-  instead of stopping at the end of the current one.
-- **`seq` is a monotonic cursor, not a clock.** A client that disconnects
-  resumes with `since: seq` and gets exactly what it missed — no skew, no
-  duplicates, no gaps it cannot detect.
-- **Search** is indexed `LIKE` everywhere, upgraded to SQLite FTS5 where the
-  runtime provides it. Bun ships FTS5; Node 22's built-in SQLite does not, so
-  search degrades rather than failing.
-- **Retention is explicit.** Pruning takes a cutoff or a per-subject keep count,
-  the default is keep-everything, and a current row is never pruned.
 
 ## The `report_status` tool
 
@@ -322,18 +283,14 @@ It is on by default.
 ```
 
 **Priority decides who gets interrupted.** `high` and `critical` raise a
-notification; everything else waits in the Hub to be found. That split is what
-lets agents report often without becoming noise, and the tool description tells
-the model plainly that over-using the loud levels makes the signal worthless.
+notification; everything else waits in the Hub to be found. Attribution
+(session, agent, workspace) is filled from tool context — an agent cannot file
+status as another agent. A failed publish returns a message rather than throwing.
 
-**Attribution is not up to the model.** Session, agent, and workspace are filled
-from the tool context, so an agent cannot file a status as another agent. A
-failed publish returns a message rather than throwing — reporting on work must
-never break the work.
+Agents report unprompted on starting distinct work, finishing it, the moment
+they are blocked, and at real milestones — not after every tool call.
 
-Agents also get guidance on *when* to report unprompted: on starting a distinct
-piece of work, on finishing it, the moment they are blocked, and at real
-milestones — not after every tool call.
+---
 
 ## Quickstart
 
@@ -349,33 +306,31 @@ bun run build:sdk               # required — packages resolve each other throu
 bun run preflight               # toolchain, build output, ports, provider
 ```
 
-`bun run preflight` also works before install — it just reports the install and
-build steps as the ones still to do.
-
-**Hub (Drive tab, Spotlight, Status Hub)**
+**Hub (Drive rail, Spotlight, Status Hub, Analytics)**
 
 ```bash
 bun run --cwd apps/cline-hub dev
 ```
 
 Two URLs are printed. Open the one labelled **`Cline Hub dashboard listening`**
-(default `http://127.0.0.1:8787/`), not the Vite one, and click **Connect**.
-Preferred ports are used when free; if they are busy, the next free ports are
-chosen automatically — read them from your terminal rather than hardcoding one.
-`dev` starts the hub daemon for you.
+(not the Vite one), and click **Connect**. Preferred ports are used when free;
+if they are busy, the next free ports are chosen automatically — read them from
+your terminal. `dev` starts the hub daemon for you.
 
-- **Drive** in the sidebar is the home for everything above.
-- **Start a Drive call** opens a room with an agent. The call renders around
-  the chat surface, so the URL changes — that is expected.
-- **Status Hub** is the Board, Changelog, and Dependency map.
-- In a call, **Drive Settings** chooses local/cloud/hybrid plus STT/TTS providers.
+- **Drive** in the sidebar is the lobby for everything above.
+- **Turn on Drive** opens a room with an agent. The call renders around the
+  chat surface, so the URL changes — that is expected.
+- **Rooms / Artifacts / Tasks / Status Hub / Analytics** are the rest of the
+  Drive rail.
+- In a call, **Drive Settings** chooses local/cloud/hybrid plus STT/TTS.
 
 **Bring your own key.** A real call needs a provider. An API key env var alone
 does not select one, so either run
 `bun run cli auth --provider <id> --apikey <key> --modelid <model>` or pick a
 provider under **Settings → Providers** in the dashboard. To look around with
 no credentials, open `/drive?demoShareScreen=1` on the dashboard URL — the
-scripted share-screen demo.
+scripted share-screen demo. Populate Status / Tasks with `?demoPlans=1`,
+Analytics with `?demoSessions=1`.
 
 **CLI (TUI)**
 
@@ -396,15 +351,10 @@ preflight` when something will not start, and `bun run cli doctor` /
 - [Support](docs/drivecode/plans/cline-drivemode/ops/beta-support.md) — where
   to report a problem
 
-| In the TUI | How |
-|---|---|
-| Drive join / leave | `Ctrl+Shift+D` or status-bar Drive line |
-| Status Hub | `/status` · **Opt+T** · command palette |
-
 ## How it fits together
 
 ```
- Browser (Drive tab · Spotlight · Status Hub · Drive Settings)
+ Browser (Drive rail · Spotlight · Status Hub · Analytics · Drive Settings)
         │  WebSocket
  Cline Hub dashboard  ── listen port chosen automatically when free
         │  hub ops: call_* · status.* · drive.* · drive_config_*
@@ -424,9 +374,12 @@ preflight` when something will not start, and `bun run cli doctor` /
 ```
 
 The hub is the only writer for shared state. Clients publish facts and render
-projections; they never hold an authoritative copy. Everything above is built on
-the [Cline SDK](https://docs.cline.bot/sdk/overview) — the same packages this
-repo publishes — rather than beside it.
+projections; they never hold an authoritative copy. Room truth is partitioned
+into three lanes
+([ADR-0013](docs/drivecode/plans/cline-drivemode/adr/ADR-0013-state-partition.md)):
+append-only event log, live `RoomSnapshot`, durable Drive facets. Everything
+above is built on the [Cline SDK](https://docs.cline.bot/sdk/overview) — the
+same packages this repo publishes — rather than beside it.
 
 **Reference**
 
