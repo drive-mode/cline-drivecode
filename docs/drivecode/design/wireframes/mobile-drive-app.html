@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Drive · mobile consumer app — first open</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --well: #050507;
+    --card: #0d0d10;
+    --text: #fff;
+    --muted: #9ca3af;
+    --dim: #6b7280;
+    --accent: #9f58fa;
+    --accent-soft: #b98aff;
+    --live: #f59e0b;
+    --live-bg: rgba(245,158,11,0.14);
+    --danger: #f53969;
+    --green: #2bcc28;
+    --font: "Schibsted Grotesk", "DM Sans", system-ui, sans-serif;
+    --mono: "Space Grotesk", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #050505;
+    color: var(--text);
+    font-family: var(--font);
+  }
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+  }
+  h1 { margin: 0 0 8px; font-size: 1.4rem; letter-spacing: -0.02em; }
+  .lede {
+    margin: 0 0 18px;
+    max-width: 58ch;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .banner {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 0.8px solid rgba(159,88,250,0.35);
+    background: rgba(159,88,250,0.1);
+    color: var(--accent-soft);
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    margin-bottom: 22px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: 1fr; justify-items: center; }
+  }
+  .col { width: min(360px, 100%); }
+  .col h2 {
+    margin: 0 0 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .pill {
+    font-size: 0.65rem;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 0.8px solid rgba(255,255,255,0.12);
+    color: var(--dim);
+  }
+  .pill.on {
+    border-color: rgba(43,204,40,0.4);
+    color: #7dff7a;
+    background: rgba(43,204,40,0.1);
+  }
+  .phone {
+    position: relative;
+    height: 720px;
+    border-radius: 32px;
+    border: 0.8px solid rgba(255,255,255,0.14);
+    background: var(--well);
+    overflow: hidden;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.65);
+  }
+  .phone::before {
+    content: "";
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    width: 108px; height: 22px;
+    border-radius: 999px;
+    background: #000;
+    z-index: 6;
+  }
+  .safe { height: 40px; }
+  .app {
+    height: calc(100% - 40px);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ---- Screen: splash / press play ---- */
+  .splash {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 24px 20px 28px;
+    background:
+      linear-gradient(180deg, transparent 20%, rgba(5,5,7,0.92) 70%),
+      radial-gradient(600px 400px at 50% 20%, rgba(159,88,250,0.35), transparent 60%),
+      #0a0614;
+  }
+  .brand {
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    margin: 0 0 8px;
+  }
+  .tag {
+    margin: 0 0 22px;
+    color: rgba(255,255,255,0.78);
+    font-size: 1.05rem;
+    line-height: 1.35;
+    max-width: 16ch;
+  }
+  .cta {
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    padding: 16px 20px;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 650;
+    cursor: pointer;
+    width: 100%;
+  }
+  .cta.ghost {
+    margin-top: 10px;
+    background: transparent;
+    border: 0.8px solid rgba(255,255,255,0.2);
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 0.88rem;
+  }
+  .fine {
+    margin-top: 14px;
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-align: center;
+  }
+
+  /* ---- Screen: live call ---- */
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 3;
+    background: linear-gradient(180deg, rgba(0,0,0,0.55), transparent);
+  }
+  .top .name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+  .live {
+    font-size: 0.65rem;
+    color: var(--live);
+    background: var(--live-bg);
+    border: 0.8px solid rgba(245,158,11,0.4);
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+  .preview-mark {
+    font-size: 0.62rem;
+    color: var(--accent-soft);
+    border: 0.8px solid rgba(159,88,250,0.35);
+    border-radius: 999px;
+    padding: 3px 7px;
+    font-family: var(--mono);
+  }
+  .spot {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    background: #030305;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .spot .frame {
+    flex: 1;
+    margin: 52px 12px 8px;
+    border-radius: 14px;
+    border: 0.8px solid rgba(245,158,11,0.3);
+    background:
+      linear-gradient(180deg, rgba(245,158,11,0.08), transparent 35%),
+      #0b0c12;
+    padding: 14px;
+    overflow: hidden;
+  }
+  .spot .eyebrow {
+    font-size: 0.65rem;
+    color: var(--dim);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .spot pre {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #d1d5db;
+    white-space: pre-wrap;
+  }
+  .spot .add { color: #6ee7b7; }
+  .spot .del { color: #fda4af; }
+  .caption {
+    padding: 0 16px 8px;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: rgba(255,255,255,0.9);
+    min-height: 2.6em;
+  }
+  .now {
+    padding: 0 16px 10px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .now strong { color: var(--text); }
+  .activity {
+    height: 3px;
+    margin: 0 16px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .activity > span {
+    display: block;
+    height: 100%;
+    width: 42%;
+    background: linear-gradient(90deg, var(--accent), var(--live));
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: translateX(0); opacity: 0.7; }
+    50% { transform: translateX(80%); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .activity > span { animation: none; width: 100%; }
+  }
+
+  .talk {
+    margin: 0 16px 12px;
+    height: 56px;
+    border-radius: 999px;
+    border: 0.8px solid rgba(159,88,250,0.45);
+    background: rgba(159,88,250,0.18);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .talk:active, .talk.hot {
+    background: var(--accent);
+  }
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px max(14px, env(safe-area-inset-bottom));
+    border-top: 0.8px solid rgba(245,158,11,0.25);
+    background: rgba(245,158,11,0.08);
+  }
+  .strip .b {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    border: 0.8px solid rgba(245,158,11,0.35);
+    background: rgba(10,10,10,0.7);
+    color: var(--text);
+    display: grid; place-items: center;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .strip .leave {
+    margin-left: auto;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 0.8px solid rgba(245,57,105,0.45);
+    background: rgba(245,57,105,0.12);
+    color: #ff7a9a;
+    font: inherit;
+    font-weight: 650;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  /* ---- Screen: install ---- */
+  .install {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 28px 22px;
+    text-align: center;
+    background: radial-gradient(500px 300px at 50% 30%, rgba(159,88,250,0.25), transparent 65%), var(--well);
+  }
+  .icon {
+    width: 84px; height: 84px;
+    margin: 0 auto 18px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, var(--accent), #5487c8);
+    display: grid; place-items: center;
+    font-size: 2rem; font-weight: 800;
+  }
+  .install h3 { margin: 0 0 8px; font-size: 1.35rem; }
+  .install p { margin: 0 0 22px; color: var(--muted); font-size: 0.92rem; line-height: 1.4; }
+
+  .notes {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 720px) { .notes { grid-template-columns: 1fr; } }
+  .card {
+    border: 0.8px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: rgba(13,13,16,0.75);
+  }
+  .card h3 { margin: 0 0 8px; font-size: 0.9rem; }
+  .card ul { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.82rem; line-height: 1.55; }
+  .card.warn { border-color: rgba(245,158,11,0.35); }
+  footer {
+    margin-top: 24px;
+    color: var(--dim);
+    font-size: 0.72rem;
+  }
+  footer a { color: var(--accent-soft); }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;
+  }
+  .toolbar button {
+    appearance: none;
+    border: 0.8px solid rgba(255,255,255,0.14);
+    background: var(--card);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .toolbar button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>Drive app · mobile consumer first-open</h1>
+    <p class="lede">
+      Less-technical audience. One verb: watch an agent work, then steer by voice.
+      No hub rail, no providers screen, no MCP. TikTok-grade pacing — vertical Spotlight,
+      hold-to-talk, continuous activity — applied to drive coding.
+    </p>
+    <div class="banner">mobile-consumer · MC0–MC3 · credential-free first path</div>
+
+    <div class="toolbar" role="group" aria-label="Demo beat">
+      <button type="button" data-beat="0" aria-pressed="true">1 · Press play</button>
+      <button type="button" data-beat="1" aria-pressed="false">2 · On the call</button>
+      <button type="button" data-beat="2" aria-pressed="false">3 · Add to Home</button>
+    </div>
+
+    <div class="grid">
+      <div class="col">
+        <h2>Press play <span class="pill">Cold open</span></h2>
+        <div class="phone" data-screen="splash" id="p0">
+          <div class="safe"></div>
+          <div class="app">
+            <div class="splash">
+              <p class="brand">Drive</p>
+              <p class="tag">Watch your agent build. Steer when you want.</p>
+              <button type="button" class="cta" data-go="1">Start watching</button>
+              <button type="button" class="cta ghost">I have a workspace</button>
+              <p class="fine">No account needed for the preview · mic stays off until you hold</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>Live call <span class="pill on">Core loop</span></h2>
+        <div class="phone" data-screen="call" id="p1">
+          <div class="safe"></div>
+          <div class="app">
+            <div class="top">
+              <div class="name">Drive</div>
+              <span class="preview-mark">preview</span>
+              <span class="live">Live</span>
+            </div>
+            <div class="spot">
+              <div class="frame">
+                <div class="eyebrow">Spotlight · Cline · edit</div>
+                <pre><span class="del">- if (!user) return null</span>
+<span class="add">+ if (!user) throw new AuthError()</span>
+<span class="add">+ return sessionFrom(user)</span></pre>
+              </div>
+              <div class="activity" aria-hidden="true"><span></span></div>
+              <div class="caption">“Locking the auth guard so anonymous requests fail closed — then I’ll run the tests.”</div>
+              <div class="now"><strong>NOW</strong> Fix auth · <span style="color:var(--dim)">NEXT</span> Ship PR</div>
+              <button type="button" class="talk" id="talk">● Hold to talk</button>
+              <div class="strip">
+                <button type="button" class="b" title="Mute">🎙</button>
+                <button type="button" class="b" title="Raise hand">✋</button>
+                <button type="button" class="b" title="Captions">CC</button>
+                <button type="button" class="leave">Leave</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>Install <span class="pill">PWA</span></h2>
+        <div class="phone" data-screen="install" id="p2">
+          <div class="safe"></div>
+          <div class="app">
+            <div class="install">
+              <div class="icon" aria-hidden="true">D</div>
+              <h3>Keep Drive on your phone</h3>
+              <p>Add to Home Screen for a one-tap call — same experience, app icon.</p>
+              <button type="button" class="cta">Add to Home Screen</button>
+              <button type="button" class="cta ghost">Not now</button>
+              <p class="fine">Standalone display · mic permission only when you talk</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="card">
+        <h3>What this shell hides</h3>
+        <ul>
+          <li>Hub nav (Status, MCP, Analytics, Settings dump)</li>
+          <li>Provider catalog on first open</li>
+          <li>Facet / power customization (Advanced, later)</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h3>What still needs a product decision</h3>
+        <ul>
+          <li>Real agent turns on a phone ⇒ hosted runtime (ADR-0016 tier 4)</li>
+          <li>Until then this path is honest <strong>preview</strong> + self-host CTA</li>
+          <li>Freemium tokens beat BYOK for this audience</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer>
+      Plan: <a href="../../plans/cline-drivemode/initiatives/mobile-consumer/README.md">mobile-consumer</a>.
+      Brand: <a href="../brand/CLINE-BRAND-TOKENS.md">CLINE-BRAND-TOKENS</a>.
+      Throwaway wireframe — not shipping chrome.
+    </footer>
+  </div>
+
+<script>
+  const phones = [document.getElementById("p0"), document.getElementById("p1"), document.getElementById("p2")];
+  const buttons = [...document.querySelectorAll("[data-beat]")];
+
+  function focusBeat(i) {
+    buttons.forEach((b, idx) => b.setAttribute("aria-pressed", String(idx === i)));
+    phones.forEach((p, idx) => {
+      p.style.outline = idx === i ? "2px solid #9f58fa" : "none";
+      p.style.outlineOffset = "6px";
+    });
+  }
+  buttons.forEach((b) => b.addEventListener("click", () => focusBeat(Number(b.dataset.beat))));
+  document.querySelectorAll("[data-go]").forEach((el) => {
+    el.addEventListener("click", () => focusBeat(Number(el.dataset.go)));
+  });
+
+  const talk = document.getElementById("talk");
+  const setHot = (on) => {
+    talk.classList.toggle("hot", on);
+    talk.textContent = on ? "● Listening…" : "● Hold to talk";
+  };
+  talk.addEventListener("pointerdown", (e) => { e.preventDefault(); setHot(true); });
+  talk.addEventListener("pointerup", () => setHot(false));
+  talk.addEventListener("pointerleave", () => setHot(false));
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target.matches("input,textarea,button")) return;
+    if (e.key === "1") focusBeat(0);
+    if (e.key === "2") focusBeat(1);
+    if (e.key === "3") focusBeat(2);
+  });
+  focusBeat(1);
+</script>
+</body>
+</html>

@@ -296,3 +296,53 @@
 	--drive-ink-6: oklch(0.78 0.0936 223.13);
 	--drive-ink-7: oklch(0.78 0.1034 61.91);
 }
+
+/* Drive mark motion — wheel spin / head peek (DriveMarkMotion) */
+@keyframes drive-mark-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@keyframes drive-mark-peek {
+	0%,
+	100% {
+		transform: rotate(0deg) translateX(0);
+	}
+	18% {
+		transform: rotate(-22deg) translateX(-1.5%);
+	}
+	36% {
+		transform: rotate(0deg) translateX(0);
+	}
+	54% {
+		transform: rotate(22deg) translateX(1.5%);
+	}
+	72% {
+		transform: rotate(0deg) translateX(0);
+	}
+}
+.drive-mark-motion .dm-wheel,
+.drive-mark-motion .dm-head {
+	transform-box: fill-box;
+	transform-origin: center;
+}
+.drive-mark-motion[data-motion="loading"] .dm-wheel,
+.drive-mark-motion[data-motion="drive"] .dm-wheel {
+	animation: drive-mark-spin 1.15s linear infinite;
+}
+.drive-mark-motion[data-motion="drive"] .dm-wheel {
+	animation-duration: 1.4s;
+}
+.drive-mark-motion[data-motion="peek"] .dm-head,
+.drive-mark-motion[data-motion="drive"] .dm-head {
+	animation: drive-mark-peek 2.4s ease-in-out infinite;
+}
+.drive-mark-motion[data-motion="drive"] .dm-head {
+	animation-duration: 3.2s;
+}
+@media (prefers-reduced-motion: reduce) {
+	.drive-mark-motion .dm-wheel,
+	.drive-mark-motion .dm-head {
+		animation: none !important;
+	}
+}

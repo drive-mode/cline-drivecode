@@ -3,6 +3,7 @@
 import type { Participant } from "@cline/shared";
 import { GitBranchIcon, Loader2Icon } from "lucide-react";
 import type { ReactElement } from "react";
+import { DriveMarkMotion } from "@/components/icons/drive-mark-motion";
 import {
 	Checkpoint,
 	CheckpointIcon,
@@ -281,11 +282,12 @@ export function ConversationPanel({
 		<Conversation className="min-h-0 flex-1">
 			<ConversationContent className="px-4 py-5">
 				{isHydrating ? (
-					<div className="flex h-full items-center justify-center rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
-						<span className="inline-flex items-center gap-2">
-							<Loader2Icon className="size-4 animate-spin" />
-							Loading chat history...
-						</span>
+					<div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
+						<DriveMarkMotion
+							className="size-10 text-foreground"
+							motion="loading"
+						/>
+						Loading chat history…
 					</div>
 				) : messages.length === 0 ? (
 					<div className="flex h-full items-center align-middle justify-center rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">

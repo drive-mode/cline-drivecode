@@ -13,6 +13,7 @@ feature inside it.
 | `cline-drive-dark-on-transparent.svg` | The mark in `#1F2024` on transparent. This is the one served at `/cline-drive-logo.svg`. |
 | `cline-drive-light-on-transparent.svg` | The mark in `#FAFAF8` on transparent, for dark surfaces. |
 | `cline-drive-light.svg` / `cline-drive-dark.svg` | Same mark on a solid tile. |
+| `cline-drive-mark-layers.svg` | **Motion layers** — `.dm-wheel` (rim + spokes) + `.dm-head` (traced from source). Wheel can spin while head peeks. |
 | `favicon.svg` | Adaptive favicon — follows `prefers-color-scheme`. |
 | `favicon-light.ico` / `favicon-dark.ico` | 16–256px ICO bundles. |
 | `cline-drive-*-512.png` | 512px rasters, solid and transparent. |
@@ -30,6 +31,10 @@ feature inside it.
   [`components/icons/drive-mark.tsx`](../../apps/cline-hub/src/webview/src/components/icons/drive-mark.tsx),
   an inline component so it inherits `currentColor` and picks up nav active and
   hover states. An `<img>` cannot do that.
+- **Motion (loading / blind-spot peek)** —
+  [`drive-mark-motion.tsx`](../../apps/cline-hub/src/webview/src/components/icons/drive-mark-motion.tsx)
+  + wireframe [`drive-mark-motion.html`](../../docs/drivecode/design/wireframes/drive-mark-motion.html).
+  Props: `motion="idle" | "loading" | "peek" | "drive"`.
 - **README hero** — `docs/drivecode/assets/logos/logo-{light,dark}.png`, behind a
   `<picture>` so it adapts to GitHub's theme.
 - **Served asset** — `apps/cline-hub/src/webview/public/cline-drive-logo.svg`,

@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drive · Modern light · iOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Brand: CLINE-BRAND-TOKENS.md — light is first-class, not inverted dark */
+  :root, [data-theme="light"] {
+    --violet: #9F58FA;
+    --violet-soft: #B98AFF;
+    --violet-deep: #7A3FD4;
+    --violet-wash: rgba(159, 88, 250, 0.10);
+    --violet-wash-strong: rgba(159, 88, 250, 0.16);
+    --live: #2BCC28;
+    --danger: #F53969;
+    --ink: #151516;
+    --ink-78: rgba(21, 21, 22, 0.78);
+    --ink-55: rgba(21, 21, 22, 0.55);
+    --ink-35: rgba(21, 21, 22, 0.35);
+    --ink-12: rgba(21, 21, 22, 0.12);
+    --ink-06: rgba(21, 21, 22, 0.06);
+    --page: #F8FAFB;
+    --page-wash: #F3F0F8;
+    --surface: #FFFFFF;
+    --surface-2: #F4F5F7;
+    --hairline: rgba(21, 21, 22, 0.08);
+    --hairline-strong: rgba(21, 21, 22, 0.12);
+    --shadow-sm: 0 1px 2px rgba(21, 21, 22, 0.04), 0 4px 16px rgba(21, 21, 22, 0.05);
+    --shadow-md: 0 8px 28px rgba(21, 21, 22, 0.08), 0 2px 8px rgba(21, 21, 22, 0.04);
+    --shadow-lg: 0 20px 50px rgba(21, 21, 22, 0.12), 0 4px 12px rgba(21, 21, 22, 0.05);
+    --shadow-violet: 0 12px 32px rgba(159, 88, 250, 0.28);
+    --glass: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.9);
+    --tab-bg: rgba(255, 255, 255, 0.82);
+    --status-fg: #151516;
+    --status-muted: rgba(21, 21, 22, 0.45);
+    --island: #151516;
+    --sheet-handle: rgba(21, 21, 22, 0.18);
+    --chat-bubble: #FFFFFF;
+    --chat-agent: #F3EEFF;
+    --pill-bg: rgba(21, 21, 22, 0.05);
+    --control: rgba(21, 21, 22, 0.06);
+    --control-fg: #151516;
+    --scrim: rgba(21, 21, 22, 0.28);
+    --hero-grad: linear-gradient(165deg, #F8FAFB 0%, #F0EAF8 42%, #E8DFF5 100%);
+    --ring: rgba(159, 88, 250, 0.35);
+  }
+
+  [data-theme="dark"] {
+    --ink: #FFFFFF;
+    --ink-78: rgba(255, 255, 255, 0.78);
+    --ink-55: rgba(255, 255, 255, 0.55);
+    --ink-35: rgba(255, 255, 255, 0.35);
+    --ink-12: rgba(255, 255, 255, 0.12);
+    --ink-06: rgba(255, 255, 255, 0.06);
+    --page: #0A0A0A;
+    --page-wash: #0D0B12;
+    --surface: #12131A;
+    --surface-2: #1B1D24;
+    --hairline: rgba(255, 255, 255, 0.08);
+    --hairline-strong: rgba(255, 255, 255, 0.14);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+    --shadow-violet: 0 12px 32px rgba(159, 88, 250, 0.35);
+    --glass: rgba(18, 19, 26, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --tab-bg: rgba(18, 19, 26, 0.88);
+    --status-fg: #FFFFFF;
+    --status-muted: rgba(255, 255, 255, 0.45);
+    --island: #000;
+    --sheet-handle: rgba(255, 255, 255, 0.28);
+    --chat-bubble: #1B1D24;
+    --chat-agent: rgba(159, 88, 250, 0.18);
+    --pill-bg: rgba(255, 255, 255, 0.08);
+    --control: rgba(255, 255, 255, 0.1);
+    --control-fg: #FFFFFF;
+    --scrim: rgba(0, 0, 0, 0.55);
+    --hero-grad: radial-gradient(120% 80% at 50% -10%, rgba(159, 88, 250, 0.28), transparent 55%), #0A0A0A;
+    --ring: rgba(185, 138, 255, 0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Schibsted Grotesk", system-ui, sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    min-height: 100vh;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(159, 88, 250, 0.07), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 90% 0%, rgba(84, 135, 200, 0.05), transparent 45%);
+    z-index: 0;
+  }
+  [data-theme="dark"] body::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(159, 88, 250, 0.12), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 90% 0%, rgba(84, 135, 200, 0.06), transparent 45%);
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 36px 28px 80px;
+  }
+
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 36px;
+  }
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .brand-mark .logo {
+    width: 36px;
+    height: 36px;
+    color: var(--ink);
+    flex-shrink: 0;
+    display: block;
+  }
+  .brand-mark span {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+    max-width: 16ch;
+  }
+  header h1 em {
+    font-style: normal;
+    color: var(--violet);
+  }
+  header .lede {
+    margin-top: 10px;
+    font-size: 15px;
+    color: var(--ink-55);
+    max-width: 46ch;
+    line-height: 1.5;
+  }
+
+  .theme-switch {
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+  }
+  .theme-switch button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 999px;
+    color: var(--ink-55);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .theme-switch button[aria-pressed="true"] {
+    background: var(--violet);
+    color: #fff;
+    box-shadow: var(--shadow-violet);
+  }
+
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  @media (max-width: 900px) {
+    .principles { grid-template-columns: 1fr 1fr; }
+  }
+  .principle {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .principle strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .principle span {
+    font-size: 12px;
+    color: var(--ink-55);
+    line-height: 1.4;
+  }
+
+  .gallery-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+    margin: 0 0 16px;
+  }
+
+  .gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 36px 28px;
+    justify-content: center;
+  }
+
+  .phone-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .caption {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-55);
+    letter-spacing: -0.01em;
+  }
+  .caption small {
+    display: block;
+    font-weight: 500;
+    color: var(--ink-35);
+    margin-top: 2px;
+  }
+
+  /* Device — modern continuous corners */
+  .device {
+    width: 300px;
+    height: 648px;
+    border-radius: 48px;
+    background: #1a1a1c;
+    padding: 9px;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.2),
+      var(--shadow-lg),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    position: relative;
+  }
+  [data-theme="light"] .device {
+    background: #2a2a2e;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 40px;
+    overflow: hidden;
+    background: var(--page);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .status {
+    height: 48px;
+    padding: 12px 22px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--status-fg);
+    position: relative;
+    z-index: 5;
+    flex-shrink: 0;
+  }
+  .status .time { padding-left: 6px; }
+  .status .icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding-right: 4px;
+    color: var(--status-fg);
+    opacity: 0.9;
+  }
+  .island {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 28px;
+    background: var(--island);
+    border-radius: 20px;
+    z-index: 6;
+  }
+
+  .scroll {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ——— OPEN ——— */
+  .open {
+    height: 100%;
+    background: var(--hero-grad);
+    display: flex;
+    flex-direction: column;
+    padding: 8px 22px 28px;
+  }
+  .open .orb {
+    width: 96px;
+    height: 96px;
+    margin: 28px auto 20px;
+    border-radius: 26px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-md), 0 0 0 8px var(--violet-wash);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+  }
+  .open .orb svg {
+    width: 68px;
+    height: 68px;
+    display: block;
+  }
+  .open h2 {
+    text-align: center;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.1;
+  }
+  .open h2 .accent { color: var(--violet); }
+  .open .sub {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--ink-55);
+    line-height: 1.45;
+    padding: 0 8px;
+  }
+  .open .cta {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn {
+    height: 52px;
+    border-radius: 16px;
+    border: 0;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: default;
+  }
+  .btn-primary {
+    background: var(--violet);
+    color: #fff;
+    box-shadow: var(--shadow-violet);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-55);
+    font-size: 14px;
+    font-weight: 600;
+    height: 40px;
+  }
+  .trust {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-35);
+  }
+  .trust span::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--live);
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  /* ——— HOME ——— */
+  .home {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--page);
+  }
+  .large-title {
+    padding: 4px 20px 12px;
+  }
+  .large-title h2 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+  }
+  .search {
+    margin: 0 16px 14px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    color: var(--ink-35);
+    font-size: 15px;
+  }
+  .search .glyph {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    opacity: 0.6;
+  }
+  .section-label {
+    padding: 4px 20px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+  }
+  .hero-card {
+    margin: 0 16px 16px;
+    padding: 18px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, var(--violet) 0%, #7B3FE0 100%);
+    color: #fff;
+    box-shadow: var(--shadow-violet);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card::after {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .hero-card .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.95;
+    margin-bottom: 8px;
+  }
+  .hero-card .live i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+  }
+  .hero-card h3 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    position: relative;
+  }
+  .hero-card p {
+    margin-top: 4px;
+    font-size: 13px;
+    opacity: 0.85;
+    position: relative;
+  }
+  .hero-card .row {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+  .avatars { display: flex; }
+  .avatars span {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--violet);
+    margin-left: -8px;
+    background: #d4b8ff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--violet-deep);
+  }
+  .avatars span:first-child { margin-left: 0; }
+  .avatars span:nth-child(2) { background: #c5e8ff; color: #2a6a9a; }
+  .avatars span:nth-child(3) { background: #ffe0c2; color: #9a5a20; }
+  .join-chip {
+    background: #fff;
+    color: var(--violet-deep);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 999px;
+  }
+
+  .list-card {
+    margin: 0 16px 12px;
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .list-row:last-child { border-bottom: 0; }
+  .list-row .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--violet-wash);
+    color: var(--violet);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .list-row .meta { flex: 1; min-width: 0; }
+  .list-row .meta strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .list-row .meta span {
+    font-size: 12px;
+    color: var(--ink-55);
+  }
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--violet-wash);
+    color: var(--violet-deep);
+  }
+  [data-theme="dark"] .badge { color: var(--violet-soft); }
+
+  .tabbar {
+    margin: 8px 16px 16px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--tab-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-35);
+    min-width: 56px;
+  }
+  .tab.on { color: var(--violet); }
+  .tab .dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 8px;
+    background: var(--ink-06);
+  }
+  .tab.on .dot {
+    background: var(--violet-wash-strong);
+    box-shadow: inset 0 0 0 1.5px var(--violet);
+  }
+
+  /* ——— CALL ——— */
+  .call {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--page-wash);
+  }
+  .call-top {
+    padding: 4px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .call-top .back {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--violet);
+  }
+  .call-top .title {
+    text-align: center;
+  }
+  .call-top .title strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .call-top .title span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--live);
+  }
+  .call-top .title span::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--live);
+    margin-right: 4px;
+    vertical-align: 1px;
+  }
+  .call-top .more {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-55);
+  }
+
+  .stage {
+    margin: 0 16px;
+    height: 150px;
+    border-radius: 22px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, var(--violet-wash-strong), transparent 65%);
+  }
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 36px;
+    position: relative;
+  }
+  .waveform i {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--violet);
+    display: block;
+    animation: wave 1.1s ease-in-out infinite;
+  }
+  .waveform i:nth-child(1) { height: 10px; animation-delay: 0s; }
+  .waveform i:nth-child(2) { height: 22px; animation-delay: 0.1s; }
+  .waveform i:nth-child(3) { height: 32px; animation-delay: 0.2s; }
+  .waveform i:nth-child(4) { height: 18px; animation-delay: 0.15s; }
+  .waveform i:nth-child(5) { height: 28px; animation-delay: 0.05s; }
+  .waveform i:nth-child(6) { height: 14px; animation-delay: 0.25s; }
+  .waveform i:nth-child(7) { height: 24px; animation-delay: 0.12s; }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.55); opacity: 0.7; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+  .stage .who {
+    position: relative;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--ink-78);
+  }
+  .stage .who em {
+    font-style: normal;
+    color: var(--violet);
+  }
+
+  .roster {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    overflow: hidden;
+  }
+  .person {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 10px 8px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .person .av {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .person .av.a { background: #EDE4FF; color: var(--violet-deep); }
+  .person .av.b { background: #DFF0FF; color: #2a6a9a; }
+  .person .av.c { background: #FFE8D4; color: #9a5a20; }
+  [data-theme="dark"] .person .av.a { background: rgba(159,88,250,0.25); color: var(--violet-soft); }
+  [data-theme="dark"] .person .av.b { background: rgba(84,135,200,0.25); color: #8eb8e8; }
+  [data-theme="dark"] .person .av.c { background: rgba(245,57,105,0.2); color: #ff8aa8; }
+  .person strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  .person span {
+    font-size: 10px;
+    color: var(--ink-35);
+  }
+  .person.speaking {
+    border-color: rgba(159, 88, 250, 0.45);
+    box-shadow: 0 0 0 3px var(--violet-wash);
+  }
+
+  .feed {
+    flex: 1;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .bubble {
+    max-width: 88%;
+    padding: 10px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: var(--shadow-sm);
+  }
+  .bubble.me {
+    align-self: flex-end;
+    background: var(--violet);
+    color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+  .bubble.them {
+    align-self: flex-start;
+    background: var(--chat-bubble);
+    border: 1px solid var(--hairline);
+    border-bottom-left-radius: 6px;
+    color: var(--ink-78);
+  }
+  .bubble.agent {
+    align-self: flex-start;
+    background: var(--chat-agent);
+    border: 1px solid rgba(159, 88, 250, 0.2);
+    border-bottom-left-radius: 6px;
+  }
+  .bubble .from {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--violet);
+    margin-bottom: 2px;
+  }
+
+  .controls {
+    margin: 10px 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  .ctrl {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-78);
+  }
+  .ctrl.mic {
+    width: 64px;
+    height: 64px;
+    background: var(--violet);
+    color: #fff;
+    border: 0;
+    box-shadow: var(--shadow-violet);
+    font-size: 12px;
+  }
+  .ctrl.end {
+    background: var(--danger);
+    color: #fff;
+    border: 0;
+  }
+
+  /* ——— APPROVAL SHEET ——— */
+  .sheet-screen {
+    height: 100%;
+    background: var(--page);
+    position: relative;
+  }
+  .sheet-screen .dim {
+    position: absolute;
+    inset: 0;
+    background: var(--scrim);
+    backdrop-filter: blur(2px);
+  }
+  .sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 10px 20px 28px;
+    box-shadow: var(--shadow-lg);
+  }
+  .sheet .handle {
+    width: 36px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--sheet-handle);
+    margin: 0 auto 16px;
+  }
+  .sheet h3 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+  }
+  .sheet .who-line {
+    font-size: 13px;
+    color: var(--ink-55);
+    margin-bottom: 14px;
+  }
+  .sheet .code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: var(--ink-78);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .sheet .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .sheet .actions .btn { height: 48px; font-size: 15px; }
+  .sheet .actions .btn-deny {
+    background: var(--surface-2);
+    color: var(--danger);
+    border: 1px solid var(--hairline);
+  }
+
+  /* ——— SETTINGS ——— */
+  .settings {
+    height: 100%;
+    background: var(--page);
+    display: flex;
+    flex-direction: column;
+  }
+  .nav-bar {
+    padding: 4px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-bar .back-link {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--violet);
+  }
+  .nav-bar strong {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .grouped {
+    margin: 0 16px 14px;
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .grouped .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .grouped .row:last-child { border-bottom: 0; }
+  .grouped .row span { color: var(--ink-55); font-size: 14px; }
+  .toggle {
+    width: 48px;
+    height: 30px;
+    border-radius: 15px;
+    background: var(--violet);
+    position: relative;
+  }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .toggle.off { background: var(--ink-12); }
+  .toggle.off::after { right: auto; left: 3px; }
+
+  .notes {
+    margin-top: 48px;
+    padding: 24px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-sm);
+  }
+  .notes h3 {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+  .notes ul {
+    list-style: none;
+    display: grid;
+    gap: 8px;
+  }
+  .notes li {
+    font-size: 13px;
+    color: var(--ink-78);
+    line-height: 1.45;
+    padding-left: 14px;
+    position: relative;
+  }
+  .notes li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--violet);
+  }
+
+  .drive-mark-motion .dm-wheel,
+  .drive-mark-motion .dm-head {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .orb.is-peek .dm-head,
+  .is-peek .dm-head {
+    animation: dm-peek 2.8s ease-in-out infinite;
+  }
+  .orb.is-loading .dm-wheel,
+  .is-loading .dm-wheel {
+    animation: dm-spin 1.15s linear infinite;
+  }
+  @keyframes dm-spin { to { transform: rotate(360deg); } }
+  @keyframes dm-peek {
+    0%, 100% { transform: rotate(0deg) translateX(0); }
+    18% { transform: rotate(-22deg) translateX(-1px); }
+    36% { transform: rotate(0deg) translateX(0); }
+    54% { transform: rotate(22deg) translateX(1px); }
+    72% { transform: rotate(0deg) translateX(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dm-wheel, .dm-head { animation: none !important; }
+  }
+
+</style>
+</head>
+<body>
+<!-- Drive mark: Cline in steering wheel (layered — assets/drive/cline-drive-mark-layers.svg) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="drive-mark" viewBox="0 0 100 100">
+<!-- Layered for motion: .dm-wheel turns; .dm-head peeks. Head traced from source.png; wheel geometric. -->
+  <g class="dm-wheel" fill="currentColor">
+    <path fill-rule="evenodd" d="M50 7.6c23.5 0 42.55 19.05 42.55 42.55S73.5 92.7 50 92.7 7.45 73.65 7.45 50.15 26.5 7.6 50 7.6zm0 9.55c-18.22 0-33 14.78-33 33s14.78 33 33 33 33-14.78 33-33-14.78-33-33-33z"/>
+    <rect x="8.2" y="46.4" width="28" height="7.2" rx="2.2"/>
+    <rect x="63.8" y="46.4" width="28" height="7.2" rx="2.2"/>
+    <rect x="46.4" y="61" width="7.2" height="28" rx="2.2"/>
+  </g>
+  <g class="dm-head" fill="currentColor">
+    <path fill-rule="evenodd" d="M49.08 30.94L48.44 31.18L47.77 31.66L46.89 32.74L46.49 34.09L46.65 35.61L46.57 35.81L43.90 35.81L42.07 36.28L41.35 36.60L39.63 37.80L38.84 38.72L37.88 40.39L37.48 41.59L37.32 42.54L37.32 44.18L36.20 45.26L35.73 46.29L35.65 46.85L35.73 50.80L36.04 51.59L37.32 52.99L37.32 54.47L37.48 55.50L37.88 56.86L38.68 58.29L39.63 59.37L41.43 60.57L42.94 61.12L43.74 61.28L56.38 61.28L57.50 61.04L58.85 60.49L60.33 59.45L61.20 58.45L62.08 56.94L62.40 55.98L62.64 54.70L62.64 52.99L63.76 51.83L64.23 50.80L64.31 50.32L64.23 46.21L63.76 45.26L62.64 44.10L62.64 42.38L62.32 40.87L61.60 39.27L60.96 38.36L59.81 37.24L58.13 36.28L56.22 35.81L53.47 35.81L53.39 35.73L53.47 35.09L53.39 33.45L52.91 32.42L52.43 31.82L51.67 31.26L50.64 30.86Z M54.43 42.94L55.42 43.02L56.38 43.50L57.02 44.22L57.42 45.33L57.42 51.83L56.94 53.03L56.42 53.59L55.82 53.99L54.86 54.23L53.95 54.07L53.11 53.59L52.59 53.03L52.27 52.39L52.11 51.75L52.11 45.33L52.51 44.22L53.07 43.58L54.03 43.02Z M44.86 42.94L45.93 43.02L46.81 43.50L47.45 44.22L47.85 45.33L47.85 51.83L47.53 52.79L46.85 53.59L46.25 53.99L45.30 54.23L44.38 54.07L43.46 53.51L42.94 52.87L42.54 51.75L42.54 45.33L42.86 44.38L43.38 43.66L44.46 43.02Z"/>
+  </g>
+  </symbol>
+</svg>
+<div class="page">
+    <header class="top">
+      <div>
+        <div class="brand-mark">
+          <svg class="logo" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true"><!-- Layered for motion: .dm-wheel turns; .dm-head peeks. Head traced from source.png; wheel geometric. -->
+  <g class="dm-wheel" fill="currentColor">
+    <path fill-rule="evenodd" d="M50 7.6c23.5 0 42.55 19.05 42.55 42.55S73.5 92.7 50 92.7 7.45 73.65 7.45 50.15 26.5 7.6 50 7.6zm0 9.55c-18.22 0-33 14.78-33 33s14.78 33 33 33 33-14.78 33-33-14.78-33-33-33z"/>
+    <rect x="8.2" y="46.4" width="28" height="7.2" rx="2.2"/>
+    <rect x="63.8" y="46.4" width="28" height="7.2" rx="2.2"/>
+    <rect x="46.4" y="61" width="7.2" height="28" rx="2.2"/>
+  </g>
+  <g class="dm-head" fill="currentColor">
+    <path fill-rule="evenodd" d="M49.08 30.94L48.44 31.18L47.77 31.66L46.89 32.74L46.49 34.09L46.65 35.61L46.57 35.81L43.90 35.81L42.07 36.28L41.35 36.60L39.63 37.80L38.84 38.72L37.88 40.39L37.48 41.59L37.32 42.54L37.32 44.18L36.20 45.26L35.73 46.29L35.65 46.85L35.73 50.80L36.04 51.59L37.32 52.99L37.32 54.47L37.48 55.50L37.88 56.86L38.68 58.29L39.63 59.37L41.43 60.57L42.94 61.12L43.74 61.28L56.38 61.28L57.50 61.04L58.85 60.49L60.33 59.45L61.20 58.45L62.08 56.94L62.40 55.98L62.64 54.70L62.64 52.99L63.76 51.83L64.23 50.80L64.31 50.32L64.23 46.21L63.76 45.26L62.64 44.10L62.64 42.38L62.32 40.87L61.60 39.27L60.96 38.36L59.81 37.24L58.13 36.28L56.22 35.81L53.47 35.81L53.39 35.73L53.47 35.09L53.39 33.45L52.91 32.42L52.43 31.82L51.67 31.26L50.64 30.86Z M54.43 42.94L55.42 43.02L56.38 43.50L57.02 44.22L57.42 45.33L57.42 51.83L56.94 53.03L56.42 53.59L55.82 53.99L54.86 54.23L53.95 54.07L53.11 53.59L52.59 53.03L52.27 52.39L52.11 51.75L52.11 45.33L52.51 44.22L53.07 43.58L54.03 43.02Z M44.86 42.94L45.93 43.02L46.81 43.50L47.45 44.22L47.85 45.33L47.85 51.83L47.53 52.79L46.85 53.59L46.25 53.99L45.30 54.23L44.38 54.07L43.46 53.51L42.94 52.87L42.54 51.75L42.54 45.33L42.86 44.38L43.38 43.66L44.46 43.02Z"/>
+  </g></svg>
+          <span>Cline Drive</span>
+        </div>
+        <h1>Modern <em>light</em> for phones</h1>
+        <p class="lede">
+          First-class light surfaces from brand tokens — soft violet washes, glass tab bars,
+          continuous corners. Dark stays one tap away.
+        </p>
+      </div>
+      <div class="theme-switch" role="group" aria-label="Theme">
+        <button type="button" id="btn-light" aria-pressed="true">Light</button>
+        <button type="button" id="btn-dark" aria-pressed="false">Dark</button>
+      </div>
+    </header>
+
+    <div class="principles">
+      <div class="principle">
+        <strong>Brand page #F8FAFB</strong>
+        <span>White cards, violet accent — not inverted dark.</span>
+      </div>
+      <div class="principle">
+        <strong>Soft depth</strong>
+        <span>Shadows + hairlines instead of heavy chrome borders.</span>
+      </div>
+      <div class="principle">
+        <strong>One hero action</strong>
+        <span>Violet CTA / mic — everything else recedes.</span>
+      </div>
+      <div class="principle">
+        <strong>iOS patterns</strong>
+        <span>Large titles, grouped lists, sheets, Dynamic Island.</span>
+      </div>
+    </div>
+
+    <p class="gallery-label">Core surfaces · 390pt frame</p>
+    <div class="gallery">
+      <!-- Open -->
+      <div class="phone-wrap">
+        <div class="device"><div class="screen">
+          <div class="status">
+            <span class="time">9:41</span>
+            <div class="island"></div>
+            <span class="icons">■■ ▬ ●</span>
+          </div>
+          <div class="scroll">
+            <div class="open">
+              <div class="orb is-peek" aria-hidden="true">
+                <svg class="drive-mark-motion" viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+<!-- Layered for motion: .dm-wheel turns; .dm-head peeks. Head traced from source.png; wheel geometric. -->
+  <g class="dm-wheel" fill="currentColor">
+    <path fill-rule="evenodd" d="M50 7.6c23.5 0 42.55 19.05 42.55 42.55S73.5 92.7 50 92.7 7.45 73.65 7.45 50.15 26.5 7.6 50 7.6zm0 9.55c-18.22 0-33 14.78-33 33s14.78 33 33 33 33-14.78 33-33-14.78-33-33-33z"/>
+    <rect x="8.2" y="46.4" width="28" height="7.2" rx="2.2"/>
+    <rect x="63.8" y="46.4" width="28" height="7.2" rx="2.2"/>
+    <rect x="46.4" y="61" width="7.2" height="28" rx="2.2"/>
+  </g>
+  <g class="dm-head" fill="currentColor">
+    <path fill-rule="evenodd" d="M49.08 30.94L48.44 31.18L47.77 31.66L46.89 32.74L46.49 34.09L46.65 35.61L46.57 35.81L43.90 35.81L42.07 36.28L41.35 36.60L39.63 37.80L38.84 38.72L37.88 40.39L37.48 41.59L37.32 42.54L37.32 44.18L36.20 45.26L35.73 46.29L35.65 46.85L35.73 50.80L36.04 51.59L37.32 52.99L37.32 54.47L37.48 55.50L37.88 56.86L38.68 58.29L39.63 59.37L41.43 60.57L42.94 61.12L43.74 61.28L56.38 61.28L57.50 61.04L58.85 60.49L60.33 59.45L61.20 58.45L62.08 56.94L62.40 55.98L62.64 54.70L62.64 52.99L63.76 51.83L64.23 50.80L64.31 50.32L64.23 46.21L63.76 45.26L62.64 44.10L62.64 42.38L62.32 40.87L61.60 39.27L60.96 38.36L59.81 37.24L58.13 36.28L56.22 35.81L53.47 35.81L53.39 35.73L53.47 35.09L53.39 33.45L52.91 32.42L52.43 31.82L51.67 31.26L50.64 30.86Z M54.43 42.94L55.42 43.02L56.38 43.50L57.02 44.22L57.42 45.33L57.42 51.83L56.94 53.03L56.42 53.59L55.82 53.99L54.86 54.23L53.95 54.07L53.11 53.59L52.59 53.03L52.27 52.39L52.11 51.75L52.11 45.33L52.51 44.22L53.07 43.58L54.03 43.02Z M44.86 42.94L45.93 43.02L46.81 43.50L47.45 44.22L47.85 45.33L47.85 51.83L47.53 52.79L46.85 53.59L46.25 53.99L45.30 54.23L44.38 54.07L43.46 53.51L42.94 52.87L42.54 51.75L42.54 45.33L42.86 44.38L43.38 43.66L44.46 43.02Z"/>
+  </g>
+                </svg>
+              </div>
+              <h2>Talk to your<br><span class="accent">codebase</span></h2>
+              <p class="sub">Join a Drive call. Agents work while you speak — approvals stay in your hands.</p>
+              <div class="cta">
+                <div class="btn btn-primary">Continue with Apple</div>
+                <div class="btn btn-secondary">Continue with Google</div>
+                <div class="btn btn-ghost">I have an invite link</div>
+              </div>
+              <div class="trust">
+                <span>On device</span>
+                <span>You approve</span>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="caption">Open <small>Credential-free · social SSO</small></div>
+      </div>
+
+      <!-- Home -->
+      <div class="phone-wrap">
+        <div class="device"><div class="screen">
+          <div class="status">
+            <span class="time">9:41</span>
+            <div class="island"></div>
+            <span class="icons">■■ ▬ ●</span>
+          </div>
+          <div class="scroll home">
+            <div class="large-title"><h2>Drive</h2></div>
+            <div class="search"><span class="glyph"></span> Search calls &amp; plans</div>
+            <div class="section-label">Happening now</div>
+            <div class="hero-card">
+              <div class="live"><i></i> Live</div>
+              <h3>Ship auth middleware</h3>
+              <p>3 people · 2 agents · 12m</p>
+              <div class="row">
+                <div class="avatars">
+                  <span>A</span><span>M</span><span>J</span>
+                </div>
+                <div class="join-chip">Join</div>
+              </div>
+            </div>
+            <div class="section-label">Recent</div>
+            <div class="list-card">
+              <div class="list-row">
+                <div class="icon">P</div>
+                <div class="meta">
+                  <strong>Payments refactor</strong>
+                  <span>Yesterday · Plan ready</span>
+                </div>
+                <div class="badge">Review</div>
+              </div>
+              <div class="list-row">
+                <div class="icon">S</div>
+                <div class="meta">
+                  <strong>Status board sync</strong>
+                  <span>Mon · Completed</span>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab on"><div class="dot"></div>Home</div>
+              <div class="tab"><div class="dot"></div>Browse</div>
+              <div class="tab"><div class="dot"></div>You</div>
+            </div>
+          </div>
+        </div></div>
+        <div class="caption">Home <small>Large title · live hero · floating tabs</small></div>
+      </div>
+
+      <!-- Call -->
+      <div class="phone-wrap">
+        <div class="device"><div class="screen">
+          <div class="status">
+            <span class="time">9:41</span>
+            <div class="island"></div>
+            <span class="icons">■■ ▬ ●</span>
+          </div>
+          <div class="scroll call">
+            <div class="call-top">
+              <div class="back">‹</div>
+              <div class="title">
+                <strong>Auth middleware</strong>
+                <span>Live · 12:04</span>
+              </div>
+              <div class="more">···</div>
+            </div>
+            <div class="stage">
+              <div class="waveform"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="who"><em>Maya</em> is speaking</div>
+            </div>
+            <div class="roster">
+              <div class="person speaking">
+                <div class="av a">M</div>
+                <strong>Maya</strong>
+                <span>You</span>
+              </div>
+              <div class="person">
+                <div class="av b">A</div>
+                <strong>Alex</strong>
+                <span>Muted</span>
+              </div>
+              <div class="person">
+                <div class="av c">◈</div>
+                <strong>Coder</strong>
+                <span>Agent</span>
+              </div>
+            </div>
+            <div class="feed">
+              <div class="bubble them">Can we gate the JWT refresh?</div>
+              <div class="bubble agent">
+                <div class="from">Coder</div>
+                Drafted middleware — needs your OK.
+              </div>
+              <div class="bubble me">Show me the diff</div>
+            </div>
+            <div class="controls">
+              <div class="ctrl">Chat</div>
+              <div class="ctrl mic">Hold</div>
+              <div class="ctrl end">Leave</div>
+            </div>
+          </div>
+        </div></div>
+        <div class="caption">Live call <small>Stage · roster · hold-to-talk</small></div>
+      </div>
+
+      <!-- Approval -->
+      <div class="phone-wrap">
+        <div class="device"><div class="screen">
+          <div class="status">
+            <span class="time">9:41</span>
+            <div class="island"></div>
+            <span class="icons">■■ ▬ ●</span>
+          </div>
+          <div class="sheet-screen">
+            <div class="dim"></div>
+            <div class="sheet">
+              <div class="handle"></div>
+              <h3>Approve change?</h3>
+              <p class="who-line">Coder wants to edit <strong>auth.ts</strong></p>
+              <div class="code">+ export function requireAuth()<br/>+   verifyJwt(req)<br/>+   next()</div>
+              <div class="actions">
+                <div class="btn btn-deny">Deny</div>
+                <div class="btn btn-primary">Allow</div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="caption">Approval <small>Sheet · one decision · clear code</small></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="phone-wrap">
+        <div class="device"><div class="screen">
+          <div class="status">
+            <span class="time">9:41</span>
+            <div class="island"></div>
+            <span class="icons">■■ ▬ ●</span>
+          </div>
+          <div class="scroll settings">
+            <div class="nav-bar">
+              <span class="back-link">‹ You</span>
+              <strong>Settings</strong>
+              <span style="width:48px"></span>
+            </div>
+            <div class="section-label">Appearance</div>
+            <div class="grouped">
+              <div class="row">Appearance <span>System</span></div>
+              <div class="row">Reduce motion <div class="toggle off"></div></div>
+            </div>
+            <div class="section-label">Voice</div>
+            <div class="grouped">
+              <div class="row">Hold to talk <div class="toggle"></div></div>
+              <div class="row">Haptics <div class="toggle"></div></div>
+            </div>
+            <div class="section-label">Trust</div>
+            <div class="grouped">
+              <div class="row">Always ask before edits <div class="toggle"></div></div>
+              <div class="row">Connected hub <span>Local</span></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="caption">Settings <small>Grouped lists · system appearance</small></div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>Modern light rules</h3>
+      <ul>
+        <li>Page <code>#F8FAFB</code>, cards <code>#FFFFFF</code>, ink <code>#151516</code> @ 78% for body — brand light tokens, not gray-on-gray.</li>
+        <li>Violet fills CTAs and live hero; washes for icons/selection — never purple-washed page chrome.</li>
+        <li>Depth from soft shadows + 8% hairlines; glass only on floating tab bar.</li>
+        <li>Typography: Schibsted Grotesk, heavy display (−0.045em), 15–16px interactive, IBM Plex Mono for diffs.</li>
+        <li>Theme toggle flips the same five surfaces — light is default, dark is peer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const light = document.getElementById("btn-light");
+    const dark = document.getElementById("btn-dark");
+    function setTheme(t) {
+      root.setAttribute("data-theme", t);
+      light.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+      dark.setAttribute("aria-pressed", t === "dark" ? "true" : "false");
+    }
+    light.addEventListener("click", () => setTheme("light"));
+    dark.addEventListener("click", () => setTheme("dark"));
+  </script>
+</body>
+</html>

@@ -23,9 +23,10 @@ import {
 	recordGateDenial,
 	shouldShowGatesActiveStrip,
 } from "@cline/shared";
-import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
+import { DriveMarkMotion } from "@/components/icons/drive-mark-motion";
 import { Button } from "@/components/ui/button";
 import type {
 	WebviewChatAttachments,
@@ -1934,7 +1935,10 @@ export default function Chat({
 						) : null}
 						{isHydrating ? (
 							<span className="ml-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-								<Loader2Icon className="size-3 animate-spin" />
+								<DriveMarkMotion
+									className="size-3.5"
+									motion="loading"
+								/>
 								Loading history
 							</span>
 						) : null}

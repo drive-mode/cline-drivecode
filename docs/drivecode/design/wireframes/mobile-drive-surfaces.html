@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Drive · mobile surfaces — all pages · portrait &amp; landscape</title>
+<style>
+  :root {
+    --bg: #070708;
+    --panel: #0d0d10;
+    --well: #050507;
+    --text: #fff;
+    --muted: #9ca3af;
+    --dim: #6b7280;
+    --accent: #9f58fa;
+    --accent-soft: #b98aff;
+    --live: #f59e0b;
+    --live-bg: rgba(245,158,11,.14);
+    --danger: #f53969;
+    --green: #2bcc28;
+    --border: rgba(255,255,255,.1);
+    --font: "Schibsted Grotesk","DM Sans",system-ui,sans-serif;
+    --mono: "Space Grotesk",ui-monospace,monospace;
+    --phone-w: 390px;
+    --phone-h: 844px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(900px 500px at 20% -10%, #1a1030 0%, var(--bg) 50%);
+    color: var(--text);
+    font-family: var(--font);
+  }
+  .shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0,1fr);
+    min-height: 100vh;
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { border-right: 0; border-bottom: .8px solid var(--border); max-height: 42vh; overflow: auto; }
+  }
+  .sidebar {
+    border-right: .8px solid var(--border);
+    background: rgba(10,10,12,.92);
+    padding: 18px 14px 28px;
+    overflow: auto;
+  }
+  .sidebar h1 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    letter-spacing: -.02em;
+  }
+  .sidebar .sub {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: .78rem;
+    line-height: 1.4;
+  }
+  .ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .ctrl label {
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--dim);
+    font-family: var(--mono);
+  }
+  .seg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .seg button, .nav button {
+    appearance: none;
+    border: .8px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 7px 9px;
+    font: inherit;
+    font-size: .72rem;
+    cursor: pointer;
+    text-align: left;
+  }
+  .seg button[aria-pressed="true"], .nav button[aria-current="true"] {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+  }
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav .group {
+    margin: 10px 0 4px;
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--dim);
+    font-family: var(--mono);
+  }
+  .nav button .tag {
+    float: right;
+    opacity: .7;
+    font-size: .6rem;
+    font-family: var(--mono);
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 16px 40px;
+    gap: 12px;
+  }
+  .meta {
+    width: min(100%, var(--phone-w));
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--dim);
+    font-size: .72rem;
+    font-family: var(--mono);
+  }
+  .meta strong { color: var(--accent-soft); font-weight: 600; }
+  .phone {
+    width: var(--phone-w);
+    height: var(--phone-h);
+    max-width: 100%;
+    border-radius: calc(var(--phone-w) * .08);
+    border: .8px solid rgba(255,255,255,.14);
+    background: var(--well);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 40px 100px rgba(0,0,0,.55);
+    transition: width .2s ease, height .2s ease;
+  }
+  .phone::before {
+    content: "";
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: min(110px, 28%);
+    height: 18px;
+    border-radius: 999px;
+    background: #000;
+    z-index: 8;
+  }
+  .phone.landscape::before {
+    top: 50%; left: 8px;
+    transform: translateY(-50%);
+    width: 18px;
+    height: min(110px, 28%);
+  }
+  .safe { height: 36px; flex-shrink: 0; }
+  .phone.landscape .safe { width: 36px; height: auto; }
+  .app-wrap { height: 100%; }
+  .app {
+    height: calc(100% - 36px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .phone.landscape .app-wrap {
+    display: flex;
+  }
+  .phone.landscape .app-wrap .safe { align-self: stretch; }
+  .phone.landscape .app { flex: 1; height: 100%; width: auto; }
+
+  /* shared chrome bits */
+  .top {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    border-bottom: .8px solid rgba(255,255,255,.06);
+    background: rgba(10,10,10,.85);
+    flex-shrink: 0;
+  }
+  .top .t { flex: 1; font-size: .86rem; font-weight: 650; min-width: 0; }
+  .chip {
+    font-size: .6rem; font-family: var(--mono);
+    padding: 2px 7px; border-radius: 999px;
+    border: .8px solid rgba(159,88,250,.4);
+    color: var(--accent-soft);
+  }
+  .chip.live {
+    border-color: rgba(245,158,11,.45);
+    color: var(--live);
+    background: var(--live-bg);
+  }
+  .list { flex: 1; overflow: auto; padding: 10px 12px; min-height: 0; }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 10px;
+    border-radius: 12px;
+    border: .8px solid transparent;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,.03);
+  }
+  .row:active, .row:hover { border-color: rgba(159,88,250,.35); background: rgba(159,88,250,.08); }
+  .av {
+    width: 36px; height: 36px; border-radius: 999px;
+    display: grid; place-items: center;
+    background: rgba(159,88,250,.22);
+    border: .8px solid rgba(159,88,250,.45);
+    font-weight: 700; font-size: .8rem; color: var(--accent-soft);
+    flex-shrink: 0;
+  }
+  .row .m { min-width: 0; flex: 1; }
+  .row .n { font-size: .84rem; font-weight: 600; }
+  .row .d { font-size: .7rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cta {
+    appearance: none; border: 0; border-radius: 999px;
+    padding: 14px 16px; width: 100%;
+    background: var(--accent); color: #fff;
+    font: inherit; font-weight: 650; font-size: .95rem; cursor: pointer;
+  }
+  .cta.ghost {
+    background: transparent;
+    border: .8px solid rgba(255,255,255,.18);
+    color: var(--muted); font-weight: 500; font-size: .85rem;
+  }
+  .pad { padding: 16px; }
+  .fine { font-size: .68rem; color: var(--dim); text-align: center; margin-top: 10px; }
+  .strip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+    border-top: .8px solid rgba(245,158,11,.28);
+    background: rgba(245,158,11,.08);
+    flex-shrink: 0;
+  }
+  .strip .b {
+    width: 44px; height: 44px; border-radius: 12px;
+    border: .8px solid rgba(245,158,11,.35);
+    background: rgba(10,10,10,.7);
+    display: grid; place-items: center; cursor: pointer; font-size: .95rem;
+  }
+  .strip .leave {
+    margin-left: auto; height: 44px; padding: 0 12px;
+    border-radius: 12px; border: .8px solid rgba(245,57,105,.45);
+    background: rgba(245,57,105,.12); color: #ff7a9a;
+    font: inherit; font-weight: 650; font-size: .8rem; cursor: pointer;
+  }
+  .talk {
+    margin: 0 12px 10px; height: 52px; border-radius: 999px;
+    border: .8px solid rgba(159,88,250,.45);
+    background: rgba(159,88,250,.18);
+    color: #fff; font: inherit; font-weight: 650; cursor: pointer;
+  }
+  .spot-frame {
+    flex: 1; min-height: 0; margin: 10px 12px 6px;
+    border-radius: 14px; border: .8px solid rgba(245,158,11,.3);
+    background: linear-gradient(180deg, rgba(245,158,11,.07), transparent 40%), #0b0c12;
+    padding: 12px; overflow: auto;
+  }
+  .eyebrow {
+    font-size: .62rem; color: var(--dim); font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
+  }
+  pre {
+    margin: 0; font-family: var(--mono); font-size: .74rem; line-height: 1.45;
+    color: #d1d5db; white-space: pre-wrap;
+  }
+  .add { color: #6ee7b7; } .del { color: #fda4af; }
+  .caption { padding: 0 14px 6px; font-size: .8rem; line-height: 1.35; min-height: 2.4em; }
+  .now { padding: 0 14px 8px; font-size: .7rem; color: var(--muted); }
+  .now strong { color: var(--text); }
+  .activity {
+    height: 3px; margin: 0 14px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.08); overflow: hidden;
+  }
+  .activity > i {
+    display: block; height: 100%; width: 40%;
+    background: linear-gradient(90deg, var(--accent), var(--live));
+    animation: slide 1.5s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0%,100% { transform: translateX(0); opacity: .7; }
+    50% { transform: translateX(120%); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .activity > i { animation: none; width: 100%; }
+  }
+  .splash {
+    flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 22px 18px 24px;
+    background:
+      linear-gradient(180deg, transparent 15%, rgba(5,5,7,.94) 65%),
+      radial-gradient(520px 360px at 50% 18%, rgba(159,88,250,.38), transparent 60%),
+      #0a0614;
+  }
+  .brand { font-size: 2.5rem; font-weight: 750; letter-spacing: -.04em; margin: 0 0 6px; }
+  .tag { margin: 0 0 18px; font-size: 1.02rem; line-height: 1.35; color: rgba(255,255,255,.8); max-width: 14ch; }
+  .tabs {
+    display: flex; border-bottom: .8px solid rgba(255,255,255,.08); flex-shrink: 0;
+  }
+  .tabs button {
+    flex: 1; appearance: none; border: 0; background: transparent;
+    color: var(--dim); padding: 10px; font: inherit; font-size: .75rem; cursor: pointer;
+  }
+  .tabs button.on {
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .rail {
+    position: absolute; top: 36px; right: 0; bottom: 0;
+    width: min(72%, 230px);
+    background: rgba(8,8,10,.97);
+    border-left: .8px solid rgba(255,255,255,.1);
+    display: flex; flex-direction: column; z-index: 4;
+  }
+  .banner {
+    margin: 8px 12px; padding: 10px 12px; border-radius: 12px;
+    border: .8px solid rgba(245,158,11,.4); background: rgba(245,158,11,.1);
+    font-size: .78rem; line-height: 1.35;
+  }
+  .banner.danger {
+    border-color: rgba(245,57,105,.45); background: rgba(245,57,105,.1);
+  }
+  .banner.ok {
+    border-color: rgba(43,204,40,.4); background: rgba(43,204,40,.1);
+  }
+  .modal {
+    position: absolute; inset: 0; z-index: 5;
+    background: rgba(0,0,0,.5);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .sheet {
+    width: 100%; max-height: 70%;
+    background: var(--panel);
+    border-radius: 18px 18px 0 0;
+    border-top: .8px solid rgba(255,255,255,.12);
+    padding: 10px 14px 18px;
+  }
+  .grab {
+    width: 36px; height: 4px; border-radius: 999px;
+    background: rgba(255,255,255,.2); margin: 4px auto 12px;
+  }
+  .legend {
+    max-width: 720px;
+    color: var(--dim);
+    font-size: .72rem;
+    line-height: 1.45;
+    text-align: center;
+  }
+  .legend a { color: var(--accent-soft); }
+  /* landscape call: spotlight left, controls right column */
+  .call-land {
+    flex: 1; min-height: 0; display: grid;
+    grid-template-columns: 1.4fr .9fr;
+    min-width: 0;
+  }
+  .call-land .spot-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .call-land .ctrl-col {
+    display: flex; flex-direction: column; min-width: 0;
+    border-left: .8px solid rgba(255,255,255,.08);
+    background: rgba(10,10,12,.9);
+  }
+  .kbd {
+    display: inline-block; padding: 1px 5px; border-radius: 4px;
+    border: .8px solid var(--border); font-family: var(--mono); font-size: .65rem;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <h1>Drive mobile surfaces</h1>
+    <p class="sub">All consumer + advanced pages. Switch size, orientation, and surface. Primary loop stays call-first; hub power pages live under Advanced.</p>
+
+    <div class="ctrl">
+      <label>Phone size</label>
+      <div class="seg" id="sizes" role="group" aria-label="Phone size"></div>
+    </div>
+    <div class="ctrl">
+      <label>Orientation</label>
+      <div class="seg" id="orients" role="group" aria-label="Orientation"></div>
+    </div>
+    <div class="ctrl">
+      <label>Surfaces</label>
+      <nav class="nav" id="nav" aria-label="Surfaces"></nav>
+    </div>
+    <p class="sub" style="margin-top:14px">Keys: <span class="kbd">[</span>/<span class="kbd">]</span> surface · <span class="kbd">O</span> orientation · <span class="kbd">1</span>–<span class="kbd">3</span> size</p>
+  </aside>
+
+  <main class="stage">
+    <div class="meta">
+      <span id="meta-label">—</span>
+      <strong id="meta-dims">—</strong>
+    </div>
+    <div class="phone" id="phone" aria-live="polite">
+      <div class="app-wrap">
+        <div class="safe" aria-hidden="true"></div>
+        <div class="app" id="screen"></div>
+      </div>
+    </div>
+    <p class="legend">
+      Plan: <a href="../../plans/cline-drivemode/initiatives/mobile-consumer/README.md">mobile-consumer</a>
+      · companion first-open: <a href="./mobile-drive-app.html">mobile-drive-app.html</a>
+      · brand: <a href="../brand/CLINE-BRAND-TOKENS.md">CLINE-BRAND-TOKENS</a>
+    </p>
+  </main>
+</div>
+
+<script>
+const SIZES = [
+  { id: "se", label: "Compact", w: 360, h: 640, note: "SE / small Android" },
+  { id: "std", label: "Standard", w: 390, h: 844, note: "iPhone 14-class" },
+  { id: "lg", label: "Large", w: 430, h: 932, note: "Pro Max / Pixel XL" },
+];
+
+const GROUPS = [
+  {
+    name: "Core loop",
+    items: [
+      { id: "splash", label: "Press play", tier: "primary" },
+      { id: "lobby", label: "Home / lobby", tier: "primary" },
+      { id: "call", label: "Live call", tier: "primary" },
+      { id: "rail", label: "Call + rail", tier: "primary" },
+      { id: "captions", label: "Captions open", tier: "primary" },
+      { id: "interrupt", label: "Raise hand", tier: "primary" },
+      { id: "stuck", label: "Stuck recovery", tier: "primary" },
+      { id: "gate", label: "Approval gate", tier: "primary" },
+      { id: "handoff", label: "Leave / handoff", tier: "primary" },
+      { id: "history", label: "Session history", tier: "primary" },
+      { id: "install", label: "PWA install", tier: "primary" },
+    ],
+  },
+  {
+    name: "Browse",
+    items: [
+      { id: "rooms", label: "Rooms", tier: "browse" },
+      { id: "tasks", label: "Tasks", tier: "browse" },
+      { id: "artifacts", label: "Artifacts", tier: "browse" },
+      { id: "agents", label: "Agents", tier: "browse" },
+      { id: "agent", label: "Agent profile", tier: "browse" },
+      { id: "status", label: "Status", tier: "browse" },
+    ],
+  },
+  {
+    name: "Settings (minimal)",
+    items: [
+      { id: "settings", label: "Settings home", tier: "settings" },
+      { id: "voice", label: "Voice & devices", tier: "settings" },
+      { id: "providers", label: "Providers / sign-in", tier: "settings" },
+      { id: "advanced", label: "Advanced hub", tier: "settings" },
+    ],
+  },
+];
+
+const FLAT = GROUPS.flatMap((g) => g.items);
+
+let state = {
+  size: "std",
+  orient: "portrait", // portrait | landscape
+  surface: "call",
+};
+
+function dims() {
+  const s = SIZES.find((x) => x.id === state.size);
+  return state.orient === "portrait"
+    ? { w: s.w, h: s.h, note: s.note }
+    : { w: s.h, h: Math.round(s.w * 0.92), note: s.note + " · landscape" };
+  // landscape height slightly shorter than width flip to mimic usable phone landscape chrome
+}
+
+function applyChrome() {
+  const d = dims();
+  const phone = document.getElementById("phone");
+  phone.style.setProperty("--phone-w", d.w + "px");
+  phone.style.setProperty("--phone-h", d.h + "px");
+  // also set on :root for meta width
+  document.documentElement.style.setProperty("--phone-w", d.w + "px");
+  document.documentElement.style.setProperty("--phone-h", d.h + "px");
+  phone.classList.toggle("landscape", state.orient === "landscape");
+  document.getElementById("meta-label").textContent =
+    FLAT.find((x) => x.id === state.surface)?.label + " · " + state.orient;
+  document.getElementById("meta-dims").textContent = `${d.w}×${d.h} · ${d.note}`;
+}
+
+function topBar(title, extras = "") {
+  return `<div class="top"><div class="t">${title}</div>${extras}</div>`;
+}
+
+function strip(extra = "") {
+  return `<div class="strip">
+    <button type="button" class="b" title="Mic">🎙</button>
+    <button type="button" class="b" title="Hand">✋</button>
+    <button type="button" class="b" title="CC">CC</button>
+    ${extra}
+    <button type="button" class="leave">Leave</button>
+  </div>`;
+}
+
+function spotBody() {
+  return `
+    <div class="spot-frame">
+      <div class="eyebrow">Spotlight · Cline · edit</div>
+      <pre><span class="del">- if (!user) return null</span>
+<span class="add">+ if (!user) throw new AuthError()</span>
+<span class="add">+ return sessionFrom(user)</span></pre>
+    </div>
+    <div class="activity" aria-hidden="true"><i></i></div>
+    <div class="caption">“Locking the auth guard so anonymous requests fail closed — then I’ll run the tests.”</div>
+    <div class="now"><strong>NOW</strong> Fix auth · <span style="color:var(--dim)">NEXT</span> Ship PR</div>`;
+}
+
+function renderCall(opts = {}) {
+  const land = state.orient === "landscape";
+  const rail = opts.rail
+    ? `<aside class="rail" style="${land ? "position:relative;top:0;width:100%;border-left:0;border-top:.8px solid rgba(255,255,255,.08);max-height:45%" : ""}">
+        <div class="tabs">
+          <button type="button" class="on">Roster</button>
+          <button type="button">Feed</button>
+        </div>
+        <div class="list">
+          <div class="row"><span class="av">Y</span><div class="m"><div class="n">You</div><div class="d">watching</div></div></div>
+          <div class="row"><span class="av">C</span><div class="m"><div class="n">Cline</div><div class="d">Editing auth.ts</div></div></div>
+        </div>
+      </aside>`
+    : "";
+  const banners = [
+    opts.captions ? `<div class="banner">CC · Locking the auth guard… · captions stay on while you watch</div>` : "",
+    opts.interrupt ? `<div class="banner">Hand raised — finishing current step. Hard cancel stays one tap away.</div>` : "",
+    opts.stuck ? `<div class="banner danger">Stuck on tests · Narrow scope · Fix · Recruit · Pause</div>` : "",
+    opts.gate ? `<div class="banner">Approval · Allow write to auth.ts? · Allow once · Deny</div>` : "",
+  ].join("");
+
+  if (land) {
+    return `
+      ${topBar("Drive", `<span class="chip">preview</span><span class="chip live">Live</span>`)}
+      <div class="call-land">
+        <div class="spot-col">${spotBody()}${banners}</div>
+        <div class="ctrl-col">
+          ${rail || `<div class="pad" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end">
+            <button type="button" class="talk">● Hold to talk</button>
+          </div>`}
+          ${opts.rail ? `<button type="button" class="talk" style="margin:8px">● Hold to talk</button>` : ""}
+          ${strip(opts.rail ? "" : `<button type="button" class="b" title="Rail">☰</button>`)}
+        </div>
+      </div>`;
+  }
+
+  return `
+    ${topBar("Drive", `<span class="chip">preview</span><span class="chip live">Live</span>`)}
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;position:relative">
+      ${spotBody()}
+      ${banners}
+      ${rail}
+      <button type="button" class="talk">● Hold to talk</button>
+      ${strip(`<button type="button" class="b" title="Rail">☰</button>`)}
+    </div>`;
+}
+
+const SCREENS = {
+  splash() {
+    const land = state.orient === "landscape";
+    if (land) {
+      return `<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0">
+        <div class="splash" style="justify-content:center">
+          <p class="brand">Drive</p>
+          <p class="tag">Watch your agent build.</p>
+        </div>
+        <div class="pad" style="display:flex;flex-direction:column;justify-content:center;gap:10px;background:#0a0614">
+          <button type="button" class="cta">Start watching</button>
+          <button type="button" class="cta ghost">I have a workspace</button>
+          <p class="fine">No account for preview · mic off until you hold</p>
+        </div>
+      </div>`;
+    }
+    return `<div class="splash">
+      <p class="brand">Drive</p>
+      <p class="tag">Watch your agent build. Steer when you want.</p>
+      <button type="button" class="cta">Start watching</button>
+      <button type="button" class="cta ghost" style="margin-top:10px">I have a workspace</button>
+      <p class="fine">No account needed for the preview · mic stays off until you hold</p>
+    </div>`;
+  },
+  lobby() {
+    return `
+      ${topBar("Drive", `<span class="chip">preview</span>`)}
+      <div class="list">
+        <div class="banner ok">Continue where you left off — Pairing room is ready.</div>
+        <div class="row"><span class="av">▶</span><div class="m"><div class="n">Join call</div><div class="d">Watch Cline · plan mode</div></div></div>
+        <div class="row"><span class="av">◷</span><div class="m"><div class="n">Session history</div><div class="d">3 recent handoffs</div></div></div>
+        <div class="row"><span class="av">◎</span><div class="m"><div class="n">Start watching (demo)</div><div class="d">Credential-free preview</div></div></div>
+      </div>
+      <div class="pad"><button type="button" class="cta">Join call</button></div>`;
+  },
+  call: () => renderCall(),
+  rail: () => renderCall({ rail: true }),
+  captions: () => renderCall({ captions: true }),
+  interrupt: () => renderCall({ interrupt: true }),
+  stuck: () => renderCall({ stuck: true }),
+  gate: () => renderCall({ gate: true }),
+  handoff() {
+    return `
+      ${topBar("Call ended")}
+      <div class="pad" style="flex:1;overflow:auto">
+        <div class="banner ok">Handoff ready — work is saved in the room.</div>
+        <h3 style="margin:8px 0 6px;font-size:.95rem">What changed</h3>
+        <p style="margin:0 0 12px;color:var(--muted);font-size:.82rem;line-height:1.45">Auth guard now throws; session helper extracted; tests green.</p>
+        <h3 style="margin:8px 0 6px;font-size:.95rem">Next</h3>
+        <p style="margin:0 0 16px;color:var(--muted);font-size:.82rem">Open the PR draft and rejoin anytime — Leave ≠ lose.</p>
+        <button type="button" class="cta">Back to home</button>
+        <button type="button" class="cta ghost" style="margin-top:8px">View session</button>
+      </div>`;
+  },
+  history() {
+    return `
+      ${topBar("History")}
+      <div class="list">
+        ${["Auth guard fix · 12m", "Landing copy pass · yesterday", "Billing spike · Mon"].map((t,i)=>`
+          <div class="row"><span class="av">${i+1}</span><div class="m"><div class="n">${t}</div><div class="d">Rejoin · handoff packet</div></div></div>`).join("")}
+      </div>`;
+  },
+  install() {
+    return `
+      <div class="pad" style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;background:radial-gradient(420px 260px at 50% 30%,rgba(159,88,250,.25),transparent 65%)">
+        <div class="av" style="width:84px;height:84px;margin:0 auto 14px;border-radius:20px;font-size:2rem">D</div>
+        <h3 style="margin:0 0 8px">Keep Drive on your phone</h3>
+        <p style="margin:0 0 18px;color:var(--muted);font-size:.88rem;line-height:1.4">Add to Home Screen for one-tap watching.</p>
+        <button type="button" class="cta">Add to Home Screen</button>
+        <button type="button" class="cta ghost" style="margin-top:8px">Not now</button>
+        <p class="fine">Standalone · mic only when you talk</p>
+      </div>`;
+  },
+  rooms() {
+    return `
+      ${topBar("Rooms")}
+      <div class="list">
+        ${["Pairing", "Docs polish", "Onboarding"].map((n)=>`
+          <div class="row"><span class="av">#</span><div class="m"><div class="n">${n}</div><div class="d">Live · tap to join</div></div></div>`).join("")}
+      </div>`;
+  },
+  tasks() {
+    return `
+      ${topBar("Tasks")}
+      <div class="list">
+        ${[["Fix auth guard","NOW"],["Run tests","NEXT"],["Open PR","queued"]].map(([n,s])=>`
+          <div class="row"><span class="av">✓</span><div class="m"><div class="n">${n}</div><div class="d">${s}</div></div></div>`).join("")}
+      </div>`;
+  },
+  artifacts() {
+    return `
+      ${topBar("Artifacts")}
+      <div class="list">
+        ${["diagram · auth flow","diff · auth.ts","handoff · session"].map((n)=>`
+          <div class="row"><span class="av">◇</span><div class="m"><div class="n">${n}</div><div class="d">Open in Spotlight</div></div></div>`).join("")}
+      </div>`;
+  },
+  agents() {
+    return `
+      ${topBar("Agents")}
+      <div class="list">
+        ${[["Cline","Pair partner"],["Docs","Writer"],["QA","Verifier"]].map(([n,d])=>`
+          <div class="row"><span class="av">${n[0]}</span><div class="m"><div class="n">${n}</div><div class="d">${d}</div></div></div>`).join("")}
+      </div>`;
+  },
+  agent() {
+    return `
+      ${topBar("Cline", `<button type="button" class="chip">Edit</button>`)}
+      <div class="pad" style="flex:1;overflow:auto">
+        <div class="av" style="width:64px;height:64px;margin-bottom:12px;font-size:1.4rem">C</div>
+        <div class="n" style="font-size:1.1rem;font-weight:650;margin-bottom:4px">Cline</div>
+        <p style="margin:0 0 12px;color:var(--muted);font-size:.82rem">Senior pair partner · narrates decisions</p>
+        <div class="row"><div class="m"><div class="n">Name color</div><div class="d">Violet ink · theme-aware</div></div></div>
+        <div class="row"><div class="m"><div class="n">Voice</div><div class="d">TTS off · tap to enable</div></div></div>
+      </div>`;
+  },
+  status() {
+    return `
+      ${topBar("Status")}
+      <div class="list">
+        <div class="row"><span class="av">●</span><div class="m"><div class="n">Board</div><div class="d">2 blocked · 1 running</div></div></div>
+        <div class="row"><span class="av">≡</span><div class="m"><div class="n">Changelog</div><div class="d">Today’s shipped notes</div></div></div>
+        <div class="row"><span class="av">⧉</span><div class="m"><div class="n">Dependency map</div><div class="d">Simplified on phone</div></div></div>
+      </div>`;
+  },
+  settings() {
+    return `
+      ${topBar("Settings")}
+      <div class="list">
+        ${[["Voice & devices","Mic, TTS, earcons"],["Appearance","Theme follows system"],["Sign-in","When you want real turns"],["Advanced","Hub power tools"]].map(([n,d])=>`
+          <div class="row"><div class="m"><div class="n">${n}</div><div class="d">${d}</div></div></div>`).join("")}
+      </div>`;
+  },
+  voice() {
+    return `
+      ${topBar("Voice & devices")}
+      <div class="list">
+        <div class="row"><div class="m"><div class="n">Microphone</div><div class="d">System default · muted on join</div></div></div>
+        <div class="row"><div class="m"><div class="n">Partner voice (TTS)</div><div class="d">Off · enable on first call</div></div></div>
+        <div class="row"><div class="m"><div class="n">Earcons</div><div class="d">Join + approval on · complete off</div></div></div>
+      </div>`;
+  },
+  providers() {
+    return `
+      ${topBar("Sign-in")}
+      <div class="pad" style="flex:1">
+        <p style="margin:0 0 12px;color:var(--muted);font-size:.85rem;line-height:1.45">Preview works without this. Sign in when you want a real agent on your work.</p>
+        <button type="button" class="cta">Continue with device code</button>
+        <button type="button" class="cta ghost" style="margin-top:8px">Bring your own key</button>
+        <p class="fine">Dismissible · never blocks Start watching</p>
+      </div>`;
+  },
+  advanced() {
+    return `
+      ${topBar("Advanced")}
+      <div class="list">
+        <div class="banner">Power surfaces from the hub — hidden from the consumer home. Open only when you need them.</div>
+        ${["Analytics","Models","MCP","Plugins","Skills","Rules","Hooks","Tools","Channels","Schedules","Account"].map((n)=>`
+          <div class="row"><div class="m"><div class="n">${n}</div><div class="d">Hub · not in default tab bar</div></div></div>`).join("")}
+      </div>`;
+  },
+};
+
+function renderNav() {
+  const nav = document.getElementById("nav");
+  nav.innerHTML = GROUPS.map((g) => `
+    <div class="group">${g.name}</div>
+    ${g.items.map((it) => `
+      <button type="button" data-surface="${it.id}" aria-current="${it.id === state.surface}">
+        ${it.label}<span class="tag">${it.tier}</span>
+      </button>`).join("")}
+  `).join("");
+  nav.querySelectorAll("[data-surface]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.surface = btn.dataset.surface;
+      render();
+    });
+  });
+}
+
+function renderSizes() {
+  const el = document.getElementById("sizes");
+  el.innerHTML = SIZES.map((s) => `
+    <button type="button" data-size="${s.id}" aria-pressed="${s.id === state.size}">${s.label}</button>
+  `).join("");
+  el.querySelectorAll("[data-size]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.size = btn.dataset.size;
+      render();
+    });
+  });
+}
+
+function renderOrients() {
+  const el = document.getElementById("orients");
+  el.innerHTML = ["portrait", "landscape"].map((o) => `
+    <button type="button" data-orient="${o}" aria-pressed="${o === state.orient}">${o}</button>
+  `).join("");
+  el.querySelectorAll("[data-orient]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.orient = btn.dataset.orient;
+      render();
+    });
+  });
+}
+
+function render() {
+  applyChrome();
+  renderNav();
+  renderSizes();
+  renderOrients();
+  const fn = SCREENS[state.surface] || SCREENS.call;
+  document.getElementById("screen").innerHTML = fn();
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.target.matches("input,textarea,button")) return;
+  const idx = FLAT.findIndex((x) => x.id === state.surface);
+  if (e.key === "]") {
+    state.surface = FLAT[(idx + 1) % FLAT.length].id;
+    render();
+  }
+  if (e.key === "[") {
+    state.surface = FLAT[(idx - 1 + FLAT.length) % FLAT.length].id;
+    render();
+  }
+  if (e.key === "o" || e.key === "O") {
+    state.orient = state.orient === "portrait" ? "landscape" : "portrait";
+    render();
+  }
+  if (e.key === "1") { state.size = "se"; render(); }
+  if (e.key === "2") { state.size = "std"; render(); }
+  if (e.key === "3") { state.size = "lg"; render(); }
+});
+
+render();
+</script>
+</body>
+</html>
