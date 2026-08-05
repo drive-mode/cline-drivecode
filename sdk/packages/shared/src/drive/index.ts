@@ -193,7 +193,7 @@ export {
 	parseGateActionClass,
 } from "./gates";
 export {
-	allowGateClassForSession,
+	allowGateToolForSession,
 	canOfferGateSessionAllow,
 	clearGateSession,
 	createGateSessionState,
