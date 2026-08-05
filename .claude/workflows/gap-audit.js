@@ -142,17 +142,42 @@ const results = await pipeline(
 )
 
 const all = results.flat().filter(Boolean)
-const confirmed = all.filter((f) => f.verdict && f.verdict.refuted === false)
+const survived = (f) => Boolean(f.verdict) && f.verdict.refuted === false
+const confirmed = all.filter(survived)
 const refutedCount = all.length - confirmed.length
+const refutationRate = `${Math.round((refutedCount / Math.max(1, all.length)) * 100)}%`
 
 log(`${all.length} verified, ${confirmed.length} confirmed, ${refutedCount} refuted`)
+
+/*
+ * Refutations are output, not waste. `refutationRate` is the workflow's own
+ * quality signal — a very low one means the verifiers rubber-stamped rather
+ * than that the audit was good — and a rate cannot be judged without the
+ * reasoning behind it. So it ships on every return path, including the one
+ * where nothing survived, which is the path where it is the only evidence.
+ */
+const refuted = all
+  .filter((f) => !survived(f))
+  .map((f) => ({
+    lens: f.lens,
+    subject: f.subject,
+    at: `${f.file}${f.line ? ':' + f.line : ''}`,
+    gap: f.gap,
+    why: f.verdict ? f.verdict.why : 'verifier returned no verdict',
+  }))
 
 if (confirmed.length === 0) {
   return {
     since,
-    confirmed: [],
+    confirmedCount: 0,
     refutedCount,
-    note: 'No gaps survived verification. Either the surface is clean or the lenses need widening — check the refutation reasons before concluding the former.',
+    refutationRate,
+    confirmed: [],
+    refuted,
+    note:
+      all.length === 0
+        ? 'Nothing reached verification: every lens returned zero candidates. That is a result about scope, not a clean bill of health — widen `since`, or check that the lens prompts still describe surfaces this repo still has.'
+        : 'No gaps survived verification. Either the surface is clean or the lenses need widening — `refuted` carries each verifier’s reasoning; read it before concluding the former.',
   }
 }
 
@@ -186,7 +211,7 @@ return {
   since,
   confirmedCount: confirmed.length,
   refutedCount,
-  refutationRate: `${Math.round((refutedCount / Math.max(1, all.length)) * 100)}%`,
+  refutationRate,
   triage: ranked,
   confirmed: confirmed.map((f) => ({
     lens: f.lens,
@@ -198,4 +223,5 @@ return {
     blocks: f.verdict.blocks,
     effort: f.verdict.effort,
   })),
+  refuted,
 }

@@ -46,7 +46,9 @@ uncertain. On the run that produced this workflow, 10 of 34 candidates were
 refuted — a false correction pushed into a doc whose argument is "check this
 yourself" costs more than a missed one. Watch `refutationRate` in the output: a
 very low rate usually means the verifiers are rubber-stamping, not that the
-audit was unusually good.
+audit was unusually good. Judging that means reading `refuted`, which carries
+every rejected candidate with the verifier's reasoning — a rate on its own is
+not evidence of anything.
 
 **Every confirmed finding carries `blocks`.** That field names the artifact
 which would stop the defect recurring — a specific failing test, a CI gate, a
@@ -61,3 +63,9 @@ find. If a run ends without anything landing, the run did nothing.
 chance the rest recur, which findings share a root cause and should land as one
 change, and **what the audit did not look at** — the last one matters most,
 because a green run invites the assumption that it covered everything.
+
+`confirmed` and `refuted` are both present on every run, so a consumer never
+has to branch on the shape. A run with nothing confirmed returns no `triage` —
+there is nothing to order — and distinguishes the two ways that happens: no
+candidate survived verification (read `refuted`), versus no candidate was ever
+raised (a result about scope, not a clean bill of health).
