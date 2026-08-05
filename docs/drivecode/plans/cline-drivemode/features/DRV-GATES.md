@@ -18,8 +18,8 @@ Pair-call agents will eventually touch destructive or sensitive actions. Users n
 |---|---|
 | Plumbing | Reuse hub/`approval.requested` events; Drive projects them into the room feed |
 | UI owner | **Feed card** in the active room transcript (not a blocking modal; strip may show badge count) |
-| Session allow | Expires on leave/end or explicit revoke; never survives process restart without durable opt-in (default: no durable allow) |
-| Deny | Partner must replan or ask; do not retry the same gated tool silently |
+| Session allow | **Scoped to the exact tool name, never to the action class.** Expires on leave/end, on chat-session switch, or explicit revoke; never survives process restart without durable opt-in (default: no durable allow) |
+| Deny | Partner must replan or ask; do not retry the same gated tool silently. A deny revokes any session allow that tool held |
 | Taxonomy source | Facet `gates.highImpact` + this feature’s action classes |
 
 ## Action taxonomy (v1)
@@ -37,14 +37,16 @@ Classes that **must** emit a gate when Drive is active (unless session-allowed):
 
 Thresholds (starting point, tunable via facet later): after **3 denials** of the same class in one room session, partner must narrate a strategy change; after **5 warnings**, call strip shows a sticky “gates active” hint.
 
+**A class decides whether to gate; it must never decide what an approval covers.** `classifyToolNameForGate` is a best-effort name matcher and its fallback is `shell.unchecked`, so most of the default tool set — `read_files`, `search_codebase`, `editor`, `apply_patch` — shares a bucket with `run_commands`. Scoping a session allow by class therefore grants arbitrary shell from an approval the user gave a read-only tool; it shipped that way once and is pinned against by test. The class is the right key for *counting denials* (a strategy signal, where over-grouping is harmless) and the wrong key for *granting authority*.
+
 ## Acceptance criteria
 
 - When Drive is active, tools in the taxonomy emit `approval.requested` (or Drive-equivalent gate event) before execution.
 - Feed shows an approve / deny / allow-for-session card bound to the requesting participant.
 - Deny yields a room-visible reason and the partner’s next narration acknowledges the block (no silent no-op).
 - `policy.hard` blocks cannot be session-allowed from the card; user must change permissions/home policy.
-- Session allow clears on leave/end; debug persistence of allows requires the same visible debug flag family as DRV-PRIVACY.
-- Unit tests cover taxonomy classification, expiry, and “no silent retry after deny.”
+- Session allow clears on leave/end **and on chat-session switch** — the hook being bypassed is ClineCore's global `requestToolApproval`, not a Drive-scoped one, so a grant made in one session would otherwise apply to the next while Drive stayed active. Debug persistence of allows requires the same visible debug flag family as DRV-PRIVACY.
+- Unit tests cover taxonomy classification, expiry, “no silent retry after deny,” and that an allow granted to one tool does **not** bypass a sibling tool in the same class.
 - Voice path (later): gate cards remain text-first; no modal that steals mic focus (W-34 alignment).
 
 ## Dependencies
