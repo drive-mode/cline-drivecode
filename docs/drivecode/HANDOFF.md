@@ -107,6 +107,7 @@ CLI Status uses the live hub adapter; CLI Drive toggle best-effort `call_join`/`
 
 ### Top gaps
 
+- **UX quality (web + mobile browser):** [ux-quality](plans/cline-drivemode/initiatives/ux-quality/) — surface inventory, award bar, phases 0–7 over [drive-web](plans/cline-drivemode/initiatives/drive-web/) + [hosted-preview](plans/cline-drivemode/initiatives/hosted-preview/). Native apps YAGNI. Owner open decisions block implementation.
 - **ADLC factory track (plan):** [adlc-drive-factory](plans/cline-drivemode/initiatives/adlc-drive-factory/) + [ADR-0028](plans/cline-drivemode/adr/ADR-0028-adlc-control-plane.md) — first-use on-ramps, Status→Drive offer bridge, traces polish, receipt ship atom. Does not replace [MVP-beta.md](plans/cline-drivemode/delivery/MVP-beta.md) (MVP already delivered).
 - ADR-0019 full DrivePlan–Kanban Interop wire (after ADR-0018 D1–D2 proved on this branch) — [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/).
 - Optional composers: `/recruit`, `/pack`; Spatial Dependency map (`DRV-DEP-MAP`) still card-grid only.

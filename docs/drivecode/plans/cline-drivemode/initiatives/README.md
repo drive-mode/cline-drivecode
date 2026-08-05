@@ -14,3 +14,4 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [session-satisfaction-moments](session-satisfaction-moments/) | active | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) … [visual plan](session-satisfaction-moments/visual-plan.md) |
 | [adlc-drive-factory](adlc-drive-factory/) | active (plan) | [ADR-0028](../adr/ADR-0028-adlc-control-plane.md) — ADLC control plane over existing Drive planes |
 | [share-screen-canvas](share-screen-canvas/) | reference | [DRV-SHARE](../features/DRV-SHARE.md), [DRV-STAGE](../features/DRV-STAGE.md) |
+| [ux-quality](ux-quality/) | active (plan) | Web + mobile UX backlog over [drive-web](drive-web/), [hosted-preview](hosted-preview/), [00-vision](../foundation/00-vision.md) |
