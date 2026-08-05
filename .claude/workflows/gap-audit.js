@@ -145,7 +145,15 @@ const all = results.flat().filter(Boolean)
 const survived = (f) => Boolean(f.verdict) && f.verdict.refuted === false
 const confirmed = all.filter(survived)
 const refutedCount = all.length - confirmed.length
-const refutationRate = `${Math.round((refutedCount / Math.max(1, all.length)) * 100)}%`
+/*
+ * `null`, not "0%", when nothing was verified. A rate over zero samples is
+ * undefined, and the usual `Math.max(1, n)` divide-guard resolves it to the
+ * one value the README teaches readers to distrust — a very low rate is
+ * supposed to mean the verifiers rubber-stamped. Reporting a measurement
+ * nobody took is worse than reporting none.
+ */
+const refutationRate =
+  all.length === 0 ? null : `${Math.round((refutedCount / all.length) * 100)}%`
 
 log(`${all.length} verified, ${confirmed.length} confirmed, ${refutedCount} refuted`)
 

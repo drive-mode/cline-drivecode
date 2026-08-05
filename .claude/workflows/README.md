@@ -48,7 +48,9 @@ yourself" costs more than a missed one. Watch `refutationRate` in the output: a
 very low rate usually means the verifiers are rubber-stamping, not that the
 audit was unusually good. Judging that means reading `refuted`, which carries
 every rejected candidate with the verifier's reasoning — a rate on its own is
-not evidence of anything.
+not evidence of anything. It is `null`, never `0%`, when no candidate reached
+verification: a rate over zero samples is undefined, and `0%` is precisely the
+value that would be misread.
 
 **Every confirmed finding carries `blocks`.** That field names the artifact
 which would stop the defect recurring — a specific failing test, a CI gate, a
