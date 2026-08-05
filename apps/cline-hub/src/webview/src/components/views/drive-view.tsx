@@ -18,6 +18,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CredentialOnboardingBanner } from "../../drive/CredentialOnboardingBanner";
+import {
+	type CredentialCatalogProvider,
+	isLlmProviderConfigured,
+	readCredentialOnboardingDismissed,
+	shouldShowCredentialOnboardingBanner,
+	writeCredentialOnboardingDismissed,
+} from "../../drive/credentialOnboarding";
 import type { DriveOpenCallRequest } from "../../drive/driveLaunch";
 import {
 	applyDriveRoomPreviewMessage,
@@ -271,16 +279,25 @@ function RoomPreviewCard({
 
 export function DriveView({
 	onOpenCall,
+	onOpenDemo,
 	onOpenHistory,
+	onOpenProviders,
 	onOpenStatus,
 }: {
 	onOpenCall: (request: DriveOpenCallRequest) => void;
+	onOpenDemo: () => void;
 	onOpenHistory: () => void;
+	onOpenProviders: () => void;
 	onOpenStatus: () => void;
 }) {
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
 	const [roomPreview, setRoomPreview] = useState<DriveRoomPreview | null>(null);
 	const [roomLookupError, setRoomLookupError] = useState<string | null>(null);
+	const [catalogReady, setCatalogReady] = useState(false);
+	const [configured, setConfigured] = useState(false);
+	const [dismissed, setDismissed] = useState(() =>
+		readCredentialOnboardingDismissed(),
+	);
 
 	const requestSummary = useCallback(() => {
 		postToHost({ type: "status_summary", requestId: "drive-summary" });
@@ -295,6 +312,7 @@ export function DriveView({
 	useEffect(() => {
 		requestSummary();
 		requestRoom();
+		postToHost({ type: "loadProviderCatalog" });
 	}, [requestRoom, requestSummary]);
 
 	useEffect(() => {
@@ -306,6 +324,28 @@ export function DriveView({
 					setSummary(message.summary);
 				} else if (message.type === "status_updated") {
 					requestSummary();
+				} else if (message.type === "provider_catalog") {
+					setCatalogReady(true);
+					setConfigured(
+						isLlmProviderConfigured(
+							message.providers as CredentialCatalogProvider[],
+						),
+					);
+				} else if (
+					message.type === "providers" &&
+					message.providers.length > 0
+				) {
+					setConfigured(true);
+				} else if (
+					message.type === "provider_settings_saved" &&
+					message.enabled
+				) {
+					setConfigured(true);
+				} else if (
+					message.type === "provider_oauth_login_done" &&
+					message.accessTokenPresent
+				) {
+					setConfigured(true);
 				}
 				const roomNotFound = isDriveRoomNotFoundMessage(message);
 				if (
@@ -366,6 +406,11 @@ export function DriveView({
 	}, [roomPreview, roomLookupError]);
 
 	const blocked = summary?.byState.blocked ?? 0;
+	const showCredentialBanner = shouldShowCredentialOnboardingBanner({
+		catalogReady,
+		configured,
+		dismissed,
+	});
 
 	return (
 		<PageFrame>
@@ -384,6 +429,17 @@ export function DriveView({
 				icon={DriveMarkIcon}
 				title="Drive"
 			/>
+
+			{showCredentialBanner ? (
+				<CredentialOnboardingBanner
+					onDismiss={() => {
+						writeCredentialOnboardingDismissed(true);
+						setDismissed(true);
+					}}
+					onOpenDemo={onOpenDemo}
+					onOpenProviders={onOpenProviders}
+				/>
+			) : null}
 
 			<RoomPreviewCard
 				lookupError={roomLookupError}

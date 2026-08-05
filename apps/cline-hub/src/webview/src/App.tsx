@@ -1531,6 +1531,23 @@ function App() {
 		setLocationSearch(window.location.search);
 	}, []);
 
+	const openDriveCredentialDemo = useCallback(() => {
+		setDriveLaunchRequest(null);
+		setSelectedSessionId(undefined);
+		setDriveShellMode("lobby");
+		const params = persistentRouteSearchParams();
+		params.set("demoShareScreen", "1");
+		const nextPath = drivePath({
+			mode: "lobby",
+			preserveSearch: params,
+		});
+		if (currentPathWithSearch() !== nextPath) {
+			window.history.pushState(null, "", nextPath);
+		}
+		setView("drive");
+		setLocationSearch(window.location.search);
+	}, []);
+
 	const openDriveCall = useCallback((request: DriveOpenCallRequest) => {
 		nextDriveLaunchRequestIdRef.current += 1;
 		setDriveLaunchRequest({
@@ -1681,7 +1698,9 @@ function App() {
 			return (
 				<DriveView
 					onOpenCall={openDriveCall}
+					onOpenDemo={openDriveCredentialDemo}
 					onOpenHistory={openDriveHistory}
+					onOpenProviders={() => navigate("models")}
 					onOpenStatus={() => navigate("status")}
 				/>
 			);
@@ -1849,6 +1868,7 @@ function App() {
 		openRoom,
 		openStatusSessionRoom,
 		openDriveHistory,
+		openDriveCredentialDemo,
 		roomsSource,
 		driveWorkspaceRoot,
 		statusSessionSource,

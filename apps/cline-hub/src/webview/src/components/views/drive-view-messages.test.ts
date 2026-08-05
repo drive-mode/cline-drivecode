@@ -70,6 +70,42 @@ describe("isDriveViewHostMessage", () => {
 		);
 	});
 
+	it("keeps provider credential payloads shallow", () => {
+		expect(
+			isDriveViewHostMessage({
+				type: "provider_catalog",
+				providers: [{ id: "anthropic", enabled: true }],
+			}),
+		).toBe(true);
+		expect(isDriveViewHostMessage({ type: "provider_catalog" })).toBe(false);
+		expect(
+			isDriveViewHostMessage({
+				type: "providers",
+				providers: [{ id: "anthropic", enabled: true }],
+			}),
+		).toBe(true);
+		expect(
+			isDriveViewHostMessage({
+				type: "provider_settings_saved",
+				providerId: "anthropic",
+				enabled: true,
+			}),
+		).toBe(true);
+		expect(
+			isDriveViewHostMessage({
+				type: "provider_oauth_login_done",
+				providerId: "cline",
+				accessTokenPresent: true,
+			}),
+		).toBe(true);
+		expect(
+			isDriveViewHostMessage({
+				type: "provider_settings_saved",
+				enabled: "yes",
+			}),
+		).toBe(false);
+	});
+
 	it("rejects unrelated message types", () => {
 		expect(isDriveViewHostMessage({ type: "hub_state" })).toBe(false);
 	});

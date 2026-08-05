@@ -50,7 +50,11 @@ in the gate rather than a nice-to-have.
 | B3 | Credential onboarding, dismissible | per [ADR-0021](../adr/ADR-0021-drive-credential-onboarding.md) | dismissing reaches the credential-free demo route |
 
 B2 and B3 are the same shape: a feature that is off with no in-product path to
-on is unfinished, not conservative.
+on is unfinished, not conservative. Delivery sequencing for B2/B3 under the
+ADLC factory outcome lives in
+[adlc-drive-factory](../initiatives/adlc-drive-factory/) (phases 2–3) and
+[ADR-0028](../adr/ADR-0028-adlc-control-plane.md). This file remains the
+defaults source of truth.
 
 ## Tranche C — the meter
 

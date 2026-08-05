@@ -12,4 +12,5 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [task-bank-drive-loop](task-bank-drive-loop/) | reference (partial) | [DRV-TASK-BANK](../features/DRV-TASK-BANK.md) |
 | [task-satisfaction-observability](task-satisfaction-observability/) | active | [DRV-CALL-SESSION](../features/DRV-CALL-SESSION.md), [DRV-TASK-METRICS](../features/DRV-TASK-METRICS.md), [DRV-PLAN-IMPROVE](../features/DRV-PLAN-IMPROVE.md) |
 | [session-satisfaction-moments](session-satisfaction-moments/) | active | [DRV-STUCK-RECOVERY](../features/DRV-STUCK-RECOVERY.md) … [visual plan](session-satisfaction-moments/visual-plan.md) |
+| [adlc-drive-factory](adlc-drive-factory/) | active (plan) | [ADR-0028](../adr/ADR-0028-adlc-control-plane.md) — ADLC control plane over existing Drive planes |
 | [share-screen-canvas](share-screen-canvas/) | reference | [DRV-SHARE](../features/DRV-SHARE.md), [DRV-STAGE](../features/DRV-STAGE.md) |
