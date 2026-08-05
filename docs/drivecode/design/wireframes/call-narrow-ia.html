@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drive · narrow call IA — collapsible vs sheet</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --well: #08080a;
+    --card: #0d0d10;
+    --panel: #101013;
+    --border: rgba(150, 99, 241, 0.28);
+    --text: #ffffff;
+    --muted: #9ca3af;
+    --dim: #6b7280;
+    --accent: #9f58fa;
+    --accent-text: #b98aff;
+    --live: #f59e0b;
+    --live-soft: rgba(245, 158, 11, 0.12);
+    --danger: #f53969;
+    --green: #2bcc28;
+    --radius: 9px;
+    --font: "Schibsted Grotesk", "DM Sans", system-ui, sans-serif;
+    --mono: "Space Grotesk", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 50% -10%, #1a1028 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: var(--font);
+  }
+  header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 12px;
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 1.35rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 6px 10px;
+    border: 0.8px solid var(--border);
+    border-radius: 999px;
+    background: rgba(159, 88, 250, 0.08);
+    color: var(--accent-text);
+    font-size: 0.75rem;
+    font-family: var(--mono);
+  }
+  .banner strong { color: var(--text); font-weight: 600; }
+  .toolbar {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .seg {
+    display: inline-flex;
+    border: 0.8px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] {
+    background: var(--accent);
+    color: #fff;
+  }
+  .hint {
+    color: var(--dim);
+    font-size: 0.78rem;
+  }
+  .stage {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 8px 24px 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .stage { grid-template-columns: 1fr; justify-items: center; }
+  }
+  .phone-wrap { width: min(360px, 100%); }
+  .label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .label h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .pill {
+    font-size: 0.68rem;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 0.8px solid var(--border);
+    color: var(--accent-text);
+  }
+  .pill.pref {
+    background: rgba(43, 204, 40, 0.12);
+    border-color: rgba(43, 204, 40, 0.45);
+    color: #7dff7a;
+  }
+  .phone {
+    position: relative;
+    height: 640px;
+    border: 0.8px solid rgba(255,255,255,0.12);
+    border-radius: 28px;
+    background: var(--well);
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  }
+  .phone::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 96px;
+    height: 18px;
+    border-radius: 999px;
+    background: #050505;
+    z-index: 5;
+  }
+  .notch-safe { height: 34px; }
+  .chrome {
+    display: flex;
+    height: calc(100% - 34px);
+    flex-direction: column;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 0.8px solid rgba(255,255,255,0.06);
+    background: rgba(10,10,10,0.92);
+  }
+  .topbar .mark {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), #5487c8);
+  }
+  .topbar .title { flex: 1; font-size: 0.82rem; font-weight: 600; }
+  .topbar .badge {
+    font-size: 0.65rem;
+    color: var(--live);
+    background: var(--live-soft);
+    border: 0.8px solid rgba(245,158,11,0.35);
+    border-radius: 999px;
+    padding: 2px 7px;
+  }
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  .spotlight {
+    flex: 1;
+    min-height: 0;
+    margin: 8px;
+    border-radius: var(--radius);
+    border: 0.8px solid rgba(245,158,11,0.28);
+    background:
+      linear-gradient(180deg, rgba(245,158,11,0.06), transparent 40%),
+      #050507;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .spotlight .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    font-size: 0.65rem;
+    color: var(--dim);
+    border-bottom: 0.8px solid rgba(255,255,255,0.05);
+  }
+  .spotlight .screen {
+    flex: 1;
+    margin: 8px;
+    border-radius: 6px;
+    background: #0b0c10;
+    border: 0.8px solid rgba(255,255,255,0.06);
+    padding: 10px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #d1d5db;
+  }
+  .spotlight .screen .code {
+    font-family: var(--mono);
+    color: #a7f3d0;
+    white-space: pre-wrap;
+  }
+  .spotlight .now {
+    padding: 6px 10px 8px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    border-top: 0.8px solid rgba(255,255,255,0.05);
+  }
+  .spotlight .now strong { color: var(--text); font-weight: 560; }
+  .rail-toggle {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    z-index: 3;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 0.8px solid var(--border);
+    background: rgba(13,13,16,0.92);
+    color: var(--accent-text);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .side {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 0;
+    overflow: hidden;
+    background: rgba(8,8,10,0.97);
+    border-left: 0.8px solid transparent;
+    transition: width 180ms ease, border-color 180ms ease;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone[data-open="1"] .side {
+    width: min(72%, 230px);
+    border-left-color: rgba(255,255,255,0.08);
+  }
+  .side .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 0.8px solid rgba(255,255,255,0.06);
+  }
+  .side .tabs button {
+    flex: 1;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--dim);
+    padding: 10px 6px;
+    font: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+  .side .tabs button[aria-selected="true"] {
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .side .pane {
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+  }
+  .member {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 6px;
+    border-radius: 8px;
+  }
+  .member:hover { background: rgba(255,255,255,0.04); }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 999px;
+    background: rgba(159,88,250,0.25);
+    border: 0.8px solid rgba(159,88,250,0.5);
+    display: grid; place-items: center;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-text);
+  }
+  .member .meta { min-width: 0; flex: 1; }
+  .member .name { font-size: 0.75rem; font-weight: 560; }
+  .member .task { font-size: 0.65rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 999px; background: var(--green);
+  }
+  .composer {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    border-top: 0.8px solid rgba(255,255,255,0.06);
+    background: var(--card);
+  }
+  .composer input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    border-radius: 8px;
+    border: 0.8px solid rgba(255,255,255,0.1);
+    background: var(--well);
+    color: var(--text);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 0.78rem;
+  }
+  .composer button {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
+    border-top: 0.8px solid rgba(245,158,11,0.28);
+    background: var(--live-soft);
+    overflow-x: auto;
+  }
+  .strip .btn {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border-radius: 10px;
+    border: 0.8px solid rgba(245,158,11,0.4);
+    background: rgba(13,13,16,0.85);
+    color: var(--text);
+    display: grid; place-items: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .strip .btn.danger {
+    border-color: rgba(245,57,105,0.45);
+    color: #ff7a9a;
+  }
+  .strip .leave {
+    margin-left: auto;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 0.8px solid rgba(245,57,105,0.45);
+    background: rgba(245,57,105,0.12);
+    color: #ff7a9a;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* Bottom sheet variant */
+  .sheet-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+    z-index: 4;
+  }
+  .phone[data-open="1"][data-ia="sheet"] .sheet-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 0;
+    background: var(--panel);
+    border-radius: 16px 16px 0 0;
+    border-top: 0.8px solid rgba(255,255,255,0.1);
+    z-index: 5;
+    overflow: hidden;
+    transition: height 180ms ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone[data-open="1"][data-ia="sheet"] .sheet {
+    height: 48%;
+  }
+  .sheet .grab {
+    width: 36px; height: 4px; border-radius: 999px;
+    background: rgba(255,255,255,0.2);
+    margin: 8px auto 4px;
+  }
+  .phone[data-ia="sheet"] .side { display: none; }
+  .phone[data-ia="collapse"] .sheet,
+  .phone[data-ia="collapse"] .sheet-scrim { display: none; }
+
+  .compare {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 56px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+  .card {
+    border: 0.8px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    background: rgba(13,13,16,0.7);
+    padding: 14px 16px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 0.9rem; }
+  .card ul { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.82rem; line-height: 1.55; }
+  .card.win { border-color: rgba(43,204,40,0.35); }
+  footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+    color: var(--dim);
+    font-size: 0.75rem;
+  }
+  footer a { color: var(--accent-text); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Narrow call IA · phone (~360×640)</h1>
+    <p>
+      Two ways to keep Spotlight dominant when roster / feed / settings need to appear.
+      Same call strip (44px targets). Preference locked toward <strong>collapsible rail</strong> —
+      columns fold beside the stage instead of covering it with a sheet.
+    </p>
+    <div class="banner">ux-quality phase 2 · open decision 2 · <strong>collapsible preferred</strong></div>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="IA variant">
+      <button type="button" id="btn-collapse" aria-pressed="true">1 · Collapsible</button>
+      <button type="button" id="btn-sheet" aria-pressed="false">2 · Bottom sheet</button>
+    </div>
+    <button type="button" class="seg" id="btn-toggle" style="padding:8px 14px;color:var(--text);cursor:pointer;background:var(--card);border:0.8px solid var(--border);border-radius:999px;font:inherit;font-size:0.82rem">
+      Toggle panel
+    </button>
+    <span class="hint">Keys: <kbd>1</kbd> collapsible · <kbd>2</kbd> sheet · <kbd>Space</kbd> open/close</span>
+  </div>
+
+  <div class="stage">
+    <!-- Collapsible phone -->
+    <div class="phone-wrap" id="wrap-collapse">
+      <div class="label">
+        <h2>Collapsible columns</h2>
+        <span class="pill pref">Preferred</span>
+      </div>
+      <div class="phone" data-ia="collapse" data-open="0" id="phone-collapse">
+        <div class="notch-safe"></div>
+        <div class="chrome">
+          <div class="topbar">
+            <div class="mark" aria-hidden="true"></div>
+            <div class="title">Drive · Pairing</div>
+            <span class="badge">Live</span>
+          </div>
+          <div class="body">
+            <button type="button" class="rail-toggle" data-toggle title="Open roster / feed">☰</button>
+            <div class="spotlight">
+              <div class="bar">
+                <span>Spotlight · Cline</span>
+                <span>working</span>
+              </div>
+              <div class="screen">
+                <div class="code">EDIT  auth.ts:88
+- if (!token) return
++ if (!token) throw new AuthError()</div>
+              </div>
+              <div class="now"><strong>NOW</strong> Fix auth guard · <span style="color:var(--dim)">NEXT</span> Run tests</div>
+            </div>
+            <aside class="side" aria-label="Collapsible rail">
+              <div class="tabs" role="tablist">
+                <button type="button" role="tab" aria-selected="true">Roster</button>
+                <button type="button" role="tab" aria-selected="false">Feed</button>
+              </div>
+              <div class="pane">
+                <div class="member"><span class="avatar">Y</span><div class="meta"><div class="name">You</div><div class="task">watching</div></div><span class="dot"></span></div>
+                <div class="member"><span class="avatar">C</span><div class="meta"><div class="name">Cline</div><div class="task">Editing auth.ts</div></div><span class="dot"></span></div>
+              </div>
+              <div class="composer">
+                <input aria-label="Message" placeholder="Steer everyone…" />
+                <button type="button">Send</button>
+              </div>
+            </aside>
+          </div>
+          <div class="strip" aria-label="Call strip">
+            <button type="button" class="btn" title="Mute">🎙</button>
+            <button type="button" class="btn" title="Deafen">🎧</button>
+            <button type="button" class="btn" title="Raise hand">✋</button>
+            <button type="button" class="btn" title="Settings">⚙</button>
+            <button type="button" class="leave">Leave</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet phone -->
+    <div class="phone-wrap" id="wrap-sheet">
+      <div class="label">
+        <h2>Bottom sheet</h2>
+        <span class="pill">Alt</span>
+      </div>
+      <div class="phone" data-ia="sheet" data-open="0" id="phone-sheet">
+        <div class="notch-safe"></div>
+        <div class="chrome">
+          <div class="topbar">
+            <div class="mark" aria-hidden="true"></div>
+            <div class="title">Drive · Pairing</div>
+            <span class="badge">Live</span>
+          </div>
+          <div class="body">
+            <button type="button" class="rail-toggle" data-toggle title="Open roster / feed">☰</button>
+            <div class="spotlight">
+              <div class="bar">
+                <span>Spotlight · Cline</span>
+                <span>working</span>
+              </div>
+              <div class="screen">
+                <div class="code">EDIT  auth.ts:88
+- if (!token) return
++ if (!token) throw new AuthError()</div>
+              </div>
+              <div class="now"><strong>NOW</strong> Fix auth guard · <span style="color:var(--dim)">NEXT</span> Run tests</div>
+            </div>
+            <div class="sheet-scrim" data-toggle></div>
+            <div class="sheet" role="dialog" aria-label="Roster and feed">
+              <div class="grab" aria-hidden="true"></div>
+              <div class="tabs" role="tablist" style="display:flex;border-bottom:0.8px solid rgba(255,255,255,0.06)">
+                <button type="button" style="flex:1;padding:10px;border:0;background:transparent;color:var(--text);font:inherit;font-size:0.72rem;box-shadow:inset 0 -2px 0 var(--accent)">Roster</button>
+                <button type="button" style="flex:1;padding:10px;border:0;background:transparent;color:var(--dim);font:inherit;font-size:0.72rem">Feed</button>
+              </div>
+              <div class="pane" style="padding:10px;overflow:auto;flex:1">
+                <div class="member"><span class="avatar">Y</span><div class="meta"><div class="name">You</div><div class="task">watching</div></div><span class="dot"></span></div>
+                <div class="member"><span class="avatar">C</span><div class="meta"><div class="name">Cline</div><div class="task">Editing auth.ts</div></div><span class="dot"></span></div>
+              </div>
+              <div class="composer">
+                <input aria-label="Message" placeholder="Steer everyone…" />
+                <button type="button">Send</button>
+              </div>
+            </div>
+          </div>
+          <div class="strip" aria-label="Call strip">
+            <button type="button" class="btn" title="Mute">🎙</button>
+            <button type="button" class="btn" title="Deafen">🎧</button>
+            <button type="button" class="btn" title="Raise hand">✋</button>
+            <button type="button" class="btn" title="Settings">⚙</button>
+            <button type="button" class="leave">Leave</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="card win">
+      <h3>Why collapsible wins here</h3>
+      <ul>
+        <li>Spotlight stays on-screen — you still see the edit while steering.</li>
+        <li>Matches desktop split (Spotlight | feed) — one mental model, width changes.</li>
+        <li>Strip stays put; no sheet fighting safe-area / Leave.</li>
+        <li>Reuses existing feed-collapse chrome already in <code>Chat.tsx</code>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>When a sheet would still help</h3>
+      <ul>
+        <li>Deep settings / pack picker that needs full width.</li>
+        <li>One-shot confirmations (end call, approval) — keep those as dialogs.</li>
+        <li>Not the default for roster/feed during an active watch loop.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    Throwaway wireframe for <a href="../../plans/cline-drivemode/initiatives/ux-quality/README.md">ux-quality</a> phase 2.
+    Brand from <a href="../brand/CLINE-BRAND-TOKENS.md">CLINE-BRAND-TOKENS</a>. Not product chrome.
+  </footer>
+
+<script>
+  const phones = {
+    collapse: document.getElementById("phone-collapse"),
+    sheet: document.getElementById("phone-sheet"),
+  };
+  let mode = "collapse";
+
+  function setMode(next) {
+    mode = next;
+    document.getElementById("btn-collapse").setAttribute("aria-pressed", String(next === "collapse"));
+    document.getElementById("btn-sheet").setAttribute("aria-pressed", String(next === "sheet"));
+    // Keep both phones in sync for open state when switching modes for demo focus
+    const open = phones[next].dataset.open;
+    phones.collapse.dataset.open = next === "collapse" ? open : phones.collapse.dataset.open;
+    phones.sheet.dataset.open = next === "sheet" ? open : phones.sheet.dataset.open;
+  }
+
+  function toggleActive() {
+    const phone = phones[mode];
+    phone.dataset.open = phone.dataset.open === "1" ? "0" : "1";
+  }
+
+  document.getElementById("btn-collapse").addEventListener("click", () => setMode("collapse"));
+  document.getElementById("btn-sheet").addEventListener("click", () => setMode("sheet"));
+  document.getElementById("btn-toggle").addEventListener("click", toggleActive);
+
+  document.querySelectorAll("[data-toggle]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      const phone = e.currentTarget.closest(".phone");
+      if (!phone) return;
+      phone.dataset.open = phone.dataset.open === "1" ? "0" : "1";
+      mode = phone.dataset.ia;
+      setMode(mode);
+    });
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target.matches("input, textarea, button")) return;
+    if (e.key === "1") setMode("collapse");
+    if (e.key === "2") setMode("sheet");
+    if (e.key === " ") {
+      e.preventDefault();
+      toggleActive();
+    }
+  });
+
+  // Start with preferred open so the difference is obvious
+  phones.collapse.dataset.open = "1";
+</script>
+</body>
+</html>

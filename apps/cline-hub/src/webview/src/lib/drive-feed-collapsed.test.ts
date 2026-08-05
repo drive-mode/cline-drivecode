@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	DRIVE_FEED_COLLAPSED_STORAGE_KEY,
 	parseDriveFeedCollapsedStorage,
+	prefersCollapsedFeedByDefault,
 	readDriveFeedCollapsed,
+	resolveFeedCollapsed,
 	writeDriveFeedCollapsed,
 } from "./drive-feed-collapsed";
 
@@ -43,9 +45,22 @@ describe("parseDriveFeedCollapsedStorage", () => {
 });
 
 describe("drive feed collapsed persistence", () => {
-	it("defaults to expanded for an unseen room", () => {
+	it("defaults to expanded for an unseen room on desktop reads", () => {
 		stubLocalStorage();
 		expect(readDriveFeedCollapsed("default")).toBe(false);
+	});
+
+	it("defaults to collapsed on narrow viewports when unset", () => {
+		stubLocalStorage();
+		expect(prefersCollapsedFeedByDefault(720)).toBe(true);
+		expect(prefersCollapsedFeedByDefault(721)).toBe(false);
+		expect(resolveFeedCollapsed("default", 360)).toBe(true);
+		expect(resolveFeedCollapsed("default", 1280)).toBe(false);
+	});
+
+	it("stored fold wins over the viewport default", () => {
+		stubLocalStorage(JSON.stringify({ default: false }));
+		expect(resolveFeedCollapsed("default", 360)).toBe(false);
 	});
 
 	it("round-trips the fold per room without disturbing the others", () => {

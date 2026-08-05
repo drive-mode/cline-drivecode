@@ -284,6 +284,8 @@ flowchart LR
 
 **Goal.** Remove silent fallbacks and dishonest chrome so later polish is trustworthy.
 
+**Status.** Core hang + bank degradation notice landed on main (#140, #143). Residual closed on the phase-0 implementation branch: `/agents` directory no longer substitutes an empty list for a hub timeout.
+
 **Changes.** Audit 3 s correlator fallbacks named in ADR-0024; fail visibly when hub/capabilities missing. Hide settings that no-op on web preview (22-default-posture Door B). Kill or relabel fabricated lists if any remain.
 
 **Gate.** On a no-hub open of `/drive` (non-demo), user sees an honest blocked state within one viewport, never an infinite "Checking…" or a fake populated room. `bun -F @cline/cline-hub test` green for touched modules.
@@ -299,6 +301,8 @@ flowchart LR
 ### Phase 2 · Responsive call shell (inherits drive-web §3)
 
 **Goal.** Usable join → watch → steer → leave at 360×640 portrait through ultrawide.
+
+**Status.** Collapsible rail **locked** ([call-narrow-ia.html](../../../../design/wireframes/call-narrow-ia.html)). Shipped: call-strip 44px + safe-area + `prefers-color-scheme`; phone defaults feed **collapsed**; open rail `min(230px, 72%)`; Spotlight toggle 44px + “roster and chat” label. Residual: Roster|Feed tabs inside the rail (stacked today), control-ui measure at 360×640.
 
 **Changes.** Touch targets, safe areas, no-hover paths, `prefers-color-scheme`. Redesign narrow IA as if phone were day-one (bottom sheet for roster/settings vs cramped rail), without a second codebase.
 
@@ -380,7 +384,7 @@ Split this README into `overview.md` + `phase-N-*.md` only when implementation s
 ## Open decisions (owner)
 
 1. **Accept 22-default-posture bets as shipping defaults?** Especially no spend cap, fork depth 1, task-complete earcon off. Research lists these as least-sure.
-2. **Narrow-width call IA.** Bottom sheet / tabs vs collapsible columns. Needs 2–3 throwaway prototypes before phase 2 commits.
+2. **Narrow-width call IA.** **Locked: collapsible columns/rail** (not bottom sheet as default). Wireframe: [call-narrow-ia.html](../../../../design/wireframes/call-narrow-ia.html). Sheet remains OK for deep settings / one-shot approvals.
 3. **Operator panel placement.** In-call drawer/overlay vs beside-call (21-operator-experience open question). Recommendation: drawer that does not compete with stage height.
 4. **Hosted preview honesty level.** Quiet persistent preview marker (recommended) vs stronger "not a live agent" chrome.
 5. **PWA.** Stay YAGNI until after phase 7, or force phase 8 into the committed roadmap?

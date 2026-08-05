@@ -10,93 +10,22 @@
  *    no Drive identity, and nothing here changes that.
  */
 
-import type { AgentRef, InkRef } from "@cline/shared";
-import { agentProfileId } from "@cline/shared";
 import { useEffect, useState } from "react";
 import { ClineMarkIcon } from "@/components/icons/cline-mark";
 import { Badge } from "@/components/ui/badge";
+import {
+	type DirectoryEntry,
+	loadDirectorySources,
+} from "./agentDirectoryLoad";
 import { resolveChannelInk, useDriveInkTheme } from "./agentInk";
 import { CLINE_BUILTIN_REF_ID } from "./agentMark";
 import { agentProfilePath } from "./agentProfileRoute";
-import { requestDriveAgentProfiles } from "./requestDriveAgentProfiles";
-import {
-	type DriveagentHomeListing,
-	requestDriveagentHomeList,
-} from "./requestDriveagentHome";
 
-type DirectoryEntry = {
-	profileId: string;
-	ref: AgentRef;
-	displayName: string;
-	description?: string;
-	tier?: "workspace" | "user";
-	skills?: string[];
-	nameInk: InkRef | null;
-};
-
-function titleCase(slug: string): string {
-	return slug
-		.split(/[-_]/g)
-		.filter(Boolean)
-		.map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-		.join(" ");
-}
-
-/**
- * Fold the two durable sources into one list.
- *
- * Homes come first because a home is the richer record; a durably-styled agent
- * with no home is still listed, since someone deliberately gave it a colour and
- * it would be strange for the page that stores that to pretend it does not
- * exist.
- */
-export function buildDirectoryEntries(
-	homes: readonly DriveagentHomeListing[],
-	profiles: readonly {
-		id: string;
-		ref: AgentRef;
-		displayName?: string;
-		nameInk: InkRef;
-	}[],
-): DirectoryEntry[] {
-	const byId = new Map<string, DirectoryEntry>();
-	for (const home of homes) {
-		const ref: AgentRef = { kind: "driveagent", slug: home.slug };
-		const id = agentProfileId(ref);
-		byId.set(id, {
-			profileId: id,
-			ref,
-			displayName: home.displayName?.trim() || titleCase(home.slug),
-			...(home.description ? { description: home.description } : {}),
-			tier: home.tier,
-			...(home.skills?.length ? { skills: home.skills } : {}),
-			nameInk: null,
-		});
-	}
-	for (const profile of profiles) {
-		const existing = byId.get(profile.id);
-		if (existing) {
-			existing.nameInk = profile.nameInk;
-			if (profile.displayName?.trim()) {
-				existing.displayName = profile.displayName.trim();
-			}
-			continue;
-		}
-		byId.set(profile.id, {
-			profileId: profile.id,
-			ref: profile.ref,
-			displayName:
-				profile.displayName?.trim() ||
-				titleCase(
-					profile.ref.kind === "driveagent" ? profile.ref.slug : profile.ref.id,
-				),
-			nameInk: profile.nameInk,
-		});
-	}
-	return [...byId.values()].sort((a, b) =>
-		a.displayName.localeCompare(b.displayName),
-	);
-}
+export {
+	buildDirectoryEntries,
+	loadDirectorySources,
+	type DirectoryEntry,
+} from "./agentDirectoryLoad";
 
 function AgentCard({ entry }: { entry: DirectoryEntry }) {
 	const theme = useDriveInkTheme();
@@ -164,23 +93,11 @@ export function AgentDirectory({ workspaceRoot }: { workspaceRoot?: string }) {
 		let cancelled = false;
 		setEntries(null);
 		setError(null);
-		void Promise.all([
-			requestDriveagentHomeList(root).catch(
-				() => [] as DriveagentHomeListing[],
-			),
-			requestDriveAgentProfiles(root).catch(() => []),
-		])
-			.then(([homes, profiles]) => {
-				if (!cancelled) {
-					setEntries(buildDirectoryEntries(homes, profiles));
-				}
-			})
-			.catch((cause: unknown) => {
-				if (!cancelled) {
-					setError(cause instanceof Error ? cause.message : String(cause));
-					setEntries([]);
-				}
-			});
+		void loadDirectorySources(root).then((result) => {
+			if (cancelled) return;
+			setError(result.error);
+			setEntries(result.entries);
+		});
 		return () => {
 			cancelled = true;
 		};
@@ -204,20 +121,35 @@ export function AgentDirectory({ workspaceRoot }: { workspaceRoot?: string }) {
 				</p>
 			) : entries === null ? (
 				<p className="text-xs text-muted-foreground">Loading agents…</p>
-			) : error ? (
-				<p className="text-xs text-destructive">{error}</p>
-			) : entries.length === 0 ? (
-				<p className="text-xs text-muted-foreground">
-					No Driveagent homes in this workspace. Add one at{" "}
-					<code className="font-mono">.driveagent/&lt;slug&gt;/agent.yaml</code>
-					.
-				</p>
 			) : (
-				<div className="grid gap-2 sm:grid-cols-2">
-					{entries.map((entry) => (
-						<AgentCard entry={entry} key={entry.profileId} />
-					))}
-				</div>
+				<>
+					{error ? (
+						<p className="text-xs text-destructive" role="status">
+							{error}
+						</p>
+					) : null}
+					{entries.length === 0 && !error ? (
+						<p className="text-xs text-muted-foreground">
+							No Driveagent homes in this workspace. Add one at{" "}
+							<code className="font-mono">
+								.driveagent/&lt;slug&gt;/agent.yaml
+							</code>
+							.
+						</p>
+					) : null}
+					{entries.length === 0 && error ? (
+						<p className="text-xs text-muted-foreground">
+							Could not load the agent directory from the hub.
+						</p>
+					) : null}
+					{entries.length > 0 ? (
+						<div className="grid gap-2 sm:grid-cols-2">
+							{entries.map((entry) => (
+								<AgentCard entry={entry} key={entry.profileId} />
+							))}
+						</div>
+					) : null}
+				</>
 			)}
 		</section>
 	);

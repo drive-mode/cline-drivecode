@@ -24,7 +24,7 @@ import {
 	shouldShowGatesActiveStrip,
 } from "@cline/shared";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
 import type {
@@ -132,7 +132,8 @@ import { shouldSpeakDriveTts } from "./drive/voice/driveVoiceUi";
 import { useDriveEarcons } from "./drive/voice/useDriveEarcons";
 import { clearVoiceCaptionAfterSend } from "./drive/voice/voiceCaptionState";
 import {
-	readDriveFeedCollapsed,
+	NARROW_CALL_MAX_WIDTH_PX,
+	resolveFeedCollapsed,
 	writeDriveFeedCollapsed,
 } from "./lib/drive-feed-collapsed";
 import { subscribeToHostMessages } from "./lib/host-message-gateway";
@@ -436,11 +437,24 @@ export default function Chat({
 		[drive, rosterParticipants, feedInkTheme],
 	);
 	const feedRoomKey = drive.roomId ?? DRIVE_DEFAULT_ROOM_ID;
+	const narrowCall = useSyncExternalStore(
+		(onChange) => {
+			const mq = window.matchMedia(`(max-width: ${NARROW_CALL_MAX_WIDTH_PX}px)`);
+			mq.addEventListener("change", onChange);
+			return () => mq.removeEventListener("change", onChange);
+		},
+		() => window.matchMedia(`(max-width: ${NARROW_CALL_MAX_WIDTH_PX}px)`).matches,
+		() => false,
+	);
 	const [feedCollapsed, setFeedCollapsed] = useState(false);
-	/** Fold state is webview-local and per room — rejoining restores the drawer. */
+	/** Fold state is webview-local and per room — rejoining restores the drawer.
+	 * Unset rooms collapse on phone so Spotlight owns first paint (collapsible IA). */
 	useEffect(() => {
-		setFeedCollapsed(readDriveFeedCollapsed(feedRoomKey));
-	}, [feedRoomKey]);
+		const width = narrowCall
+			? NARROW_CALL_MAX_WIDTH_PX
+			: NARROW_CALL_MAX_WIDTH_PX + 1;
+		setFeedCollapsed(resolveFeedCollapsed(feedRoomKey, width));
+	}, [feedRoomKey, narrowCall]);
 	const toggleFeedCollapsed = useCallback(() => {
 		const next = !feedCollapsed;
 		setFeedCollapsed(next);
@@ -2302,7 +2316,8 @@ export default function Chat({
 										"flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-l transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none",
 										feedCollapsed
 											? "w-0 border-l-0 opacity-0"
-											: "w-[340px] max-w-[45%]",
+											: // Desktop: fixed drawer. Phone: ~72%/230px rail so Spotlight stays visible (call-narrow-ia).
+												"w-[340px] max-w-[45%] max-[720px]:w-[min(230px,72%)] max-[720px]:max-w-none",
 									)
 								: "flex min-h-0 flex-1 flex-col"
 						}

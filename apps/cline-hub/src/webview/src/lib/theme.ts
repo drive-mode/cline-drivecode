@@ -9,11 +9,31 @@ export function readStoredHubTheme(): HubTheme | null {
 	return stored === "light" || stored === "dark" ? stored : null;
 }
 
+/**
+ * Resolve the ambient theme without touching the DOM — VS Code kind wins;
+ * otherwise honor `prefers-color-scheme` (browser / static preview).
+ */
+export function resolveSystemHubTheme(
+	vscodeThemeKind: string | undefined,
+	prefersDark: boolean,
+): HubTheme {
+	if (
+		vscodeThemeKind === "vscode-dark" ||
+		vscodeThemeKind === "vscode-high-contrast"
+	) {
+		return "dark";
+	}
+	if (vscodeThemeKind === "vscode-light") {
+		return "light";
+	}
+	return prefersDark ? "dark" : "light";
+}
+
 export function readSystemHubTheme(): HubTheme {
-	const kind = document.body.dataset.vscodeThemeKind;
-	return kind === "vscode-dark" || kind === "vscode-high-contrast"
-		? "dark"
-		: "light";
+	return resolveSystemHubTheme(
+		document.body.dataset.vscodeThemeKind,
+		window.matchMedia("(prefers-color-scheme: dark)").matches,
+	);
 }
 
 export function applyHubTheme(theme: HubTheme): HubTheme {

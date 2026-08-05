@@ -165,7 +165,11 @@ export function DriveHeaderControls({
 }
 
 /**
- * One 30px icon-only call control — the canvas `.strip-btn`.
+ * One icon-only call control — the canvas `.strip-btn`.
+ *
+ * Desktop stays at the canvas 30px density. At ≤720px (phone / narrow hub
+ * rail) bump to 44px so the strip meets the touch target floor without a
+ * second component tree (ux-quality phase 2).
  *
  * Icon-only chrome is only a win when it stays labelled, so the label is a
  * required prop and feeds both the tooltip and `aria-label`.
@@ -195,7 +199,7 @@ function StripButton({
 						aria-label={label}
 						aria-pressed={pressed}
 						className={cn(
-							"size-[30px] shrink-0 [&_svg]:size-[15px]",
+							"size-[30px] shrink-0 touch-manipulation max-[720px]:size-11 [&_svg]:size-[15px] max-[720px]:[&_svg]:size-[18px]",
 							tone === "live" &&
 								"border-amber-500/55 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:border-amber-400/55 dark:bg-amber-400/10 dark:text-amber-300",
 							tone === "danger" &&
@@ -309,7 +313,7 @@ function StripSharePin({
 							render={
 								<Button
 									aria-label={label}
-									className="size-[30px] shrink-0 [&_svg]:size-[15px]"
+									className="size-[30px] shrink-0 touch-manipulation max-[720px]:size-11 [&_svg]:size-[15px] max-[720px]:[&_svg]:size-[18px]"
 									data-testid="drive-strip-share-pin"
 									disabled={disabled}
 									size="icon-sm"
@@ -368,7 +372,7 @@ function DriveModePill({
 									aria-label={label}
 									// The outline variant repaints aria-expanded like a popover
 									// trigger; the pill keeps its amber skin while open.
-									className="h-[30px] shrink-0 rounded-full border-amber-500/45 bg-amber-500/15 px-3 text-xs font-semibold capitalize text-amber-700 aria-expanded:bg-amber-500/25 aria-expanded:text-amber-700 dark:border-amber-400/45 dark:bg-amber-400/15 dark:text-amber-300 dark:aria-expanded:text-amber-300"
+									className="h-[30px] shrink-0 touch-manipulation rounded-full border-amber-500/45 bg-amber-500/15 px-3 text-xs font-semibold capitalize text-amber-700 aria-expanded:bg-amber-500/25 aria-expanded:text-amber-700 max-[720px]:h-11 dark:border-amber-400/45 dark:bg-amber-400/15 dark:text-amber-300 dark:aria-expanded:text-amber-300"
 									disabled={disabled}
 									size="sm"
 									type="button"
@@ -508,7 +512,7 @@ export function DriveCallStrip({
 	];
 
 	return (
-		<div className="flex items-center gap-2 overflow-x-auto border-b border-amber-500/30 bg-amber-500/5 px-4 py-[7px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+		<div className="flex items-center gap-2 overflow-x-auto border-b border-amber-500/30 bg-amber-500/5 px-4 py-[7px] max-[720px]:gap-2.5 max-[720px]:px-3 max-[720px]:py-2 max-[720px]:pb-[max(0.5rem,env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 			<span className="sr-only" role="status">
 				{statusFacts.map((fact) => (
 					// Trailing stop so adjacent facts do not run together aloud.

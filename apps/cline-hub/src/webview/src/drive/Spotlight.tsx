@@ -594,7 +594,9 @@ export function Spotlight({
 }: SpotlightViewProps) {
 	const showHumanPrimary = Boolean(humanPin);
 	const suppressAgentCards = Boolean(humanPin) && humanSharing !== false;
-	const feedToggleLabel = feedCollapsed ? "Show chat feed" : "Hide chat feed";
+	const feedToggleLabel = feedCollapsed
+		? "Show roster and chat"
+		: "Hide roster and chat";
 	const staged = Boolean(artifact?.uri || artifact?.title);
 	const railEntries = projectShowRail(backlog, activeShowId);
 	const artifactKind = showHumanPrimary
@@ -638,7 +640,7 @@ export function Spotlight({
 											// The ghost variant styles aria-expanded like a popover
 											// trigger; here it only reports the drawer's fold state.
 											className={cn(
-												"shrink-0 aria-expanded:bg-transparent",
+												"shrink-0 touch-manipulation aria-expanded:bg-transparent max-[720px]:size-11",
 												feedCollapsed
 													? "text-amber-300"
 													: "text-zinc-400 hover:text-white aria-expanded:text-zinc-400",
@@ -651,9 +653,9 @@ export function Spotlight({
 									}
 								>
 									{feedCollapsed ? (
-										<PanelRightOpenIcon className="size-3.5" />
+										<PanelRightOpenIcon className="size-3.5 max-[720px]:size-[18px]" />
 									) : (
-										<PanelRightCloseIcon className="size-3.5" />
+										<PanelRightCloseIcon className="size-3.5 max-[720px]:size-[18px]" />
 									)}
 								</TooltipTrigger>
 								<TooltipContent side="bottom">{feedToggleLabel}</TooltipContent>

@@ -2,6 +2,9 @@ import { readStoredValue, writeStoredValue } from "./safe-storage";
 
 export const DRIVE_FEED_COLLAPSED_STORAGE_KEY = "cline.drive.feed-collapsed.v1";
 
+/** Matches hub `max-[720px]` shell — phone / narrow call IA. */
+export const NARROW_CALL_MAX_WIDTH_PX = 720;
+
 /** roomId → folded. Per room so folding one call does not fold the others. */
 export type DriveFeedCollapsedStorage = Record<string, boolean>;
 
@@ -33,8 +36,29 @@ function readStorage(): DriveFeedCollapsedStorage {
 	);
 }
 
+/** Narrow viewports start folded so Spotlight owns the first paint (collapsible IA). */
+export function prefersCollapsedFeedByDefault(viewportWidthPx: number): boolean {
+	return viewportWidthPx <= NARROW_CALL_MAX_WIDTH_PX;
+}
+
+/**
+ * Stored fold wins. Unset rooms default open on desktop and collapsed on phone
+ * so the collapsible rail does not steal the stage on first join.
+ */
+export function resolveFeedCollapsed(
+	roomId: string,
+	viewportWidthPx: number,
+): boolean {
+	const stored = readStorage()[roomId];
+	if (typeof stored === "boolean") {
+		return stored;
+	}
+	return prefersCollapsedFeedByDefault(viewportWidthPx);
+}
+
+/** Desktop-oriented read — unset rooms expand. Prefer {@link resolveFeedCollapsed} with a viewport. */
 export function readDriveFeedCollapsed(roomId: string): boolean {
-	return readStorage()[roomId] ?? false;
+	return resolveFeedCollapsed(roomId, Number.POSITIVE_INFINITY);
 }
 
 export function writeDriveFeedCollapsed(
