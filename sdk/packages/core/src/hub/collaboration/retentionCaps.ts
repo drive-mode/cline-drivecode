@@ -19,19 +19,36 @@ export type RetentionFacetValues = {
 	retentionBankMax?: number;
 };
 
+/**
+ * A retention cap is a record *count*, so only a positive integer is a usable
+ * one. The previous guard was `> 0` followed by `Math.floor`, which mapped
+ * every value in `(0, 1)` to `0` — and `trimJsonlFileToMaxRecords` treats `0`
+ * as "write an empty file". A `retentionRoomMax` of `0.5` therefore destroyed
+ * the entire room log on the very next append, silently and permanently.
+ *
+ * Anything that is not a usable count falls back to the default. Clamping to
+ * `1` would be the other option and is nearly as destructive — nobody who
+ * writes `0.5` means "keep one record", so the safe reading of an
+ * uninterpretable cap is that no cap was set.
+ */
+function resolveRecordCap(value: number | undefined, fallback: number): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		return fallback;
+	}
+	const floored = Math.floor(value);
+	return floored >= 1 ? floored : fallback;
+}
+
 export function resolveRoomEventLogMaxRecords(
 	facets: RetentionFacetValues = {},
 ): number {
 	if (facets.debugRetention) {
 		return DEBUG_ROOM_EVENT_LOG_MAX_RECORDS;
 	}
-	if (
-		typeof facets.retentionRoomMax === "number" &&
-		facets.retentionRoomMax > 0
-	) {
-		return Math.floor(facets.retentionRoomMax);
-	}
-	return DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS;
+	return resolveRecordCap(
+		facets.retentionRoomMax,
+		DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS,
+	);
 }
 
 export function resolveBankEventLogMaxRecords(
@@ -40,13 +57,10 @@ export function resolveBankEventLogMaxRecords(
 	if (facets.debugRetention) {
 		return DEBUG_BANK_EVENT_LOG_MAX_RECORDS;
 	}
-	if (
-		typeof facets.retentionBankMax === "number" &&
-		facets.retentionBankMax > 0
-	) {
-		return Math.floor(facets.retentionBankMax);
-	}
-	return DEFAULT_BANK_EVENT_LOG_MAX_RECORDS;
+	return resolveRecordCap(
+		facets.retentionBankMax,
+		DEFAULT_BANK_EVENT_LOG_MAX_RECORDS,
+	);
 }
 
 /**

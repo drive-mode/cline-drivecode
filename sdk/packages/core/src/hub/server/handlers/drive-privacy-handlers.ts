@@ -27,12 +27,23 @@ function readOptionalBoolean(
 	return typeof value === "boolean" ? value : undefined;
 }
 
-function readOptionalPositiveNumber(
+/**
+ * Both retention facets are record counts, so a fractional value is not a
+ * small cap — it is not a cap. Accepting `0.5` here is what let it reach
+ * `Math.floor` downstream and resolve to `0`, which means "empty the log".
+ * Rejecting non-integers at the wire keeps the destructive value from being
+ * expressible at all; `resolveRecordCap` is the second line, not the first.
+ *
+ * An unusable value is dropped rather than erroring, matching how every other
+ * field here treats the wrong type. The caller is not left guessing: the
+ * `ok` reply echoes the facets that were actually applied.
+ */
+function readOptionalPositiveInteger(
 	payload: Record<string, unknown> | undefined,
 	key: string,
 ): number | undefined {
 	const value = payload?.[key];
-	return typeof value === "number" && Number.isFinite(value) && value > 0
+	return typeof value === "number" && Number.isInteger(value) && value >= 1
 		? value
 		: undefined;
 }
@@ -58,11 +69,11 @@ export function handleDrivePrivacyCommand(
 				envelope.payload,
 				"debugRetention",
 			);
-			const retentionRoomMax = readOptionalPositiveNumber(
+			const retentionRoomMax = readOptionalPositiveInteger(
 				envelope.payload,
 				"retentionRoomMax",
 			);
-			const retentionBankMax = readOptionalPositiveNumber(
+			const retentionBankMax = readOptionalPositiveInteger(
 				envelope.payload,
 				"retentionBankMax",
 			);
