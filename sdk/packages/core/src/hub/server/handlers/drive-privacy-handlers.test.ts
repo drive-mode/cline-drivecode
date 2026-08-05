@@ -126,4 +126,59 @@ describe("handleDrivePrivacyCommand", () => {
 			retentionBankMax: 20,
 		});
 	});
+
+	// A record count that accepts 0.5 floors to 0 downstream, and a cap of 0
+	// means "write an empty file" — so an unusable cap must not be storable.
+	it.each([
+		["fractional below one", 0.5],
+		["fractional above one", 10.5],
+		["zero", 0],
+		["negative", -5],
+		["NaN", Number.NaN],
+		["Infinity", Number.POSITIVE_INFINITY],
+	])("drops a %s retention cap rather than storing it", (_label, value) => {
+		const reply = handleDrivePrivacyCommand(
+			ctx(),
+			command("drive_privacy_put", {
+				workspaceRoot: "/ws/frac",
+				retentionRoomMax: value,
+				retentionBankMax: value,
+			}),
+		);
+		expect(reply.ok).toBe(true);
+		expect(getLiveRetentionFacets("/ws/frac")).toEqual({});
+	});
+
+	it("does not clobber a previously valid cap with an unusable one", () => {
+		handleDrivePrivacyCommand(
+			ctx(),
+			command("drive_privacy_put", {
+				workspaceRoot: "/ws/keep",
+				retentionRoomMax: 500,
+			}),
+		);
+		handleDrivePrivacyCommand(
+			ctx(),
+			command("drive_privacy_put", {
+				workspaceRoot: "/ws/keep",
+				retentionRoomMax: 0.5,
+			}),
+		);
+		expect(getLiveRetentionFacets("/ws/keep")).toEqual({
+			retentionRoomMax: 500,
+		});
+	});
+
+	it("echoes the applied facets so a dropped value is visible to the caller", () => {
+		const reply = handleDrivePrivacyCommand(
+			ctx(),
+			command("drive_privacy_put", {
+				workspaceRoot: "/ws/echo",
+				retentionRoomMax: 0.5,
+				retentionBankMax: 64,
+			}),
+		);
+		expect(reply.ok).toBe(true);
+		expect(reply.payload?.facets).toEqual({ retentionBankMax: 64 });
+	});
 });
