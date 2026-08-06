@@ -66,7 +66,7 @@ voice default, freemium) stay in the mobile-consumer README.
 7. **Honesty chrome stays visible** on credential-free opens (`Preview` /
    demo chip) — styling must not hide it for “polish.”
 
-## Soft depth exception (documented)
+## Soft depth + liquid glass (documented)
 
 Brand tokens say avoid heavy shadows. Phone consumer UI still needs **one
 plane of soft elevation** so white cards separate from `#F8FAFB` and the glass
@@ -76,7 +76,21 @@ tab bar reads as iOS chrome:
 |---|---|
 | `shadow-sm` / `shadow-md` as in iOS wireframe on light cards & tab bar | Multi-layer glow stacks, neon violet blooms on every control |
 | Single violet CTA glow on the **one** hero action | Purple wash behind every list row |
+| Liquid glass on **tab bar + call hold strip only**: `backdrop-filter: blur(28px) saturate(1.4)`, hairline, single specular inset | Glass on every card / list row |
 | Dark mode: prefer hairline + surface step; minimal shadow | Copying light-mode soft shadows 1:1 onto `#0A0A0A` |
+
+## Live call plane (2026 lock)
+
+The call surface is **not** a chat stack with a small stage card.
+
+| Layer | Rule |
+|---|---|
+| **Spotlight** | Full-bleed agent share / diff — fills the phone between thin top chrome and hold strip |
+| **Captions / activity** | Overlay on Spotlight (sticky captions + dead-air activity line) |
+| **Presence** | Compact avatar chips; roster rail stays collapsed by default |
+| **Hold strip** | Liquid-glass floating strip; Hold is the only violet verb (52px) |
+
+Visual SoT: [`mobile-drive-ios.html`](../wireframes/mobile-drive-ios.html) Live call phone.
 
 ## Consumer token sheet (alias Hub)
 
@@ -126,10 +140,10 @@ ladder; pick by elevation, don’t invent new greys.
 
 | Surface | Light read | Motion |
 |---|---|---|
-| **Open / splash** | Brand tile (official mark) + one headline + one CTA | Location settle (opacity/scale); then idle |
-| **Home** | Large title, one Live card, short Recent | No spinner in nav; Live pill uses green |
-| **Live call** | Spotlight fills; 44px strip + safe-area; hold 52px | Event `loading` only for hydrate/join; waveform ≠ mark spin |
-| **Approval sheet** | Bottom sheet; Deny muted / Allow violet | Location sheet enter; no page spinner |
+| **Open / splash** | Brand tile (official mark) + **Drive** wordmark + one headline + one primary verb (`Watch a live call`); Preview chip visible | Location settle (opacity/scale); then idle peek |
+| **Home** | Large title, one Live card (green pulse), short Recent | No spinner in nav; Live pill uses brand green |
+| **Live call** | Full-bleed Spotlight; captions + activity overlay; presence chips; glass hold strip | Event `loading` only for hydrate/join; waveform ≠ mark spin |
+| **Approval sheet** | Bottom sheet; Deny muted / Allow violet gradient | Location sheet enter; no page spinner |
 | **Settings** | iOS grouped lists; Advanced collapses hub power | Idle mark; never animate settings chrome |
 | **PWA install** | Same Open tokens; honest preview if demo | Location settle |
 
@@ -147,14 +161,14 @@ Not styling blockers: ADR-0016 hosted path, freemium — keep out of the token s
 
 ## Implementation checklist
 
+- [x] Elevate `mobile-drive-ios.html` to full-bleed Spotlight + liquid glass (visual SoT)
+- [x] Sync `mobile-drive-ios-demo.html` call / open to the same language
 - [ ] Retheme `mobile-drive-app.html` + `mobile-drive-surfaces.html` to the
       token sheet (light default + dark peer; green Live; official mark)
-- [ ] Keep `mobile-drive-ios.html` as the visual reference; prune any
-      non-token one-offs during MC1
 - [ ] MC1 composition root consumes Hub CSS variables — no parallel
       `mobile-tokens.css` package
 - [ ] Replace amber Live in any remaining docs/screenshots
-- [ ] Capture refreshed app/surfaces screenshots after retheme
+- [ ] Capture refreshed iOS + demo screenshots after this pass
 - [ ] Confirm AA on `--ink-35` / `--dim` captions (ux-quality phase 5)
 
 ## Relationship

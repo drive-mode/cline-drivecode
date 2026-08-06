@@ -242,6 +242,14 @@
     margin: 28px 0 22px;
   }
   .orb svg { width: 52px; height: 52px; }
+  .open .brand-word {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+  }
   .open h2 {
     margin: 0;
     font-size: 34px;
@@ -270,7 +278,7 @@
     cursor: pointer;
   }
   .btn-primary {
-    background: var(--violet);
+    background: linear-gradient(135deg, #B98AFF 0%, var(--violet) 48%, #7B3FE0 100%);
     color: #fff;
     box-shadow: var(--shadow-violet);
   }
@@ -329,7 +337,7 @@
     color: var(--ink-35);
   }
   .hero-card {
-    background: linear-gradient(145deg, var(--violet) 0%, #7B3FE0 100%);
+    background: linear-gradient(145deg, #B98AFF 0%, var(--violet) 42%, #6E35D4 100%);
     color: #fff;
     border-radius: 22px;
     padding: 18px;
@@ -341,14 +349,18 @@
     gap: 6px;
     font-size: 12px;
     font-weight: 700;
-    background: rgba(255,255,255,0.18);
-    border-radius: 999px;
-    padding: 4px 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .hero-card .live i {
     width: 7px; height: 7px; border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(255,255,255,0.25);
+    background: var(--live);
+    box-shadow: 0 0 0 3px rgba(43, 204, 40, 0.35);
+    animation: live-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
   .hero-card h3 { margin: 12px 0 4px; font-size: 22px; letter-spacing: -0.03em; }
   .hero-card p { margin: 0; opacity: 0.85; font-size: 13px; }
@@ -411,11 +423,13 @@
   .tabbar {
     position: absolute;
     left: 16px; right: 16px; bottom: 18px;
-    height: 64px;
+    height: 58px;
     border-radius: 22px;
     background: var(--tab-bg);
-    backdrop-filter: blur(16px);
-    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 0.8px solid rgba(255,255,255,0.55);
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.4);
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     padding: 8px;
@@ -441,18 +455,115 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 4px 4px 12px;
+    padding: 4px 4px 10px;
   }
-  .call-top .back, .nav-bar .back-link {
+  .call-top .back {
+    width: 34px; height: 34px; border-radius: 12px;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,0.1);
+    border: 0.8px solid rgba(255,255,255,0.14);
+    cursor: pointer;
+    font-size: 18px;
+    color: #fff;
+  }
+  .nav-bar .back-link {
     width: 36px; height: 36px; border-radius: 12px;
     display: grid; place-items: center;
     background: var(--control);
     cursor: pointer;
     font-size: 20px;
+    color: var(--violet);
   }
-  .call-top .title { text-align: center; }
-  .call-top strong { display: block; font-size: 15px; }
-  .call-top span { color: var(--live); font-size: 12px; font-weight: 650; }
+  .call-top .title { text-align: center; color: #fff; }
+  .call-top strong { display: block; font-size: 14px; }
+  .call-top span { color: var(--live); font-size: 11px; font-weight: 650; }
+  .view[data-view="call"],
+  .view[data-view="thinking"] {
+    background: var(--stage);
+  }
+  .screen:has(.view.on[data-view="call"]) .status,
+  .screen:has(.view.on[data-view="thinking"]) .status,
+  .screen:has(.view.on[data-view="call"]) .status .icons,
+  .screen:has(.view.on[data-view="thinking"]) .status .icons {
+    color: #fff;
+  }
+  .presence {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 0 8px;
+  }
+  .presence span {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700;
+    border: 2px solid var(--stage);
+  }
+  .presence span.a { background: #EDE4FF; color: var(--violet-deep); }
+  .presence span.b { background: #DFF0FF; color: #2a6a9a; }
+  .presence span.c { background: #FFE8D4; color: #9a5a20; }
+  .presence span.on { box-shadow: 0 0 0 2px var(--violet); }
+  .spotlight-fill {
+    flex: 1;
+    min-height: 0;
+    margin: 0 2px 8px;
+    border-radius: 22px;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(159, 88, 250, 0.22), transparent 55%),
+      linear-gradient(180deg, #12131A 0%, #0A0A0A 100%);
+    border: 0.8px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .spotlight-fill .code-pane {
+    flex: 1;
+    padding: 16px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.72);
+  }
+  .spotlight-fill .path {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 10px;
+  }
+  .spotlight-fill .add { color: #4ADE80; }
+  .spotlight-fill .del { color: #ff8aa8; }
+  .spotlight-fill .mute { color: rgba(255,255,255,0.35); }
+  .spotlight-fill .activity {
+    margin: 0 12px 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 0.8px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .spotlight-fill .activity .meta strong {
+    display: block;
+    font-size: 12px;
+    color: #fff;
+  }
+  .spotlight-fill .activity .meta span {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+  }
+  .captions {
+    margin: 0 12px 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.45);
+    border: 0.8px solid rgba(255,255,255,0.08);
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+  }
+  .captions em { font-style: normal; color: var(--violet-soft); font-weight: 700; }
   .stage-card {
     background: var(--stage);
     color: #fff;
@@ -483,105 +594,77 @@
     display: flex;
     align-items: end;
     justify-content: center;
-    gap: 5px;
-    height: 42px;
-    margin-top: 8px;
+    gap: 4px;
+    height: 22px;
   }
   .waveform i {
-    width: 5px;
+    width: 3px;
     border-radius: 999px;
     background: var(--violet-soft);
     animation: wave 1s ease-in-out infinite;
   }
-  .waveform i:nth-child(1) { height: 12px; animation-delay: 0s; }
-  .waveform i:nth-child(2) { height: 24px; animation-delay: .1s; }
-  .waveform i:nth-child(3) { height: 34px; animation-delay: .2s; }
-  .waveform i:nth-child(4) { height: 18px; animation-delay: .3s; }
-  .waveform i:nth-child(5) { height: 28px; animation-delay: .15s; }
-  .waveform i:nth-child(6) { height: 14px; animation-delay: .25s; }
-  .waveform i:nth-child(7) { height: 22px; animation-delay: .05s; }
+  .waveform i:nth-child(1) { height: 8px; animation-delay: 0s; }
+  .waveform i:nth-child(2) { height: 14px; animation-delay: .1s; }
+  .waveform i:nth-child(3) { height: 20px; animation-delay: .2s; }
+  .waveform i:nth-child(4) { height: 12px; animation-delay: .3s; }
+  .waveform i:nth-child(5) { height: 18px; animation-delay: .15s; }
+  .waveform i:nth-child(6) { height: 10px; animation-delay: .25s; }
+  .waveform i:nth-child(7) { height: 16px; animation-delay: .05s; }
   @keyframes wave {
     0%,100% { transform: scaleY(0.55); opacity: 0.6; }
     50% { transform: scaleY(1); opacity: 1; }
   }
   .who { text-align: center; margin: 10px 0 14px; color: var(--ink-55); font-size: 13px; }
   .who em { color: var(--ink); font-style: normal; font-weight: 700; }
-  .roster {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .person {
-    background: var(--surface);
-    border-radius: 16px;
-    padding: 12px 8px;
-    text-align: center;
-    box-shadow: var(--shadow-sm);
-  }
-  .person.speaking { outline: 2px solid var(--violet); }
-  .person .av {
-    width: 36px; height: 36px; border-radius: 50%;
-    margin: 0 auto 8px;
-    display: grid; place-items: center;
-    font-weight: 800; font-size: 13px;
-  }
-  .person .av.a { background: rgba(159,88,250,0.15); color: var(--violet); }
-  .person .av.b { background: rgba(84,135,200,0.15); color: #5487C8; }
-  .person .av.c { background: rgba(245,57,105,0.12); color: var(--danger); }
-  .person strong { display: block; font-size: 12px; }
-  .person span { color: var(--ink-35); font-size: 11px; }
-  .feed { display: grid; gap: 8px; margin-bottom: 88px; }
-  .bubble {
-    max-width: 88%;
-    padding: 10px 12px;
-    border-radius: 16px;
-    font-size: 14px;
-    line-height: 1.35;
-    background: var(--chat-bubble);
-    box-shadow: var(--shadow-sm);
-  }
-  .bubble.them { justify-self: start; }
-  .bubble.me {
-    justify-self: end;
-    background: var(--violet);
-    color: #fff;
-  }
-  .bubble.agent {
-    justify-self: start;
-    background: var(--chat-agent);
-  }
-  .bubble .from {
-    font-size: 11px;
-    font-weight: 750;
-    color: var(--violet);
-    margin-bottom: 2px;
+  .scroll.call {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-bottom: 88px !important;
   }
   .controls {
     position: absolute;
-    left: 16px; right: 16px; bottom: 18px;
-    display: grid;
-    grid-template-columns: 1fr 1.35fr 1fr;
-    gap: 10px;
+    left: 14px; right: 14px; bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 22px;
+    background: rgba(18, 19, 26, 0.72);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 0.8px solid rgba(255,255,255,0.12);
+    box-shadow: var(--shadow-md);
   }
   .ctrl {
-    min-height: 52px;
-    border-radius: 18px;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
     display: grid;
     place-items: center;
     font-weight: 750;
-    background: var(--control);
-    color: var(--ink);
+    font-size: 11px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.9);
     cursor: pointer;
+    border: 0.8px solid rgba(255,255,255,0.1);
   }
   .ctrl.mic {
-    background: var(--violet);
+    width: 72px;
+    height: 52px;
+    background: linear-gradient(135deg, #B98AFF 0%, var(--violet) 50%, #7B3FE0 100%);
     color: #fff;
     box-shadow: var(--shadow-violet);
-    min-height: 56px;
+    border: 0;
+    font-size: 12px;
   }
   .ctrl.mic.holding { transform: scale(0.97); filter: brightness(1.08); }
-  .ctrl.end { color: var(--danger); }
+  .ctrl.end {
+    background: rgba(245, 57, 105, 0.18);
+    color: #ff8aa8;
+    border-color: rgba(245, 57, 105, 0.35);
+  }
   .sheet-screen { flex: 1; position: relative; }
   .sheet-screen .dim {
     position: absolute; inset: 0;
@@ -689,6 +772,23 @@
     font-size: 13px;
   }
   .loading-row svg { width: 18px; height: 18px; color: var(--ink); }
+  /* Dark stage plane (call + hydrate): light theme --ink-* is near-black — force light ink */
+  .view[data-view="call"] .who,
+  .view[data-view="thinking"] .who {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .view[data-view="call"] .who em,
+  .view[data-view="thinking"] .who em {
+    color: #fff;
+  }
+  .view[data-view="call"] .loading-row,
+  .view[data-view="thinking"] .loading-row {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .view[data-view="call"] .loading-row svg,
+  .view[data-view="thinking"] .loading-row svg {
+    color: #fff;
+  }
   .dm-wheel, .dm-head { transform-box: fill-box; transform-origin: center; }
   .is-loading .dm-wheel { animation: dm-spin 1.15s linear infinite; }
   .is-peek .dm-head { animation: dm-peek 2.4s ease-in-out infinite; }
@@ -798,11 +898,12 @@
             <div class="orb is-peek" aria-hidden="true">
               <svg viewBox="0 0 24 24"><use href="#drive-mark"/></svg>
             </div>
+            <div class="brand-word">Drive</div>
             <h2>Talk to your<br><span class="accent">codebase</span></h2>
-            <p class="sub">Join a Drive call. Agents work while you speak — approvals stay in your hands.</p>
+            <p class="sub">Watch agents ship while you steer — hold to talk, approve every edit.</p>
             <div class="cta">
-              <button type="button" class="btn btn-primary" data-go="home">Continue with Apple</button>
-              <button type="button" class="btn btn-secondary" data-go="home">Continue with Google</button>
+              <button type="button" class="btn btn-primary" data-go="call">Watch a live call</button>
+              <button type="button" class="btn btn-secondary" data-go="home">Continue with Apple</button>
               <button type="button" class="btn btn-ghost" data-go="home">I have an invite link</button>
             </div>
             <div class="trust"><span>On device</span><span>You approve</span></div>
@@ -890,27 +991,33 @@
               </div>
               <span class="preview">Preview</span>
             </div>
-            <div class="stage-card">
-              <div class="eyebrow">Spotlight · Coder · edit</div>
-              <pre><span class="del">- if (!user) return null</span>
-<span class="add">+ if (!user) throw new AuthError()</span>
-<span class="add">+ return sessionFrom(user)</span></pre>
-              <div class="waveform" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="presence">
+              <span class="a on">M</span>
+              <span class="b">A</span>
+              <span class="c">◈</span>
             </div>
-            <div class="who"><em>Maya</em> is speaking</div>
-            <div class="roster">
-              <div class="person speaking"><div class="av a">M</div><strong>Maya</strong><span>You</span></div>
-              <div class="person"><div class="av b">A</div><strong>Alex</strong><span>Muted</span></div>
-              <div class="person"><div class="av c">◈</div><strong>Coder</strong><span>Agent</span></div>
-            </div>
-            <div class="feed">
-              <div class="bubble them">Can we gate the JWT refresh?</div>
-              <div class="bubble agent"><div class="from">Coder</div>Drafted middleware — needs your OK.</div>
-              <div class="bubble me">Show me the diff</div>
+            <div class="spotlight-fill">
+              <div class="code-pane">
+                <div class="path">auth.ts · Coder editing</div>
+                <div class="mute">export async function middleware(req) {</div>
+                <div class="del">- if (!user) return null</div>
+                <div class="add">+ const token = await verifyJwt(req)</div>
+                <div class="add">+ if (!token) return unauthorized()</div>
+                <div class="mute">  return next()</div>
+                <div class="mute">}</div>
+              </div>
+              <div class="activity">
+                <div class="waveform" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="meta">
+                  <strong>Maya is speaking</strong>
+                  <span>Drafting requireAuth · waiting for you</span>
+                </div>
+              </div>
+              <div class="captions"><em>Maya</em> — Gate JWT refresh before we merge.</div>
             </div>
           </div>
           <div class="controls">
-            <div class="ctrl" data-go="home">Chat</div>
+            <div class="ctrl" data-go="home">✋</div>
             <div class="ctrl mic" id="hold">Hold</div>
             <div class="ctrl end" data-go="approve">Leave</div>
           </div>
@@ -1020,7 +1127,7 @@
     <div class="progress" aria-hidden="true"><i id="progress"></i></div>
     <button type="button" class="beat" data-beat="open" aria-current="true">
       <strong>1 · Open</strong>
-      <span>Brand tile · Preview honesty · SSO CTAs</span>
+      <span>Brand hero · Preview · Watch live</span>
     </button>
     <button type="button" class="beat" data-beat="home">
       <strong>2 · Home</strong>
@@ -1032,7 +1139,7 @@
     </button>
     <button type="button" class="beat" data-beat="call">
       <strong>4 · Live call</strong>
-      <span>Spotlight · roster · hold-to-talk</span>
+      <span>Full-bleed Spotlight · captions · Hold</span>
     </button>
     <button type="button" class="beat" data-beat="thinking">
       <strong>5 · Hydrate / think</strong>

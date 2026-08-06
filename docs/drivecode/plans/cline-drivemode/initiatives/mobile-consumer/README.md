@@ -83,9 +83,9 @@ never surfaces hub Door-B settings that no-op.
 
 Wireframe: [mobile-drive-app.html](../../../../design/wireframes/mobile-drive-app.html) (first-open beats).  
 **Full surface map:** [mobile-drive-surfaces.html](../../../../design/wireframes/mobile-drive-surfaces.html) — every consumer + advanced page, portrait & landscape, three phone sizes.  
-**Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — light-first brand surfaces (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).  
+**Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — **2026 frontier shell**: full-bleed Spotlight, liquid-glass chrome, light-first brand (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).  
 **Presenter demo:** [mobile-drive-ios-demo.html](../../../../design/wireframes/mobile-drive-ios-demo.html) — single-phone autoplay / click-through of the full consumer loop.  
-**Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; retire amber Live; iOS wireframe is visual SoT.  
+**Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; liquid glass + Spotlight plane locks; retire amber Live; iOS wireframe is visual SoT.  
 **Capability / UX gaps → fill plan:** [GAPS.md](GAPS.md) — demo vs inventory vs product; voice / interrupt / PWA / hosted packs.  
 **Features users want:** [FEATURES.md](FEATURES.md) — jobs (glance / decide / speak / join / return); Tier 1–4 priority; interaction architecture.  
 **Phone-only power users:** [POWER-USERS.md](POWER-USERS.md) — operator cockpit on phone (task lines, spend, stop-one, Live stack); progressive power sheet.  
