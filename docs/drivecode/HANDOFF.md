@@ -70,6 +70,8 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
 - `docs/drivecode/plans/cline-drivemode/adr/` records the decisions for Driveagent home, canonical graph data, recruit, RosterPack, gated learning, and agent runtime (see status board + **Impl** column).
 - `docs/drivecode/plans/cline-drivemode/initiatives/driveplan-agent-runtime/` ships [ADR-0018](plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md) slices (`DriveRun` / lease / receipt; Kanban projection stub). Parallel to phased TASK-GRAPH UX — does not replace Phase 1–3 gates.
 - `docs/drivecode/plans/cline-drivemode/examples/driveagent-pair-partner/` is the concrete agent-home and graph fixture.
+- `docs/drivecode/plans/cline-drivemode/initiatives/mobile-consumer/` phone-first consumer shell (PWA + wireframes).
+- `docs/drivecode/plans/cline-drivemode/initiatives/multi-device/` cross-device feature list + backlog; skill `multi-device-backlog`. Native SwiftUI client: [`apps/drive-ios`](../../apps/drive-ios/).
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
 - `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the end-to-end systems analysis (context, interfaces, NFRs, as-is/to-be, delivery slices) — **§13.0 is current as-is**.
 

@@ -16,3 +16,4 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [share-screen-canvas](share-screen-canvas/) | reference | [DRV-SHARE](../features/DRV-SHARE.md), [DRV-STAGE](../features/DRV-STAGE.md) |
 | [ux-quality](ux-quality/) | active (plan) | Web + mobile UX backlog over [drive-web](drive-web/), [hosted-preview](hosted-preview/), [00-vision](../foundation/00-vision.md) |
 | [mobile-consumer](mobile-consumer/) | active (plan) | Phone-first Drive app for less-technical users — PWA before native; hosted ADR fork explicit |
+| [multi-device](multi-device/) | active | Cross-device feature list + backlog (hub / PWA / iOS / TUI); skill `multi-device-backlog` |

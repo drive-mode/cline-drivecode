@@ -1,0 +1,8 @@
+# Xcode / Swift local artifacts
+DerivedData/
+**/xcuserdata/
+**/*.xcuserstate
+**/xcshareddata/WorkspaceSettings.xcsettings
+.build/
+*.ipa
+*.dSYM.zip

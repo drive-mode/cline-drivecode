@@ -1,0 +1,327 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B890BD40065C4F71826EB186 /* DriveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F890BD40065C4F71826EB186 /* DriveApp.swift */; };
+		BE8A5C7636BB4819B14F51EB /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E8A5C7636BB4819B14F51EB /* ContentView.swift */; };
+		B5442CD82871402987FCBC94 /* DriveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75442CD82871402987FCBC94 /* DriveTheme.swift */; };
+		B04AE34D9E97497A9C37AD1E /* DemoModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04AE34D9E97497A9C37AD1E /* DemoModels.swift */; };
+		B9CDA0DFFE764F6681E3FF0E /* OpenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CDA0DFFE764F6681E3FF0E /* OpenView.swift */; };
+		BDA3ED14BC7349679AE1432A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DA3ED14BC7349679AE1432A /* HomeView.swift */; };
+		B3DB229C4B9E4415BA5728FE /* CallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73DB229C4B9E4415BA5728FE /* CallView.swift */; };
+		B35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift */; };
+		BD61DDD554EE45FC9069BCEE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD61DDD554EE45FC9069BCEE /* SettingsView.swift */; };
+		BAD3E80762AC43ACA5A46CF9 /* DriveComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD3E80762AC43ACA5A46CF9 /* DriveComponents.swift */; };
+		BCC8C31A657F4FA38EE0AF1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5CC8C31A657F4FA38EE0AF1F /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F890BD40065C4F71826EB186 /* DriveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DriveApp.swift"; sourceTree = "<group>"; };
+		8E8A5C7636BB4819B14F51EB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; };
+		75442CD82871402987FCBC94 /* DriveTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DriveTheme.swift"; sourceTree = "<group>"; };
+		C04AE34D9E97497A9C37AD1E /* DemoModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DemoModels.swift"; sourceTree = "<group>"; };
+		69CDA0DFFE764F6681E3FF0E /* OpenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OpenView.swift"; sourceTree = "<group>"; };
+		9DA3ED14BC7349679AE1432A /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView.swift"; sourceTree = "<group>"; };
+		73DB229C4B9E4415BA5728FE /* CallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CallView.swift"; sourceTree = "<group>"; };
+		A35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ApprovalSheet.swift"; sourceTree = "<group>"; };
+		AD61DDD554EE45FC9069BCEE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
+		9AD3E80762AC43ACA5A46CF9 /* DriveComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DriveComponents.swift"; sourceTree = "<group>"; };
+		5CC8C31A657F4FA38EE0AF1F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		46937C9CE38A4FBD98D123B2 /* Drive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Drive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EBF5204D7D594C9E9BD65FAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9B2E2E50D01F4E8A9717BD28 = {
+			isa = PBXGroup;
+			children = (
+				ABE43E62067D4D9BADF93F98 /* Drive */,
+				31782950DF734B4E9867231A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		31782950DF734B4E9867231A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				46937C9CE38A4FBD98D123B2 /* Drive.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		ABE43E62067D4D9BADF93F98 /* Drive */ = {
+			isa = PBXGroup;
+			children = (
+				F890BD40065C4F71826EB186 /* DriveApp.swift */,
+				8E8A5C7636BB4819B14F51EB /* ContentView.swift */,
+				9CC5689EF46F46B49C94B39D /* Theme */,
+				3764D4EE157249DEB029D385 /* Models */,
+				D47F84911818482DB7899479 /* Views */,
+				F06DB358AF8C41E7B1AA2029 /* Resources */,
+			);
+			path = Drive;
+			sourceTree = "<group>";
+		};
+		9CC5689EF46F46B49C94B39D /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				75442CD82871402987FCBC94 /* DriveTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		3764D4EE157249DEB029D385 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C04AE34D9E97497A9C37AD1E /* DemoModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		DB71BEBB1A284DECA1AE0FD5 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				9AD3E80762AC43ACA5A46CF9 /* DriveComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		D47F84911818482DB7899479 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				69CDA0DFFE764F6681E3FF0E /* OpenView.swift */,
+				9DA3ED14BC7349679AE1432A /* HomeView.swift */,
+				73DB229C4B9E4415BA5728FE /* CallView.swift */,
+				A35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift */,
+				AD61DDD554EE45FC9069BCEE /* SettingsView.swift */,
+				DB71BEBB1A284DECA1AE0FD5 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F06DB358AF8C41E7B1AA2029 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5CC8C31A657F4FA38EE0AF1F /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7284FE35323941C08650F150 /* Drive */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D3F9D77C68CD4D9F8AE61145 /* Build configuration list for PBXNativeTarget "Drive" */;
+			buildPhases = (
+				9ABB89459CE04C0AB2D380EB /* Sources */,
+				EBF5204D7D594C9E9BD65FAC /* Frameworks */,
+				7798D9EC57684BE4BAAFA5ED /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Drive;
+			productName = Drive;
+			productReference = 46937C9CE38A4FBD98D123B2 /* Drive.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4E799B4480F64BEB928AE2C2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					7284FE35323941C08650F150 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = E90065E186524E6DB46A4D31 /* Build configuration list for PBXProject "Drive" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9B2E2E50D01F4E8A9717BD28;
+			productRefGroup = 31782950DF734B4E9867231A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7284FE35323941C08650F150 /* Drive */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7798D9EC57684BE4BAAFA5ED /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BCC8C31A657F4FA38EE0AF1F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9ABB89459CE04C0AB2D380EB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B890BD40065C4F71826EB186 /* DriveApp.swift in Sources */,
+				BE8A5C7636BB4819B14F51EB /* ContentView.swift in Sources */,
+				B5442CD82871402987FCBC94 /* DriveTheme.swift in Sources */,
+				B04AE34D9E97497A9C37AD1E /* DemoModels.swift in Sources */,
+				B9CDA0DFFE764F6681E3FF0E /* OpenView.swift in Sources */,
+				BDA3ED14BC7349679AE1432A /* HomeView.swift in Sources */,
+				B3DB229C4B9E4415BA5728FE /* CallView.swift in Sources */,
+				B35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift in Sources */,
+				BD61DDD554EE45FC9069BCEE /* SettingsView.swift in Sources */,
+				BAD3E80762AC43ACA5A46CF9 /* DriveComponents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		ED6985C75ABE4C7AB3E77EA3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		02F78A751CA145EEA3A69374 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9AF008291C4E4A71BB611095 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Drive;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Drive uses the microphone for hold-to-talk while you steer agents.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.cline.drive;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		05F98FE5525447DAAD0DC75C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Drive;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Drive uses the microphone for hold-to-talk while you steer agents.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.cline.drive;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E90065E186524E6DB46A4D31 /* Build configuration list for PBXProject "Drive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED6985C75ABE4C7AB3E77EA3 /* Debug */,
+				02F78A751CA145EEA3A69374 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D3F9D77C68CD4D9F8AE61145 /* Build configuration list for PBXNativeTarget "Drive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AF008291C4E4A71BB611095 /* Debug */,
+				05F98FE5525447DAAD0DC75C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4E799B4480F64BEB928AE2C2 /* Project object */;
+}

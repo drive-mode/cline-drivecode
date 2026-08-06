@@ -86,6 +86,8 @@ Wireframe: [mobile-drive-app.html](../../../../design/wireframes/mobile-drive-ap
 **Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — **2026 frontier shell**: full-bleed Spotlight, liquid-glass chrome, light-first brand (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).  
 **Presenter demo:** [mobile-drive-ios-demo.html](../../../../design/wireframes/mobile-drive-ios-demo.html) — single-phone autoplay / click-through of the full consumer loop.  
 **Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; liquid glass + Spotlight plane locks; retire amber Live; iOS wireframe is visual SoT.  
+**Native SwiftUI (on-device):** [`apps/drive-ios`](../../../../../../apps/drive-ios/) — Open / Home / Call / Approval / Settings fixtures.  
+**Cross-device backlog:** [multi-device](../multi-device/) + skill `multi-device-backlog`.  
 **Capability / UX gaps → fill plan:** [GAPS.md](GAPS.md) — demo vs inventory vs product; voice / interrupt / PWA / hosted packs.  
 **Features users want:** [FEATURES.md](FEATURES.md) — jobs (glance / decide / speak / join / return); Tier 1–4 priority; interaction architecture.  
 **Phone-only power users:** [POWER-USERS.md](POWER-USERS.md) — operator cockpit on phone (task lines, spend, stop-one, Live stack); progressive power sheet.  
@@ -177,14 +179,18 @@ CTA forever and we stop promising “just open the app and build.”
 
 **Gate.** Written owner accept/reject. No silent drift into tier 4.
 
-### Phase MC6 · Native shells (only if MC3–4 prove retention)
+### Phase MC6 · Native shells
 
-**Goal.** Store presence if PWA is not enough.
+**Goal.** Store presence and on-device iteration when PWA is not enough — or when
+owners want a native SwiftUI client for development (this fork).
 
-**Changes.** Capacitor or thin RN/WebView shell around the same webview.
-**YAGNI until** install + session metrics say the browser shell fails.
+**Changes.** [`apps/drive-ios`](../../../../../../apps/drive-ios/) SwiftUI shell
+(Open / Home / Call / Approval / Settings). Capacitor/RN remains an alternate
+thin wrap around drive-web if preferred later. Track parity via
+[multi-device](../multi-device/).
 
-**Gate.** Owner opts in with evidence. Otherwise mark YAGNI.
+**Gate.** On-device smoke of Tier 1 jobs; MATRIX rows for ios move `wip`→`done`
+as hub adapters land. Android stays YAGNI until ios+pwa Tier 1 green.
 
 ## Explicit non-goals (this initiative)
 
@@ -192,7 +198,9 @@ CTA forever and we stop promising “just open the app and build.”
 - Multi-human TikTok Live rooms (still a non-goal under current ADR-0016)
 - Pixel screen share as the agent stage
 - Building a second protocol or second agent registry
-- Shipping native before PWA proof
+- Shipping native **instead of** PWA proof as the only path (PWA remains MC3;
+  SwiftUI `apps/drive-ios` is for on-device iteration + store-later, tracked in
+  [multi-device](../multi-device/))
 
 ## Relationship to ux-quality / drive-web
 
