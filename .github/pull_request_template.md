@@ -88,50 +88,63 @@ JetBrains integration: comment `/test-jetbrains` (maintainers only).
 -   [ ] Changes are limited to a single feature, bugfix or chore (split larger changes into separate PRs)
 -   [ ] Tests are passing (`bun test`) and code is formatted and linted (`bun run format && bun run lint`)
 -   [ ] I have reviewed [contributor guidelines](https://github.com/cline/cline/blob/main/CONTRIBUTING.md)
--   [ ] **If this PR includes UI/UX changes:** I attached required screenshots and/or a video below (PRs without media will be sent back)
+-   [ ] **Visual evidence is in this PR body** (not only linked elsewhere): screenshots, diagrams, interactive demos, and/or video when the change is visual, architectural, or demoable — see section below
 
-### Screenshots / Videos (required for UI/UX)
+### Screenshots / Diagrams / Demos (in this PR body)
 
 <!--
-REQUIRED when this PR changes any user-facing UI or UX, including but not limited to:
-- VS Code extension / webview
-- Cline Hub / Drive Mode dashboard
-- Desktop app
-- CLI TUI chrome that users see
-- Landing pages, settings screens, empty states, dialogs, toasts
+Put visual evidence IN THE DRAFT PR BODY below — reviewers should not need to
+check out the branch or hunt through commits to see what changed.
 
-Not required for pure backend, SDK-only, docs-only, or CI/workflow changes with no visible UI diff.
+REQUIRED when any of these apply:
+- UI / UX changes (webview, Hub / Drive, desktop, CLI TUI chrome, settings, empty states, dialogs)
+- New or updated diagrams (architecture, sequence, Mermaid, canvases)
+- Interactive demos / wireframes / presenter click-throughs (HTML demos, Storybook, etc.)
+- Brand / logo / motion / design-token visual changes
 
-Must include:
-1. Before and after screenshots for visual/layout changes, OR a short screen recording for multi-step flows / state transitions
-2. Enough context that a reviewer can judge the change without checking out the branch
+Also preferred (not skipped lightly) for docs PRs whose main deliverable is a
+demo, wireframe, or diagram — embed a still + link the runnable file.
 
-Embed images/videos in this section (drag-and-drop into the GitHub PR description, or use markdown).
+Not required for pure backend, SDK-only, or CI/workflow changes with no visible
+or diagrammable surface.
+
+How to attach:
+1. Embed images/videos directly in this section (markdown / HTML, or drag-and-drop
+   into the GitHub PR description). Do not rely on “see branch” alone.
+2. For interactive demos, include at least one screenshot (or short recording) in
+   the body AND a repo-relative path / how-to-open line for the live file.
+3. For diagrams, paste the rendered image or Mermaid source in the body.
+4. Caption each asset so a reviewer knows what to look for.
 -->
 
-**Does this PR change UI/UX?**
+**Does this PR need visual evidence in the body?**
 
--   [ ] No — skip the media below
--   [ ] Yes — complete the checklist and attach media
+-   [ ] No — no UI, diagram, or demo surface; skip the media below
+-   [ ] Yes — complete the checklist and embed media **in this PR body**
 
-**UI/UX media checklist** (required if Yes):
+**Visual evidence checklist** (required if Yes):
 
--   [ ] Before screenshot(s) attached *(or N/A for net-new UI)*
--   [ ] After screenshot(s) attached
--   [ ] Video attached for multi-step / interactive flows *(or N/A)*
--   [ ] Captions briefly describe what changed in each asset
+-   [ ] Screenshot(s) and/or diagram(s) embedded below *(or N/A with reason)*
+-   [ ] Interactive demo: still frame in body + path / open instructions *(or N/A)*
+-   [ ] Video for multi-step / interactive flows *(or N/A)*
+-   [ ] Before / after for visual regressions *(or N/A for net-new)*
+-   [ ] Each asset has a one-line caption
 
-#### Before
+#### Screenshots / diagrams
 
-<!-- Paste before screenshot(s) or write N/A -->
+<!-- Embed stills and diagrams here (not only links). Write N/A if not applicable. -->
 
-#### After
+#### Interactive demo
 
-<!-- Paste after screenshot(s) or write N/A -->
+<!--
+Embed a representative screenshot of the demo, then link the runnable file with
+open instructions (e.g. open docs/.../foo-demo.html in a browser). Write N/A if
+this PR has no interactive demo.
+-->
 
 #### Video / walkthrough
 
-<!-- Paste a screen recording for flows with multiple steps or state changes, or write N/A -->
+<!-- Embed a screen recording for multi-step flows, autoplay demos, or state changes. Write N/A if not applicable. -->
 
 ### Additional Notes
 

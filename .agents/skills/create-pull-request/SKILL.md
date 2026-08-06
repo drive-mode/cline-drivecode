@@ -146,6 +146,7 @@ When filling out the template:
 - Fill in all sections with relevant information gathered from commits and context
 - Mark the appropriate "Type of Change" checkbox(es)
 - Complete the "Pre-flight Checklist" items that apply
+- **Visual evidence in the PR body:** If the change is UI/UX, a diagram, brand/motion, or an interactive demo/wireframe, embed screenshots, diagrams, and/or video **in the draft PR description** (Screenshots / Diagrams / Demos section). For HTML demos, include a still frame in the body plus a repo-relative path and how to open it. Do not leave reviewers to discover demos only by checking out the branch.
 
 ### Create PR with gh CLI
 

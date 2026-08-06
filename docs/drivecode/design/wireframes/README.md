@@ -17,6 +17,7 @@ Design exploration for Drive's pair-partner UX inside Cline. Mocks are throwaway
 | [mobile-drive-app.html](mobile-drive-app.html) | Consumer phone first-open — press play → vertical call → PWA install ([mobile-consumer](../../plans/cline-drivemode/initiatives/mobile-consumer/)) |
 | [mobile-drive-surfaces.html](mobile-drive-surfaces.html) | **All mobile pages** — core loop + browse + settings; portrait/landscape; compact/standard/large ([mobile-consumer](../../plans/cline-drivemode/initiatives/mobile-consumer/)) |
 | [mobile-drive-ios.html](mobile-drive-ios.html) | **Modern light (default) + dark** — iOS HIG phone chrome; brand light tokens; Open / Home / Call / Approval / Settings ([mobile-consumer](../../plans/cline-drivemode/initiatives/mobile-consumer/)) |
+| [mobile-drive-ios-demo.html](mobile-drive-ios-demo.html) | **Presenter demo** — single phone click-through + autoplay (open → browse → call → hydrate → approve → settings → PWA); light/dark; keyboard ([MOBILE-BRAND-STYLING](../brand/MOBILE-BRAND-STYLING.md)) |
 | [drive-mark-motion.html](drive-mark-motion.html) | **Drive mark motion** — Cline-in-wheel layers; loading spin + blind-spot peek ([`DriveMarkMotion`](../../../../apps/cline-hub/src/webview/src/components/icons/drive-mark-motion.tsx)). Strategy: [DRIVE-MARK.md](../brand/DRIVE-MARK.md) |
 | [CLINE-BRAND-TOKENS.md](../brand/CLINE-BRAND-TOKENS.md) | Brand tokens measured off cline.bot — palette, surfaces, type, radius, and what not to copy |
 

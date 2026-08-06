@@ -83,7 +83,9 @@ never surfaces hub Door-B settings that no-op.
 
 Wireframe: [mobile-drive-app.html](../../../../design/wireframes/mobile-drive-app.html) (first-open beats).  
 **Full surface map:** [mobile-drive-surfaces.html](../../../../design/wireframes/mobile-drive-surfaces.html) — every consumer + advanced page, portrait & landscape, three phone sizes.  
-**Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — light-first brand surfaces (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).
+**Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — light-first brand surfaces (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).  
+**Presenter demo:** [mobile-drive-ios-demo.html](../../../../design/wireframes/mobile-drive-ios-demo.html) — single-phone autoplay / click-through of the full consumer loop.  
+**Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; retire amber Live; iOS wireframe is visual SoT.
 
 ## Surface inventory (mobile app)
 
@@ -219,4 +221,6 @@ runtime ADR. Reuse the Drive call loop; hide the hub. Prove delight on phone
 with a credential-free watch path before App Store / Play Store.
 
 Next concrete build after this plan: **MC1** on top of drive-web + collapsible
-rail — `?app=1` composition root with vertical Spotlight.
+rail — `?app=1` composition root with vertical Spotlight. Apply
+[MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md)
+before restyling app/surfaces wireframes (green Live, light default).

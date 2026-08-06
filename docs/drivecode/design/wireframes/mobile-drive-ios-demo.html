@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Drive · iOS consumer demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root, [data-theme="light"] {
+    --violet: #9F58FA;
+    --violet-soft: #B98AFF;
+    --violet-deep: #7A3FD4;
+    --violet-wash: rgba(159, 88, 250, 0.10);
+    --violet-wash-strong: rgba(159, 88, 250, 0.16);
+    --live: #2BCC28;
+    --danger: #F53969;
+    --ink: #151516;
+    --ink-78: rgba(21, 21, 22, 0.78);
+    --ink-55: rgba(21, 21, 22, 0.55);
+    --ink-35: rgba(21, 21, 22, 0.35);
+    --ink-12: rgba(21, 21, 22, 0.12);
+    --ink-06: rgba(21, 21, 22, 0.06);
+    --page: #F8FAFB;
+    --page-wash: #F3F0F8;
+    --surface: #FFFFFF;
+    --surface-2: #F4F5F7;
+    --hairline: rgba(21, 21, 22, 0.08);
+    --shadow-sm: 0 1px 2px rgba(21, 21, 22, 0.04), 0 4px 16px rgba(21, 21, 22, 0.05);
+    --shadow-md: 0 8px 28px rgba(21, 21, 22, 0.08), 0 2px 8px rgba(21, 21, 22, 0.04);
+    --shadow-violet: 0 12px 32px rgba(159, 88, 250, 0.28);
+    --glass: rgba(255, 255, 255, 0.82);
+    --tab-bg: rgba(255, 255, 255, 0.88);
+    --island: #151516;
+    --sheet-handle: rgba(21, 21, 22, 0.18);
+    --chat-bubble: #FFFFFF;
+    --chat-agent: #F3EEFF;
+    --control: rgba(21, 21, 22, 0.06);
+    --scrim: rgba(21, 21, 22, 0.28);
+    --hero-grad: linear-gradient(165deg, #F8FAFB 0%, #F0EAF8 42%, #E8DFF5 100%);
+    --stage: #0A0A0A;
+    --deck: #EEF0F4;
+  }
+  [data-theme="dark"] {
+    --ink: #FFFFFF;
+    --ink-78: rgba(255, 255, 255, 0.78);
+    --ink-55: rgba(255, 255, 255, 0.55);
+    --ink-35: rgba(255, 255, 255, 0.35);
+    --ink-12: rgba(255, 255, 255, 0.12);
+    --ink-06: rgba(255, 255, 255, 0.06);
+    --page: #0A0A0A;
+    --page-wash: #0D0B12;
+    --surface: #12131A;
+    --surface-2: #1B1D24;
+    --hairline: rgba(255, 255, 255, 0.10);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+    --shadow-violet: 0 12px 32px rgba(159, 88, 250, 0.35);
+    --glass: rgba(18, 19, 26, 0.88);
+    --tab-bg: rgba(18, 19, 26, 0.92);
+    --island: #000;
+    --sheet-handle: rgba(255, 255, 255, 0.28);
+    --chat-bubble: #1B1D24;
+    --chat-agent: rgba(159, 88, 250, 0.18);
+    --control: rgba(255, 255, 255, 0.1);
+    --scrim: rgba(0, 0, 0, 0.55);
+    --hero-grad: linear-gradient(165deg, #0A0A0A 0%, #12101A 50%, #1A1228 100%);
+    --live: #4ADE80;
+    --stage: #050507;
+    --deck: #0A0A0A;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Schibsted Grotesk", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--deck);
+    overflow: hidden;
+  }
+  .demo {
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(240px, 320px) 1fr minmax(220px, 280px);
+    gap: 0;
+  }
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .demo { grid-template-columns: 1fr; min-height: 100%; }
+    .rail, .beats { position: sticky; top: 0; z-index: 4; }
+  }
+  .rail, .beats {
+    padding: 22px 18px;
+    background: var(--surface);
+    border-right: 0.8px solid var(--hairline);
+    overflow: auto;
+  }
+  .beats { border-right: 0; border-left: 0.8px solid var(--hairline); }
+  .rail h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    letter-spacing: -0.04em;
+    font-weight: 800;
+  }
+  .rail h1 em { font-style: normal; color: var(--violet); }
+  .rail .lede {
+    margin: 0 0 18px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink-55);
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    appearance: none;
+    border: 0.8px solid var(--hairline);
+    background: var(--page);
+    color: var(--ink-55);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--violet);
+    border-color: transparent;
+    color: #fff;
+  }
+  .keys {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ink-35);
+    line-height: 1.55;
+  }
+  .keys kbd {
+    display: inline-block;
+    min-width: 1.4em;
+    padding: 1px 5px;
+    border-radius: 5px;
+    border: 0.8px solid var(--hairline);
+    background: var(--page);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-55);
+    text-align: center;
+  }
+  .stage-wrap {
+    display: grid;
+    place-items: center;
+    padding: 28px 16px;
+    background:
+      radial-gradient(900px 480px at 50% -10%, rgba(159,88,250,0.12), transparent 60%),
+      var(--deck);
+  }
+  .device {
+    width: min(390px, 92vw);
+    height: min(844px, 92vh);
+    border-radius: 48px;
+    background: var(--page);
+    box-shadow: var(--shadow-md), 0 0 0 10px #1a1a1c, 0 0 0 12px #2a2a2e;
+    overflow: hidden;
+    position: relative;
+  }
+  [data-theme="light"] .device {
+    box-shadow: var(--shadow-lg, var(--shadow-md)), 0 0 0 10px #e8e9ec, 0 0 0 12px #c9ccd3;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--page);
+  }
+  .status {
+    height: 54px;
+    padding: 14px 28px 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    font-size: 14px;
+    font-weight: 650;
+    flex: none;
+  }
+  .status .time { justify-self: start; }
+  .status .icons { justify-self: end; letter-spacing: 1px; color: var(--ink-55); font-size: 11px; }
+  .island {
+    width: 118px;
+    height: 34px;
+    border-radius: 20px;
+    background: var(--island);
+    margin-top: -2px;
+  }
+  .view {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    position: relative;
+  }
+  .view.on { display: flex; }
+  .scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 20px 28px;
+  }
+  .scroll.padded-bottom { padding-bottom: 108px; }
+  .preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--violet-deep);
+    background: var(--violet-wash);
+    border-radius: 999px;
+    padding: 5px 10px;
+  }
+  [data-theme="dark"] .preview { color: var(--violet-soft); }
+  .open {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 18px 8px 8px;
+    background: var(--hero-grad);
+  }
+  .orb {
+    width: 92px;
+    height: 92px;
+    border-radius: 28px;
+    background: var(--surface);
+    box-shadow: var(--shadow-md), 0 0 0 8px var(--violet-wash);
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+    margin: 28px 0 22px;
+  }
+  .orb svg { width: 52px; height: 52px; }
+  .open h2 {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1.05;
+    letter-spacing: -0.045em;
+    font-weight: 850;
+  }
+  .open h2 .accent { color: var(--violet); }
+  .open .sub {
+    margin: 12px 0 0;
+    max-width: 28ch;
+    color: var(--ink-55);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .cta { width: 100%; margin-top: auto; display: grid; gap: 10px; padding-top: 28px; }
+  .btn {
+    appearance: none;
+    border: 0;
+    border-radius: 16px;
+    min-height: 52px;
+    padding: 0 18px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--violet);
+    color: #fff;
+    box-shadow: var(--shadow-violet);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+    border: 0.8px solid var(--hairline);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-55);
+    min-height: 44px;
+  }
+  .trust {
+    display: flex;
+    gap: 14px;
+    margin-top: 14px;
+    color: var(--ink-35);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .trust span::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--live);
+    margin-right: 6px;
+  }
+  .large-title h2 {
+    margin: 4px 0 14px;
+    font-size: 34px;
+    letter-spacing: -0.045em;
+    font-weight: 850;
+  }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--ink-35);
+    font-size: 15px;
+    margin-bottom: 18px;
+  }
+  .section-label {
+    margin: 8px 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+  }
+  .hero-card {
+    background: linear-gradient(145deg, var(--violet) 0%, #7B3FE0 100%);
+    color: #fff;
+    border-radius: 22px;
+    padding: 18px;
+    box-shadow: var(--shadow-violet);
+  }
+  .hero-card .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 4px 10px;
+  }
+  .hero-card .live i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.25);
+  }
+  .hero-card h3 { margin: 12px 0 4px; font-size: 22px; letter-spacing: -0.03em; }
+  .hero-card p { margin: 0; opacity: 0.85; font-size: 13px; }
+  .hero-card .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+  }
+  .avatars { display: flex; }
+  .avatars span {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    margin-left: -8px;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .avatars span:first-child { margin-left: 0; }
+  .join-chip {
+    background: #fff;
+    color: var(--violet-deep);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 750;
+  }
+  .list-card {
+    background: var(--surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px;
+    border-top: 0.8px solid var(--hairline);
+  }
+  .list-row:first-child { border-top: 0; }
+  .list-row .icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--violet-wash);
+    color: var(--violet);
+    display: grid; place-items: center;
+    font-weight: 800;
+  }
+  .list-row .meta { flex: 1; min-width: 0; }
+  .list-row strong { display: block; font-size: 15px; }
+  .list-row span { color: var(--ink-55); font-size: 12px; }
+  .badge {
+    font-size: 11px; font-weight: 750;
+    color: var(--violet-deep);
+    background: var(--violet-wash);
+    border-radius: 999px;
+    padding: 5px 9px;
+  }
+  [data-theme="dark"] .badge { color: var(--violet-soft); }
+  .tabbar {
+    position: absolute;
+    left: 16px; right: 16px; bottom: 18px;
+    height: 64px;
+    border-radius: 22px;
+    background: var(--tab-bg);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-md);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 8px;
+  }
+  .tab {
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 650;
+    color: var(--ink-35);
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  .tab.on { color: var(--violet); background: var(--violet-wash-strong); }
+  .tab .dot {
+    width: 18px; height: 18px; border-radius: 6px;
+    background: currentColor; opacity: 0.35;
+  }
+  .tab.on .dot { opacity: 1; background: var(--violet); }
+  .call-top, .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 4px 12px;
+  }
+  .call-top .back, .nav-bar .back-link {
+    width: 36px; height: 36px; border-radius: 12px;
+    display: grid; place-items: center;
+    background: var(--control);
+    cursor: pointer;
+    font-size: 20px;
+  }
+  .call-top .title { text-align: center; }
+  .call-top strong { display: block; font-size: 15px; }
+  .call-top span { color: var(--live); font-size: 12px; font-weight: 650; }
+  .stage-card {
+    background: var(--stage);
+    color: #fff;
+    border-radius: 22px;
+    padding: 18px;
+    min-height: 168px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .stage-card .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    font-weight: 700;
+  }
+  .stage-card pre {
+    margin: 12px 0 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  .stage-card .del { color: #ff8aa8; }
+  .stage-card .add { color: #4ADE80; }
+  .waveform {
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    gap: 5px;
+    height: 42px;
+    margin-top: 8px;
+  }
+  .waveform i {
+    width: 5px;
+    border-radius: 999px;
+    background: var(--violet-soft);
+    animation: wave 1s ease-in-out infinite;
+  }
+  .waveform i:nth-child(1) { height: 12px; animation-delay: 0s; }
+  .waveform i:nth-child(2) { height: 24px; animation-delay: .1s; }
+  .waveform i:nth-child(3) { height: 34px; animation-delay: .2s; }
+  .waveform i:nth-child(4) { height: 18px; animation-delay: .3s; }
+  .waveform i:nth-child(5) { height: 28px; animation-delay: .15s; }
+  .waveform i:nth-child(6) { height: 14px; animation-delay: .25s; }
+  .waveform i:nth-child(7) { height: 22px; animation-delay: .05s; }
+  @keyframes wave {
+    0%,100% { transform: scaleY(0.55); opacity: 0.6; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+  .who { text-align: center; margin: 10px 0 14px; color: var(--ink-55); font-size: 13px; }
+  .who em { color: var(--ink); font-style: normal; font-weight: 700; }
+  .roster {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .person {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 12px 8px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .person.speaking { outline: 2px solid var(--violet); }
+  .person .av {
+    width: 36px; height: 36px; border-radius: 50%;
+    margin: 0 auto 8px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 13px;
+  }
+  .person .av.a { background: rgba(159,88,250,0.15); color: var(--violet); }
+  .person .av.b { background: rgba(84,135,200,0.15); color: #5487C8; }
+  .person .av.c { background: rgba(245,57,105,0.12); color: var(--danger); }
+  .person strong { display: block; font-size: 12px; }
+  .person span { color: var(--ink-35); font-size: 11px; }
+  .feed { display: grid; gap: 8px; margin-bottom: 88px; }
+  .bubble {
+    max-width: 88%;
+    padding: 10px 12px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.35;
+    background: var(--chat-bubble);
+    box-shadow: var(--shadow-sm);
+  }
+  .bubble.them { justify-self: start; }
+  .bubble.me {
+    justify-self: end;
+    background: var(--violet);
+    color: #fff;
+  }
+  .bubble.agent {
+    justify-self: start;
+    background: var(--chat-agent);
+  }
+  .bubble .from {
+    font-size: 11px;
+    font-weight: 750;
+    color: var(--violet);
+    margin-bottom: 2px;
+  }
+  .controls {
+    position: absolute;
+    left: 16px; right: 16px; bottom: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1.35fr 1fr;
+    gap: 10px;
+  }
+  .ctrl {
+    min-height: 52px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    font-weight: 750;
+    background: var(--control);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .ctrl.mic {
+    background: var(--violet);
+    color: #fff;
+    box-shadow: var(--shadow-violet);
+    min-height: 56px;
+  }
+  .ctrl.mic.holding { transform: scale(0.97); filter: brightness(1.08); }
+  .ctrl.end { color: var(--danger); }
+  .sheet-screen { flex: 1; position: relative; }
+  .sheet-screen .dim {
+    position: absolute; inset: 0;
+    background: var(--scrim);
+  }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--surface);
+    border-radius: 28px 28px 0 0;
+    padding: 12px 20px 28px;
+    box-shadow: var(--shadow-md);
+  }
+  .sheet .handle {
+    width: 42px; height: 5px; border-radius: 999px;
+    background: var(--sheet-handle);
+    margin: 4px auto 16px;
+  }
+  .sheet h3 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.03em; }
+  .sheet .who-line { margin: 0 0 14px; color: var(--ink-55); font-size: 14px; }
+  .code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background: var(--surface-2);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+    color: var(--live);
+  }
+  .sheet .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-deny {
+    background: var(--control);
+    color: var(--ink);
+    border-radius: 16px;
+    min-height: 52px;
+    font: inherit;
+    font-weight: 750;
+    border: 0;
+    cursor: pointer;
+  }
+  .grouped {
+    background: var(--surface);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 18px;
+  }
+  .grouped .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px;
+    border-top: 0.8px solid var(--hairline);
+    font-size: 15px;
+  }
+  .grouped .row:first-child { border-top: 0; }
+  .grouped .row span { color: var(--ink-35); font-size: 14px; }
+  .toggle {
+    width: 48px; height: 30px; border-radius: 999px;
+    background: var(--violet);
+    position: relative;
+  }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 21px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #fff;
+  }
+  .toggle.off { background: var(--ink-12); }
+  .toggle.off::after { left: 3px; }
+  .install {
+    text-align: center;
+    padding: 36px 10px 10px;
+  }
+  .install .icon {
+    width: 84px; height: 84px; border-radius: 22px;
+    margin: 0 auto 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow-md), 0 0 0 8px var(--violet-wash);
+    display: grid; place-items: center;
+    color: var(--ink);
+  }
+  .install .icon svg { width: 46px; height: 46px; }
+  .install h3 {
+    margin: 0 0 8px;
+    font-size: 26px;
+    letter-spacing: -0.04em;
+  }
+  .install p {
+    margin: 0 auto;
+    max-width: 28ch;
+    color: var(--ink-55);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .loading-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0;
+    color: var(--ink-55);
+    font-size: 13px;
+  }
+  .loading-row svg { width: 18px; height: 18px; color: var(--ink); }
+  .dm-wheel, .dm-head { transform-box: fill-box; transform-origin: center; }
+  .is-loading .dm-wheel { animation: dm-spin 1.15s linear infinite; }
+  .is-peek .dm-head { animation: dm-peek 2.4s ease-in-out infinite; }
+  @keyframes dm-spin { to { transform: rotate(360deg); } }
+  @keyframes dm-peek {
+    0%,100% { transform: rotate(0deg); }
+    20% { transform: rotate(-18deg); }
+    50% { transform: rotate(0deg); }
+    70% { transform: rotate(18deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .is-loading .dm-wheel, .is-peek .dm-head, .waveform i { animation: none !important; }
+  }
+  .beats h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+  }
+  .beat {
+    width: 100%;
+    text-align: left;
+    appearance: none;
+    border: 0.8px solid transparent;
+    background: transparent;
+    border-radius: 14px;
+    padding: 12px 12px;
+    cursor: pointer;
+    color: var(--ink);
+    font: inherit;
+    margin-bottom: 4px;
+  }
+  .beat[aria-current="true"] {
+    background: var(--violet-wash);
+    border-color: rgba(159, 88, 250, 0.35);
+  }
+  .beat strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .beat span { display: block; font-size: 12px; color: var(--ink-55); line-height: 1.35; }
+  .progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ink-06);
+    margin: 14px 0 18px;
+    overflow: hidden;
+  }
+  .progress > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--violet);
+    transition: width 0.35s ease;
+  }
+  .note {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--ink-35);
+    line-height: 1.45;
+  }
+  .note a { color: var(--violet); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="drive-mark" viewBox="0 0 24 24">
+    <g class="dm-wheel"><path fill="currentColor" fill-rule="evenodd" d="M11.45 0.87C11.15 0.88 10.87 0.92 10.58 0.96C10.30 1.00 10.02 1.05 9.74 1.11C9.46 1.17 9.19 1.24 8.92 1.32C8.65 1.41 8.39 1.50 8.13 1.60C7.87 1.70 7.62 1.81 7.37 1.93C7.11 2.06 6.87 2.19 6.62 2.33C6.38 2.47 6.14 2.61 5.90 2.78C5.67 2.94 5.44 3.12 5.22 3.30C4.99 3.48 4.77 3.68 4.56 3.88C4.34 4.08 4.14 4.29 3.94 4.51C3.74 4.72 3.56 4.95 3.38 5.18C3.21 5.41 3.05 5.64 2.89 5.88C2.74 6.12 2.58 6.36 2.45 6.60C2.31 6.85 2.19 7.10 2.08 7.35C1.97 7.61 1.86 7.87 1.76 8.13C1.67 8.39 1.58 8.66 1.51 8.93C1.43 9.20 1.36 9.47 1.31 9.75C1.25 10.02 1.20 10.31 1.17 10.59C1.13 10.88 1.11 11.17 1.10 11.47C1.08 11.76 1.06 12.07 1.07 12.36C1.08 12.66 1.11 12.95 1.14 13.24C1.17 13.53 1.21 13.81 1.26 14.09C1.31 14.37 1.37 14.65 1.44 14.92C1.51 15.20 1.60 15.46 1.69 15.73C1.78 15.99 1.88 16.25 1.99 16.51C2.10 16.76 2.22 17.01 2.35 17.26C2.48 17.51 2.62 17.75 2.77 17.99C2.92 18.23 3.09 18.46 3.26 18.69C3.43 18.92 3.62 19.15 3.81 19.37C4.00 19.58 4.19 19.77 4.39 19.97C4.60 20.17 4.81 20.37 5.03 20.56C5.25 20.74 5.49 20.92 5.72 21.08C5.95 21.25 6.19 21.41 6.43 21.55C6.67 21.70 6.92 21.84 7.17 21.96C7.41 22.09 7.67 22.21 7.92 22.31C8.18 22.42 8.44 22.52 8.71 22.61C8.97 22.69 9.24 22.77 9.52 22.83C9.79 22.90 10.07 22.96 10.35 23.00C10.64 23.04 10.92 23.08 11.22 23.10C11.51 23.12 11.81 23.13 12.11 23.13C12.41 23.12 12.70 23.10 12.99 23.08C13.28 23.05 13.57 23.02 13.85 22.97C14.14 22.92 14.41 22.86 14.68 22.79C14.96 22.72 15.22 22.64 15.49 22.55C15.75 22.46 16.01 22.35 16.27 22.24C16.52 22.13 16.77 22.01 17.02 21.88C17.27 21.75 17.51 21.61 17.75 21.46C17.99 21.31 18.23 21.15 18.46 20.99C18.69 20.82 18.92 20.64 19.14 20.45C19.36 20.26 19.57 20.06 19.77 19.85C19.98 19.64 20.18 19.43 20.37 19.21C20.56 18.99 20.73 18.76 20.90 18.53C21.07 18.29 21.22 18.06 21.36 17.81C21.51 17.57 21.65 17.33 21.77 17.08C21.90 16.83 22.01 16.57 22.12 16.32C22.22 16.06 22.32 15.80 22.40 15.53C22.49 15.26 22.57 15.00 22.63 14.72C22.70 14.45 22.75 14.17 22.79 13.88C22.84 13.60 22.88 13.31 22.90 13.02C22.92 12.73 22.92 12.43 22.92 12.13C22.92 11.83 22.92 11.53 22.90 11.23C22.88 10.94 22.86 10.65 22.82 10.36C22.77 10.08 22.72 9.80 22.66 9.52C22.59 9.25 22.51 8.98 22.43 8.71C22.35 8.45 22.27 8.18 22.17 7.92C22.07 7.66 21.95 7.40 21.83 7.15C21.71 6.90 21.58 6.65 21.44 6.41C21.30 6.17 21.15 5.93 21.00 5.69C20.84 5.45 20.67 5.22 20.49 5.00C20.31 4.77 20.11 4.54 19.91 4.33C19.71 4.12 19.52 3.92 19.31 3.73C19.10 3.53 18.87 3.33 18.64 3.16C18.41 2.98 18.18 2.81 17.94 2.65C17.71 2.49 17.47 2.34 17.22 2.20C16.98 2.07 16.73 1.94 16.48 1.83C16.22 1.71 15.96 1.61 15.70 1.51C15.44 1.41 15.17 1.33 14.90 1.25C14.63 1.18 14.36 1.11 14.08 1.06C13.80 1.00 13.52 0.96 13.23 0.92C12.94 0.89 12.65 0.88 12.35 0.87C12.05 0.86 11.74 0.85 11.45 0.87ZM11.59 2.93C11.89 2.92 12.19 2.92 12.49 2.94C12.78 2.95 13.07 2.98 13.35 3.03C13.63 3.07 13.91 3.13 14.18 3.20C14.45 3.27 14.72 3.34 14.98 3.44C15.24 3.53 15.50 3.65 15.75 3.77C16.00 3.89 16.24 4.02 16.48 4.16C16.73 4.30 16.96 4.46 17.19 4.63C17.42 4.80 17.65 4.98 17.87 5.17C18.08 5.37 18.29 5.57 18.49 5.79C18.68 6.00 18.87 6.23 19.04 6.46C19.21 6.68 19.37 6.92 19.52 7.16C19.67 7.40 19.80 7.64 19.92 7.89C20.05 8.14 20.16 8.40 20.26 8.65C20.36 8.91 20.47 9.17 20.54 9.44C20.62 9.71 20.74 10.00 20.71 10.27C20.68 10.53 20.56 10.86 20.37 11.03C20.18 11.19 19.85 11.24 19.57 11.27C19.29 11.30 18.99 11.24 18.70 11.21C18.41 11.18 18.13 11.11 17.84 11.10C17.56 11.09 17.13 10.99 16.98 11.15C16.84 11.31 16.99 11.76 16.97 12.05C16.95 12.34 16.85 12.70 16.87 12.91C16.89 13.12 16.91 13.25 17.10 13.32C17.28 13.39 17.70 13.32 18.00 13.32C18.30 13.32 18.60 13.31 18.90 13.32C19.20 13.32 19.52 13.27 19.79 13.35C20.05 13.43 20.35 13.57 20.48 13.78C20.62 14.00 20.60 14.35 20.57 14.62C20.54 14.89 20.41 15.15 20.31 15.41C20.21 15.67 20.09 15.92 19.96 16.16C19.83 16.41 19.69 16.65 19.54 16.89C19.39 17.13 19.24 17.37 19.07 17.60C18.90 17.83 18.72 18.06 18.52 18.27C18.33 18.49 18.12 18.68 17.91 18.87C17.69 19.06 17.46 19.23 17.22 19.39C16.99 19.55 16.75 19.70 16.51 19.84C16.26 19.97 16.02 20.10 15.76 20.22C15.51 20.33 15.25 20.44 14.99 20.53C14.73 20.63 14.47 20.76 14.20 20.78C13.92 20.81 13.57 20.81 13.37 20.67C13.17 20.53 13.04 20.21 12.99 19.94C12.93 19.67 13.01 19.35 13.03 19.06C13.05 18.76 13.08 18.48 13.11 18.19C13.13 17.90 13.16 17.61 13.19 17.32C13.22 17.03 13.40 16.61 13.27 16.45C13.15 16.30 12.71 16.39 12.42 16.38C12.13 16.37 11.80 16.36 11.52 16.38C11.24 16.41 10.85 16.35 10.74 16.52C10.62 16.69 10.80 17.09 10.83 17.38C10.86 17.67 10.88 17.96 10.90 18.25C10.93 18.54 10.96 18.83 10.98 19.12C11.00 19.41 11.07 19.73 11.01 19.99C10.94 20.25 10.79 20.56 10.58 20.69C10.37 20.82 10.02 20.80 9.75 20.77C9.48 20.74 9.21 20.62 8.95 20.52C8.69 20.42 8.44 20.32 8.19 20.20C7.94 20.08 7.69 19.94 7.45 19.79C7.21 19.64 6.98 19.49 6.75 19.32C6.52 19.15 6.28 18.96 6.07 18.77C5.86 18.58 5.68 18.39 5.48 18.18C5.29 17.97 5.09 17.74 4.91 17.52C4.73 17.29 4.56 17.06 4.41 16.82C4.26 16.59 4.12 16.34 3.99 16.10C3.87 15.85 3.75 15.59 3.66 15.33C3.56 15.07 3.42 14.81 3.41 14.54C3.39 14.27 3.41 13.92 3.56 13.72C3.71 13.52 4.03 13.41 4.31 13.34C4.58 13.28 4.90 13.32 5.20 13.32C5.50 13.31 5.80 13.32 6.10 13.32C6.40 13.32 6.83 13.40 7.00 13.32C7.17 13.24 7.10 13.07 7.10 12.84C7.11 12.62 7.05 12.26 7.03 11.97C7.00 11.69 7.12 11.26 6.96 11.11C6.80 10.97 6.37 11.09 6.08 11.11C5.79 11.13 5.51 11.20 5.23 11.23C4.94 11.25 4.63 11.31 4.35 11.27C4.08 11.23 3.75 11.15 3.57 10.97C3.40 10.80 3.31 10.46 3.29 10.20C3.28 9.93 3.40 9.64 3.48 9.37C3.56 9.10 3.65 8.84 3.76 8.59C3.86 8.33 3.98 8.07 4.10 7.83C4.23 7.58 4.37 7.34 4.52 7.10C4.67 6.86 4.83 6.63 5.00 6.40C5.18 6.17 5.37 5.94 5.56 5.73C5.76 5.52 5.98 5.32 6.20 5.13C6.41 4.94 6.64 4.76 6.88 4.60C7.11 4.43 7.34 4.28 7.59 4.13C7.83 3.99 8.07 3.86 8.32 3.74C8.57 3.62 8.83 3.52 9.09 3.43C9.36 3.33 9.62 3.25 9.90 3.19C10.17 3.12 10.45 3.06 10.73 3.02C11.01 2.98 11.30 2.94 11.59 2.93Z"/></g>
+    <g class="dm-head"><path fill="currentColor" fill-rule="evenodd" d="M11.99 6.20C11.73 6.21 11.41 6.36 11.22 6.55C11.04 6.73 11.00 7.10 10.88 7.31C10.75 7.52 10.69 7.70 10.47 7.80C10.26 7.90 9.88 7.82 9.61 7.91C9.35 7.99 9.09 8.12 8.87 8.30C8.65 8.47 8.44 8.71 8.29 8.95C8.15 9.19 8.07 9.46 7.99 9.73C7.92 10.00 7.93 10.31 7.84 10.57C7.74 10.83 7.50 11.03 7.43 11.30C7.36 11.57 7.37 11.92 7.41 12.20C7.45 12.49 7.58 12.74 7.67 13.00C7.76 13.27 7.88 13.52 7.96 13.78C8.04 14.05 8.05 14.35 8.17 14.60C8.29 14.86 8.47 15.11 8.67 15.30C8.87 15.49 9.13 15.65 9.39 15.76C9.65 15.87 9.93 15.91 10.22 15.94C10.51 15.97 10.82 15.94 11.13 15.94C11.43 15.94 11.73 15.94 12.03 15.94C12.34 15.94 12.64 15.94 12.94 15.94C13.24 15.94 13.56 15.97 13.85 15.94C14.14 15.91 14.42 15.87 14.68 15.76C14.93 15.65 15.19 15.47 15.38 15.27C15.58 15.07 15.75 14.81 15.86 14.56C15.97 14.30 15.96 13.99 16.04 13.73C16.13 13.46 16.27 13.23 16.36 12.96C16.45 12.70 16.55 12.43 16.58 12.14C16.61 11.86 16.64 11.51 16.56 11.25C16.48 10.98 16.22 10.79 16.12 10.53C16.03 10.27 16.06 9.95 15.99 9.68C15.92 9.40 15.85 9.13 15.70 8.89C15.56 8.65 15.35 8.42 15.13 8.25C14.90 8.08 14.64 7.96 14.37 7.88C14.10 7.80 13.71 7.90 13.50 7.80C13.29 7.70 13.24 7.49 13.11 7.28C12.99 7.06 12.95 6.70 12.76 6.52C12.58 6.34 12.24 6.20 11.99 6.20ZM13.45 10.09C13.69 10.07 14.06 10.25 14.22 10.46C14.37 10.66 14.34 11.03 14.37 11.33C14.40 11.63 14.38 11.96 14.37 12.27C14.35 12.57 14.41 12.93 14.28 13.16C14.15 13.40 13.84 13.64 13.60 13.66C13.35 13.68 12.99 13.50 12.83 13.29C12.68 13.08 12.71 12.72 12.68 12.42C12.66 12.12 12.67 11.79 12.68 11.48C12.70 11.18 12.64 10.81 12.77 10.58C12.90 10.35 13.21 10.11 13.45 10.09ZM10.39 10.09C10.64 10.07 11.01 10.25 11.16 10.46C11.31 10.66 11.29 11.03 11.31 11.33C11.34 11.63 11.33 11.96 11.31 12.27C11.30 12.57 11.36 12.93 11.23 13.17C11.10 13.40 10.78 13.64 10.54 13.66C10.30 13.68 9.93 13.50 9.78 13.29C9.63 13.08 9.65 12.72 9.62 12.42C9.60 12.12 9.61 11.79 9.62 11.48C9.64 11.18 9.58 10.81 9.71 10.58C9.84 10.35 10.15 10.11 10.39 10.09Z"/></g>
+  </symbol>
+</svg>
+
+<div class="demo">
+  <aside class="rail">
+    <h1>Drive <em>iOS</em> demo</h1>
+    <p class="lede">Presenter click-through of the light-first consumer shell — open → call → approve → install.</p>
+    <div class="chip-row" role="group" aria-label="Theme">
+      <button type="button" class="chip" id="btn-light" aria-pressed="true">Light</button>
+      <button type="button" class="chip" id="btn-dark" aria-pressed="false">Dark</button>
+    </div>
+    <div class="chip-row" role="group" aria-label="Playback">
+      <button type="button" class="chip" id="btn-play" aria-pressed="false">Autoplay</button>
+      <button type="button" class="chip" id="btn-prev">Prev</button>
+      <button type="button" class="chip" id="btn-next">Next</button>
+    </div>
+    <p class="keys">
+      <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> prev · <kbd>P</kbd> autoplay · <kbd>L</kbd>/<kbd>D</kbd> theme · <kbd>H</kbd> hold mic
+    </p>
+    <p class="note">
+      Visual SoT: <a href="mobile-drive-ios.html">mobile-drive-ios.html</a>.
+      Tokens: <a href="../brand/MOBILE-BRAND-STYLING.md">MOBILE-BRAND-STYLING</a>.
+      Honesty: Preview chip stays visible.
+    </p>
+  </aside>
+
+  <main class="stage-wrap">
+    <div class="device" aria-label="iPhone demo">
+      <div class="screen">
+        <div class="status">
+          <span class="time">9:41</span>
+          <div class="island"></div>
+          <span class="icons">■■ ▬ ●</span>
+        </div>
+
+        <!-- 0 Open -->
+        <section class="view on" data-view="open">
+          <div class="scroll open">
+            <span class="preview">Preview</span>
+            <div class="orb is-peek" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><use href="#drive-mark"/></svg>
+            </div>
+            <h2>Talk to your<br><span class="accent">codebase</span></h2>
+            <p class="sub">Join a Drive call. Agents work while you speak — approvals stay in your hands.</p>
+            <div class="cta">
+              <button type="button" class="btn btn-primary" data-go="home">Continue with Apple</button>
+              <button type="button" class="btn btn-secondary" data-go="home">Continue with Google</button>
+              <button type="button" class="btn btn-ghost" data-go="home">I have an invite link</button>
+            </div>
+            <div class="trust"><span>On device</span><span>You approve</span></div>
+          </div>
+        </section>
+
+        <!-- 1 Home -->
+        <section class="view" data-view="home">
+          <div class="scroll home padded-bottom">
+            <div class="large-title"><h2>Drive</h2></div>
+            <div class="search">Search calls &amp; plans</div>
+            <div class="section-label">Happening now</div>
+            <button type="button" class="hero-card" data-go="call" style="width:100%;text-align:left;border:0;font:inherit;cursor:pointer">
+              <div class="live"><i></i> Live</div>
+              <h3>Ship auth middleware</h3>
+              <p>3 people · 2 agents · 12m</p>
+              <div class="row">
+                <div class="avatars"><span>A</span><span>M</span><span>J</span></div>
+                <div class="join-chip">Join</div>
+              </div>
+            </button>
+            <div class="section-label">Recent</div>
+            <div class="list-card">
+              <div class="list-row">
+                <div class="icon">P</div>
+                <div class="meta"><strong>Payments refactor</strong><span>Yesterday · Plan ready</span></div>
+                <div class="badge">Review</div>
+              </div>
+              <div class="list-row">
+                <div class="icon">S</div>
+                <div class="meta"><strong>Status board sync</strong><span>Mon · Completed</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab on" data-go="home"><div class="dot"></div>Home</div>
+            <div class="tab" data-go="browse"><div class="dot"></div>Browse</div>
+            <div class="tab" data-go="settings"><div class="dot"></div>You</div>
+          </div>
+        </section>
+
+        <!-- 2 Browse -->
+        <section class="view" data-view="browse">
+          <div class="scroll padded-bottom">
+            <div class="large-title"><h2>Browse</h2></div>
+            <div class="section-label">Rooms</div>
+            <div class="list-card">
+              <button type="button" class="list-row" data-go="call" style="width:100%;border:0;background:transparent;font:inherit;cursor:pointer;text-align:left">
+                <div class="icon">A</div>
+                <div class="meta"><strong>Auth middleware</strong><span>Live · Maya + Coder</span></div>
+                <div class="badge">Join</div>
+              </button>
+              <div class="list-row">
+                <div class="icon">R</div>
+                <div class="meta"><strong>Release train</strong><span>Quiet · 2 agents idle</span></div>
+              </div>
+            </div>
+            <div class="section-label">Tasks</div>
+            <div class="list-card">
+              <div class="list-row">
+                <div class="icon">T</div>
+                <div class="meta"><strong>Gate JWT refresh</strong><span>In call · Needs approval</span></div>
+              </div>
+              <div class="list-row">
+                <div class="icon">D</div>
+                <div class="meta"><strong>Docs pass</strong><span>Queued</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab" data-go="home"><div class="dot"></div>Home</div>
+            <div class="tab on" data-go="browse"><div class="dot"></div>Browse</div>
+            <div class="tab" data-go="settings"><div class="dot"></div>You</div>
+          </div>
+        </section>
+
+        <!-- 3 Call -->
+        <section class="view" data-view="call">
+          <div class="scroll call">
+            <div class="call-top">
+              <div class="back" data-go="home" title="Back">‹</div>
+              <div class="title">
+                <strong>Auth middleware</strong>
+                <span>● Live · 12:04</span>
+              </div>
+              <span class="preview">Preview</span>
+            </div>
+            <div class="stage-card">
+              <div class="eyebrow">Spotlight · Coder · edit</div>
+              <pre><span class="del">- if (!user) return null</span>
+<span class="add">+ if (!user) throw new AuthError()</span>
+<span class="add">+ return sessionFrom(user)</span></pre>
+              <div class="waveform" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+            <div class="who"><em>Maya</em> is speaking</div>
+            <div class="roster">
+              <div class="person speaking"><div class="av a">M</div><strong>Maya</strong><span>You</span></div>
+              <div class="person"><div class="av b">A</div><strong>Alex</strong><span>Muted</span></div>
+              <div class="person"><div class="av c">◈</div><strong>Coder</strong><span>Agent</span></div>
+            </div>
+            <div class="feed">
+              <div class="bubble them">Can we gate the JWT refresh?</div>
+              <div class="bubble agent"><div class="from">Coder</div>Drafted middleware — needs your OK.</div>
+              <div class="bubble me">Show me the diff</div>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="ctrl" data-go="home">Chat</div>
+            <div class="ctrl mic" id="hold">Hold</div>
+            <div class="ctrl end" data-go="approve">Leave</div>
+          </div>
+        </section>
+
+        <!-- 4 Thinking / hydrate -->
+        <section class="view" data-view="thinking">
+          <div class="scroll call">
+            <div class="call-top">
+              <div class="back" data-go="call">‹</div>
+              <div class="title">
+                <strong>Auth middleware</strong>
+                <span>● Live · 12:08</span>
+              </div>
+              <span class="preview">Preview</span>
+            </div>
+            <div class="stage-card">
+              <div class="eyebrow">Spotlight · catching up</div>
+              <div class="loading-row is-loading">
+                <svg viewBox="0 0 24 24"><use href="#drive-mark"/></svg>
+                Loading history
+              </div>
+              <p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;line-height:1.45">
+                Coder is preparing the diff while the room snapshot hydrates.
+              </p>
+            </div>
+            <div class="who"><em>Coder</em> is thinking</div>
+            <div class="loading-row is-peek" style="justify-content:center">
+              <svg viewBox="0 0 24 24"><use href="#drive-mark"/></svg>
+              Blind-spot peek
+            </div>
+            <button type="button" class="btn btn-primary" data-go="approve" style="margin-top:18px;width:100%">Diff ready — review</button>
+          </div>
+        </section>
+
+        <!-- 5 Approval -->
+        <section class="view" data-view="approve">
+          <div class="sheet-screen">
+            <div class="dim" data-go="call"></div>
+            <div class="sheet">
+              <div class="handle"></div>
+              <h3>Approve change?</h3>
+              <p class="who-line">Coder wants to edit <strong>auth.ts</strong></p>
+              <div class="code">+ export function requireAuth()<br/>+   verifyJwt(req)<br/>+   next()</div>
+              <div class="actions">
+                <button type="button" class="btn-deny" data-go="call">Deny</button>
+                <button type="button" class="btn btn-primary" data-go="install">Allow</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6 Settings -->
+        <section class="view" data-view="settings">
+          <div class="scroll padded-bottom">
+            <div class="nav-bar">
+              <span class="back-link" data-go="home">‹</span>
+              <strong>Settings</strong>
+              <span style="width:36px"></span>
+            </div>
+            <div class="section-label">Appearance</div>
+            <div class="grouped">
+              <div class="row">Appearance <span>System</span></div>
+              <div class="row">Reduce motion <div class="toggle off"></div></div>
+            </div>
+            <div class="section-label">Voice</div>
+            <div class="grouped">
+              <div class="row">Hold to talk <div class="toggle"></div></div>
+              <div class="row">Haptics <div class="toggle"></div></div>
+            </div>
+            <div class="section-label">Trust</div>
+            <div class="grouped">
+              <div class="row">Always ask before edits <div class="toggle"></div></div>
+              <div class="row">Connected hub <span>Local</span></div>
+            </div>
+            <button type="button" class="btn btn-secondary" data-go="install" style="width:100%">Add to Home Screen</button>
+          </div>
+          <div class="tabbar">
+            <div class="tab" data-go="home"><div class="dot"></div>Home</div>
+            <div class="tab" data-go="browse"><div class="dot"></div>Browse</div>
+            <div class="tab on" data-go="settings"><div class="dot"></div>You</div>
+          </div>
+        </section>
+
+        <!-- 7 Install -->
+        <section class="view" data-view="install">
+          <div class="scroll install">
+            <span class="preview">Preview</span>
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><use href="#drive-mark"/></svg>
+            </div>
+            <h3>Keep Drive on your phone</h3>
+            <p>Add to Home Screen for a one-tap call — same experience, app icon.</p>
+            <div class="cta">
+              <button type="button" class="btn btn-primary" data-go="home">Add to Home Screen</button>
+              <button type="button" class="btn btn-ghost" data-go="home">Not now</button>
+            </div>
+            <p style="margin-top:18px;color:var(--ink-35);font-size:12px">Standalone display · mic only when you hold</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <aside class="beats">
+    <h2>Demo beats</h2>
+    <div class="progress" aria-hidden="true"><i id="progress"></i></div>
+    <button type="button" class="beat" data-beat="open" aria-current="true">
+      <strong>1 · Open</strong>
+      <span>Brand tile · Preview honesty · SSO CTAs</span>
+    </button>
+    <button type="button" class="beat" data-beat="home">
+      <strong>2 · Home</strong>
+      <span>Large title · green Live · one Join</span>
+    </button>
+    <button type="button" class="beat" data-beat="browse">
+      <strong>3 · Browse</strong>
+      <span>Rooms &amp; tasks without hub sprawl</span>
+    </button>
+    <button type="button" class="beat" data-beat="call">
+      <strong>4 · Live call</strong>
+      <span>Spotlight · roster · hold-to-talk</span>
+    </button>
+    <button type="button" class="beat" data-beat="thinking">
+      <strong>5 · Hydrate / think</strong>
+      <span>Event loading spin · peek</span>
+    </button>
+    <button type="button" class="beat" data-beat="approve">
+      <strong>6 · Approval</strong>
+      <span>Sheet · one decision · clear diff</span>
+    </button>
+    <button type="button" class="beat" data-beat="settings">
+      <strong>7 · Settings</strong>
+      <span>Grouped lists · trust defaults</span>
+    </button>
+    <button type="button" class="beat" data-beat="install">
+      <strong>8 · PWA install</strong>
+      <span>Home-screen close · same mark</span>
+    </button>
+    <p class="note">Autoplay advances every ~3.2s. Hold mic with H or press Hold.</p>
+  </aside>
+</div>
+
+<script>
+  const order = ["open","home","browse","call","thinking","approve","settings","install"];
+  const root = document.documentElement;
+  const progress = document.getElementById("progress");
+  const hold = document.getElementById("hold");
+  let idx = 0;
+  let timer = null;
+
+  function setTheme(t) {
+    root.setAttribute("data-theme", t);
+    document.getElementById("btn-light").setAttribute("aria-pressed", t === "light" ? "true" : "false");
+    document.getElementById("btn-dark").setAttribute("aria-pressed", t === "dark" ? "true" : "false");
+  }
+
+  function show(id) {
+    idx = Math.max(0, order.indexOf(id));
+    if (idx < 0) idx = 0;
+    const view = order[idx];
+    document.querySelectorAll(".view").forEach((el) => {
+      el.classList.toggle("on", el.dataset.view === view);
+    });
+    document.querySelectorAll(".beat").forEach((el) => {
+      el.setAttribute("aria-current", el.dataset.beat === view ? "true" : "false");
+    });
+    progress.style.width = ((idx + 1) / order.length * 100) + "%";
+    history.replaceState(null, "", "#" + view);
+  }
+
+  function next() { show(order[Math.min(order.length - 1, idx + 1)]); }
+  function prev() { show(order[Math.max(0, idx - 1)]); }
+
+  function setPlay(on) {
+    document.getElementById("btn-play").setAttribute("aria-pressed", on ? "true" : "false");
+    clearInterval(timer);
+    timer = null;
+    if (!on) return;
+    timer = setInterval(() => {
+      if (idx >= order.length - 1) {
+        setPlay(false);
+        return;
+      }
+      next();
+    }, 3200);
+  }
+
+  document.getElementById("btn-light").onclick = () => setTheme("light");
+  document.getElementById("btn-dark").onclick = () => setTheme("dark");
+  document.getElementById("btn-next").onclick = () => { setPlay(false); next(); };
+  document.getElementById("btn-prev").onclick = () => { setPlay(false); prev(); };
+  document.getElementById("btn-play").onclick = () => {
+    const on = document.getElementById("btn-play").getAttribute("aria-pressed") !== "true";
+    setPlay(on);
+  };
+
+  document.querySelectorAll("[data-go]").forEach((el) => {
+    el.addEventListener("click", () => { setPlay(false); show(el.getAttribute("data-go")); });
+  });
+  document.querySelectorAll("[data-beat]").forEach((el) => {
+    el.addEventListener("click", () => { setPlay(false); show(el.dataset.beat); });
+  });
+
+  hold.addEventListener("pointerdown", () => hold.classList.add("holding"));
+  hold.addEventListener("pointerup", () => hold.classList.remove("holding"));
+  hold.addEventListener("pointerleave", () => hold.classList.remove("holding"));
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); setPlay(false); next(); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); setPlay(false); prev(); }
+    if (e.key === "p" || e.key === "P") {
+      const on = document.getElementById("btn-play").getAttribute("aria-pressed") !== "true";
+      setPlay(on);
+    }
+    if (e.key === "l" || e.key === "L") setTheme("light");
+    if (e.key === "d" || e.key === "D") setTheme("dark");
+    if (e.key === "h" || e.key === "H") {
+      hold.classList.add("holding");
+      setTimeout(() => hold.classList.remove("holding"), 500);
+    }
+  });
+
+  const start = (location.hash || "#open").slice(1);
+  show(order.includes(start) ? start : "open");
+</script>
+</body>
+</html>
