@@ -85,7 +85,10 @@ Wireframe: [mobile-drive-app.html](../../../../design/wireframes/mobile-drive-ap
 **Full surface map:** [mobile-drive-surfaces.html](../../../../design/wireframes/mobile-drive-surfaces.html) — every consumer + advanced page, portrait & landscape, three phone sizes.  
 **Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — light-first brand surfaces (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).  
 **Presenter demo:** [mobile-drive-ios-demo.html](../../../../design/wireframes/mobile-drive-ios-demo.html) — single-phone autoplay / click-through of the full consumer loop.  
-**Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; retire amber Live; iOS wireframe is visual SoT.
+**Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; retire amber Live; iOS wireframe is visual SoT.  
+**Capability / UX gaps → fill plan:** [GAPS.md](GAPS.md) — demo vs inventory vs product; voice / interrupt / PWA / hosted packs.  
+**Features users want:** [FEATURES.md](FEATURES.md) — jobs (glance / decide / speak / join / return); Tier 1–4 priority; interaction architecture.  
+**Phone-only power users:** [POWER-USERS.md](POWER-USERS.md) — operator cockpit on phone (task lines, spend, stop-one, Live stack); progressive power sheet.
 
 ## Surface inventory (mobile app)
 
@@ -223,4 +226,5 @@ with a credential-free watch path before App Store / Play Store.
 Next concrete build after this plan: **MC1** on top of drive-web + collapsible
 rail — `?app=1` composition root with vertical Spotlight. Apply
 [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md)
-before restyling app/surfaces wireframes (green Live, light default).
+before restyling app/surfaces wireframes (green Live, light default). Gap
+priority and capability packs: [GAPS.md](GAPS.md).
