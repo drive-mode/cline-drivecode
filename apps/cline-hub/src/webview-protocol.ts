@@ -308,7 +308,8 @@ export type WebviewInboundMessage =
 				| "drive.script.advance"
 				| "drive.fork.list"
 				| "drive.fork.audit.get"
-				| "drive.fork.retain.set";
+				| "drive.fork.retain.set"
+				| "drive.fork.cancel";
 			payload?: Record<string, unknown>;
 	  }
 	| {

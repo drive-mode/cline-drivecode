@@ -20,6 +20,7 @@ import {
 	classifyToolNameForGate,
 	clearGateSession,
 	createGateSessionState,
+	EVERYONE_ADDRESS,
 	recordGateDenial,
 	shouldShowGatesActiveStrip,
 } from "@cline/shared";
@@ -93,6 +94,11 @@ import { GateFeedCard, type GateFeedResponse } from "./drive/GateFeedCard";
 import { resolveIncomingApprovalBypass } from "./drive/gateApproval";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
+import { DriveAddressChip } from "./drive/DriveAddressChip";
+import {
+	type CallSpendSnapshot,
+	foldUsageIntoSpend,
+} from "./drive/callSpend";
 import {
 	collectRecruitCandidates,
 	RECRUIT_FIXTURE_CANDIDATES,
@@ -275,6 +281,8 @@ export default function Chat({
 		attachmentCount: number;
 		source: "voice" | "text";
 	} | null>(null);
+	/** Measured call spend (PU4) — cleared when the call ends. */
+	const [callSpend, setCallSpend] = useState<CallSpendSnapshot | null>(null);
 	/** suggest (default) | auto | manual — auto applies address without a chip (7.4). */
 	const routerMode = "suggest" as RouterUiMode;
 	const activeAssistantIdRef = useRef<string | undefined>(undefined);
@@ -329,6 +337,44 @@ export default function Chat({
 		openForkAudit,
 		setForkRetain,
 	} = driveSession;
+
+	useEffect(() => {
+		if (!drive.active) {
+			setCallSpend(null);
+		}
+	}, [drive.active]);
+
+	const modelShortlist = useMemo(() => {
+		const ids = new Set<string>();
+		if (provider.trim() && model.trim()) {
+			ids.add(`${provider}:${model}`);
+		}
+		for (const [providerId, modelId] of Object.entries(
+			lastSelection.lastModelByProvider,
+		)) {
+			if (providerId.trim() && modelId?.trim()) {
+				ids.add(`${providerId}:${modelId}`);
+			}
+		}
+		return [...ids].slice(0, 8);
+	}, [provider, model, lastSelection.lastModelByProvider]);
+
+	const currentModelId =
+		provider.trim() && model.trim() ? `${provider}:${model}` : undefined;
+
+	const selectPowerModel = useCallback((providerModel: string) => {
+		const sep = providerModel.indexOf(":");
+		if (sep <= 0) {
+			return;
+		}
+		const nextProvider = providerModel.slice(0, sep);
+		const nextModel = providerModel.slice(sep + 1);
+		if (!nextProvider || !nextModel) {
+			return;
+		}
+		setProvider(nextProvider);
+		setModel(nextModel);
+	}, []);
 
 	const driveRef = useRef(drive);
 	driveRef.current = drive;
@@ -1349,6 +1395,10 @@ export default function Chat({
 					setSending(false);
 					setPendingApprovals([]);
 					activeAssistantIdRef.current = undefined;
+					// PU4 session spend is call-scoped — ignore off-call / post-leave turns.
+					if (driveRef.current.active) {
+						setCallSpend((prev) => foldUsageIntoSpend(prev, message.usage));
+					}
 					setMessages((current) =>
 						finalizeAssistantTurn(
 							current,
@@ -1491,7 +1541,7 @@ export default function Chat({
 	const applyAddressSet = useCallback((addressSet: AddressSet) => {
 		postToHost({
 			type: "call_set_address",
-			roomId: DRIVE_DEFAULT_ROOM_ID,
+			roomId: driveRef.current.roomId?.trim() || DRIVE_DEFAULT_ROOM_ID,
 			addressSet,
 		});
 	}, []);
@@ -2372,6 +2422,13 @@ export default function Chat({
 							sending={sending}
 							session={driveSession}
 						/>
+						{drive.active ? (
+							<DriveAddressChip
+								addressSet={drive.addressSet}
+								onAddressEveryone={() => applyAddressSet(EVERYONE_ADDRESS)}
+								participants={drive.participants}
+							/>
+						) : null}
 						{routeSuggestion ? (
 							<RouteSuggestChip
 								onAccept={acceptRouteSuggestion}
@@ -2446,8 +2503,12 @@ export default function Chat({
 				 * top of it. DriveCallStrip no-ops (returns null) off a call.
 				 */}
 				<DriveCallStripDock
+					currentModel={currentModelId}
 					disabled={isHydrating}
+					modelShortlist={modelShortlist}
+					onSelectModel={selectPowerModel}
 					session={driveSession}
+					spend={callSpend}
 					turnInFlight={sending}
 				/>
 			</div>

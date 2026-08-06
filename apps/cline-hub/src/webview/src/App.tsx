@@ -1702,6 +1702,8 @@ function App() {
 					onOpenHistory={openDriveHistory}
 					onOpenProviders={() => navigate("models")}
 					onOpenStatus={() => navigate("status")}
+					roomsSource={roomsSource}
+					workspaceRoot={driveWorkspaceRoot}
 				/>
 			);
 		}

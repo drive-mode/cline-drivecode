@@ -169,7 +169,7 @@ export function NowNext({
 					type="button"
 				>
 					<div className="text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
-						next
+						{snapshot.nextTitle ? "about to" : "next"}
 					</div>
 					<div className="truncate text-xs">
 						{snapshot.nextTitle ?? snapshot.nextTaskId ?? "—"}

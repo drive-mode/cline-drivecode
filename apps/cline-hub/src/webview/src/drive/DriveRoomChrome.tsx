@@ -17,6 +17,15 @@ import { Button } from "@/components/ui/button";
 import { NowNext } from "../components/NowNext";
 import { downloadTextFile } from "../status/downloadTextFile";
 import { DriveCallStrip } from "./DriveCallChrome";
+import {
+	DrivePowerSheet,
+	useDrivePowerChromePref,
+} from "./DrivePowerSheet";
+import {
+	type CallSpendSnapshot,
+	formatCallSpend,
+	hasCallSpend,
+} from "./callSpend";
 import { PlanImproveGate } from "./PlanImproveGate";
 import { PlanReentryRow } from "./PlanReentryRow";
 import { requestPlanImproveResolve } from "./planImproveResolve";
@@ -93,6 +102,7 @@ export function DriveRoster({
 	recruitFixtures?: readonly RecruitCandidate[];
 }) {
 	const { drive, setDrive } = session;
+	const { powerChrome } = useDrivePowerChromePref();
 	if (!drive.active) {
 		return null;
 	}
@@ -103,6 +113,7 @@ export function DriveRoster({
 			onAddRosterPack={onAddRosterPack}
 			onDriveChange={setDrive}
 			onSeatRecruit={onSeatRecruit}
+			powerChrome={powerChrome}
 			recruitFixtures={recruitFixtures}
 			onTranscriptFocus={(participantId) => {
 				setDrive((current) => applyTranscriptFocus(current, participantId));
@@ -427,10 +438,18 @@ export function DriveCallStripDock({
 	session,
 	disabled,
 	turnInFlight = false,
+	spend = null,
+	modelShortlist = [],
+	currentModel,
+	onSelectModel,
 }: {
 	session: UseDriveSessionResult;
 	disabled: boolean;
 	turnInFlight?: boolean;
+	spend?: CallSpendSnapshot | null;
+	modelShortlist?: readonly string[];
+	currentModel?: string;
+	onSelectModel?: (providerModel: string) => void;
 }) {
 	const {
 		captionsOpen,
@@ -440,19 +459,41 @@ export function DriveCallStripDock({
 		chatForks,
 		workersPanelOpen,
 		leaveDrive,
+		cancelFork,
 	} = session;
+	const [powerOpen, setPowerOpen] = useState(false);
+	const { powerChrome, setPowerChrome } = useDrivePowerChromePref();
+	const spendLabel = hasCallSpend(spend) && spend ? formatCallSpend(spend) : undefined;
 	return (
-		<DriveCallStrip
-			captionsOpen={captionsOpen}
-			disabled={disabled}
-			drive={drive}
-			onLeaveDrive={leaveDrive}
-			outputVolume={driveVoice.hardware.outputVolume}
-			turnInFlight={turnInFlight}
-			workerCount={chatForks.length}
-			workersOpen={workersPanelOpen}
-			{...stripHandlers}
-		/>
+		<>
+			<DriveCallStrip
+				captionsOpen={captionsOpen}
+				disabled={disabled}
+				drive={drive}
+				onLeaveDrive={leaveDrive}
+				onTogglePower={() => setPowerOpen((open) => !open)}
+				outputVolume={driveVoice.hardware.outputVolume}
+				powerOpen={powerOpen}
+				spendLabel={spendLabel}
+				turnInFlight={turnInFlight}
+				workerCount={chatForks.length}
+				workersOpen={workersPanelOpen}
+				{...stripHandlers}
+			/>
+			<DrivePowerSheet
+				chatForks={chatForks}
+				currentModel={currentModel}
+				drive={drive}
+				modelShortlist={modelShortlist}
+				onCancelFork={cancelFork}
+				onOpenChange={setPowerOpen}
+				onPowerChromeChange={setPowerChrome}
+				onSelectModel={onSelectModel}
+				open={powerOpen}
+				powerChrome={powerChrome}
+				spend={spend}
+			/>
+		</>
 	);
 }
 

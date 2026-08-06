@@ -88,7 +88,8 @@ Wireframe: [mobile-drive-app.html](../../../../design/wireframes/mobile-drive-ap
 **Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; retire amber Live; iOS wireframe is visual SoT.  
 **Capability / UX gaps → fill plan:** [GAPS.md](GAPS.md) — demo vs inventory vs product; voice / interrupt / PWA / hosted packs.  
 **Features users want:** [FEATURES.md](FEATURES.md) — jobs (glance / decide / speak / join / return); Tier 1–4 priority; interaction architecture.  
-**Phone-only power users:** [POWER-USERS.md](POWER-USERS.md) — operator cockpit on phone (task lines, spend, stop-one, Live stack); progressive power sheet.
+**Phone-only power users:** [POWER-USERS.md](POWER-USERS.md) — operator cockpit on phone (task lines, spend, stop-one, Live stack); progressive power sheet.  
+**Power roadmap:** [ROADMAP.md](ROADMAP.md) · design [mobile-drive-power.html](../../../../design/wireframes/mobile-drive-power.html) (PU0–PU2 shipping).
 
 ## Surface inventory (mobile app)
 

@@ -13,6 +13,7 @@ import { CheckIcon, Loader2Icon, ShieldAlertIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PendingApproval } from "@/components/PendingApprovalsPanel";
+import { blastRadiusPaths } from "./gatePaths";
 
 function formatApprovalInput(input: unknown): string {
 	if (input == null) {
@@ -63,6 +64,7 @@ export function GateFeedCard({
 				const disposition = defaultDispositionForGateClass(actionClass);
 				const offerSession = canOfferGateSessionAllow(actionClass);
 				const busy = Boolean(approval.responding) || disabled;
+				const paths = blastRadiusPaths(approval.input);
 				return (
 					<div
 						className="grid gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
@@ -87,6 +89,15 @@ export function GateFeedCard({
 								<p className="text-[10px] text-muted-foreground">
 									Requested by {requesterLabel}
 								</p>
+								{paths.length > 0 ? (
+									<p
+										className="mt-1 text-[11px] text-foreground/80"
+										data-slot="gate-blast-radius"
+									>
+										Blast radius ·{" "}
+										<span className="font-medium">{paths.join(", ")}</span>
+									</p>
+								) : null}
 							</div>
 							<div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
 								{disposition === "block" ? (
@@ -149,7 +160,7 @@ export function GateFeedCard({
 											) : (
 												<CheckIcon className="size-4" />
 											)}
-											Approve
+											Once
 										</Button>
 									</>
 								)}

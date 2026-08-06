@@ -15,7 +15,8 @@ type DriveWebviewCommand =
 	| "drive.script.advance"
 	| "drive.fork.list"
 	| "drive.fork.audit.get"
-	| "drive.fork.retain.set";
+	| "drive.fork.retain.set"
+	| "drive.fork.cancel";
 
 export async function handleDriveWebviewCommand(
 	ctx: HubContext,

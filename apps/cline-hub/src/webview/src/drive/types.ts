@@ -8,6 +8,7 @@ import {
 	type SdlcFreezeProposal,
 } from "@cline/drive";
 import type {
+	AddressSet,
 	BankSnapshot,
 	InkRef,
 	Participant,
@@ -16,6 +17,7 @@ import type {
 	StageCard,
 	StagePin,
 } from "@cline/shared";
+import { EVERYONE_ADDRESS } from "@cline/shared";
 import {
 	type PlanMutationKind,
 	planEditConsequenceBanner,
@@ -118,6 +120,11 @@ export type DriveUiState = {
 	 */
 	addressFollowsFocusParticipantId: string | null;
 	/**
+	 * Hub-projected address set for the next send (PU6).
+	 * Mirrored from room_snapshot.addressSet.
+	 */
+	addressSet: AddressSet;
+	/**
 	 * One-shot felt-agency consequence banner (DRV-FELT-AGENCY).
 	 * Cleared by the chrome after display or on the next explicit clear.
 	 */
@@ -188,6 +195,7 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	participants: [],
 	focusedParticipantId: null,
 	addressFollowsFocusParticipantId: null,
+	addressSet: EVERYONE_ADDRESS,
 	agencyBanner: null,
 	cleanDrainInvite: null,
 	attributionAgentId: null,
@@ -346,6 +354,7 @@ export function applyRoomSnapshot(
 		subMode: fromSharedDriveSubMode(snapshot.subMode),
 		demo: false,
 		participants: [...snapshot.participants],
+		addressSet: snapshot.addressSet ?? EVERYONE_ADDRESS,
 	};
 }
 

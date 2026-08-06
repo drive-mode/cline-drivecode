@@ -2,6 +2,8 @@
 
 **Status.** Product / UX architecture (power audience).  
 **Companion.** [FEATURES.md](FEATURES.md) = mainstream phone jobs. **This file** = people who *live* on the phone and still want real control.  
+**Roadmap + build order.** [ROADMAP.md](ROADMAP.md)  
+**Design.** [mobile-drive-power.html](../../../../design/wireframes/mobile-drive-power.html)  
 **Parent.** [README.md](README.md).  
 **Operator depth.** [21-operator-experience](../../research/21-operator-experience.md).
 

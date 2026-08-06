@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drive · Power cockpit (phone)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root, [data-theme="light"] {
+    --violet: #9F58FA; --live: #2BCC28; --danger: #F53969;
+    --ink: #151516; --ink-78: rgba(21,21,22,.78); --ink-55: rgba(21,21,22,.55); --ink-35: rgba(21,21,22,.35);
+    --page: #F8FAFB; --surface: #fff; --surface-2: #F4F5F7;
+    --hairline: rgba(21,21,22,.08); --shadow-sm: 0 1px 2px rgba(21,21,22,.04), 0 4px 16px rgba(21,21,22,.05);
+    --shadow-md: 0 8px 28px rgba(21,21,22,.08); --radius: 9px; --radius-cta: 16px;
+  }
+  [data-theme="dark"] {
+    --ink: #fff; --ink-78: rgba(255,255,255,.78); --ink-55: rgba(255,255,255,.55); --ink-35: rgba(255,255,255,.35);
+    --page: #0A0A0A; --surface: #12131A; --surface-2: #1B1D24;
+    --hairline: rgba(255,255,255,.1); --live: #4ADE80;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Schibsted Grotesk", system-ui, sans-serif;
+    background: var(--page); color: var(--ink);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(159,88,250,.12), transparent);
+  }
+  header {
+    max-width: 1100px; margin: 0 auto; padding: 28px 20px 12px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between;
+  }
+  header h1 { margin: 0; font-size: 28px; letter-spacing: -0.04em; }
+  header p { margin: 6px 0 0; max-width: 42rem; color: var(--ink-55); font-size: 14px; line-height: 1.45; }
+  .seg { display: inline-flex; border: 0.8px solid var(--hairline); border-radius: 999px; overflow: hidden; background: var(--surface); }
+  .seg button {
+    border: 0; background: transparent; color: var(--ink-55); padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--violet); color: #fff; }
+  .gallery {
+    max-width: 1100px; margin: 0 auto; padding: 12px 20px 48px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px;
+  }
+  .card { display: grid; gap: 10px; justify-items: center; }
+  .card figcaption { font-size: 13px; color: var(--ink-55); text-align: center; }
+  .card strong { color: var(--ink); }
+  .phone {
+    width: 280px; height: 560px; border-radius: 36px; border: 0.8px solid var(--hairline);
+    background: var(--surface); box-shadow: var(--shadow-md); overflow: hidden; position: relative;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 96px; height: 22px; background: #151516; border-radius: 12px; z-index: 3;
+  }
+  [data-theme="dark"] .notch { background: #000; }
+  .screen { position: absolute; inset: 0; padding: 44px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-35); }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: -0.045em; margin: 0; }
+  .live-card, .stack-row, .sheet, .spot {
+    border: 0.8px solid var(--hairline); border-radius: 14px; background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .live-card {
+    padding: 12px; background: linear-gradient(145deg, rgba(159,88,250,.14), transparent 60%), var(--surface);
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px; background: rgba(43,204,40,.14); color: #1a8f18;
+  }
+  [data-theme="dark"] .pill { color: var(--live); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--live); }
+  .stack { display: grid; gap: 8px; }
+  .stack-row { display: flex; align-items: center; gap: 8px; padding: 10px; }
+  .stack-row .meta { flex: 1; min-width: 0; }
+  .stack-row strong { display: block; font-size: 13px; }
+  .stack-row span { display: block; font-size: 11px; color: var(--ink-55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .join {
+    border: 0; border-radius: 9px; background: var(--violet); color: #fff;
+    font: inherit; font-size: 12px; font-weight: 600; padding: 8px 10px; cursor: default;
+  }
+  .spot { flex: 1; padding: 10px; background: #0D0D10; color: #fff; font-family: "IBM Plex Mono", monospace; font-size: 11px; line-height: 1.45; }
+  .spot .tag { color: rgba(255,255,255,.45); font-size: 10px; margin-bottom: 6px; letter-spacing: .04em; }
+  .add { color: #4ADE80; } .del { color: #F53969; }
+  .strip {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: auto;
+  }
+  .strip button {
+    height: 44px; border-radius: 9px; border: 0.8px solid var(--hairline);
+    background: var(--surface-2); color: var(--ink-55); font-size: 10px; font-weight: 600;
+  }
+  .strip button.pri { background: var(--violet); color: #fff; border-color: transparent; height: 52px; border-radius: var(--radius-cta); }
+  .strip button.on { outline: 2px solid var(--violet); color: var(--violet); }
+  .spend {
+    align-self: flex-end; font-size: 11px; font-weight: 600; padding: 4px 8px;
+    border-radius: 999px; border: 0.8px solid var(--hairline); background: var(--surface-2); color: var(--ink-78);
+  }
+  .sheet-wrap { position: absolute; inset: 0; background: rgba(21,21,22,.28); display: flex; align-items: flex-end; z-index: 4; }
+  .sheet { width: 100%; border-radius: 18px 18px 0 0; padding: 10px 14px 18px; max-height: 72%; }
+  .handle { width: 36px; height: 4px; border-radius: 99px; background: var(--ink-12, rgba(21,21,22,.12)); margin: 0 auto 10px; }
+  .row { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-top: 0.8px solid var(--hairline); }
+  .av { width: 28px; height: 28px; border-radius: 8px; background: rgba(159,88,250,.2); color: var(--violet); display: grid; place-items: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .stop { margin-left: auto; border: 0; background: transparent; color: var(--danger); font: inherit; font-size: 12px; font-weight: 600; }
+  .gate { margin-top: auto; border-radius: 18px 18px 0 0; border: 0.8px solid var(--hairline); background: var(--surface); padding: 14px; box-shadow: var(--shadow-md); }
+  .gate h3 { margin: 0 0 4px; font-size: 17px; }
+  .gate p { margin: 0 0 10px; font-size: 13px; color: var(--ink-55); }
+  .diff { background: var(--surface-2); border-radius: 9px; padding: 10px; font-family: "IBM Plex Mono", monospace; font-size: 11px; margin-bottom: 8px; }
+  .blast { font-size: 11px; color: var(--ink-55); margin-bottom: 12px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .actions button {
+    border: 0; border-radius: 9px; padding: 12px 8px; font: inherit; font-size: 12px; font-weight: 600;
+    background: var(--surface-2); color: var(--ink);
+  }
+  .actions .allow { background: var(--violet); color: #fff; grid-column: span 1; }
+  .note { max-width: 1100px; margin: 0 auto 40px; padding: 0 20px; font-size: 13px; color: var(--ink-55); }
+  .note a { color: var(--violet); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Power cockpit</h1>
+    <p>Phone-only pilots: Live stack, task-line roster, spend, stop-one, gate blast radius. Consumer default stays one-hero; power is a sheet.</p>
+  </div>
+  <div class="seg" role="group" aria-label="Theme">
+    <button type="button" id="btn-light" aria-pressed="true">Light</button>
+    <button type="button" id="btn-dark" aria-pressed="false">Dark</button>
+  </div>
+</header>
+
+<div class="gallery">
+  <figure class="card">
+    <div class="phone" aria-label="Home with Live stack">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="eyebrow">Drive</div>
+        <h2 class="title">Home</h2>
+        <div class="live-card">
+          <span class="pill"><span class="dot"></span> Live</span>
+          <strong style="display:block;margin-top:8px;font-size:15px">Auth middleware</strong>
+          <span style="font-size:12px;color:var(--ink-55)">Maya + Coder · blocked on you</span>
+          <div style="margin-top:10px"><button class="join" type="button">Join</button></div>
+        </div>
+        <div class="eyebrow">Live stack</div>
+        <div class="stack">
+          <div class="stack-row">
+            <span class="dot"></span>
+            <div class="meta"><strong>Payments refactor</strong><span>2 agents · 18m</span></div>
+            <button class="join" type="button">Join</button>
+          </div>
+          <div class="stack-row">
+            <span class="dot"></span>
+            <div class="meta"><strong>Release train</strong><span>Quiet · needs review</span></div>
+            <button class="join" type="button">Join</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><strong>PU1 · Live stack</strong> — up to 3 concurrent rooms under the pairing hero</figcaption>
+  </figure>
+
+  <figure class="card">
+    <div class="phone" aria-label="Call with power sheet">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="eyebrow">Auth middleware</div>
+            <span class="pill"><span class="dot"></span> Live · 12:04</span>
+          </div>
+          <span class="spend">$1.42 · 18k</span>
+        </div>
+        <div class="spot">
+          <div class="tag">SPOTLIGHT · CODER · EDIT</div>
+          <div class="del">- if (!user) return null</div>
+          <div class="add">+ if (!user) throw new AuthError()</div>
+          <div class="add">+ return sessionFrom(user)</div>
+        </div>
+        <div class="strip">
+          <button type="button">Mic</button>
+          <button type="button">Hand</button>
+          <button class="pri" type="button">Hold</button>
+          <button class="on" type="button">Power</button>
+          <button type="button">Leave</button>
+        </div>
+      </div>
+      <div class="sheet-wrap">
+        <div class="sheet">
+          <div class="handle"></div>
+          <strong style="font-size:15px">Power</strong>
+          <p style="margin:4px 0 8px;font-size:12px;color:var(--ink-55)">Task lines · stop one · spend</p>
+          <div class="row">
+            <div class="av">M</div>
+            <div><strong style="font-size:13px">Maya</strong><span style="display:block;font-size:11px;color:var(--ink-55)">You · speaking</span></div>
+          </div>
+          <div class="row">
+            <div class="av">◈</div>
+            <div style="min-width:0;flex:1">
+              <strong style="font-size:13px">Coder</strong>
+              <span style="display:block;font-size:11px;color:var(--ink-55)">working · 4m</span>
+              <span style="display:block;font-size:12px">Gate JWT refresh</span>
+            </div>
+            <button class="stop" type="button">Stop</button>
+          </div>
+          <div class="row">
+            <div class="av">W</div>
+            <div style="min-width:0;flex:1">
+              <strong style="font-size:13px">Worker-2</strong>
+              <span style="display:block;font-size:11px;color:var(--ink-55)">working · $0.31</span>
+              <span style="display:block;font-size:12px">Draft tests</span>
+            </div>
+            <button class="stop" type="button">Stop</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><strong>PU0 / PU2–PU4</strong> — power sheet over Spotlight; strip Power control</figcaption>
+  </figure>
+
+  <figure class="card">
+    <div class="phone" aria-label="Gate with blast radius">
+      <div class="notch"></div>
+      <div class="screen" style="justify-content:flex-end;background:var(--page)">
+        <div class="gate">
+          <h3>Approve change?</h3>
+          <p>Coder wants to edit <strong style="color:var(--ink)">auth.ts</strong></p>
+          <div class="diff">
+            <div class="add">+ export function requireAuth()</div>
+            <div class="add">+ verifyJwt(req)</div>
+            <div class="add">+ next()</div>
+          </div>
+          <div class="blast">Blast radius · <strong style="color:var(--ink)">3 files</strong> · reversible via leave-without-loss</div>
+          <div class="actions">
+            <button type="button">Deny</button>
+            <button type="button">Once</button>
+            <button class="allow" type="button">Allow</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><strong>PU5 · Gate+</strong> — diff peek + files touched + Allow once</figcaption>
+  </figure>
+</div>
+
+<p class="note">
+  Roadmap: <a href="../../plans/cline-drivemode/initiatives/mobile-consumer/ROADMAP.md">ROADMAP.md</a>
+  · thesis <a href="../../plans/cline-drivemode/initiatives/mobile-consumer/POWER-USERS.md">POWER-USERS.md</a>
+  · tokens <a href="../brand/MOBILE-BRAND-STYLING.md">MOBILE-BRAND-STYLING.md</a>
+</p>
+<script>
+  const root = document.documentElement;
+  function setTheme(t) {
+    root.setAttribute("data-theme", t);
+    document.getElementById("btn-light").setAttribute("aria-pressed", t === "light" ? "true" : "false");
+    document.getElementById("btn-dark").setAttribute("aria-pressed", t === "dark" ? "true" : "false");
+  }
+  document.getElementById("btn-light").onclick = () => setTheme("light");
+  document.getElementById("btn-dark").onclick = () => setTheme("dark");
+</script>
+</body>
+</html>

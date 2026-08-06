@@ -44,6 +44,8 @@ import {
 } from "../../lib/host-message-gateway";
 import { postToHost } from "../../vscode";
 import { DriveMarkIcon } from "../icons/drive-mark";
+import { DriveLiveStack } from "../../drive/DriveLiveStack";
+import type { DriveRoomsSource } from "../../rooms/drive-rooms-source";
 import {
 	DRIVE_VIEW_MESSAGE_TYPES,
 	isDriveViewHostMessage,
@@ -283,12 +285,17 @@ export function DriveView({
 	onOpenHistory,
 	onOpenProviders,
 	onOpenStatus,
+	roomsSource,
+	workspaceRoot,
 }: {
 	onOpenCall: (request: DriveOpenCallRequest) => void;
 	onOpenDemo: () => void;
 	onOpenHistory: () => void;
 	onOpenProviders: () => void;
 	onOpenStatus: () => void;
+	/** Optional — when set, Live stack (PU1) lists concurrent live rooms. */
+	roomsSource?: DriveRoomsSource;
+	workspaceRoot?: string;
 }) {
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
 	const [roomPreview, setRoomPreview] = useState<DriveRoomPreview | null>(null);
@@ -447,6 +454,14 @@ export function DriveView({
 				onRetry={requestRoom}
 				preview={roomPreview}
 			/>
+
+			{roomsSource ? (
+				<DriveLiveStack
+					onOpenCall={onOpenCall}
+					roomsSource={roomsSource}
+					workspaceRoot={workspaceRoot}
+				/>
+			) : null}
 
 			{/* Status snapshot first: if something is blocked, that is the most
 			    useful thing this page can tell you. */}
