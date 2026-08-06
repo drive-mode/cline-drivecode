@@ -91,6 +91,7 @@ The harness proposes operations, the Cline host commits them through the hub, an
 - `docs/drivecode/design/wireframes/DRIVE-TAB.md` records the Discord information architecture inside Slack-like single-workspace chrome.
 - `docs/drivecode/design/wireframes/drive-tab-discord-slack.html` is the primary interactive Drive tab prototype.
 - `docs/drivecode/design/brand/CLINE-BRAND-TOKENS.md` records the palette, typography, spacing, borders, and radii measured from cline.bot.
+- `docs/drivecode/design/brand/DRIVE-MARK.md` locks the official light/dark Drive feature mark and event- vs location-oriented wait motion ([DEC-drive-mark-official](plans/cline-drivemode/decisions/DEC-drive-mark-official.md)).
 - `docs/drivecode/design/wireframes/index.html` contains the earlier Chat-based variants. Its banner marks them as superseded where appropriate.
 - Prefer the in-repo overview canvas: [docs/drivecode/design/canvases/overview-canvas.html](design/canvases/overview-canvas.html). Click-through runbook: [DEMO.md](design/wireframes/DEMO.md).
 

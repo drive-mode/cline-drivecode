@@ -35,7 +35,7 @@ big = cv2.resize(canvas, (canvas_side * SS, canvas_side * SS), interpolation=cv2
 big = cv2.GaussianBlur(big, (0, 0), sigmaX=SS * 2.0)
 _, big = cv2.threshold(big, 127, 255, cv2.THRESH_BINARY)
 
-contours, _ = cv2.findContours(big, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+contours, hierarchy = cv2.findContours(big, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 scale = VIEW / float(canvas_side * SS)
 
 
@@ -65,13 +65,23 @@ def catmull(pts):
 
 
 parts = []
-for c in contours:
+layers = {"wheel": [], "head": []}
+for i, c in enumerate(contours):
     if cv2.contourArea(c) <= 10 * SS * SS:
         continue
     pts = c.reshape(-1, 2).astype(np.float64) * scale
-    parts.append(catmull(resample_closed(pts, step=0.9)))
+    path = catmull(resample_closed(pts, step=0.9))
+    parts.append(path)
+    depth = 0
+    parent = hierarchy[0][i][3]
+    while parent >= 0:
+        depth += 1
+        parent = hierarchy[0][parent][3]
+    layers["wheel" if depth < 2 else "head"].append(path)
 
 path_data = "".join(parts)
+wheel_path = "".join(layers["wheel"])
+head_path = "".join(layers["head"])
 
 tsx = f'''/**
  * The Cline Drive mark as an inline icon.
@@ -80,6 +90,13 @@ tsx = f'''/**
  * active/hover states like the lucide icons beside it. Traced at a coarse
  * resample: the full asset path is ~25KB, which is wasted detail below 32px.
  */
+
+export const DRIVE_MARK_WHEEL_PATH =
+\t"{wheel_path}";
+export const DRIVE_MARK_HEAD_PATH =
+\t"{head_path}";
+const DRIVE_MARK_PATH =
+\t"{path_data}";
 
 export function DriveMarkIcon({{ className }}: {{ className?: string }}) {{
 \treturn (
@@ -92,7 +109,7 @@ export function DriveMarkIcon({{ className }}: {{ className?: string }}) {{
 \t\t\twidth="24"
 \t\t\txmlns="http://www.w3.org/2000/svg"
 \t\t>
-\t\t\t<path d="{path_data}" fillRule="evenodd" />
+\t\t\t<path d={{DRIVE_MARK_PATH}} fillRule="evenodd" />
 \t\t</svg>
 \t);
 }}

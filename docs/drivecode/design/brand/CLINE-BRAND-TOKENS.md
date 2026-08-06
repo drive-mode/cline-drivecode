@@ -204,6 +204,7 @@ canvases.
 
 | File | Uses |
 |---|---|
+| [DRIVE-MARK.md](DRIVE-MARK.md) | Official Drive feature mark (light/dark) + wait-motion axes |
 | [cline-canvas-tokens.css](cline-canvas-tokens.css) | Shared Hub hex for canvases / explainers |
 | [drive-tab-discord-slack.html](../wireframes/drive-tab-discord-slack.html) | Full token set as CSS custom properties, both accent variants |
 | [index.html](../wireframes/index.html) | Surface ladder, accent, type stack |

@@ -21,9 +21,9 @@ src = Path(sys.argv[1])
 out = Path(sys.argv[2])
 out.mkdir(parents=True, exist_ok=True)
 
-# Cline-inspired monochrome palette based on official light/dark brand assets.
-DARK = "#1F2024"
-LIGHT = "#FAFAF8"
+# Official Drive mark pair: pure black on white / pure white on black.
+DARK = "#000000"
+LIGHT = "#FFFFFF"
 VIEW = 1024  # clean power-of-two viewBox
 
 img = Image.open(src).convert("L")
@@ -54,7 +54,7 @@ big = cv2.resize(canvas, (canvas_side * SS, canvas_side * SS), interpolation=cv2
 big = cv2.GaussianBlur(big, (0, 0), sigmaX=SS * 1.6)
 _, big = cv2.threshold(big, 127, 255, cv2.THRESH_BINARY)
 
-contours, _ = cv2.findContours(big, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+contours, hierarchy = cv2.findContours(big, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 scale = VIEW / float(canvas_side * SS)
 
 
@@ -91,17 +91,27 @@ def catmull_rom_path(pts: np.ndarray) -> str:
 
 
 subpaths = []
+layer_subpaths = {"wheel": [], "head": []}
 kept = 0
-for c in contours:
+for i, c in enumerate(contours):
     if cv2.contourArea(c) <= 10 * SS * SS:
         continue
     pts = c.reshape(-1, 2).astype(np.float64) * scale
     # ~14px spacing in viewBox units keeps curvature without overfitting noise.
     pts = resample_closed(pts, step_px=14.0)
-    subpaths.append(catmull_rom_path(pts))
+    path = catmull_rom_path(pts)
+    subpaths.append(path)
+    depth = 0
+    parent = hierarchy[0][i][3]
+    while parent >= 0:
+        depth += 1
+        parent = hierarchy[0][parent][3]
+    layer_subpaths["wheel" if depth < 2 else "head"].append(path)
     kept += 1
 
 path_data = " ".join(subpaths)
+wheel_path = " ".join(layer_subpaths["wheel"])
+head_path = " ".join(layer_subpaths["head"])
 
 
 def make_svg(fg, bg=None):
@@ -168,6 +178,19 @@ favicon_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VIEW} {V
 '''
 (out / "favicon.svg").write_text(favicon_svg, encoding="utf-8")
 
+layers_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VIEW} {VIEW}" role="img" aria-label="Cline Drive steering wheel logo">
+  <!-- Official motion layers generated from source.png. The wheel turns; Cline stays upright. -->
+  <g id="dm-wheel" class="dm-wheel" fill="currentColor">
+    <path d="{wheel_path}" fill-rule="evenodd"/>
+  </g>
+  <g id="dm-head" class="dm-head" fill="currentColor">
+    <path d="{head_path}" fill-rule="evenodd"/>
+  </g>
+</svg>
+'''
+(out / "cline-drive-mark-layers.svg").write_text(layers_svg, encoding="utf-8")
+
 print(f"viewBox: {VIEW}")
 print(f"path chars: {len(path_data):,}")
 print(f"contours kept: {kept}")
+print(f"layers: wheel={len(layer_subpaths['wheel'])}, head={len(layer_subpaths['head'])}")

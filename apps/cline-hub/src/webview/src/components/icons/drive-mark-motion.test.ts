@@ -4,6 +4,7 @@
  */
 import { createElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
+import { DRIVE_MARK_HEAD_PATH, DRIVE_MARK_WHEEL_PATH } from "./drive-mark";
 import { DriveMarkMotion, type DriveMarkMotionKind } from "./drive-mark-motion";
 
 const kinds: DriveMarkMotionKind[] = ["idle", "loading", "peek", "drive"];
@@ -30,6 +31,8 @@ describe("DriveMarkMotion", () => {
 		);
 		expect(groups.some((g) => g.props.className === "dm-wheel")).toBe(true);
 		expect(groups.some((g) => g.props.className === "dm-head")).toBe(true);
+		expect(DRIVE_MARK_WHEEL_PATH.length).toBeGreaterThan(1_000);
+		expect(DRIVE_MARK_HEAD_PATH.length).toBeGreaterThan(1_000);
 	});
 
 	it("createElement accepts loading for conversation hydrate", () => {

@@ -4,9 +4,13 @@
  * Static nav still uses `DriveMarkIcon` (single path, tiny). Use this when you
  * need loading spin (wheel turns, head stays) or blind-spot peek (head tips).
  *
- * Geometry: `assets/drive/cline-drive-mark-layers.svg` (head traced from
- * source.png; wheel geometric rim + three spokes).
+ * When to use which motion (event vs location): docs/drivecode/design/brand/DRIVE-MARK.md
+ *
+ * Geometry: generated from the official `assets/drive/source.png`; see
+ * `assets/drive/cline-drive-mark-layers.svg`.
  */
+
+import { DRIVE_MARK_HEAD_PATH, DRIVE_MARK_WHEEL_PATH } from "./drive-mark";
 
 export type DriveMarkMotionKind = "idle" | "loading" | "peek" | "drive";
 
@@ -23,29 +27,22 @@ export function DriveMarkMotion({
 	return (
 		<svg
 			aria-hidden={title ? undefined : true}
-			className={className ? `drive-mark-motion ${className}` : "drive-mark-motion"}
+			aria-label={title}
+			className={
+				className ? `drive-mark-motion ${className}` : "drive-mark-motion"
+			}
 			data-motion={motion}
 			fill="currentColor"
 			role={title ? "img" : undefined}
-			viewBox="0 0 100 100"
+			viewBox="0 0 24 24"
 			xmlns="http://www.w3.org/2000/svg"
 		>
 			{title ? <title>{title}</title> : null}
-			{/* ponytail: geometric rim/spokes — upgrade to traced wheel if brand QA wants pixel-match at >64px */}
 			<g className="dm-wheel">
-				<path
-					d="M50 7.6c23.5 0 42.55 19.05 42.55 42.55S73.5 92.7 50 92.7 7.45 73.65 7.45 50.15 26.5 7.6 50 7.6zm0 9.55c-18.22 0-33 14.78-33 33s14.78 33 33 33 33-14.78 33-33-14.78-33-33-33z"
-					fillRule="evenodd"
-				/>
-				<rect height="7.2" rx="2.2" width="28" x="8.2" y="46.4" />
-				<rect height="7.2" rx="2.2" width="28" x="63.8" y="46.4" />
-				<rect height="28" rx="2.2" width="7.2" x="46.4" y="61" />
+				<path d={DRIVE_MARK_WHEEL_PATH} fillRule="evenodd" />
 			</g>
 			<g className="dm-head">
-				<path
-					d="M49.08 30.94L48.44 31.18L47.77 31.66L46.89 32.74L46.49 34.09L46.65 35.61L46.57 35.81L43.90 35.81L42.07 36.28L41.35 36.60L39.63 37.80L38.84 38.72L37.88 40.39L37.48 41.59L37.32 42.54L37.32 44.18L36.20 45.26L35.73 46.29L35.65 46.85L35.73 50.80L36.04 51.59L37.32 52.99L37.32 54.47L37.48 55.50L37.88 56.86L38.68 58.29L39.63 59.37L41.43 60.57L42.94 61.12L43.74 61.28L56.38 61.28L57.50 61.04L58.85 60.49L60.33 59.45L61.20 58.45L62.08 56.94L62.40 55.98L62.64 54.70L62.64 52.99L63.76 51.83L64.23 50.80L64.31 50.32L64.23 46.21L63.76 45.26L62.64 44.10L62.64 42.38L62.32 40.87L61.60 39.27L60.96 38.36L59.81 37.24L58.13 36.28L56.22 35.81L53.47 35.81L53.39 35.73L53.47 35.09L53.39 33.45L52.91 32.42L52.43 31.82L51.67 31.26L50.64 30.86Z M54.43 42.94L55.42 43.02L56.38 43.50L57.02 44.22L57.42 45.33L57.42 51.83L56.94 53.03L56.42 53.59L55.82 53.99L54.86 54.23L53.95 54.07L53.11 53.59L52.59 53.03L52.27 52.39L52.11 51.75L52.11 45.33L52.51 44.22L53.07 43.58L54.03 43.02Z M44.86 42.94L45.93 43.02L46.81 43.50L47.45 44.22L47.85 45.33L47.85 51.83L47.53 52.79L46.85 53.59L46.25 53.99L45.30 54.23L44.38 54.07L43.46 53.51L42.94 52.87L42.54 51.75L42.54 45.33L42.86 44.38L43.38 43.66L44.46 43.02Z"
-					fillRule="evenodd"
-				/>
+				<path d={DRIVE_MARK_HEAD_PATH} fillRule="evenodd" />
 			</g>
 		</svg>
 	);

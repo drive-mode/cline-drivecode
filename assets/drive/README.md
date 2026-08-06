@@ -5,13 +5,17 @@ the **Drive feature**, not the application — the Cline Hub keeps Cline's own
 wordmark and favicon, because `apps/cline-hub` is upstream Cline and Drive is a
 feature inside it.
 
+**Official direction:** light mode = dark silhouette; dark mode = light
+silhouette. Motion rules (event- vs location-oriented waits):
+[`docs/drivecode/design/brand/DRIVE-MARK.md`](../../docs/drivecode/design/brand/DRIVE-MARK.md).
+
 ## Files
 
 | File | Use |
 |---|---|
 | `source.png` | Original raster. **Source of truth** — regenerate everything else from it rather than editing the derived files. |
-| `cline-drive-dark-on-transparent.svg` | The mark in `#1F2024` on transparent. This is the one served at `/cline-drive-logo.svg`. |
-| `cline-drive-light-on-transparent.svg` | The mark in `#FAFAF8` on transparent, for dark surfaces. |
+| `cline-drive-dark-on-transparent.svg` | The mark in `#000000` on transparent. This is the one served at `/cline-drive-logo.svg`. |
+| `cline-drive-light-on-transparent.svg` | The mark in `#FFFFFF` on transparent, for dark surfaces. |
 | `cline-drive-light.svg` / `cline-drive-dark.svg` | Same mark on a solid tile. |
 | `cline-drive-mark-layers.svg` | **Motion layers** — `.dm-wheel` (rim + spokes) + `.dm-head` (traced from source). Wheel can spin while head peeks. |
 | `favicon.svg` | Adaptive favicon — follows `prefers-color-scheme`. |
@@ -19,11 +23,12 @@ feature inside it.
 | `cline-drive-*-512.png` | 512px rasters, solid and transparent. |
 | `generate-assets.py` | Rebuilds every file above from `source.png`. |
 | `generate-icon.py` | Emits the inline React icon component. |
+| `validate-assets.py` | Checks inversion, alpha, docs copies, and motion layers. |
 
 ## Palette
 
-- Dark `#1F2024`
-- Light `#FAFAF8`
+- Dark `#000000`
+- Light `#FFFFFF`
 
 ## Where it is used
 
@@ -52,6 +57,9 @@ python assets/drive/generate-icon.py assets/drive/source.png \
 # The served copy is not generated in place -- copy it, or it goes stale silently.
 cp assets/drive/cline-drive-dark-on-transparent.svg \
   apps/cline-hub/src/webview/public/cline-drive-logo.svg
+cp assets/drive/cline-drive-light-512.png docs/drivecode/assets/logos/logo-light.png
+cp assets/drive/cline-drive-dark-512.png docs/drivecode/assets/logos/logo-dark.png
+python assets/drive/validate-assets.py
 ```
 
 Two things the tracing does that a naive threshold-and-trace does not, both
