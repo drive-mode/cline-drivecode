@@ -37,7 +37,7 @@ docs/drivecode/
 │   │   ├── leadership/       # briefs, systems analysis, gates
 │   │   ├── delivery/         # TASK-GRAPH, runbook, active handoff
 │   │   ├── decisions/        # DEC-*
-│   │   ├── adr/              # ADR-NNNN-* + ADR-0000 board + decision-changelog.md
+│   │   ├── adr/              # ADR-NNNN-* + ADR-0000 board + decision-changelog.md + decision-coverage.md
 │   │   ├── prd/
 │   │   ├── features/         # DRV-*.md
 │   │   ├── initiatives/      # multi-file tracks (README each)

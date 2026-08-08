@@ -330,8 +330,12 @@ export async function checkDrivecodeStructure(
 			);
 			continue;
 		}
-		// Index + out-of-band chronology (ADR bodies stay current-truth only).
-		if (entry.name === "README.md" || entry.name === "decision-changelog.md") {
+		// Index + out-of-band chronology / coverage inventory (ADR bodies stay current-truth only).
+		if (
+			entry.name === "README.md" ||
+			entry.name === "decision-changelog.md" ||
+			entry.name === "decision-coverage.md"
+		) {
 			continue;
 		}
 		if (!/^ADR-\d{4}-[a-z0-9-]+\.md$/.test(entry.name)) {

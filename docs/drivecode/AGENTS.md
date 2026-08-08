@@ -26,7 +26,7 @@ Fix failures before merging Drive doc changes.
 | `plans/cline-drivemode/leadership/` | SE/PM briefs, systems analysis, entry gates |
 | `plans/cline-drivemode/delivery/` | TASK-GRAPH, AGENT-RUNBOOK, active track handoff |
 | `plans/cline-drivemode/decisions/` | `DEC-*` |
-| `plans/cline-drivemode/adr/` | `ADR-NNNN-*` + status board + `decision-changelog.md` (chronology out of band) |
+| `plans/cline-drivemode/adr/` | `ADR-NNNN-*` + status board + `decision-changelog.md` (chronology) + `decision-coverage.md` (binding-clause inventory) |
 | `plans/cline-drivemode/prd/` | Product requirements |
 | `plans/cline-drivemode/features/` | `DRV-*.md` one-pagers only |
 | `plans/cline-drivemode/initiatives/<slug>/` | Multi-file delivery plans (README required) |
@@ -69,7 +69,7 @@ this nest. Brand source files under repo-root `assets/drive/` are not docs.
 
 - After shared SDK edits that docs cite, rebuild with `bun run build:sdk` before claiming behavior in reference pages.
 - Screenshot refresh: write under `docs/drivecode/assets/{hub,tui,demos,logos}/` (see root `AGENTS.md` TUI / hub screenshot notes).
-- Decision status stays on the ADR board: `plans/cline-drivemode/adr/ADR-0000-status-board.md`. Chronology of rewrites: `plans/cline-drivemode/adr/decision-changelog.md` (do not put changelogs inside ADR bodies).
+- Decision status stays on the ADR board: `plans/cline-drivemode/adr/ADR-0000-status-board.md`. Chronology: `decision-changelog.md`. Clause inventory: `decision-coverage.md`. Do not put changelogs inside ADR bodies.
 - Keep `HANDOFF.md` short; deep detail belongs in plans / ADRs / initiatives, not duplicated here.
 - Structure drift is a CI failure — do not bypass `check:drivecode-docs`.
 

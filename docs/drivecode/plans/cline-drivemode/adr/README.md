@@ -2,16 +2,18 @@
 
 **ADR** = Architecture Decision Record (industry-standard naming; same artifact family as cursor-drive and harrison-site).
 
-**Status board.** [ADR-0000-status-board.md](ADR-0000-status-board.md) — Accepted / Recommended / Proposed / Open, clusters, and **decision coverage gaps** in one place.
+**Status board.** [ADR-0000-status-board.md](ADR-0000-status-board.md) — Accepted / Recommended / Proposed / Open, clusters, and **decision coverage gaps** in one place.  
+**Coverage inventory.** [decision-coverage.md](decision-coverage.md) — binding clauses, domain tags, and domain matrix for ADR-0001…0029 + DEC-\* + Architecture D1–D10.
 **Acceptance.** 2026-07-29 human `accept all`: ADR-0000…0013 + DEC bundle. ADR-0014 Accepted on `main` the same day. **2026-08-08 cleanup:** ADR-0023 reconciled; ADR-0023 / 0027 / 0028 / 0029 Accepted; path H + DEC-mobile on the board.
 
 **Hygiene (unpoisoned context).** Prefer **rewrite-in-place** so each ADR’s
 Context/Decision reads as current tip truth. Do not leave a false Finding beside
 an “amendment: ignore the above” note — that doubles the claim set and slows
-decisions. Chronology is **out of band**: [decision-changelog.md](decision-changelog.md)
-(append under the record’s heading). Do not put `## Changelog` inside ADRs —
-keeps the passable context window clean. Status is one current verdict. New ADR
-only for a real fork or supersession. See ADR-0000 § Change control.
+decisions. Out of band: [decision-changelog.md](decision-changelog.md)
+(chronology) and [decision-coverage.md](decision-coverage.md) (clause inventory).
+Do not put changelogs inside ADRs — keeps the passable context window clean.
+Status is one current verdict. New ADR only for a real fork or supersession.
+See ADR-0000 § Change control.
 
 | ID | Title | Status | Features |
 |---|---|---|---|

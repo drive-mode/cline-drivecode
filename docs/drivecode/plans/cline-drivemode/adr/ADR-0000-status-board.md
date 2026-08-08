@@ -2,7 +2,7 @@
 
 **Purpose.** One place to see what is Accepted, Proposed, Recommended-default, or Superseded.
 **Owner.** Drivecode SE lead / PM.
-**Related.** [decision-changelog.md](decision-changelog.md) (chronology), [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [HANDOFF.md](../delivery/HANDOFF.md), [../../HANDOFF.md](../../../HANDOFF.md).
+**Related.** [decision-changelog.md](decision-changelog.md) (chronology), [decision-coverage.md](decision-coverage.md) (binding-clause inventory), [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [HANDOFF.md](../delivery/HANDOFF.md), [../../HANDOFF.md](../../../HANDOFF.md).
 
 ## Status legend
 
@@ -34,7 +34,7 @@
 
 **2026-08-07.** Path H + freemium owner defaults ([DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md)); ADR-0016 rewritten in place for dual install paths.
 
-**2026-08-08.** ADR cleanup wave: reconcile ADR-0023; Accept ADR-0023 / 0027 / 0028 / 0029 (H1–H4 shipped, H5 open); fold path H onto main board; rename hotpath slices **H1–H5**; change control → **current truth singular**; chronology → [decision-changelog.md](decision-changelog.md).
+**2026-08-08.** ADR cleanup wave: reconcile ADR-0023; Accept ADR-0023 / 0027 / 0028 / 0029 (H1–H4 shipped, H5 open); fold path H onto main board; rename hotpath slices **H1–H5**; change control → **current truth singular**; chronology → [decision-changelog.md](decision-changelog.md); clause inventory → [decision-coverage.md](decision-coverage.md).
 
 ## Clusters (read together)
 
@@ -112,6 +112,8 @@ Foundation defaults in [01-architecture.md](../foundation/01-architecture.md). *
 SDK amendments (reducer/projection in `@cline/drive`; host port + conformance kit) must be reflected in `DRV-KERNEL` ACs before Phase 0 gate.
 
 ## Decision coverage gaps
+
+**Full clause inventory** (every ADR/DEC + Architecture D1–D10 + domain matrix): [decision-coverage.md](decision-coverage.md). Chronology: [decision-changelog.md](decision-changelog.md).
 
 Where product / platform work is advancing **without** a binding ADR (or with only Proposed paper). Prioritized for next decision writing — not a feature backlog.
 
