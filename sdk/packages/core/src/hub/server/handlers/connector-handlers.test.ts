@@ -37,6 +37,7 @@ describe("connector hub handlers", () => {
 			sessionState: new Map(),
 			pendingApprovals: new Map(),
 			pendingCapabilityRequests: new Map(),
+			pendingDriveToolInputs: new Map(),
 			suppressNextTerminalEventBySession: new Map(),
 			telemetry: telemetry as never,
 			sessionHost: {} as never,
