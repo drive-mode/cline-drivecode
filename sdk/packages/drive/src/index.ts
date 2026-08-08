@@ -20,7 +20,14 @@ export {
 	serializeDrivePlan,
 	serializeDriveTask,
 } from "./bankSerialize.js";
+export {
+	applyAppendTasksToPlan,
+	type BankOp,
+	buildBankOpsForDrafts,
+	type BuildBankOpsForDraftsInput,
+} from "./bankOps.js";
 export { deriveBankSnapshot } from "./bankSnapshot.js";
+export { commitBankOps } from "./commitBankOps.js";
 export {
 	type BankStore,
 	type CreateBankStoreOptions,

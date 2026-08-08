@@ -27,12 +27,15 @@ export {
 	type DrivePlanStatus,
 	DrivePlanStatusSchema,
 	type DriveTask,
+	type DriveTaskDraft,
+	DriveTaskDraftSchema,
 	DriveTaskSchema,
 	type DriveTaskStatus,
 	DriveTaskStatusSchema,
 	parseBankSnapshot,
 	parseDrivePlan,
 	parseDriveTask,
+	parseDriveTaskDraft,
 } from "./bank";
 export {
 	type DriveRun,

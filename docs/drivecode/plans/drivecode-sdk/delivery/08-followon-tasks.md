@@ -226,4 +226,16 @@ Plan was implemented in the revised ship order above.
 | F2 Remove-pack plan + harness + hub remove | **Done** (`planDismissParticipant` pure only; no dismiss wire) |
 | F3 Script/planner DirectorOps | **Done** |
 
-Still out of scope: webview pack library, `/pack`, Team CI guard.
+## Residual audit (2026-08-08)
+
+Re-checked the three out-of-scope items against tip. Two are resolved; one is a real open wire.
+
+| Item | Actual state |
+|---|---|
+| Team / `team_` guard | **Already enforced** — [`import-boundary.test.ts`](../../../../../sdk/packages/drive/src/import-boundary.test.ts) bans `\bTeam\b\|\bteam_` in kernel source (alongside the type-only `@cline/shared` rule and the `:7891` ban). It landed as a package test, not a CI script, which is why searching `scripts/` and `.github/` finds nothing. Nothing to build |
+| Webview pack library | Partially landed — `RosterPackLibrary` / `AddPackMenu` exist (claim:drv-roster-pack-library). Remaining ACs belong to DRV-ROSTER-PACK, not this track |
+| `call_dismiss_participant` wire | **Genuinely open.** `planDismissParticipant` is pure, exported (`drive/src/index.ts`), and table-tested (`room/seatSources.test.ts`) — but no hub command exists in `HubCommandName`, `hub-server-transport.ts`, or `drive-room-handlers.ts`. F2.3's remove-pack path is the pattern to mirror |
+
+**Do not wire dismiss from current `main`.** `drive-room-handlers.ts` and `hub-server-transport.ts` are rewritten by PR [#217](https://github.com/hhalperin/cline-drivecode/pull/217), still open ([#216](https://github.com/hhalperin/cline-drivecode/pull/216) merged 2026-08-08). Wiring it now guarantees a conflict. Sequence it after #217 merges — the work is mechanical, and it batches with the [09 host call site](09-next-task-proposer.md), which is blocked on the same files.
+
+`/pack` composer remains out of scope for this track.

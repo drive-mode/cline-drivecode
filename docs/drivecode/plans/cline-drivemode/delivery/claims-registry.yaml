@@ -2,6 +2,33 @@
 # Source of truth for delivery status. HANDOFF / README cite claim:<id>.
 
 claims:
+  - id: drv-bank-ops
+    status: verified_shipped
+    title: Pure bank op builders + task draft shape (09 rule 2)
+    note: >-
+      DriveTaskDraft + BankOp / buildBankOpsForDrafts / applyAppendTasksToPlan.
+      Harness proposes, host commits. No scorer and no ranker by 09 rules 1/3/4.
+    acs:
+      - id: ac-bank-ops-builders
+        evidence:
+          - kind: test
+            path: sdk/packages/drive/src/bankOps.test.ts
+            command: bun -F @cline/drive test -- bankOps
+      - id: ac-task-draft-strict
+        evidence:
+          - kind: test
+            path: sdk/packages/shared/src/drive/bank.test.ts
+            command: bun -F @cline/shared test -- bank
+      - id: ac-bank-ops-commit
+        evidence:
+          - kind: test
+            path: sdk/packages/drive/src/commitBankOps.test.ts
+            command: bun -F @cline/drive test -- commitBankOps
+    consumers:
+      - sdk/packages/drive/src/bankOps.ts
+      - sdk/packages/drive/src/commitBankOps.ts
+      - sdk/packages/shared/src/drive/bank.ts
+
   - id: drv-gates-feed
     status: active_partial
     title: GATES feed UI + reconnect + recruit Add

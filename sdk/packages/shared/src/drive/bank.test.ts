@@ -3,6 +3,7 @@ import {
 	parseBankSnapshot,
 	parseDrivePlan,
 	parseDriveTask,
+	parseDriveTaskDraft,
 } from "./bank";
 
 describe("DriveTaskSchema", () => {
@@ -36,6 +37,43 @@ describe("DriveTaskSchema", () => {
 				title: "x",
 				body: "",
 				status: "pending",
+			}),
+		).toThrow();
+	});
+});
+
+describe("DriveTaskDraftSchema", () => {
+	it("parses a title + body draft", () => {
+		const draft = parseDriveTaskDraft({
+			title: "Wire the gate",
+			body: "Acceptance: expiry and denial both observable",
+		});
+		expect(draft.title).toBe("Wire the gate");
+	});
+
+	it("accepts an empty body", () => {
+		expect(parseDriveTaskDraft({ title: "Stub", body: "" }).body).toBe("");
+	});
+
+	it("rejects a blank title", () => {
+		expect(() => parseDriveTaskDraft({ title: "", body: "x" })).toThrow();
+	});
+
+	it("rejects commit-time identity on a draft", () => {
+		expect(() =>
+			parseDriveTaskDraft({ title: "x", body: "", id: "t1" }),
+		).toThrow();
+		expect(() =>
+			parseDriveTaskDraft({ title: "x", body: "", status: "open" }),
+		).toThrow();
+	});
+
+	it("rejects session prose smuggled under an extra key", () => {
+		expect(() =>
+			parseDriveTaskDraft({
+				title: "Fix the thing",
+				body: "from the call",
+				transcript: "user: it broke again",
 			}),
 		).toThrow();
 	});
