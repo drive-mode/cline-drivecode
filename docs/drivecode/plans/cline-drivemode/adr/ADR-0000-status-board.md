@@ -34,7 +34,7 @@
 
 **2026-08-07.** Path H + freemium owner defaults ([DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md)); ADR-0016 rewritten in place for dual install paths.
 
-**2026-08-08.** ADR cleanup wave: reconcile ADR-0023; Accept ADR-0023 / 0027 / 0028 / 0029 (H1–H4 shipped, H5 open); fold path H onto main board; rename hotpath slices **H1–H5**; change control → **current truth singular**; chronology → [decision-changelog.md](decision-changelog.md); clause inventory → [decision-coverage.md](decision-coverage.md).
+**2026-08-08.** ADR cleanup wave: reconcile ADR-0023; Accept ADR-0023 / 0027 / 0028 / 0029 (H1–H4 shipped, H5 open); fold path H onto main board; rename hotpath slices **H1–H5**; change control → **current truth singular**; chronology → [decision-changelog.md](decision-changelog.md); clause inventory → [decision-coverage.md](decision-coverage.md). Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (**Proposed**).
 
 ## Clusters (read together)
 
@@ -81,6 +81,12 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0027](ADR-0027-role-tiers.md) | A role tier is a permission ceiling, or it is a prompt | **Accepted** | decision | No third tier until `capPreset` on `call_seat`. Depth stays 1. Three role vocabularies named as debt. |
 | [ADR-0028](ADR-0028-adlc-control-plane.md) | Drive Mode is the ADLC control plane | **Accepted** | decision | No second workflow runtime. Map factory properties onto room/bank/gates/status/receipt planes. Initiative: [adlc-drive-factory](../initiatives/adlc-drive-factory/). |
 | [ADR-0029](ADR-0029-room-hotpath-redesign.md) | Room hot-path redesign (checkpoint, deltas, one stage clock) | **Accepted** | partial | Amends ADR-0013. Slices **H1–H4** shipped; **H5** cloud signaling open (path H). Slice ids are H\* so they never collide with Architecture D1–D10. |
+| [ADR-0030](ADR-0030-plane-naming.md) | Plane naming for agent-facing code | **Proposed** | none | room/show/status (+ stage/visual); ban Engine ownership nouns; docs-first |
+| [ADR-0031](ADR-0031-visual-layout.md) | Client visual layout; producers viewport-blind | **Proposed** | none | `visual/layout`; ResizeObserver host frame; pairs with H4 |
+| [ADR-0032](ADR-0032-path-h-ops.md) | Path H hosted writer operations | **Proposed** | none | Auth/tenancy/residency/freemium failure; unblocks honest H5 |
+| [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary (DrivePlan owns truth) | **Proposed** | none | Kanban = workbench; bank/gates/receipts = Drive |
+| [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** | none | Blocked on delivery D1 (`capPreset` on `call_seat`) |
+| [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | none | Wire snapshot/delta + one factual catch-up line |
 
 ## Leadership decisions
 
@@ -91,6 +97,8 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [DEC-open-product-forks](../decisions/DEC-open-product-forks.md) | Focus / streams / share / accent / revise | **Accepted** (bundle) |
 | [DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md) | Path H, muted mic, Cline Drive name, MC3, freemium | **Accepted** (2026-08-07) |
 | [DEC-drive-mark-official](../decisions/DEC-drive-mark-official.md) | Official Drive mark + motion axes | **Accepted** |
+| [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) | Shared semantics across hub/pwa/ios/tui | **Proposed** |
+| [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) | Codebase-map explain-only; no portfolio/Status writes | **Proposed** |
 
 ## Architecture D1–D10
 
@@ -117,17 +125,16 @@ SDK amendments (reducer/projection in `@cline/drive`; host port + conformance ki
 
 Where product / platform work is advancing **without** a binding ADR (or with only Proposed paper). Prioritized for next decision writing — not a feature backlog.
 
-| Gap | Why it hurts | Suggested home |
+| Gap | Draft | Notes |
 |---|---|---|
-| **Agent-facing plane naming** (room / show / status; ban Engine/Director ownership nouns) | Arena conclusion exists in chat; code still says `visualEngine`; agents invent parallel trees | New thin ADR (or amend 0028) — docs-first |
-| **Client visual / layout adaptation** (screen format → Mermaid / stage layout) | Shipped behavior on feature branches; no decision record for viewport-blind producers vs client layout | New ADR under show/visual plane, or fold into 0029 H4 |
-| **Path H ops model** (auth, tenancy, data residency, who pays when freemium fails) | DEC-mobile + 0016 accept path H; 0021/0022 still Proposed; no hosted ops ADR | Extend 0021 + new ops DEC, or ADR-0030 hosted writer |
-| **DriveKanban managed-execution boundary** beyond wire | 0019 is the wire; product truth (who owns Done, gates, verification) is still tribal | Amend 0019 or short DEC |
-| **Role vocabulary convergence** | 0027 names three enums as debt; no decision to merge | Follow-on to 0027 when D1 lands |
-| **Multi-device product contract** (hub `?app=1` / iOS / PWA / TUI parity matrix) | Initiative + FEATURES exist; no ADR for what “parity” means vs glance-only | DEC or ADR under multi-device initiative |
-| **Codebase-map firewall** (explain-only; no Status/portfolio write) | AGENTS.md + ADR-0025 spirit; easy to violate in skills | One-page ADR or DEC citing ADR-0025 |
-| **Reconnect / late-join UX contract** | Stage catch-up exists; “since you left” copy still open product gap | Feature DRV-LEAVE-END + optional thin ADR |
-| **Show vs stage ownership nouns** | Spotlight / StickyStage / Show backlog collide for agents | Plane-naming ADR above |
+| Agent-facing plane naming (+ show/stage nouns) | [ADR-0030](ADR-0030-plane-naming.md) **Proposed** | Docs-first; ban Engine ownership nouns |
+| Client visual / layout adaptation | [ADR-0031](ADR-0031-visual-layout.md) **Proposed** | Producers viewport-blind |
+| Path H ops model | [ADR-0032](ADR-0032-path-h-ops.md) **Proposed** | Auth/tenancy/freemium failure |
+| DriveKanban managed-execution boundary | [ADR-0033](ADR-0033-managed-execution-boundary.md) **Proposed** | DrivePlan owns truth |
+| Role vocabulary convergence | [ADR-0034](ADR-0034-role-vocabulary.md) **Proposed** | Blocked on delivery D1 |
+| Multi-device product contract | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) **Proposed** | Semantics parity, not pixel parity |
+| Codebase-map firewall | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) **Proposed** | Explain-only |
+| Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) **Proposed** | One factual line + wire snapshot |
 
 ### Proposed ADRs — accept when shipped, not sooner
 
@@ -138,6 +145,12 @@ Where product / platform work is advancing **without** a binding ADR (or with on
 | **0022** | Room usage events + per-agent model/budget surface |
 | **0024** | Browser host passes `runHostConformance` |
 | **0017** | Keep deferred until Spotlight S9 |
+| **0030** | AGENTS plane table + first rename proof (`visual/layout`) |
+| **0031** | Layout module on tip with host-frame ResizeObserver |
+| **0032** | H5 writer + entitlement failure path honest |
+| **0033** | Managed cards refuse bank archive from Kanban Done |
+| **0034** | After delivery D1; unified seat role writes only |
+| **0035** | Catch-up line on leave/return + snapshot gap path |
 
 ## Still Open (product gaps)
 

@@ -27,6 +27,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-07 — Path H + DEC-mobile-consumer-owner; freemium default.
 - 2026-08-08 — ADR cleanup on main: reconcile 0023; Accept 0023/0027/0028/0029; path H fold; current-truth hygiene; chronology extracted to this file.
 - 2026-08-08 — Comprehensive git-mined changelog + full binding-clause inventory ([decision-coverage.md](decision-coverage.md)).
+- 2026-08-08 — Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (Proposed).
 
 ---
 
@@ -220,3 +221,35 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 
 - 2026-08-07 — Accepted (path H, muted mic, “Cline Drive”, MC3, freemium).
 - 2026-08-08 — Folded onto main; ADR-0029 H5 refs; portfolio-now links dropped for main tip.
+
+## ADR-0030 · Plane naming
+
+- 2026-08-08 — Proposed (room/show/status; ban Engine ownership nouns; docs-first).
+
+## ADR-0031 · Visual layout
+
+- 2026-08-08 — Proposed (producers viewport-blind; client `visual/layout`).
+
+## ADR-0032 · Path H ops
+
+- 2026-08-08 — Proposed (hosted writer auth/tenancy/residency/freemium failure).
+
+## ADR-0033 · Managed execution boundary
+
+- 2026-08-08 — Proposed (DrivePlan owns truth; Kanban = workbench).
+
+## ADR-0034 · Role vocabulary
+
+- 2026-08-08 — Proposed (converge after live `capPreset`; blocked on D1).
+
+## ADR-0035 · Late-join catch-up
+
+- 2026-08-08 — Proposed (snapshot/delta + one factual catch-up line).
+
+## DEC-multi-device-parity
+
+- 2026-08-08 — Proposed (shared semantics across hub/pwa/ios/tui; Tier 1 bar).
+
+## DEC-codebase-map-firewall
+
+- 2026-08-08 — Proposed (codebase-map explain-only; no portfolio/Status writes).

@@ -47,6 +47,12 @@ See ADR-0000 § Change control.
 | [ADR-0027](ADR-0027-role-tiers.md) | A role tier is a permission ceiling, or it is a prompt | **Accepted** — Impl decision | [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md), [DRV-CHAT-FORK](../features/DRV-CHAT-FORK.md) |
 | [ADR-0028](ADR-0028-adlc-control-plane.md) | Drive Mode is the ADLC control plane | **Accepted** — Impl decision | [adlc-drive-factory](../initiatives/adlc-drive-factory/) |
 | [ADR-0029](ADR-0029-room-hotpath-redesign.md) | Room hot-path redesign (H1–H5) | **Accepted** — Impl partial (H5 open) | [mobile-consumer](../initiatives/mobile-consumer/) |
+| [ADR-0030](ADR-0030-plane-naming.md) | Plane naming for agent-facing code | **Proposed** | — |
+| [ADR-0031](ADR-0031-visual-layout.md) | Client visual layout; producers viewport-blind | **Proposed** | — |
+| [ADR-0032](ADR-0032-path-h-ops.md) | Path H hosted writer operations | **Proposed** | [mobile-consumer](../initiatives/mobile-consumer/) |
+| [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary | **Proposed** | [driveplan-agent-runtime](../initiatives/driveplan-agent-runtime/) |
+| [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** (blocked on D1) | — |
+| [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | [DRV-LEAVE-END](../features/DRV-LEAVE-END.md) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 

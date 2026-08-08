@@ -760,21 +760,20 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## HOLES (topics advancing without a binding ADR/DEC)
+## HOLES → drafts (2026-08-08)
 
-From [ADR-0000 § Decision coverage gaps](ADR-0000-status-board.md) and Still Open — not invented:
+Former holes now have **Proposed** records (Paper until Accepted). Clause detail lives in each draft; this table is the pointer map.
 
-| Hole | Why it hurts | Suggested home |
+| Former hole | Draft | Coverage quality |
 |---|---|---|
-| **Agent-facing plane naming** (room / show / status; ban Engine/Director ownership nouns) | Arena conclusion exists; code still says `visualEngine`; agents invent parallel trees | Thin ADR or amend 0028 |
-| **Client visual / layout adaptation** (screen format → Mermaid / stage layout) | Shipped behavior on feature branches; no decision for viewport-blind producers vs client layout | New ADR under show/visual plane, or fold into 0029 H4 |
-| **Path H ops model** (auth, tenancy, data residency, who pays when freemium fails) | DEC-mobile + 0016 accept path H; 0021/0022 still Proposed; no hosted ops ADR | Extend 0021 + ops DEC, or ADR-0030 hosted writer |
-| **DriveKanban managed-execution boundary** beyond wire | 0019 is the wire; who owns Done/gates/verification still tribal | Amend 0019 or short DEC |
-| **Role vocabulary convergence** | 0027 names three enums as debt; no merge decision | Follow-on to 0027 when delivery D1 lands |
-| **Multi-device product contract** (hub `?app=1` / iOS / PWA / TUI parity matrix) | Initiative + FEATURES exist; no ADR for what “parity” means vs glance-only | DEC or ADR under multi-device initiative |
-| **Codebase-map firewall** (explain-only; no Status/portfolio write) | AGENTS.md + ADR-0025 spirit; easy to violate in skills | One-page ADR or DEC citing ADR-0025 |
-| **Reconnect / late-join UX contract** | Stage catch-up exists; “since you left” copy still open | Feature DRV-LEAVE-END + optional thin ADR |
-| **Show vs stage ownership nouns** | Spotlight / StickyStage / Show backlog collide for agents | Plane-naming ADR above |
+| Plane naming (+ show/stage nouns) | [ADR-0030](ADR-0030-plane-naming.md) | Paper |
+| Client visual / layout | [ADR-0031](ADR-0031-visual-layout.md) | Paper |
+| Path H ops | [ADR-0032](ADR-0032-path-h-ops.md) | Paper |
+| Kanban managed-execution boundary | [ADR-0033](ADR-0033-managed-execution-boundary.md) | Paper |
+| Role vocabulary convergence | [ADR-0034](ADR-0034-role-vocabulary.md) | Paper (blocked on D1) |
+| Multi-device parity | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) | Paper |
+| Codebase-map firewall | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) | Paper |
+| Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) | Paper |
 
 ### Still Open (product gaps — not holes in the ADR sense, but undecided product detail)
 
@@ -789,12 +788,20 @@ From [ADR-0000 § Decision coverage gaps](ADR-0000-status-board.md) and Still Op
 | Live `capPreset` on `call_seat` | defaults-delivery D1 |
 | Hosted signaling writer | ADR-0029 H5 |
 
-### Proposed ADRs — accept when shipped (gates)
+### Proposed ADRs / DECs — accept when shipped (gates)
 
-| ADR | Gate to Accept |
+| Record | Gate to Accept |
 |---|---|
 | **0020** | Worktree ledger + `DriveDelivery` identity on tip |
 | **0021** | Device-code path + three secret-hygiene fixes |
 | **0022** | Room usage events + per-agent model/budget surface |
 | **0024** | Browser host passes `runHostConformance` |
 | **0017** | Keep deferred until Spotlight S9 |
+| **0030** | AGENTS plane table + first rename proof (`visual/layout`) |
+| **0031** | Layout module on tip with host-frame ResizeObserver |
+| **0032** | H5 writer + honest entitlement failure |
+| **0033** | Managed cards refuse bank archive from Kanban Done |
+| **0034** | After delivery D1; unified seat role writes only |
+| **0035** | Catch-up line on leave/return + snapshot gap path |
+| **DEC-multi-device-parity** | MATRIX Tier 1 rows green on primary devices (or explicit lite) |
+| **DEC-codebase-map-firewall** | Skill + AGENTS refuse path; no write side channel |
