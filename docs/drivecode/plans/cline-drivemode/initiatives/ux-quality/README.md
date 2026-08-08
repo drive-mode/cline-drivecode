@@ -381,15 +381,17 @@ Related skills in-repo. `diagram-first` only if a phase needs a new structural d
 
 Split this README into `overview.md` + `phase-N-*.md` only when implementation starts and file size hurts review. Until then one file is the inventory.
 
-## Open decisions (owner)
+## Owner decisions — settled 2026-08-07
 
-1. **Accept 22-default-posture bets as shipping defaults?** Especially no spend cap, fork depth 1, task-complete earcon off. Research lists these as least-sure.
+All seven are answered. Implementation is unblocked; phases begin at 0. Delivery rows: [delivery/BACKLOG.md](../../delivery/BACKLOG.md) §C2.
+
+1. **22-default-posture as shipping defaults — accepted, with one variance.** Fork depth 1 and the earcon split (join/leave on, approval-required on, task-complete off) ship as written. **Variance: add an opt-in spend cap.** Always-visible spend stays the headline, but the user may set a cap explicitly and must be warned before it fires — which also retires today's `CLINE_MAX_SESSION_COST` silent abort. Phase 3 gains row `UXQ-3b`.
 2. **Narrow-width call IA.** **Locked: collapsible columns/rail** (not bottom sheet as default). Wireframe: [call-narrow-ia.html](../../../../design/wireframes/call-narrow-ia.html). Sheet remains OK for deep settings / one-shot approvals.
-3. **Operator panel placement.** In-call drawer/overlay vs beside-call (21-operator-experience open question). Recommendation: drawer that does not compete with stage height.
-4. **Hosted preview honesty level.** Quiet persistent preview marker (recommended) vs stronger "not a live agent" chrome.
-5. **PWA.** Stay YAGNI until after phase 7, or force phase 8 into the committed roadmap?
-6. **Wow-slice priority.** Insert `walkthrough.animation` into phase 4, or keep delight strictly stall/interrupt until core loop gates are green?
-7. **Upstream vs fork packaging** for public funnel copy (review strategy theme). Affects CTA tone on `cline.drivemode.ai`, not layout code.
+3. **Operator panel placement — in-call drawer/overlay.** It must not compete with stage vertical budget, and it adds no top-level nav destination. Closes the [21-operator-experience](../../research/21-operator-experience.md) open question.
+4. **Hosted preview honesty — quiet persistent marker, upgraded when real.** A quiet non-modal chrome marker is correct while the preview is fixture-backed. Once [ADR-0016](../../adr/ADR-0016-distribution-and-positioning.md) path H puts live agents behind the same URL, the marker must distinguish **fixture from live** — "preview" alone stops being honest at that point.
+5. **PWA — committed to the roadmap.** Phase 8 is no longer optional. Minimal scope only: manifest, icons, standalone, mic policy. No offline-hub work.
+6. **Wow-slice priority — held.** `walkthrough.animation` (S9) stays out of phases 0–4; delight remains stall/interrupt until core-loop gates are green. S9 is technically unblocked and may proceed as independent renderer work, but it does not enter this sequence.
+7. **Upstream vs fork packaging — answered by [ADR-0016](../../adr/ADR-0016-distribution-and-positioning.md)** (Route B, standalone fork). Funnel CTA tone follows that posture.
 
 ## Applicable skills / sibling initiatives
 
@@ -405,6 +407,6 @@ Split this README into `overview.md` + `phase-N-*.md` only when implementation s
 
 ## Hand back
 
-Phases 0→7 are the recommended sequence (8 optional). Mobile means responsive webview, not native. Award quality is the core call loop under an honest layout contract, taught by safe defaults, with operator Understand→Control on the strip/drawer, and a11y/brand as floors. Everything else is either already shipped or YAGNI.
+Phases 0→8 are the sequence (8 committed by decision 5). Mobile means responsive webview, not native. Award quality is the core call loop under an honest layout contract, taught by safe defaults, with operator Understand→Control on the strip/drawer, and a11y/brand as floors. Everything else is either already shipped or YAGNI.
 
-Owner accepts open decisions, then implementation begins from phase 0 on a stacked PR train.
+Owner decisions are settled (2026-08-07). Implementation begins from phase 0 on a stacked PR train.

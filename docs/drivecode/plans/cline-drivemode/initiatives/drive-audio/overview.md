@@ -31,6 +31,19 @@ That is the demo's job: show the experience. The **product** default stays off
 (`tts.enabled` false, per DRV-TTS "off by default"). When a user enables the facet,
 volume defaults to 50%. No slice below changes the default-off posture.
 
+## Beta backend decision (owner, 2026-08-07)
+
+The public self-hosted beta ships on the **already-shipped `browser-speechSynthesis`
+backend**. Robotic, but zero build work and zero API keys for a tester. Kokoro
+lands after, as the slices below, behind the same `TtsPort` — so the swap is a
+backend change, not a product change. The default-off `tts.enabled` posture is
+unaffected either way.
+
+This closes the ADR-0000 board's open row "Voice backend for the beta". Note the
+board framed the tradeoff as robotic-vs-keys; that framing was stale — the
+in-browser Kokoro tier below needs no API keys either, so the real tradeoff was
+integration work vs voice quality, and the beta takes the no-work side.
+
 ## Engine decision (researched 2026-07-31)
 
 **Kokoro-82M** (`onnx-community/Kokoro-82M-v1.0-ONNX`) is the engine for both the demo

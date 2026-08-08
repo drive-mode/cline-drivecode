@@ -4,10 +4,10 @@ Back to [README](../../../design/wireframes/README.md).
 
 ## How to pick work
 
-Delivery status is the claims registry ([claims-registry.yaml](claims-registry.yaml), ADR-0026) — not HANDOFF prose, not Kanban, not a generated BACKLOG. Cold-start tables must cite `claim:<id>`.
+Delivery status is the claims registry ([claims-registry.yaml](claims-registry.yaml), ADR-0026) — not HANDOFF prose, not Kanban, not a DriveKanban board. [BACKLOG.md](BACKLOG.md) is the registry's **render** and the place to select from; it is never a competing status source. If the two disagree, the registry wins. Cold-start tables must cite `claim:<id>`.
 
 1. Open [claims-registry.yaml](claims-registry.yaml). Prefer claims with status `scaffold` or `active_partial` that have empty or incomplete `acs`.
-2. Cross-check [TASK-GRAPH.md](TASK-GRAPH.md): lowest phase whose gate is not yet green, then a feature whose dependencies are complete.
+2. Cross-check [BACKLOG.md](BACKLOG.md): take the highest-priority eligible, unblocked row, and honour its dependencies and acceptance boundary. Decision-gated rows are not assignable work. [TASK-GRAPH.md](TASK-GRAPH.md) is historical delivery sequencing — read it for provenance, never as the task picker.
 3. Inside that feature, execute the agent-task checklist top to bottom. Tasks are ordered so read-and-map tasks come before write tasks.
 4. Check off tasks in the feature file as they complete, with a one-line note if reality diverged from the plan.
 5. Advance the matching claim in the registry (status / `acs` / evidence). Cite `claim:<id>` wherever HANDOFF or the product README status table is touched.

@@ -1,5 +1,11 @@
 # TASK-GRAPH · Phases and gates
 
+> **Historical delivery sequencing.** This graph records the order Drive mode was
+> built and the gate each phase had to pass. It is **not** the task picker — select
+> work from [BACKLOG.md](BACKLOG.md), backed by
+> [claims-registry.yaml](claims-registry.yaml) (ADR-0026). Many phase 0–4 features
+> below are on `main`; unchecked items here are provenance, not open work.
+
 Back to [README](../README.md). Phases are ordered by dependency and option value, never by dates. A phase is done when its gate passes, and no later phase starts on a foundation whose gate is red. The Drive-mode MVP (phases 0 through 3) lands entirely before any multi-user media work.
 
 Primary UX. Drive is a Cline mode (Plan/Act-class); Chat is the default work surface. Drive hub activity is optional room IA. Constraints unchanged. Hub is the single writer (preferred default port with discovery / free-port fallback unless `CLINE_HUB_PORT` is set), no second MCP on `:7891` by default, Bun only, events-first agent stage, WebRTC later.
