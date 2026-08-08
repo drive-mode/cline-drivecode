@@ -9,7 +9,8 @@ const FOLLOW_SLACK_PX = 4;
 
 /**
  * CC transcript — the demo canvas's `.transcript` panel (`.cc-head` /
- * `.cc-lines` / `.cc-empty`), rendered under the call strip.
+ * `.cc-lines` / `.cc-empty`). Mounted as a strip sheet (ADR-0029 D4) so it
+ * does not steal Spotlight flex height.
  *
  * Scrollback, not subtitle: the Spotlight frame already shows the current
  * line, so this panel is deliberately not a live region — announcing every

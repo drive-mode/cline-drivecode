@@ -27,6 +27,10 @@ import {
 import { restoreShowBacklogFromArtifacts } from "./artifactEventLog";
 import { resetDrivePauseAfterToolForTests } from "./drivePauseAfterTool";
 import { MemoryRoomEventLog, type RoomEventLog } from "./eventLog";
+import {
+	readRoomFoldCheckpoint,
+	writeRoomFoldCheckpoint,
+} from "./roomCheckpoint";
 import type { WorkRecordPayload } from "./work-from-tool";
 
 export type RoomCommitResult = {
@@ -206,6 +210,13 @@ export class DriveRoomStore {
 		this.rooms.set(stamped.roomId, next);
 		this.appliedEventIds.add(stamped.id);
 		this.syncLiveFromSnapshot(next);
+		// Retention may drop control.join from JSONL; checkpoint keeps hydrate honest.
+		if (record.trimmed) {
+			const parent = this.eventLog.configParent;
+			if (parent) {
+				writeRoomFoldCheckpoint(parent, stamped.roomId, seq, next);
+			}
+		}
 		return { snapshot: next, event: stamped, seq };
 	}
 
@@ -214,61 +225,42 @@ export class DriveRoomStore {
 	 * Does not re-append; folds only.
 	 */
 	async hydrateFromLog(roomId: string): Promise<RoomSnapshot | undefined> {
-		const log = this.eventLog;
-		const records = await log.readSince(roomId, 0);
-		if (records.length === 0) {
-			return undefined;
-		}
-		const first = records[0];
-		if (!first) {
-			return undefined;
-		}
-		this.create(roomId, first.event.at);
-		let snapshot = this.getOrThrow(roomId);
-		let lastEnd: RoomCommitResult | undefined;
-		for (const record of records) {
-			if (this.appliedEventIds.has(record.event.id)) {
-				continue;
-			}
-			snapshot = reduceRoom(snapshot, record.event);
-			this.rooms.set(roomId, snapshot);
-			this.appliedEventIds.add(record.event.id);
-			this.seqByRoom.set(roomId, record.seq);
-			if (record.event.type === "control.end") {
-				lastEnd = {
-					snapshot,
-					event: record.event,
-					seq: record.seq,
-				};
-			}
-		}
-		if (lastEnd) {
-			this.endedByRoom.set(roomId, lastEnd);
-			this.callSessions.delete(roomId);
-		}
-		this.syncLiveFromSnapshot(snapshot);
-		this.restoreDirectorBacklogFromArtifacts(roomId);
-		return snapshot;
+		return this.hydrateFromLogSync(roomId);
 	}
 
 	/** Sync hydrate for command handlers (JSONL / memory are sync). */
 	hydrateFromLogSync(roomId: string): RoomSnapshot | undefined {
 		const log = this.eventLog;
-		const records = log.readSinceSync(roomId, 0);
-		if (records.length === 0) {
-			return undefined;
+		const parent = log.configParent;
+		const checkpoint = parent
+			? readRoomFoldCheckpoint(parent, roomId)
+			: undefined;
+
+		let snapshot: RoomSnapshot;
+		let records: ReturnType<RoomEventLog["readSinceSync"]>;
+		if (checkpoint) {
+			this.rooms.set(roomId, checkpoint.snapshot);
+			this.seqByRoom.set(roomId, checkpoint.seq);
+			snapshot = checkpoint.snapshot;
+			records = log.readSinceSync(roomId, checkpoint.seq);
+		} else {
+			records = log.readSinceSync(roomId, 0);
+			if (records.length === 0) {
+				return undefined;
+			}
+			const first = records[0];
+			if (!first) {
+				return undefined;
+			}
+			this.create(roomId, first.event.at);
+			snapshot = this.getOrThrow(roomId);
 		}
-		const first = records[0];
-		if (!first) {
-			return undefined;
-		}
-		this.create(roomId, first.event.at);
-		let snapshot = this.getOrThrow(roomId);
+
 		let lastEnd: RoomCommitResult | undefined;
 		for (const record of records) {
-			if (this.appliedEventIds.has(record.event.id)) {
-				continue;
-			}
+			// ponytail: do not skip via process-global appliedEventIds — that set
+			// outlives trimmed log prefixes and can blank a same-process rehydrate.
+			// reduceRoom already dedups on snapshot.appliedEventIds.
 			snapshot = reduceRoom(snapshot, record.event);
 			this.rooms.set(roomId, snapshot);
 			this.appliedEventIds.add(record.event.id);

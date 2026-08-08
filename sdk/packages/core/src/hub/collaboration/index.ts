@@ -44,9 +44,15 @@ export {
 	type RoomEventLog,
 	type RoomEventLogOptions,
 	type RoomEventLogStore,
+	type RoomLogAppendResult,
 	type RoomLogRecord,
 	rebindJsonlRoomEventLog,
 } from "./eventLog";
+export {
+	type RoomFoldCheckpoint,
+	readRoomFoldCheckpoint,
+	writeRoomFoldCheckpoint,
+} from "./roomCheckpoint";
 export {
 	countNonEmptyLines,
 	DEBUG_ARTIFACT_EVENT_LOG_MAX_RECORDS,

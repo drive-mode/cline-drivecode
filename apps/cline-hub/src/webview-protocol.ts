@@ -794,7 +794,8 @@ export type WebviewOutboundMessage =
 			type: "drive_event";
 			roomId: string;
 			event: import("@cline/shared").DriveEvent;
-			snapshot: import("@cline/shared").RoomSnapshot;
+			/** Optional; live fanout is event+seq (ADR-0029). Join uses room_snapshot. */
+			snapshot?: import("@cline/shared").RoomSnapshot;
 			seq?: number;
 			callSessionId?: string;
 	  }

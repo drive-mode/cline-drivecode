@@ -85,6 +85,13 @@ const ROOM_ACTION_LABELS: Record<DriveRoomPreviewState, string> = {
 	seated: "Return to call",
 };
 
+/** MC1 consumer home — Join / Continue only (mobile-consumer). */
+const APP_ROOM_ACTION_LABELS: Record<DriveRoomPreviewState, string> = {
+	empty: "Join",
+	available: "Join",
+	seated: "Continue",
+};
+
 const ROOM_STATE_COPY: Record<
 	DriveRoomPreviewState,
 	{ badge: string; title: string; description: string }
@@ -155,11 +162,13 @@ function FeatureCard({
 }
 
 function RoomPreviewCard({
+	composition = "hub",
 	lookupError,
 	preview,
 	onOpenCall,
 	onRetry,
 }: {
+	composition?: "hub" | "app";
 	lookupError: string | null;
 	preview: DriveRoomPreview | null;
 	onOpenCall: (request: DriveOpenCallRequest) => void;
@@ -167,7 +176,10 @@ function RoomPreviewCard({
 }) {
 	const copy = preview ? ROOM_STATE_COPY[preview.state] : null;
 	const actionIntent = preview ? driveRoomOpenIntent(preview.state) : null;
-	const showRoomDetails = preview !== null && preview.state !== "empty";
+	const showRoomDetails =
+		composition === "hub" && preview !== null && preview.state !== "empty";
+	const actionLabels =
+		composition === "app" ? APP_ROOM_ACTION_LABELS : ROOM_ACTION_LABELS;
 
 	return (
 		<section
@@ -175,6 +187,7 @@ function RoomPreviewCard({
 				"mb-6 rounded-lg border bg-card p-5",
 				preview?.state === "seated" && "border-primary/40",
 			)}
+			data-slot={composition === "app" ? "drive-app-home" : "drive-room-preview"}
 		>
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div className="flex min-w-0 items-start gap-3">
@@ -226,7 +239,7 @@ function RoomPreviewCard({
 					{lookupError
 						? "Retry"
 						: preview
-							? ROOM_ACTION_LABELS[preview.state]
+							? actionLabels[preview.state]
 							: "Checking…"}
 				</Button>
 			</div>
@@ -280,6 +293,7 @@ function RoomPreviewCard({
 }
 
 export function DriveView({
+	composition = "hub",
 	onOpenCall,
 	onOpenDemo,
 	onOpenHistory,
@@ -288,6 +302,8 @@ export function DriveView({
 	roomsSource,
 	workspaceRoot,
 }: {
+	/** `app` = MC1 Join/Continue home; hub keeps Status / feature cards. */
+	composition?: "hub" | "app";
 	onOpenCall: (request: DriveOpenCallRequest) => void;
 	onOpenDemo: () => void;
 	onOpenHistory: () => void;
@@ -418,6 +434,35 @@ export function DriveView({
 		configured,
 		dismissed,
 	});
+
+	if (composition === "app") {
+		return (
+			<PageFrame>
+				<PageHeader
+					description="Join or continue a call. Watch the agent, then steer when needed."
+					icon={DriveMarkIcon}
+					title="Drive"
+				/>
+				{showCredentialBanner ? (
+					<CredentialOnboardingBanner
+						onDismiss={() => {
+							writeCredentialOnboardingDismissed(true);
+							setDismissed(true);
+						}}
+						onOpenDemo={onOpenDemo}
+						onOpenProviders={onOpenProviders}
+					/>
+				) : null}
+				<RoomPreviewCard
+					composition="app"
+					lookupError={roomLookupError}
+					onOpenCall={onOpenCall}
+					onRetry={requestRoom}
+					preview={roomPreview}
+				/>
+			</PageFrame>
+		);
+	}
 
 	return (
 		<PageFrame>

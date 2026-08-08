@@ -10,6 +10,81 @@ import {
 	readCoreSessionSnapshot,
 	readHubSessionRecord,
 } from "./context";
+import { handleDriveRoomCommand } from "./drive-room-handlers";
+
+function driveToolInputKey(sessionId: string, toolCallId: string): string {
+	return `${sessionId}\0${toolCallId}`;
+}
+
+function clearDriveToolInputsForSession(
+	ctx: HubTransportContext,
+	sessionId: string,
+): void {
+	const prefix = `${sessionId}\0`;
+	for (const key of ctx.pendingDriveToolInputs.keys()) {
+		if (key.startsWith(prefix)) {
+			ctx.pendingDriveToolInputs.delete(key);
+		}
+	}
+}
+
+/**
+ * Project a terminal tool into the Drive stage in-process (ADR-0029 slice 3).
+ * Best-effort: room_not_found / unsupported tools stay silent.
+ */
+function recordDriveWorkFromAgentTool(
+	ctx: HubTransportContext,
+	sessionId: string,
+	tool: {
+		toolCallId?: string;
+		toolName?: string;
+		input?: unknown;
+		output?: unknown;
+		error?: string;
+	},
+): void {
+	const toolCallId =
+		typeof tool.toolCallId === "string" ? tool.toolCallId.trim() : "";
+	const toolName = typeof tool.toolName === "string" ? tool.toolName.trim() : "";
+	if (!toolCallId || !toolName) {
+		return;
+	}
+	void handleDriveRoomCommand(ctx, {
+		version: "v1",
+		command: "call_record_work",
+		requestId: `drive_work_${toolCallId}`,
+		payload: {
+			sessionId,
+			tool: {
+				toolCallId,
+				toolName,
+				status: tool.error ? "failed" : "completed",
+				input: tool.input,
+				output: tool.output,
+				error: tool.error,
+			},
+		},
+	})
+		.then((reply) => {
+			if (
+				reply.ok ||
+				reply.error?.code === "room_not_found" ||
+				reply.error?.code === "unsupported_tool_for_stage"
+			) {
+				return;
+			}
+			console.warn(
+				`in-process call_record_work failed for ${sessionId}:`,
+				reply.error?.message ?? reply.error?.code,
+			);
+		})
+		.catch((error) => {
+			console.warn(
+				`in-process call_record_work threw for ${sessionId}:`,
+				error,
+			);
+		});
+}
 
 /**
  * Translates internal `CoreSessionEvent`s emitted by the session host into the
@@ -199,6 +274,16 @@ async function projectAgentEvent(
 			return;
 		}
 		if (agentEvent.contentType === "tool") {
+			if (
+				typeof agentEvent.toolCallId === "string" &&
+				agentEvent.toolCallId &&
+				agentEvent.input !== undefined
+			) {
+				ctx.pendingDriveToolInputs.set(
+					driveToolInputKey(sessionId, agentEvent.toolCallId),
+					agentEvent.input,
+				);
+			}
 			ctx.publish(
 				ctx.buildEvent(
 					"tool.started",
@@ -233,7 +318,21 @@ async function projectAgentEvent(
 					),
 				);
 				break;
-			case "tool":
+			case "tool": {
+				const toolCallId =
+					typeof agentEvent.toolCallId === "string"
+						? agentEvent.toolCallId
+						: "";
+				const cachedInput = toolCallId
+					? ctx.pendingDriveToolInputs.get(
+							driveToolInputKey(sessionId, toolCallId),
+						)
+					: undefined;
+				if (toolCallId) {
+					ctx.pendingDriveToolInputs.delete(
+						driveToolInputKey(sessionId, toolCallId),
+					);
+				}
 				ctx.publish(
 					ctx.buildEvent(
 						"tool.finished",
@@ -246,7 +345,18 @@ async function projectAgentEvent(
 						sessionId,
 					),
 				);
+				// Lead/subagent only — match prior Hub Chat bridge (skip teammates).
+				if (event.payload.teamRole !== "teammate") {
+					recordDriveWorkFromAgentTool(ctx, sessionId, {
+						toolCallId,
+						toolName: agentEvent.toolName,
+						input: cachedInput,
+						output: agentEvent.output,
+						error: agentEvent.error,
+					});
+				}
 				break;
+			}
 		}
 		return;
 	}
@@ -330,6 +440,7 @@ async function projectAgentEvent(
 		return;
 	}
 	if (agentEvent.type === "done") {
+		clearDriveToolInputsForSession(ctx, sessionId);
 		ctx.publish(
 			ctx.buildEvent(
 				"agent.done",
@@ -349,6 +460,7 @@ async function projectSessionEnded(
 	ctx: HubTransportContext,
 	event: Extract<CoreSessionEvent, { type: "ended" }>,
 ): Promise<void> {
+	clearDriveToolInputsForSession(ctx, event.payload.sessionId);
 	// `run.start` publishes the result-bearing terminal event after `send`
 	// returns. The local runtime emits `ended` synchronously during that send, so
 	// this token suppresses the earlier projector event. If session events move

@@ -21,6 +21,7 @@ function makeCtx(): HubTransportContext & { published: unknown[] } {
 		pendingApprovals: new Map(),
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
+		pendingDriveToolInputs: new Map(),
 		sessionHost: {} as HubTransportContext["sessionHost"],
 		publish(event) {
 			published.push(event);
@@ -183,11 +184,12 @@ describe("handleDriveRoomCommand", () => {
 			raisedHandByParticipantId: Record<string, boolean>;
 		};
 		expect(handSnap.raisedHandByParticipantId.you).toBe(true);
-		expect(
-			ctx.published.some(
-				(e) => (e as { event: string }).event === "room.event",
-			),
-		).toBe(true);
+		const handEvent = ctx.published.find(
+			(e) => (e as { event: string }).event === "room.event",
+		) as { payload?: { snapshot?: unknown; event?: unknown; seq?: number } };
+		expect(handEvent?.payload?.event).toBeTruthy();
+		expect(handEvent?.payload?.seq).toEqual(expect.any(Number));
+		expect(handEvent?.payload?.snapshot).toBeUndefined();
 
 		const lowered = await handleDriveRoomCommand(ctx, {
 			version: "v1",

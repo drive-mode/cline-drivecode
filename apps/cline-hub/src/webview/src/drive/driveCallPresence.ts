@@ -185,6 +185,73 @@ function foldRoomChanged(
  * Pure: same messages from the same presence always give the same result, and
  * an unrelated or unchanged message returns `current` by reference.
  */
+function foldEventDelta(
+	current: DriveCallPresence,
+	message: DriveSessionHostMessage,
+): DriveCallPresence {
+	const event = message.event;
+	if (!event || typeof event !== "object") {
+		return current;
+	}
+	const roomId =
+		typeof message.roomId === "string" && message.roomId
+			? message.roomId
+			: typeof event.roomId === "string"
+				? event.roomId
+				: null;
+	if (!roomId) {
+		return current;
+	}
+	if (current.active && current.roomId && current.roomId !== roomId) {
+		return current;
+	}
+
+	const type = event.type;
+	if (type === "control.end") {
+		return current.active ? IDLE_DRIVE_CALL_PRESENCE : current;
+	}
+	if (type === "control.leave") {
+		const participantId =
+			typeof event.participantId === "string" ? event.participantId : "";
+		if (participantId && isDriveHumanId(participantId)) {
+			return current.active ? IDLE_DRIVE_CALL_PRESENCE : current;
+		}
+		return current;
+	}
+	if (!current.active || current.roomId !== roomId) {
+		// Join without a snapshot cannot bootstrap presence; wait for room_snapshot.
+		return current;
+	}
+	if (type === "control.mute") {
+		const participantId =
+			typeof event.participantId === "string" ? event.participantId : "";
+		if (!participantId || !isDriveHumanId(participantId)) {
+			return current;
+		}
+		const muted = event.muted === true;
+		return current.muted === muted ? current : { ...current, muted };
+	}
+	if (type === "control.raise_hand") {
+		const participantId =
+			typeof event.participantId === "string" ? event.participantId : "";
+		if (!participantId || !isDriveHumanId(participantId)) {
+			return current;
+		}
+		const handRaised = event.raised === true;
+		return current.handRaised === handRaised
+			? current
+			: { ...current, handRaised };
+	}
+	if (type === "conversation.narration") {
+		const narration = readNarration(message);
+		if (!narration || narration === current.narration) {
+			return current;
+		}
+		return { ...current, narration };
+	}
+	return current;
+}
+
 export function foldDriveCallPresence(
 	current: DriveCallPresence,
 	message: DriveSessionHostMessage,
@@ -195,8 +262,11 @@ export function foldDriveCallPresence(
 	if (message.type !== "room_snapshot" && message.type !== "drive_event") {
 		return current;
 	}
-	if (!message.snapshot) {
-		return current;
+	if (message.snapshot) {
+		return foldSnapshot(current, message, message.snapshot);
 	}
-	return foldSnapshot(current, message, message.snapshot);
+	if (message.type === "drive_event") {
+		return foldEventDelta(current, message);
+	}
+	return current;
 }

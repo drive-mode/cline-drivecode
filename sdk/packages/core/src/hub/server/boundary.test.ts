@@ -6,6 +6,10 @@ import {
 	type StartSessionResult,
 } from "../../runtime/host/runtime-host";
 import { createSessionCompactionState } from "../../session/models/session-compaction";
+import {
+	getDriveRoomStore,
+	resetDriveRoomStoreForTests,
+} from "../collaboration";
 import { createLocalHubScheduleRuntimeHandlers } from "../daemon/runtime-handlers";
 import { HubServerTransport } from "../server";
 import {
@@ -17,6 +21,7 @@ import {
 	ensureSessionState,
 	type HubTransportContext,
 } from "./handlers/context";
+import { handleDriveRoomCommand } from "./handlers/drive-room-handlers";
 import { projectSessionEvent } from "./handlers/session-event-projector";
 
 describe("HubServerTransport boundaries", () => {
@@ -1646,5 +1651,120 @@ describe("HubServerTransport boundaries", () => {
 				},
 			},
 		});
+	});
+
+	it("projects terminal tools into room.event via in-process call_record_work", async () => {
+		resetDriveRoomStoreForTests();
+		const transport = createTransport();
+		const ctx = getContext(transport);
+		const events: HubEventEnvelope[] = [];
+		transport.subscribe("proj-work", (event) => {
+			events.push(event);
+		});
+
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "join-work",
+			payload: {
+				roomId: "room_proj",
+				sessionId: "session-work",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Cline" },
+			},
+		});
+		events.length = 0;
+
+		await projectSessionEvent(ctx, {
+			type: "agent_event",
+			payload: {
+				sessionId: "session-work",
+				event: {
+					type: "content_start",
+					contentType: "tool",
+					toolCallId: "tc_edit_1",
+					toolName: "write_to_file",
+					input: { path: "apps/hub/Chat.tsx", new_text: "export {}" },
+				},
+			},
+		});
+		await projectSessionEvent(ctx, {
+			type: "agent_event",
+			payload: {
+				sessionId: "session-work",
+				event: {
+					type: "content_end",
+					contentType: "tool",
+					toolCallId: "tc_edit_1",
+					toolName: "write_to_file",
+					output: "ok",
+				},
+			},
+		});
+
+		await vi.waitFor(() => {
+			expect(events.some((e) => e.event === "room.event")).toBe(true);
+		});
+
+		expect(events.some((e) => e.event === "tool.started")).toBe(true);
+		expect(events.some((e) => e.event === "tool.finished")).toBe(true);
+		const roomEvent = events.find((e) => e.event === "room.event");
+		expect(roomEvent?.payload).toMatchObject({
+			roomId: "room_proj",
+			seq: expect.any(Number),
+		});
+		expect(roomEvent?.payload?.snapshot).toBeUndefined();
+		const cards = getDriveRoomStore().get("room_proj")?.stage.cards ?? [];
+		expect(cards.some((c) => c.category === "edit")).toBe(true);
+	});
+
+	it("does not project teammate tools into the Drive stage", async () => {
+		resetDriveRoomStoreForTests();
+		const transport = createTransport();
+		const ctx = getContext(transport);
+		await handleDriveRoomCommand(ctx, {
+			version: "v1",
+			command: "call_join",
+			requestId: "join-tm",
+			payload: {
+				roomId: "room_tm",
+				sessionId: "session-tm",
+				human: { id: "you", displayName: "You" },
+				agent: { id: "adam", displayName: "Cline" },
+			},
+		});
+
+		await projectSessionEvent(ctx, {
+			type: "agent_event",
+			payload: {
+				sessionId: "session-tm",
+				teamRole: "teammate",
+				event: {
+					type: "content_start",
+					contentType: "tool",
+					toolCallId: "tc_tm",
+					toolName: "write_to_file",
+					input: { path: "x.ts", new_text: "1" },
+				},
+			},
+		});
+		await projectSessionEvent(ctx, {
+			type: "agent_event",
+			payload: {
+				sessionId: "session-tm",
+				teamRole: "teammate",
+				event: {
+					type: "content_end",
+					contentType: "tool",
+					toolCallId: "tc_tm",
+					toolName: "write_to_file",
+					output: "ok",
+				},
+			},
+		});
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(getDriveRoomStore().get("room_tm")?.stage.cards ?? []).toHaveLength(
+			0,
+		);
 	});
 });

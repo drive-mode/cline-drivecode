@@ -29,6 +29,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
 import { DriveMarkMotion } from "@/components/icons/drive-mark-motion";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import type {
 	WebviewChatAttachments,
 	WebviewDefaults,
@@ -283,6 +290,8 @@ export default function Chat({
 	} | null>(null);
 	/** Measured call spend (PU4) — cleared when the call ends. */
 	const [callSpend, setCallSpend] = useState<CallSpendSnapshot | null>(null);
+	/** Plan editor lives in a sheet on Spotlight — not under the stage column. */
+	const [planSheetOpen, setPlanSheetOpen] = useState(false);
 	/** suggest (default) | auto | manual — auto applies address without a chip (7.4). */
 	const routerMode = "suggest" as RouterUiMode;
 	const activeAssistantIdRef = useRef<string | undefined>(undefined);
@@ -343,6 +352,12 @@ export default function Chat({
 			setCallSpend(null);
 		}
 	}, [drive.active]);
+
+	useEffect(() => {
+		if (!(drive.active && drive.stageLayout)) {
+			setPlanSheetOpen(false);
+		}
+	}, [drive.active, drive.stageLayout]);
 
 	const modelShortlist = useMemo(() => {
 		const ids = new Set<string>();
@@ -1956,7 +1971,7 @@ export default function Chat({
 
 	return (
 		<PromptInputProvider>
-			<div className="relative flex h-screen flex-col overflow-hidden">
+			<div className="relative flex h-dvh flex-col overflow-hidden">
 				<div className="flex items-center justify-between border-b px-4 py-3">
 					<div className="min-w-0">
 						{visibleSessions.length > 0 ? (
@@ -2161,206 +2176,6 @@ export default function Chat({
 									ranked={recruitStall.ranked}
 								/>
 							) : null}
-							<ChatForkAuditPanel
-								auditMessages={auditMessages}
-								className="mt-3"
-								focusedAuditHandle={focusedAuditHandle}
-								forks={chatForks}
-								onClose={toggleWorkersPanel}
-								onOpenAudit={openForkAudit}
-								onRetain={setForkRetain}
-								open={workersPanelOpen}
-								showBacklog={showBacklog}
-								summaryOnly={auditSummaryOnly}
-							/>
-							<div className="space-y-3 text-xs text-muted-foreground">
-								<p>
-									Task bank cursor drives now/next. Edit plan refs below;
-									completed tasks archive under .drive/bank/archive/.
-								</p>
-								{drive.pendingSdlcFreeze ? (
-									<SdlcFreezeAcceptChip
-										disabled={isHydrating}
-										onAccept={() => {
-											const proposal = drive.pendingSdlcFreeze;
-											if (!proposal) {
-												return;
-											}
-											void (async () => {
-												const { snapshot, fromHub } =
-													await mutateBankAcceptSdlcFreeze(
-														bankSessionRef.current,
-														defaults.workspaceRoot,
-														proposal,
-														{
-															roomId: drive.roomId,
-															callSessionId: drive.callSessionId,
-														},
-													);
-												if (defaults.workspaceRoot?.trim() && !fromHub) {
-													setStatus(
-														"SDLC freeze not saved — workspace bank was not updated.",
-													);
-													return;
-												}
-												setDrive((prev) =>
-													applyBankSnapshot(
-														{
-															...prev,
-															pendingSdlcFreeze: null,
-															agencyBanner:
-																"Accepted phase-entry freeze into the bank",
-														},
-														snapshot,
-													),
-												);
-												const tasks = await listPlanTasks(
-													bankSessionRef.current,
-													snapshot.activePlanId ?? "",
-												);
-												setPlanEditorTasks(
-													tasks.map((t) => ({
-														id: t.id,
-														title: t.title,
-													})),
-												);
-											})();
-										}}
-										onDismiss={() => {
-											setDrive((prev) => ({
-												...prev,
-												pendingSdlcFreeze: null,
-											}));
-										}}
-										proposal={drive.pendingSdlcFreeze}
-									/>
-								) : null}
-								<PlanEditor
-									nowLastFailure={drive.bankSnapshot.nowLastFailure}
-									planId={drive.bankSnapshot.activePlanId}
-									planTitle="Current work"
-									tasks={planEditorTasks}
-									onAdd={(task) => {
-										void (async () => {
-											const planId = drive.bankSnapshot.activePlanId;
-											if (!planId) {
-												return;
-											}
-											const recovery = hasNowLastFailure(drive.bankSnapshot);
-											const { snapshot, fromHub } = await mutateBankCreateTask(
-												bankSessionRef.current,
-												defaults.workspaceRoot,
-												{
-													id: task.id,
-													title: task.title,
-													body: "",
-													planId,
-												},
-												{
-													roomId: drive.roomId,
-													callSessionId: drive.callSessionId,
-												},
-											);
-											if (defaults.workspaceRoot?.trim() && !fromHub) {
-												setStatus(
-													"Plan change not saved — workspace bank was not updated.",
-												);
-												return;
-											}
-											const baseline =
-												cleanDrainCountersRef.current.activateTaskIds;
-											if (baseline.length > 0 && !baseline.includes(task.id)) {
-												cleanDrainCountersRef.current.midPlanAddCount += 1;
-											}
-											setPlanEditorTasks(
-												await listPlanTasks(bankSessionRef.current, planId),
-											);
-											setDrive((current) =>
-												applyBankSnapshot(current, snapshot, {
-													mutation: "add",
-													addedTitle: task.title,
-													recovery,
-												}),
-											);
-										})();
-									}}
-									onComplete={(taskId) => {
-										void (async () => {
-											const planId = drive.bankSnapshot.activePlanId;
-											const prevSnapshot = drive.bankSnapshot;
-											const { snapshot, fromHub } =
-												await mutateBankCompleteTask(
-													bankSessionRef.current,
-													defaults.workspaceRoot,
-													{
-														taskId,
-														...(driveRef.current.attributionAgentId
-															? {
-																	agentId: driveRef.current.attributionAgentId,
-																}
-															: {}),
-													},
-													{
-														roomId: drive.roomId,
-														callSessionId: drive.callSessionId,
-													},
-												);
-											if (defaults.workspaceRoot?.trim() && !fromHub) {
-												setStatus(
-													"Plan change not saved — workspace bank was not updated.",
-												);
-												return;
-											}
-											cleanDrainCountersRef.current.completedCount += 1;
-											if (planId) {
-												setPlanEditorTasks(
-													await listPlanTasks(bankSessionRef.current, planId),
-												);
-											} else {
-												setPlanEditorTasks([]);
-											}
-											setDrive((current) =>
-												applyBankSnapshot(current, snapshot, {
-													mutation: "complete",
-												}),
-											);
-											maybeOfferCleanDrain(prevSnapshot, snapshot);
-										})();
-									}}
-									onReorder={(taskIds) => {
-										void (async () => {
-											const planId = drive.bankSnapshot.activePlanId;
-											if (!planId) {
-												return;
-											}
-											const { snapshot, fromHub } =
-												await mutateBankEditPlanTasks(
-													bankSessionRef.current,
-													defaults.workspaceRoot,
-													{ planId, taskIds },
-													{
-														roomId: drive.roomId,
-														callSessionId: drive.callSessionId,
-													},
-												);
-											if (defaults.workspaceRoot?.trim() && !fromHub) {
-												setStatus(
-													"Plan change not saved — workspace bank was not updated.",
-												);
-												return;
-											}
-											setPlanEditorTasks(
-												await listPlanTasks(bankSessionRef.current, planId),
-											);
-											setDrive((current) =>
-												applyBankSnapshot(current, snapshot, {
-													mutation: "reorder",
-												}),
-											);
-										})();
-									}}
-								/>
-							</div>
 						</Spotlight>
 					) : null}
 					<div
@@ -2507,10 +2322,244 @@ export default function Chat({
 					disabled={isHydrating}
 					modelShortlist={modelShortlist}
 					onSelectModel={selectPowerModel}
+					onTogglePlan={
+						stageLayout
+							? () => setPlanSheetOpen((open) => !open)
+							: undefined
+					}
+					planOpen={planSheetOpen}
 					session={driveSession}
 					spend={callSpend}
 					turnInFlight={sending}
 				/>
+				{/* ADR-0029 D4: audit is a sheet — not a Spotlight sibling. */}
+				<Dialog
+					onOpenChange={(open) => {
+						if (open !== workersPanelOpen) {
+							toggleWorkersPanel();
+						}
+					}}
+					open={stageLayout && workersPanelOpen}
+				>
+					<DialogContent className="max-h-[min(36rem,85dvh)] max-w-md gap-0 overflow-y-auto p-0 sm:max-w-md">
+						<DialogHeader className="sr-only">
+							<DialogTitle>Worker audit</DialogTitle>
+							<DialogDescription>
+								Invisible workers and promote audit for this call.
+							</DialogDescription>
+						</DialogHeader>
+						<div className="p-4">
+							<ChatForkAuditPanel
+								auditMessages={auditMessages}
+								focusedAuditHandle={focusedAuditHandle}
+								forks={chatForks}
+								onClose={toggleWorkersPanel}
+								onOpenAudit={openForkAudit}
+								onRetain={setForkRetain}
+								open
+								showBacklog={showBacklog}
+								summaryOnly={auditSummaryOnly}
+							/>
+						</div>
+					</DialogContent>
+				</Dialog>
+				{/* ADR-0029 D4: plan/bank edits are a sheet, not Spotlight children. */}
+				<Dialog
+					onOpenChange={setPlanSheetOpen}
+					open={stageLayout && planSheetOpen}
+				>
+					<DialogContent className="max-h-[min(36rem,85dvh)] max-w-md gap-0 overflow-y-auto p-0 sm:max-w-md">
+						<DialogHeader className="border-b px-4 py-3 text-left">
+							<DialogTitle>Plan</DialogTitle>
+							<DialogDescription>
+								Task bank cursor drives now/next. Completed tasks archive under
+								.drive/bank/archive/.
+							</DialogDescription>
+						</DialogHeader>
+						<div className="space-y-3 p-4 text-xs text-muted-foreground">
+							{drive.pendingSdlcFreeze ? (
+								<SdlcFreezeAcceptChip
+									disabled={isHydrating}
+									onAccept={() => {
+										const proposal = drive.pendingSdlcFreeze;
+										if (!proposal) {
+											return;
+										}
+										void (async () => {
+											const { snapshot, fromHub } =
+												await mutateBankAcceptSdlcFreeze(
+													bankSessionRef.current,
+													defaults.workspaceRoot,
+													proposal,
+													{
+														roomId: drive.roomId,
+														callSessionId: drive.callSessionId,
+													},
+												);
+											if (defaults.workspaceRoot?.trim() && !fromHub) {
+												setStatus(
+													"SDLC freeze not saved — workspace bank was not updated.",
+												);
+												return;
+											}
+											setDrive((prev) =>
+												applyBankSnapshot(
+													{
+														...prev,
+														pendingSdlcFreeze: null,
+														agencyBanner:
+															"Accepted phase-entry freeze into the bank",
+													},
+													snapshot,
+												),
+											);
+											const tasks = await listPlanTasks(
+												bankSessionRef.current,
+												snapshot.activePlanId ?? "",
+											);
+											setPlanEditorTasks(
+												tasks.map((t) => ({
+													id: t.id,
+													title: t.title,
+												})),
+											);
+										})();
+									}}
+									onDismiss={() => {
+										setDrive((prev) => ({
+											...prev,
+											pendingSdlcFreeze: null,
+										}));
+									}}
+									proposal={drive.pendingSdlcFreeze}
+								/>
+							) : null}
+							<PlanEditor
+								nowLastFailure={drive.bankSnapshot.nowLastFailure}
+								planId={drive.bankSnapshot.activePlanId}
+								planTitle="Current work"
+								tasks={planEditorTasks}
+								onAdd={(task) => {
+									void (async () => {
+										const planId = drive.bankSnapshot.activePlanId;
+										if (!planId) {
+											return;
+										}
+										const recovery = hasNowLastFailure(drive.bankSnapshot);
+										const { snapshot, fromHub } = await mutateBankCreateTask(
+											bankSessionRef.current,
+											defaults.workspaceRoot,
+											{
+												id: task.id,
+												title: task.title,
+												body: "",
+												planId,
+											},
+											{
+												roomId: drive.roomId,
+												callSessionId: drive.callSessionId,
+											},
+										);
+										if (defaults.workspaceRoot?.trim() && !fromHub) {
+											setStatus(
+												"Plan change not saved — workspace bank was not updated.",
+											);
+											return;
+										}
+										const baseline =
+											cleanDrainCountersRef.current.activateTaskIds;
+										if (baseline.length > 0 && !baseline.includes(task.id)) {
+											cleanDrainCountersRef.current.midPlanAddCount += 1;
+										}
+										setPlanEditorTasks(
+											await listPlanTasks(bankSessionRef.current, planId),
+										);
+										setDrive((current) =>
+											applyBankSnapshot(current, snapshot, {
+												mutation: "add",
+												addedTitle: task.title,
+												recovery,
+											}),
+										);
+									})();
+								}}
+								onComplete={(taskId) => {
+									void (async () => {
+										const planId = drive.bankSnapshot.activePlanId;
+										const prevSnapshot = drive.bankSnapshot;
+										const { snapshot, fromHub } = await mutateBankCompleteTask(
+											bankSessionRef.current,
+											defaults.workspaceRoot,
+											{
+												taskId,
+												...(driveRef.current.attributionAgentId
+													? {
+															agentId: driveRef.current.attributionAgentId,
+														}
+													: {}),
+											},
+											{
+												roomId: drive.roomId,
+												callSessionId: drive.callSessionId,
+											},
+										);
+										if (defaults.workspaceRoot?.trim() && !fromHub) {
+											setStatus(
+												"Plan change not saved — workspace bank was not updated.",
+											);
+											return;
+										}
+										cleanDrainCountersRef.current.completedCount += 1;
+										if (planId) {
+											setPlanEditorTasks(
+												await listPlanTasks(bankSessionRef.current, planId),
+											);
+										} else {
+											setPlanEditorTasks([]);
+										}
+										setDrive((current) =>
+											applyBankSnapshot(current, snapshot, {
+												mutation: "complete",
+											}),
+										);
+										maybeOfferCleanDrain(prevSnapshot, snapshot);
+									})();
+								}}
+								onReorder={(taskIds) => {
+									void (async () => {
+										const planId = drive.bankSnapshot.activePlanId;
+										if (!planId) {
+											return;
+										}
+										const { snapshot, fromHub } = await mutateBankEditPlanTasks(
+											bankSessionRef.current,
+											defaults.workspaceRoot,
+											{ planId, taskIds },
+											{
+												roomId: drive.roomId,
+												callSessionId: drive.callSessionId,
+											},
+										);
+										if (defaults.workspaceRoot?.trim() && !fromHub) {
+											setStatus(
+												"Plan change not saved — workspace bank was not updated.",
+											);
+											return;
+										}
+										setPlanEditorTasks(
+											await listPlanTasks(bankSessionRef.current, planId),
+										);
+										setDrive((current) =>
+											applyBankSnapshot(current, snapshot, {
+												mutation: "reorder",
+											}),
+										);
+									})();
+								}}
+							/>
+						</div>
+					</DialogContent>
+				</Dialog>
 			</div>
 		</PromptInputProvider>
 	);

@@ -95,4 +95,15 @@ describe("foldIncomingDriveEvent", () => {
 		});
 		expect(folded).toBe(hub);
 	});
+
+	it("folds a delta onto local without a hub snapshot", () => {
+		let local = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		local = reduceRoom(local, joinEvent("e1"));
+		const folded = foldIncomingDriveEvent({
+			local,
+			event: modeEvent("e2"),
+		});
+		expect(folded.driveActive).toBe(true);
+		expect(folded.appliedEventIds).toEqual(["e1", "e2"]);
+	});
 });

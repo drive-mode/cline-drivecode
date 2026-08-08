@@ -325,17 +325,20 @@ export async function attachHub(ctx: HubContext): Promise<void> {
 			},
 			onRoomEvent(payload) {
 				const roomId = asString(payload.roomId);
-				const snapshot = payload.snapshot;
 				const event = payload.event;
-				if (!roomId || !snapshot || typeof snapshot !== "object") {
+				if (!roomId || event == null || typeof event !== "object") {
 					return;
 				}
 				const seq = typeof payload.seq === "number" ? payload.seq : undefined;
+				const snapshot =
+					payload.snapshot && typeof payload.snapshot === "object"
+						? payload.snapshot
+						: undefined;
 				ctx.broadcast({
 					type: "drive_event",
 					roomId,
 					event,
-					snapshot,
+					...(snapshot ? { snapshot } : {}),
 					...(seq !== undefined ? { seq } : {}),
 				});
 			},

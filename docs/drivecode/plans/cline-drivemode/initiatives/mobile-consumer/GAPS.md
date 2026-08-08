@@ -87,7 +87,7 @@ Grouped by job. Priority = consumer path first; Advanced stays collapsed.
 
 | Gap | Why it hurts | Fill |
 |---|---|---|
-| No real `?app=1` composition | Demo HTML ≠ product; drift risk | MC1: strip hub nav; Home = Join / Continue |
+| No real `?app=1` composition | Demo HTML ≠ product; drift risk | **partial** — hub strips nav + Join/Continue lobby; PWA/brand still open |
 | Spotlight not full-bleed on phone | Stage loses to chrome (known 9 px lesson) | MC1 + ux-quality phase 2 layout contract |
 | Landscape untested in demo | Rotate → broken strip | Surfaces already models it; MC1 gate at 1280×640 phone landscape |
 | Credential-free path can lie | Looks live with no agent | Keep Preview chip; Door B hide no-ops (MC0 done in docs; enforce in webview) |

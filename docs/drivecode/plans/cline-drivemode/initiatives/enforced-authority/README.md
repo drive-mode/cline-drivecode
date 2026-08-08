@@ -41,7 +41,7 @@ being implemented.
 |---|---|---|
 | **L1** · Delegation must not widen authority | **done** | Parent authority threaded through `createSessionSpawnTool`, `spawnTeamTeammate`, and `buildDelegatedAgentConfig` (`intersectToolPolicies`). Locked by `sdk/packages/core/src/runtime/enforced-authority-consumer.test.ts` (ADR-0025 E1 slice for this hole). |
 | **L2** · Bound spawn depth and concurrency | proposed | ADR-0023 §1 for chat forks. Separately, `spawn-agent-tool.ts` has no concurrency, queue, or depth construct at all, and the runtime executes tool calls in parallel — one turn emitting N spawns starts N sub-agents, each able to spawn. Team runs already have an admission scheduler to route through |
-| **L3** · Room fold survives retention | proposed | Correctness, not performance. Retention trims oldest records while `hydrateFromLog` replays from seq 0 with no checkpoint, so a room past 2 048 events cannot be correctly rebuilt. `appliedEventIds` is never cleared and causes replay skips. See [research/24](../../research/24-scale-and-context.md) |
+| **L3** · Room fold survives retention | **partial** | Fold `checkpoint.json` on trim + hydrate from checkpoint + tail ([ADR-0029](../../adr/ADR-0029-room-hotpath-redesign.md) slice 1). Hydrate no longer skips via process-global `appliedEventIds`. Remaining: per-room id set hygiene / raise trim watermark (research/24). |
 | **L4** · Stop persisting team state per token delta | proposed | `onTeamEvent` calls `persistRuntime(exportState())` with no event-type filter; `exportState` copies every run including its `AgentResult`. Cost grows with session length times agent count. Filter, debounce, and stop storing a full result in a per-event-serialized record |
 
 ### Enforcement

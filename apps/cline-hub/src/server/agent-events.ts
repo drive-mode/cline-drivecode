@@ -38,43 +38,6 @@ function usageBudgetHandlerForSession(
 	return handler;
 }
 
-async function recordDriveWorkFromTool(
-	ctx: HubContext,
-	sessionId: string,
-	tool: WebviewToolEvent,
-): Promise<void> {
-	if (!ctx.uiClient) {
-		return;
-	}
-	if (tool.status !== "completed" && tool.status !== "failed") {
-		return;
-	}
-	try {
-		const reply = await ctx.uiClient.command("call_record_work", {
-			sessionId,
-			tool: {
-				toolCallId: tool.toolCallId,
-				toolName: tool.toolName,
-				status: tool.status,
-				input: tool.input,
-				output: tool.output,
-				error: tool.error,
-			},
-		});
-		if (
-			!reply.ok &&
-			reply.error?.code !== "room_not_found" &&
-			reply.error?.code !== "unsupported_tool_for_stage"
-		) {
-			console.warn(
-				`call_record_work failed for ${sessionId}:`,
-				reply.error?.message ?? reply.error?.code,
-			);
-		}
-	} catch (error) {
-		console.warn(`call_record_work threw for ${sessionId}:`, error);
-	}
-}
 function agentEventText(event: AgentEvent): string {
 	if (
 		event.type === "content_start" &&
@@ -195,7 +158,8 @@ function forwardAgentEvent(
 					: `${toolName} completed`,
 				event: toolEvent,
 			});
-			void recordDriveWorkFromTool(ctx, sessionId, toolEvent);
+			// Drive stage cards: daemon projects call_record_work in-process
+			// (ADR-0029 slice 3). Do not re-issue the command from Hub Chat.
 		}
 		return;
 	}

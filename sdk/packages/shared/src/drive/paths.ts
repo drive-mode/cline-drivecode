@@ -26,6 +26,8 @@ export function resolveDriveRegistryPath(configParent: string): string {
 export const DRIVE_ROOMS_DIRECTORY_NAME = "rooms";
 export const DRIVE_ROOM_EVENTS_FILE_NAME = "events.jsonl";
 export const DRIVE_ROOM_META_FILE_NAME = "meta.json";
+/** Fold checkpoint so retention trim cannot orphan live roster (ADR-0029). */
+export const DRIVE_ROOM_CHECKPOINT_FILE_NAME = "checkpoint.json";
 
 export function resolveDriveRoomsDir(configParent: string): string {
 	return join(resolveDriveConfigDir(configParent), DRIVE_ROOMS_DIRECTORY_NAME);
@@ -55,6 +57,16 @@ export function resolveDriveRoomMetaPath(
 	return join(
 		resolveDriveRoomDir(configParent, roomId),
 		DRIVE_ROOM_META_FILE_NAME,
+	);
+}
+
+export function resolveDriveRoomCheckpointPath(
+	configParent: string,
+	roomId: string,
+): string {
+	return join(
+		resolveDriveRoomDir(configParent, roomId),
+		DRIVE_ROOM_CHECKPOINT_FILE_NAME,
 	);
 }
 

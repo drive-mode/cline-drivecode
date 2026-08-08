@@ -9,7 +9,7 @@ Work queue for parity. Prefer small vertical slices that move a MATRIX cell
 |---|---|---|---|---|
 | B01 | SwiftUI demo shell Open→Home→Call→Approval→Settings | ios | **wip** | [`apps/drive-ios`](../../../../../../apps/drive-ios/) |
 | B02 | Wire ios fixtures to hub room snapshot (read-only glance) | ios, hub | todo | After B01 on-device smoke |
-| B03 | PWA / `?app=1` composition matching ios IA | pwa, hub | todo | mobile-consumer MC1 |
+| B03 | PWA / `?app=1` composition matching ios IA | pwa, hub | **wip** | hub: nav strip + Join/Continue lobby (`composition=app`); PWA install still MC3 |
 | B04 | Hold-to-talk + STT on ios + Safari | ios, pwa | todo | Permissions-Policy on hosted |
 | B05 | Shared Preview/demo honesty component contract | all | todo | Same chip semantics |
 

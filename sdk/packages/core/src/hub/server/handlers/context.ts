@@ -51,6 +51,11 @@ export interface HubTransportContext {
 	readonly pendingApprovals: Map<string, PendingApproval>;
 	readonly pendingCapabilityRequests: Map<string, PendingCapabilityRequest>;
 	readonly suppressNextTerminalEventBySession: Map<string, string>;
+	/**
+	 * Tool inputs from content_start, keyed `${sessionId}\\0${toolCallId}`.
+	 * Used by the in-process Drive stage projector (ADR-0029 slice 3).
+	 */
+	readonly pendingDriveToolInputs: Map<string, unknown>;
 	readonly telemetry?: ITelemetryService;
 	readonly sessionHost: RuntimeHost &
 		Partial<

@@ -222,6 +222,7 @@ export class HubServerTransport implements NativeHubTransport {
 			pendingCapabilityRequests: this.pendingCapabilityRequests,
 			suppressNextTerminalEventBySession:
 				this.suppressNextTerminalEventBySession,
+			pendingDriveToolInputs: new Map(),
 			telemetry: options.telemetry,
 			sessionHost: this.sessionHost,
 			publish: (event) => this.publish(event),

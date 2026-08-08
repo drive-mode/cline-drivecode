@@ -725,10 +725,8 @@ export function Spotlight({
 				</div>
 			) : null}
 			{children ? (
-				// Everything a caller hangs off Spotlight (recovery forks, the
-				// worker audit, the plan editor) is secondary to the stage: bounded
-				// to a predictable share of the column and scrolling on its own
-				// rather than pushing the frame below its floor.
+				// Ephemeral overlays only (recovery / gates / recruit).
+				// Plan, audit, captions are strip sheets (ADR-0029 D4).
 				<div className="max-h-52 shrink-0 space-y-3 overflow-y-auto">
 					{children}
 				</div>

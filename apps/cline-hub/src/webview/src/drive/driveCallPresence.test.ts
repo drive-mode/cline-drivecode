@@ -95,6 +95,26 @@ describe("driveCallPresence recorded broadcasts", () => {
 		});
 	});
 
+	it("folds mute and raise hand from event-only drive_event deltas", () => {
+		const { snapshot: _u, ...unmuteDelta } = unmute;
+		const { snapshot: _r, ...raiseDelta } = raiseHand;
+		expect(fold([join, unmuteDelta as DriveSessionHostMessage])).toMatchObject({
+			active: true,
+			muted: false,
+		});
+		expect(
+			fold([
+				join,
+				unmuteDelta as DriveSessionHostMessage,
+				raiseDelta as DriveSessionHostMessage,
+			]),
+		).toMatchObject({
+			active: true,
+			muted: false,
+			handRaised: true,
+		});
+	});
+
 	it("folds the drive_room_changed live-room mute patch", () => {
 		const unmuted = fold([join, unmute]);
 		expect(unmuted.muted).toBe(false);

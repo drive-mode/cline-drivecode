@@ -38,6 +38,11 @@ export type RoomLogRecord = {
 	readonly event: DriveEvent;
 };
 
+/** Append result; `trimmed` means oldest records were dropped this write. */
+export type RoomLogAppendResult = RoomLogRecord & {
+	readonly trimmed: boolean;
+};
+
 export type RoomEventLog = {
 	/**
 	 * Workspace root this log is durable to, when it has one. The artifact
@@ -46,7 +51,7 @@ export type RoomEventLog = {
 	 * on the pre-bind memory buffer — no workspace root, no durable corpus.
 	 */
 	readonly configParent?: string;
-	appendSync(roomId: string, event: DriveEvent): RoomLogRecord;
+	appendSync(roomId: string, event: DriveEvent): RoomLogAppendResult;
 	readSince(roomId: string, afterSeq: number): Promise<RoomLogRecord[]>;
 	/** Sync gap read for hub command handlers. */
 	readSinceSync(roomId: string, afterSeq: number): RoomLogRecord[];
@@ -231,7 +236,7 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		return n;
 	}
 
-	appendSync(roomId: string, event: DriveEvent): RoomLogRecord {
+	appendSync(roomId: string, event: DriveEvent): RoomLogAppendResult {
 		const metaPath = resolveDriveRoomMetaPath(this.configParent, roomId);
 		const eventsPath = resolveDriveRoomEventsPath(this.configParent, roomId);
 		mkdirSync(dirname(eventsPath), { recursive: true });
@@ -244,11 +249,13 @@ export class JsonlRoomEventLog implements RoomEventLog {
 		let count = before + 1;
 		this.lineCounts.set(roomId, count);
 		const maxRecords = this.currentMaxRecords();
+		let trimmed = false;
 		if (count > maxRecords) {
 			count = trimJsonlFileToMaxRecords(eventsPath, maxRecords);
 			this.lineCounts.set(roomId, count);
+			trimmed = true;
 		}
-		return record;
+		return { ...record, trimmed };
 	}
 
 	async readSince(roomId: string, afterSeq: number): Promise<RoomLogRecord[]> {
@@ -415,17 +422,19 @@ export class MemoryRoomEventLog implements RoomEventLog {
 		return [...this.byRoom.keys()];
 	}
 
-	appendSync(roomId: string, event: DriveEvent): RoomLogRecord {
+	appendSync(roomId: string, event: DriveEvent): RoomLogAppendResult {
 		const list = this.byRoom.get(roomId) ?? [];
 		const last = list[list.length - 1];
 		const seq = last ? last.seq + 1 : 1;
 		const record = { seq, event };
 		list.push(record);
+		let trimmed = false;
 		if (list.length > this.maxRecords) {
 			list.splice(0, list.length - this.maxRecords);
+			trimmed = true;
 		}
 		this.byRoom.set(roomId, list);
-		return record;
+		return { ...record, trimmed };
 	}
 
 	async readSince(roomId: string, afterSeq: number): Promise<RoomLogRecord[]> {

@@ -7,6 +7,7 @@ import {
 	HandIcon,
 	HeadphoneOffIcon,
 	HeadphonesIcon,
+	ListTodoIcon,
 	Loader2Icon,
 	MicIcon,
 	MicOffIcon,
@@ -416,6 +417,7 @@ export function DriveCallStrip({
 	workersOpen = false,
 	turnInFlight = false,
 	powerOpen = false,
+	planOpen = false,
 	spendLabel,
 	onMuteToggle,
 	onDeafenToggle,
@@ -432,6 +434,7 @@ export function DriveCallStrip({
 	onTogglePartnerDeafen,
 	onToggleWorkers,
 	onTogglePower,
+	onTogglePlan,
 }: {
 	/** CC panel open — the strip button is its only control. */
 	captionsOpen: boolean;
@@ -445,6 +448,8 @@ export function DriveCallStrip({
 	turnInFlight?: boolean;
 	/** Power cockpit sheet open (PU0). */
 	powerOpen?: boolean;
+	/** Plan / task-bank sheet open (ADR-0029 D4 — off stage siblings). */
+	planOpen?: boolean;
 	/** Honest spend pill when measured (PU4); omit when unknown. */
 	spendLabel?: string;
 	onMuteToggle: () => void;
@@ -466,6 +471,7 @@ export function DriveCallStrip({
 	onTogglePartnerDeafen?: () => void;
 	onToggleWorkers?: () => void;
 	onTogglePower?: () => void;
+	onTogglePlan?: () => void;
 }) {
 	if (!drive.active) {
 		return null;
@@ -662,6 +668,17 @@ export function DriveCallStrip({
 							</span>
 						) : null}
 					</span>
+				</StripButton>
+			) : null}
+			{onTogglePlan ? (
+				<StripButton
+					disabled={disabled}
+					label={planOpen ? "Close plan" : "Open plan"}
+					onClick={() => onTogglePlan()}
+					pressed={planOpen}
+					tone={planOpen ? "live" : "neutral"}
+				>
+					<ListTodoIcon />
 				</StripButton>
 			) : null}
 			{onTogglePower ? (

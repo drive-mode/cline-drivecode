@@ -256,14 +256,14 @@ const CallGetRoomPayloadSchema = z
 function publishRoomEvent(
 	ctx: HubTransportContext,
 	roomId: string,
-	snapshot: RoomSnapshot,
 	event: unknown,
 	seq: number,
 ): void {
+	// Delta publish (ADR-0029 slice 2): event+seq only. Full snapshot stays on
+	// room.snapshot (join/reconnect) and unicast command replies.
 	ctx.publish(
 		ctx.buildEvent("room.event", {
 			roomId,
-			snapshot,
 			event,
 			seq,
 		}),
@@ -505,7 +505,6 @@ export async function handleDriveRoomCommand(
 					publishRoomEvent(
 						ctx,
 						payload.roomId,
-						committed.snapshot,
 						committed.event,
 						committed.seq,
 					);
@@ -571,7 +570,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -639,7 +637,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					narration.snapshot,
 					narration.event,
 					narration.seq,
 				);
@@ -653,7 +650,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					ended.snapshot,
 					ended.event,
 					ended.seq,
 				);
@@ -681,7 +677,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -716,7 +711,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -733,7 +727,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -762,7 +755,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -790,7 +782,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -819,7 +810,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -845,7 +835,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);
@@ -1016,7 +1005,6 @@ export async function handleDriveRoomCommand(
 				publishRoomEvent(
 					ctx,
 					payload.roomId,
-					committed.snapshot,
 					committed.event,
 					committed.seq,
 				);

@@ -904,31 +904,56 @@ export function useDriveSession(
 				setWorkersPanelOpen(true);
 				return;
 			}
-			if (
-				(message.type === "room_snapshot" || message.type === "drive_event") &&
-				message.snapshot
-			) {
-				const hubSnapshot = message.snapshot;
+			if (message.type === "room_snapshot" || message.type === "drive_event") {
+				const hubSnapshot =
+					message.snapshot && typeof message.snapshot === "object"
+						? message.snapshot
+						: null;
+				if (message.type === "room_snapshot" && !hubSnapshot) {
+					return;
+				}
+				if (message.type === "drive_event" && message.event == null) {
+					return;
+				}
+				// Seq gap without a hub snapshot: refresh full state, then continue
+				// folding what we can so a single missed event does not stall forever.
+				if (
+					message.type === "drive_event" &&
+					!hubSnapshot &&
+					typeof message.seq === "number" &&
+					roomSeqRef.current > 0 &&
+					message.seq > roomSeqRef.current + 1
+				) {
+					refreshDriveRoom();
+				}
+				let snapshot: RoomSnapshot;
+				try {
+					if (message.type === "drive_event" && message.event != null) {
+						snapshot = foldIncomingDriveEvent({
+							local: roomSnapshotRef.current,
+							event: message.event,
+							hubSnapshot,
+						});
+					} else if (hubSnapshot) {
+						snapshot = hubSnapshot;
+					} else {
+						return;
+					}
+				} catch {
+					if (message.type === "drive_event") {
+						refreshDriveRoom();
+					}
+					return;
+				}
 				if (
 					!isDriveRoomSnapshotForTarget({
 						expectedRoomId: expectedRoomIdRef.current,
 						outerRoomId: message.roomId,
-						snapshotRoomId: hubSnapshot.roomId,
+						snapshotRoomId: snapshot.roomId,
 					})
 				) {
 					return;
 				}
-				// Fold drive_event through reduceRoom; room_snapshot replaces.
-				// Compute candidate before intent guards — only commit to the ref
-				// once we know this client should apply the update.
-				const snapshot =
-					message.type === "drive_event" && message.event != null
-						? foldIncomingDriveEvent({
-								local: roomSnapshotRef.current,
-								event: message.event,
-								hubSnapshot,
-							})
-						: hubSnapshot;
 				// Local human seat only — matches Drive preview; guests do not count.
 				const humanSeated = snapshot.participants.some(
 					(participant) =>

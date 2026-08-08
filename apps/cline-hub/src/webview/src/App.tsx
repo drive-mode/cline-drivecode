@@ -92,8 +92,10 @@ import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import { useDriveCallPresence } from "./drive/useDriveCallPresence";
 import {
 	type DriveShellMode,
+	appShellHomeRedirect,
 	drivePath,
 	legacyChatOrSessionsRedirect,
+	parseDriveAppShell,
 	parseDriveSessionId,
 	parseDriveShellMode,
 } from "./lib/drive-shell";
@@ -282,10 +284,10 @@ function settingsSectionFromPath(pathname: string): SettingsSection {
 
 function applyLegacyDriveRedirects(): void {
 	if (typeof window === "undefined") return;
-	const next = legacyChatOrSessionsRedirect(
-		window.location.pathname,
-		window.location.search,
-	);
+	const search = window.location.search;
+	const next =
+		legacyChatOrSessionsRedirect(window.location.pathname, search) ??
+		appShellHomeRedirect(window.location.pathname, search);
 	if (!next) return;
 	const current = `${window.location.pathname}${window.location.search}`;
 	if (current !== next) {
@@ -447,12 +449,15 @@ function sessionFilterDetails(session: WebviewSessionSummary): string[] {
 }
 
 function Shell({
+	appShell = false,
 	children,
 	onExpandCall,
 	onNavigate,
 	version,
 	view,
 }: {
+	/** `?app=1` — consumer chrome without hub nav (MC1 / ADR-0029 D4). */
+	appShell?: boolean;
 	children: ReactNode;
 	/** PiP Expand — focus the room the user is already in (DRV-PIP). */
 	onExpandCall: (roomId: string) => void;
@@ -472,6 +477,21 @@ function Shell({
 		setRailCollapsed(next);
 		setStoredNavRailCollapsed(next);
 	};
+
+	if (appShell) {
+		return (
+			<div className="flex h-dvh min-h-0 flex-col bg-background text-foreground">
+				<main className="min-h-0 flex-1 overflow-hidden bg-background [&>.h-screen]:h-full [&>.h-dvh]:h-full">
+					{children}
+				</main>
+				<PipPartner
+					onCallRoute={view === "drive"}
+					onExpand={onExpandCall}
+					presence={callPresence}
+				/>
+			</div>
+		);
+	}
 
 	const navItems = [
 		{ view: "home", label: "Home", icon: HomeIcon },
@@ -1482,12 +1502,17 @@ function App() {
 	}, []);
 
 	const navigate = useCallback((nextView: View) => {
-		if (nextView === "settings") {
+		const appShell = parseDriveAppShell(
+			typeof window !== "undefined" ? window.location.search : "",
+		);
+		// MC1: consumer chrome is Drive only — no Settings / MCP / Status Hub.
+		const target: View = appShell ? "drive" : nextView;
+		if (target === "settings") {
 			setSettingsSection("General");
 		}
 		setSelectedSessionId(undefined);
 		setDriveLaunchRequest(null);
-		if (nextView === "drive") {
+		if (target === "drive") {
 			setDriveShellMode("lobby");
 			const nextPath = drivePath({
 				mode: "lobby",
@@ -1500,11 +1525,11 @@ function App() {
 			setLocationSearch(window.location.search);
 			return;
 		}
-		const nextPath = routePath(VIEW_PATHS[nextView]);
+		const nextPath = routePath(VIEW_PATHS[target]);
 		if (currentPathWithSearch() !== nextPath) {
 			window.history.pushState(null, "", nextPath);
 		}
-		setView(nextView);
+		setView(target);
 		setLocationSearch(
 			typeof window !== "undefined" ? window.location.search : "",
 		);
@@ -1512,11 +1537,17 @@ function App() {
 
 	useEffect(() => {
 		if (!demoHub.openAnalytics) return;
+		if (parseDriveAppShell(locationSearch)) return;
 		if (view === "analytics") return;
 		navigate("analytics");
-	}, [demoHub.openAnalytics, navigate, view]);
+	}, [demoHub.openAnalytics, locationSearch, navigate, view]);
 
 	const openDriveHistory = useCallback(() => {
+		// MC1 consumer home is Join/Continue only — no session-history surface.
+		if (parseDriveAppShell(window.location.search)) {
+			navigate("drive");
+			return;
+		}
 		setDriveLaunchRequest(null);
 		setSelectedSessionId(undefined);
 		setDriveShellMode("history");
@@ -1529,7 +1560,7 @@ function App() {
 		}
 		setView("drive");
 		setLocationSearch(window.location.search);
-	}, []);
+	}, [navigate]);
 
 	const openDriveCredentialDemo = useCallback(() => {
 		setDriveLaunchRequest(null);
@@ -1667,6 +1698,8 @@ function App() {
 		});
 	}, []);
 
+	const appShell = parseDriveAppShell(locationSearch);
+
 	const content = useMemo(() => {
 		if (view === "drive") {
 			if (demoHub.useShareScreenSpotlightDemo) {
@@ -1675,7 +1708,7 @@ function App() {
 			if (demoHub.useChatForkDemo) {
 				return <ChatForkDemo />;
 			}
-			if (driveShellMode === "history") {
+			if (driveShellMode === "history" && !appShell) {
 				return (
 					<SessionsView
 						onDeleteSession={deleteSession}
@@ -1697,12 +1730,13 @@ function App() {
 			}
 			return (
 				<DriveView
+					composition={appShell ? "app" : "hub"}
 					onOpenCall={openDriveCall}
 					onOpenDemo={openDriveCredentialDemo}
 					onOpenHistory={openDriveHistory}
 					onOpenProviders={() => navigate("models")}
 					onOpenStatus={() => navigate("status")}
-					roomsSource={roomsSource}
+					roomsSource={appShell ? undefined : roomsSource}
 					workspaceRoot={driveWorkspaceRoot}
 				/>
 			);
@@ -1848,6 +1882,19 @@ function App() {
 				/>
 			);
 		}
+		if (appShell) {
+			return (
+				<DriveView
+					composition="app"
+					onOpenCall={openDriveCall}
+					onOpenDemo={openDriveCredentialDemo}
+					onOpenHistory={openDriveHistory}
+					onOpenProviders={() => navigate("models")}
+					onOpenStatus={() => navigate("status")}
+					workspaceRoot={driveWorkspaceRoot}
+				/>
+			);
+		}
 		return (
 			<HomeView
 				hubState={hubState}
@@ -1888,11 +1935,13 @@ function App() {
 		settingsSection,
 		updateChatSessionRoute,
 		locationSearch,
+		appShell,
 		view,
 	]);
 
 	return (
 		<Shell
+			appShell={appShell}
 			onExpandCall={expandDriveCall}
 			onNavigate={navigate}
 			version={hubState.coreVersion}

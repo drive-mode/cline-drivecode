@@ -79,6 +79,50 @@ describe("RoomEventLog + DriveRoomStore", () => {
 		}
 	});
 
+	it("hydrates seated participants after retention trim via fold checkpoint", () => {
+		const dir = mkdtempSync(join(tmpdir(), "drive-room-ckpt-"));
+		try {
+			const log = new JsonlRoomEventLog(dir, { maxRecords: 3 });
+			store.attachEventLog(log);
+			store.create("r1");
+			store.join({
+				roomId: "r1",
+				participant: {
+					id: "h1",
+					kind: "human",
+					displayName: "H",
+					role: "host",
+					status: "idle",
+				},
+			});
+			// Exceed cap so control.join is trimmed from JSONL.
+			store.mute({ roomId: "r1", participantId: "h1", muted: true });
+			store.mute({ roomId: "r1", participantId: "h1", muted: false });
+			store.mute({ roomId: "r1", participantId: "h1", muted: true });
+
+			const retained = log.readSinceSync("r1", 0);
+			expect(retained.every((r) => r.event.type !== "control.join")).toBe(
+				true,
+			);
+			expect(store.get("r1")?.participants).toHaveLength(1);
+
+			const restored = new DriveRoomStore();
+			restored.attachEventLog(new JsonlRoomEventLog(dir, { maxRecords: 3 }));
+			const snap = restored.hydrateFromLogSync("r1");
+			expect(snap?.participants).toHaveLength(1);
+			expect(snap?.participants[0]?.id).toBe("h1");
+			expect(snap?.muteByParticipantId.h1).toBe(true);
+
+			// Same process: drop live map but keep appliedEventIds; rehydrate must not blank.
+			restored.rooms.delete("r1");
+			const again = restored.hydrateFromLogSync("r1");
+			expect(again?.participants).toHaveLength(1);
+			expect(again?.participants[0]?.id).toBe("h1");
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
 	it("readSinceSync returns gaps after cursor", () => {
 		const log = new MemoryRoomEventLog();
 		store.attachEventLog(log);

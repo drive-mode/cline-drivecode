@@ -24,6 +24,8 @@ Drive state is partitioned into three lanes:
 
 **Adapters later (not this ADR's implementation):** remote participant bridge, org IdP / admin config, audit export. They bind to the log + `DriveHostPort`, not to a second room model.
 
+**Amendment (ADR-0029):** Live snapshot remains rebuildable after retention trim by persisting a fold **checkpoint** (`checkpoint.json` with `seq` + `RoomSnapshot`) when the JSONL drops oldest records. Hydrate loads the checkpoint then folds only the log tail. From-zero replay alone is insufficient once joins have been trimmed.
+
 **Locks:**
 
 - Hub remains the only writer of room state for local MVP (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set).
