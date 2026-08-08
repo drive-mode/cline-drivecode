@@ -330,7 +330,10 @@ export async function checkDrivecodeStructure(
 			);
 			continue;
 		}
-		if (entry.name === "README.md") continue;
+		// Index + out-of-band chronology (ADR bodies stay current-truth only).
+		if (entry.name === "README.md" || entry.name === "decision-changelog.md") {
+			continue;
+		}
 		if (!/^ADR-\d{4}-[a-z0-9-]+\.md$/.test(entry.name)) {
 			fail(
 				report(`plans/cline-drivemode/adr/${entry.name}`),

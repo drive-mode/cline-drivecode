@@ -3,9 +3,11 @@
 **Status:** Accepted (2026-08-03)
 **Owner:** Drivecode SE lead
 **Constrained by:** [ADR-0025](ADR-0025-enforced-authority.md) (declared
-authority without a refusal consumer is a defect class),
+authority without a refusal consumer is a defect class — **runtime twin** of
+this record),
 [ADR-0020](ADR-0020-session-delivery-cicd.md) (delivery CI shape),
-[ADR-0000](ADR-0000-status-board.md) (Accepted ≠ shipped).
+[ADR-0000](ADR-0000-status-board.md) (Accepted ≠ shipped).  
+**Twin:** [ADR-0025](ADR-0025-enforced-authority.md) (runtime authority refusal).
 **Evidence:** how Critique of planning+Done+CI (2026-08-03); PR burst
 #147/#156/#169, #138→#160, #171, #172, #186/#187.
 **Companions:** [claims-registry.yaml](../delivery/claims-registry.yaml),

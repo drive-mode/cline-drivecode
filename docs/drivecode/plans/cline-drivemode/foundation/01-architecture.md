@@ -51,6 +51,8 @@ The core primitive remains a `Room` with `Participant` members (human or agent),
 
 **Chat is the default work surface** while Drive is on (feed, composer, optional stage split). `joinCall()` / Drive on remain a thin façade over `room.createOrAttach()` (one human plus one `pair_partner` by default). The hub **Drive activity** lists and manages rooms (DRV-DRIVE-TAB) but is optional navigation—not a separate product home. Chat Join is synonymous with entering Drive mode and focusing the active room.
 
+> **Id hygiene:** Architecture **D1–D10** are foundation defaults. Room hot-path implementation slices are **H1–H5** in [ADR-0029](../adr/ADR-0029-room-hotpath-redesign.md) — do not reuse `D*` for those slices.
+
 This keeps Redesign from First Principles for the room domain while prioritizing seamless Cline integration over a Drive-tab-only entry story. Multi-user arrives later by adding participants and roles, not by rewriting the primitive. See [04-future-multi-user.md](../research/04-future-multi-user.md) and [DRIVE-TAB.md](../../../design/wireframes/DRIVE-TAB.md).
 
 ### D4. Screen share is events first; bidirectional sharer pointer

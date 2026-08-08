@@ -2,7 +2,7 @@
 
 **Purpose.** One place to see what is Accepted, Proposed, Recommended-default, or Superseded.
 **Owner.** Drivecode SE lead / PM.
-**Related.** [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [HANDOFF.md](../delivery/HANDOFF.md), [../../HANDOFF.md](../../../HANDOFF.md).
+**Related.** [decision-changelog.md](decision-changelog.md) (chronology), [LEADERSHIP-BRIEF.md](../leadership/LEADERSHIP-BRIEF.md), [HANDOFF.md](../delivery/HANDOFF.md), [../../HANDOFF.md](../../../HANDOFF.md).
 
 ## Status legend
 
@@ -22,10 +22,31 @@
 | **partial** | Schemas / some paths landed; decision still has open enforcement or UI |
 | **decision** | Binding intent; little or no product path yet |
 | **deferred** | Explicitly off critical path |
+| **none** | No product path yet |
 
 ## Acceptance record
 
 **2026-07-29.** Human instruction: `accept all` for **ADR-0000…0013** and the leadership DEC bundle (`DEC-agent-source-of-truth`, `DEC-package-location`, `DEC-open-product-forks`). **ADR-0014** (Chat-fork lifecycle) landed on `main` the same day as **Accepted** and is included on this board.
+
+**2026-08-02.** ADR-0016 Route B (fork) + self-hosted beta Accepted.
+
+**2026-08-03.** ADR-0025 / ADR-0026 Accepted (authority twins).
+
+**2026-08-07.** Path H + freemium owner defaults ([DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md)); ADR-0016 rewritten in place for dual install paths.
+
+**2026-08-08.** ADR cleanup wave: reconcile ADR-0023; Accept ADR-0023 / 0027 / 0028 / 0029 (H1–H4 shipped, H5 open); fold path H onto main board; rename hotpath slices **H1–H5**; change control → **current truth singular**; chronology → [decision-changelog.md](decision-changelog.md).
+
+## Clusters (read together)
+
+| Cluster | Records | One-line |
+|---|---|---|
+| **Execution stack** | 0008 → 0018 → 0019 | Task bank → run/lease/receipt → Kanban wire |
+| **Authority twins** | 0025 ↔ 0026 | Declared limit needs a refusal path (runtime / delivery) |
+| **Spawn & role authority** | 0023 + 0027 (+ 0025) | Consult vs delegate; tier = ceiling or prompt; depth stays 1 |
+| **Distribution** | 0016 + DEC-mobile (+ 0021, 0029 H5) | Route B self-host + path H hosted single-writer |
+| **State / hotpath** | 0013 + 0029 | Three lanes; checkpoint / deltas / one stage clock |
+
+Files stay separate (different change rates). Do not invent a second workflow runtime ([ADR-0028](ADR-0028-adlc-control-plane.md)).
 
 ## Architecture decision records
 
@@ -43,73 +64,124 @@
 | [ADR-0010](ADR-0010-provider-harness-byok.md) | Provider harness (BYOK) | **Accepted** | partial | Facets + secrets forbid; adapters not fully registry-wired |
 | [ADR-0011](ADR-0011-demo-share-track.md) | Demo share track | **Accepted** | partial | Schemas + snapshot stub; no demo events/track yet |
 | [ADR-0012](ADR-0012-agent-router.md) | Agent router for multi-agent rooms | **Accepted** | shipped | `planRoute` + addressSet |
-| [ADR-0013](ADR-0013-state-partition.md) | Three-lane state partition | **Accepted** | partial | Log + live + facets; two live maps wording soft |
+| [ADR-0013](ADR-0013-state-partition.md) | Three-lane state partition | **Accepted** | partial | Log + live + facets; hydrate after trim → ADR-0029 H1 |
 | [ADR-0014](ADR-0014-chat-fork-lifecycle.md) | Chat-fork lifecycle | **Accepted** | shipped | Hub `drive.fork.*` + PromotePacket |
 | [ADR-0015](ADR-0015-task-session-observability.md) | Local task-session observability | **Accepted** | partial | Slices + privacy UI + host compile enqueue; materialize into `.driveagent/` still host |
-| [ADR-0016](ADR-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** | decision | Route B fork; public self-hosted beta |
+| [ADR-0016](ADR-0016-distribution-and-positioning.md) | Drive mode distribution & positioning | **Accepted** | decision | Route B fork + **path H** hosted single-writer (2026-08-07); freemium via DEC-mobile |
 | [ADR-0017](ADR-0017-narration-bound-presentation-cues.md) | Narration-bound presentation cues | **Proposed — deferred** | deferred | Demo canvas only; behind S9 |
 | [ADR-0018](ADR-0018-agent-runtime-contract.md) | Agent runtime contract (DriveTask v1) | **Accepted** | partial | `run.ts` + interop + Agent Control hub tools + completion guard; see ADR-0019 |
 | [ADR-0019](ADR-0019-driveplan-kanban-interop-wire.md) | DrivePlan–Kanban Interop wire | **Accepted** | partial | `execute` / `collectReceipt` + `KanbanInteropHost`; Kanban/hub host adapters still thin |
 | [ADR-0020](ADR-0020-session-delivery-cicd.md) | Session delivery CI/CD (ledger + projected stack) | **Proposed** | decision | Hold + rewind; coalesce projection; wire `run_expensive` |
-| [ADR-0021](ADR-0021-drive-credential-onboarding.md) | Drive credential onboarding (device-code first) | **Proposed** | none | Blocks the beta's credentialed-call gate. Credentials stay in Cline's `ProviderSettingsManager` per ADR-0010; Drive consumes a readiness boolean, never a key. Ships with three secret-hygiene fixes: the provider catalog broadcasts **plaintext API keys** today (`local-provider-service.ts:709`), the desktop-command OAuth reply returns a **raw token** (`desktop-commands.ts:194`), and Drive reports ready when unconfigured (`driveVoiceUi.ts:89` substitutes `anthropic`) |
-| [ADR-0022](ADR-0022-agent-economics.md) | Agent economics — context, model, spend per agent | **Proposed** | none | Measurement is real per-message (`agent-runtime.ts:309-354`); **no Drive surface shows any of it**. `.driveagent/agent.yaml` already declares `providerId`/`modelId`/`maxIterations` and compiles them, but they dead-end at a read-only handler — the vocabulary was designed and never connected. Two agents in one room cannot run different models. Only cost control is a process-global env var that aborts with no warning |
-| [ADR-0023](ADR-0023-agent-spawn-governance.md) | Agent spawn governance (consult vs delegate) | **Proposed — body needs reconciliation** | partial | Agents still cause forks implicitly (any tool event → `runChatForkDirectorTick`). **Finding 2 is now stale:** generations are no longer unbounded — `c8d2e53` ([#146](https://github.com/hhalperin/cline-drivecode/pull/146)) added `DEFAULT_MAX_CHAT_FORK_DEPTH = 1`, enforced in `assertForkLegal` as `depth_exceeded` (`chatForkPolicy.ts:84-89`). The ADR body still describes the pre-fix codebase and should be amended by its owner — see [ADR-0027](ADR-0027-role-tiers.md) clause 4. Findings 1 and 3 hold: agents cannot seat agents, and `capPreset = min(parent, child)` exists unwired (→ D1) |
-| [ADR-0024](ADR-0024-drive-web-runtime.md) | Drive web runtime — conformant browser host behind a transport port | **Proposed** | none | The transport is one branch in one file (`vscode.ts:114-124`); `new WebSocket` appears once in the app. `memoryDriveHost` already implements `DriveHostPort` beside `runHostConformance`, and `@cline/drive` has zero runtime deps — so the browser runs a **conformant host**, not a mock. Load-bearing clause: it must pass the same suite as the daemon, or it drifts like the canvas did |
-| [ADR-0025](ADR-0025-enforced-authority.md) | Declared authority must be enforced authority | **Accepted** | partial | Declared limit with no enforcement-path consumer is a defect class. **E1 (L1):** `enforced-authority-consumer.test.ts` locks spawn/team/`buildDelegatedAgentConfig` parent-authority threading. Finding 1 rows (`effectivePreset`→policy, `presetIntent`, DriveRun isolation, gate classes, receipt identity) remain open. |
-| [ADR-0026](ADR-0026-evidence-backed-done.md) | Evidence-backed Done needs a refusal path | **Accepted** | partial | Delivery twin of ADR-0025. Registry + `check-drivecode-done.ts`; cold-start cites `claim:<id>`; stack-safe docs/sdk CI; runbook/PR claim contracts; ADR-0025 E1 L1 consumer landed. Full Finding 1 class + BACKLOG render still follow-on. |
-| [ADR-0027](ADR-0027-role-tiers.md) | A role tier is a permission ceiling, or it is a prompt | **Proposed** | decision | Applies ADR-0025's rule to the recurring three-tier (Architect → Tech Lead → Developer) ask. The hierarchy is already ~built: `"handoff"` is a `MissionLogKind`, the shared design doc is `TeamOutcome`/`TeamOutcomeFragment` with `draft`→`in_review`→`finalized`. Missing tier is a one-line union edit — hence the guard: **no third tier until D1 wires `capPreset` into `call_seat`**, and `DEFAULT_MAX_CHAT_FORK_DEPTH` stays 1. **Corrects ADR-0023:** its Finding 2 ("unbounded generations") is stale — `c8d2e53` (#146) added the depth guard, enforced in `assertForkLegal` as `depth_exceeded`. Also records three disjoint role vocabularies (team / router / `call_join`) |
-| [ADR-0028](ADR-0028-adlc-control-plane.md) | Drive Mode is the ADLC control plane | **Proposed** | decision | Factory loop over existing room/bank/gates/status/rollup/receipt planes. No second workflow runtime. Sequences B2/B3 + Status→Drive offer bridge + receipt product wire; spawn UI stays behind enforced-authority E2. Initiative: [adlc-drive-factory](../initiatives/adlc-drive-factory/). |
-| [ADR-0029](ADR-0029-room-hotpath-redesign.md) | Room hot-path redesign (checkpoint, deltas, one stage clock) | **Proposed** | partial | Amends ADR-0013 hydrate guarantee. Slices 1–4 landed on hotpath PR track; slice 5 cloud signaling blocked on ADR-0016 path H. Initiative: [drive-hotpath](../initiatives/drive-hotpath/). |
+| [ADR-0021](ADR-0021-drive-credential-onboarding.md) | Drive credential onboarding (device-code first) | **Proposed** | none | Blocks credentialed-call gate for beta + path H. Drive never stores keys (ADR-0010). Secret-hygiene fixes listed in the ADR body. |
+| [ADR-0022](ADR-0022-agent-economics.md) | Agent economics — context, model, spend per agent | **Proposed** | none | Per-message measurement exists; no Drive surface shows or controls it. Per-agent model dead-ends at read-only compile. |
+| [ADR-0023](ADR-0023-agent-spawn-governance.md) | Agent spawn governance (consult vs delegate) | **Accepted** | partial | Body reconciled 2026-08-08. Depth guard shipped (#146). Consult vs delegate + live `capPreset` seat path still open (→ delivery D1). Cluster with 0027. |
+| [ADR-0024](ADR-0024-drive-web-runtime.md) | Drive web runtime — conformant browser host behind a transport port | **Proposed** | none | Transport port at composition root; browser host must pass same conformance suite as daemon. |
+| [ADR-0025](ADR-0025-enforced-authority.md) | Declared authority must be enforced authority | **Accepted** | partial | Runtime twin of 0026. E1 L1 consumer landed; Finding 1 rows remain open. |
+| [ADR-0026](ADR-0026-evidence-backed-done.md) | Evidence-backed Done needs a refusal path | **Accepted** | partial | Delivery twin of 0025. Registry + `check-drivecode-done.ts`; cold-start `claim:<id>`. |
+| [ADR-0027](ADR-0027-role-tiers.md) | A role tier is a permission ceiling, or it is a prompt | **Accepted** | decision | No third tier until `capPreset` on `call_seat`. Depth stays 1. Three role vocabularies named as debt. |
+| [ADR-0028](ADR-0028-adlc-control-plane.md) | Drive Mode is the ADLC control plane | **Accepted** | decision | No second workflow runtime. Map factory properties onto room/bank/gates/status/receipt planes. Initiative: [adlc-drive-factory](../initiatives/adlc-drive-factory/). |
+| [ADR-0029](ADR-0029-room-hotpath-redesign.md) | Room hot-path redesign (checkpoint, deltas, one stage clock) | **Accepted** | partial | Amends ADR-0013. Slices **H1–H4** shipped; **H5** cloud signaling open (path H). Slice ids are H\* so they never collide with Architecture D1–D10. |
 
-## Leadership decisions (this wave)
+## Leadership decisions
 
 | ID | Title | Status |
 |---|---|---|
 | [DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md) | Author in `.driveagent/`; compile into host | **Accepted** |
 | [DEC-package-location](../decisions/DEC-package-location.md) | `@cline/drive` in monorepo for phase 1 | **Accepted** |
 | [DEC-open-product-forks](../decisions/DEC-open-product-forks.md) | Focus / streams / share / accent / revise | **Accepted** (bundle) |
+| [DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md) | Path H, muted mic, Cline Drive name, MC3, freemium | **Accepted** (2026-08-07) |
+| [DEC-drive-mark-official](../decisions/DEC-drive-mark-official.md) | Official Drive mark + motion axes | **Accepted** |
 
 ## Architecture D1–D10
+
+Foundation defaults in [01-architecture.md](../foundation/01-architecture.md). **Not** the same ids as ADR-0029 hotpath slices (**H1–H5**).
 
 | ID | Title | Status |
 |---|---|---|
 | D1 | Kernel package `@cline/drive` | Accepted (architecture) |
-| D2 | Hub single writer `:25463` | Accepted |
-| D3 | Room-first; Drive tab primary | Accepted |
+| D2 | Hub single writer (discovery / preferred default port) | Accepted |
+| D3 | Room-first; Drive mode primary activation; Chat default surface | Accepted ([ADR-0007](ADR-0007-drive-as-cline-mode.md)) |
 | D4 | Events-first stage; bidirectional sharer | Accepted |
 | D5 | Hooks are the interception path | Accepted |
 | D6 | Surfaces render typed events | Accepted |
 | D7 | Facet catalog + lanes + hub durable writes | Accepted |
-| D8 | Runtime topology local / cloud / hybrid | Accepted |
-| D9 | Provider harness (BYOK) | Accepted |
+| D8 | Runtime topology local / cloud / hybrid | Accepted ([ADR-0009](ADR-0009-runtime-topology-local-cloud.md)) |
+| D9 | Provider harness (BYOK) | Accepted ([ADR-0010](ADR-0010-provider-harness-byok.md)) |
 | D10 | Three-lane state partition | Accepted ([ADR-0013](ADR-0013-state-partition.md)) |
 
 SDK amendments (reducer/projection in `@cline/drive`; host port + conformance kit) must be reflected in `DRV-KERNEL` ACs before Phase 0 gate.
+
+## Decision coverage gaps
+
+Where product / platform work is advancing **without** a binding ADR (or with only Proposed paper). Prioritized for next decision writing — not a feature backlog.
+
+| Gap | Why it hurts | Suggested home |
+|---|---|---|
+| **Agent-facing plane naming** (room / show / status; ban Engine/Director ownership nouns) | Arena conclusion exists in chat; code still says `visualEngine`; agents invent parallel trees | New thin ADR (or amend 0028) — docs-first |
+| **Client visual / layout adaptation** (screen format → Mermaid / stage layout) | Shipped behavior on feature branches; no decision record for viewport-blind producers vs client layout | New ADR under show/visual plane, or fold into 0029 H4 |
+| **Path H ops model** (auth, tenancy, data residency, who pays when freemium fails) | DEC-mobile + 0016 accept path H; 0021/0022 still Proposed; no hosted ops ADR | Extend 0021 + new ops DEC, or ADR-0030 hosted writer |
+| **DriveKanban managed-execution boundary** beyond wire | 0019 is the wire; product truth (who owns Done, gates, verification) is still tribal | Amend 0019 or short DEC |
+| **Role vocabulary convergence** | 0027 names three enums as debt; no decision to merge | Follow-on to 0027 when D1 lands |
+| **Multi-device product contract** (hub `?app=1` / iOS / PWA / TUI parity matrix) | Initiative + FEATURES exist; no ADR for what “parity” means vs glance-only | DEC or ADR under multi-device initiative |
+| **Codebase-map firewall** (explain-only; no Status/portfolio write) | AGENTS.md + ADR-0025 spirit; easy to violate in skills | One-page ADR or DEC citing ADR-0025 |
+| **Reconnect / late-join UX contract** | Stage catch-up exists; “since you left” copy still open product gap | Feature DRV-LEAVE-END + optional thin ADR |
+| **Show vs stage ownership nouns** | Spotlight / StickyStage / Show backlog collide for agents | Plane-naming ADR above |
+
+### Proposed ADRs — accept when shipped, not sooner
+
+| ADR | Gate to Accept |
+|---|---|
+| **0020** | Worktree ledger + `DriveDelivery` identity on tip |
+| **0021** | Device-code path + three secret-hygiene fixes |
+| **0022** | Room usage events + per-agent model/budget surface |
+| **0024** | Browser host passes `runHostConformance` |
+| **0017** | Keep deferred until Spotlight S9 |
 
 ## Still Open (product gaps)
 
 | Topic | Blocking artifact | Notes |
 |---|---|---|
-| Approval UI owner detail | [DRV-GATES](../features/DRV-GATES.md) | Feed card over existing approval plumbing. **Taxonomy enums landed** in `sdk/packages/shared/src/drive/gates.ts` (UI / expiry / hub projection still open) |
+| Approval UI owner detail | [DRV-GATES](../features/DRV-GATES.md) | Feed card over existing approval plumbing. Taxonomy enums landed; UI / expiry / hub projection open |
 | Catch-up orientation copy owner | DRV-LEAVE-END | One factual “since you left” line from stage reducer |
-| One-shot fork vs specialist | Later; not Phase 0 | Out of Phase 0; track under W-33 |
-| Session satisfaction metrics accept | [ADR-0015](ADR-0015-task-session-observability.md), [PRD 10](../prd/prd-task-satisfaction-observability.md) | Local rollups + gated plan improve; leadership dual-proxy defaults in [BRIEF-task-satisfaction](../leadership/BRIEF-task-satisfaction.md) |
-| Voice backend for the beta | [drive-audio](../initiatives/drive-audio/overview.md) | MVP ships on the shipped `browser-speechSynthesis` backend so no tester needs API keys; BYOK providers are already modelled in `drive/src/topology/` and land immediately after. Owner: Harrison — confirm the robotic-but-zero-config tradeoff is acceptable for beta. |
-| Beta support path | MVP Phase 5 | GitHub issues on the fork vs something more managed. Owner: Harrison. |
+| One-shot fork vs specialist | Later; not Phase 0 | Out of Phase 0; track under WDK |
+| Session satisfaction metrics accept | [ADR-0015](ADR-0015-task-session-observability.md), [PRD 10](../prd/prd-task-satisfaction-observability.md) | Local rollups + gated plan improve |
+| Voice backend for the beta | [drive-audio](../initiatives/drive-audio/overview.md) | MVP on `browser-speechSynthesis`; BYOK after |
+| Beta support path | MVP Phase 5 | GitHub issues on the fork vs managed. Owner: Harrison. |
+| Live `capPreset` on `call_seat` | [defaults-delivery](../delivery/defaults-delivery.md) D1 | Blocks consult/delegate product + role tiers (0023/0027) |
+| Hosted signaling writer | [ADR-0029](ADR-0029-room-hotpath-redesign.md) H5 | Unblocked by path H; after MC1 call verbs unless demo forces |
 
-## Explicitly not open anymore (closed by this wave’s defaults)
+## Explicitly not open anymore (closed)
 
-- Formal ADR accept (ADR-0000…0013 + DEC bundle) → **Accepted** (2026-07-29 `accept all`). ADR-0014 (Chat-fork lifecycle) Accepted on `main` and indexed above.
+- Formal ADR accept (ADR-0000…0013 + DEC bundle) → **Accepted** (2026-07-29 `accept all`). ADR-0014 Accepted on `main`.
 - Separate `drivecode-sdk` repository for phase 1 → **Rejected** ([DEC-package-location](../decisions/DEC-package-location.md)).
 - Pixel user-share in MVP → **Rejected** ([DEC-open-product-forks](../decisions/DEC-open-product-forks.md)).
 - Dual prompt stores (facets + homes) → **Rejected** ([DEC-agent-source-of-truth](../decisions/DEC-agent-source-of-truth.md)).
 - Background turns in unfocused rooms (MVP) → **Rejected**.
-- Distribution route (upstream vs fork vs hybrid) → **Route B, fork** ([ADR-0016](ADR-0016-distribution-and-positioning.md), 2026-08-02). Revisitable after the beta.
-- Hosted beta → **Rejected** for the MVP: the beta is public but **self-hosted**. A hosted hub would require multi-human rooms and a hosted-hub initiative, both explicit non-goals today.
-- Narration cue schema accept ([ADR-0017](ADR-0017-narration-bound-presentation-cues.md)) → **deferred**, not open: spotlight S9 is outside the MVP cut, so this is off the beta's critical path.
+- Distribution route → **Route B, fork** ([ADR-0016](ADR-0016-distribution-and-positioning.md)). Revisitable after the beta.
+- Hosted **multi-human** rooms → **Rejected** (still). **Path H** (hosted single-writer, same wire, phone/PWA) → **Accepted 2026-08-07**.
+- Narration cue schema ([ADR-0017](ADR-0017-narration-bound-presentation-cues.md)) → **deferred**, not open.
+- Second workflow / Cloudflare Workflows-shaped runtime → **Rejected** ([ADR-0028](ADR-0028-adlc-control-plane.md)).
+- Unbounded chat-fork generations → **Closed** (#146 / ADR-0023 reconciled).
 
 ## Change control
 
-1. New architectural fork → new ADR or DEC, linked here.
-2. Do not silently edit Accepted decisions in feature files.
-3. Supersessions require a one-line “Supersedes X” in the new record and a status flip here.
+**Current truth is singular.** The ADR body an agent (or human) reads must not
+contain two opposing claims about tip. Stale Findings + “amendment: ignore that”
+paragraphs poison the context window and slow decisions.
+
+1. **Prefer rewrite-in-place** when a decision’s substance changes or tip makes
+   a Finding false. Edit Context / Decision so the main text is true *now*.
+2. **Chronology lives in
+   [decision-changelog.md](decision-changelog.md)** — not inside the ADR.
+   Every substantive rewrite appends one line under that record’s heading
+   there (`- YYYY-MM-DD — …`, newest last). Passing an ADR into a context
+   window should load only current truth. Status stays a single current
+   verdict, not a stack of “Amended …” banners.
+3. **New ADR / DEC** only for a real architectural fork (new plane, new writer,
+   supersession). Link it here; old record flips to Superseded with one line
+   “Superseded by ADR-NNNN”.
+4. Do not silently edit Accepted decisions **in feature files** — change the
+   ADR/DEC, then point features at it.
+5. Board (this file) stays the index; Impl column tracks shipped vs decision.
+6. Hotpath implementation slices use **H1–H5** only. Architecture defaults keep
+   **D1–D10**.

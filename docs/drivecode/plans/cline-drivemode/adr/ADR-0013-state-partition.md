@@ -18,8 +18,8 @@ Local MVP room state lived only in hub process memory: fold `DriveEvent` → `Ro
 
 Drive state is partitioned into three lanes:
 
-1. **Event log (durable).** Append-only records keyed by `roomId` + monotonic `seq`. Payload is a versioned `DriveEvent` (and later a bank family envelope). Survives hub restart. Authority for history, reconnect gaps, and future audit bundles.
-2. **Live room (ephemeral).** One hub-owned `RoomSnapshot` (plus live director fields owned by the same store) folded from the log. Process memory only; rebuildable by replaying the log. Single writer. Dual live Maps are forbidden.
+1. **Event log (durable).** Append-only records keyed by `roomId` + monotonic `seq`. Payload is a versioned `DriveEvent` (and later a bank family envelope). Survives hub restart. Authority for history, reconnect gaps, and future audit bundles. Retention may trim oldest lines; see live-room hydrate below.
+2. **Live room (ephemeral).** One hub-owned `RoomSnapshot` (plus live director fields owned by the same store) folded from the log. Process memory only; single writer; dual live Maps forbidden. **Rebuildable after retention trim** via fold **checkpoint** (`checkpoint.json`: `seq` + `RoomSnapshot`) written when the JSONL drops oldest records ([ADR-0029](ADR-0029-room-hotpath-redesign.md) H1): hydrate installs the checkpoint, then folds only `readSince(roomId, checkpoint.seq)`. From-zero replay alone is insufficient once joins have been trimmed.
 3. **Facets (durable).** `.cline/drive` disk contract, hub-written. Seeds live values at room create. Must never overwrite live mid-call.
 
 **Adapters later (not this ADR's implementation):** remote participant bridge, org IdP / admin config, audit export. They bind to the log + `DriveHostPort`, not to a second room model.

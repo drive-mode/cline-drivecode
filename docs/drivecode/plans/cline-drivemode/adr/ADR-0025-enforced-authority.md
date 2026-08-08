@@ -10,7 +10,8 @@ hub-side, `.driveagent/` stays intent),
 [ADR-0013](ADR-0013-state-partition.md) (three lanes; no fourth store).
 **Evidence:** [research/23-agent-first-design.md](../research/23-agent-first-design.md).
 **Companions:** [defaults-delivery.md](../delivery/defaults-delivery.md) (task
-D1), [initiatives/enforced-authority](../initiatives/enforced-authority/README.md).
+D1), [initiatives/enforced-authority](../initiatives/enforced-authority/README.md).  
+**Twin:** [ADR-0026](ADR-0026-evidence-backed-done.md) (delivery Done refusal).  
 **Impl:** `partial` — E1 refusal consumer locks Finding 2 / L1 delegation
 threading (`sdk/packages/core/src/runtime/enforced-authority-consumer.test.ts`).
 Remaining Finding 1 rows and initiative slices stay open.
@@ -19,8 +20,8 @@ Remaining Finding 1 rows and initiative slices stay open.
 
 Three ADRs already decide most of what this repo needs about agent authority.
 ADR-0023 settles spawn governance and says the hub decides. ADR-0022 settles
-budgets. ADR-0018 names the completion guard. All three are written, and two of
-them are `Proposed` with `Impl: none`.
+budgets. ADR-0018 names the completion guard. (As of the 2026-08-08 cleanup,
+ADR-0023 is Accepted with Impl partial; ADR-0022 remains Proposed.)
 
 None of them states the rule they all assume: **that a declared limit is worth
 anything only if something reads it.** The audit in research/23 found that

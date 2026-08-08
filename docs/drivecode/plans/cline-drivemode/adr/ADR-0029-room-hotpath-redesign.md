@@ -2,14 +2,18 @@
 
 ## Status
 
-**Proposed** (implementation slice 1 shipped in the same change set: fold checkpoint on retention trim).
+**Accepted 2026-08-08** (decision + slices **H1–H4** shipped on tip / hotpath track).  
+**Impl:** partial — **H5** (cloud signaling / path H writer) remains open.
+
+> Slice ids use **H1–H5** so they never collide with Architecture **D1–D10**
+> in [01-architecture.md](../foundation/01-architecture.md).
 
 ## Metadata
 
-- Date: 2026-08-06
-- Deciders: Drivecode planning (proposed); owner accept/reject pending
+- Date: 2026-08-06; accepted 2026-08-08 (ADR cleanup wave)
+- Deciders: Drivecode planning; owner cleanup accept
 - Amends: [ADR-0013](ADR-0013-state-partition.md) (rebuild-from-log guarantee), informs [ADR-0016](ADR-0016-distribution-and-positioning.md) / mobile path H
-- Related: [24-scale-and-context](../research/24-scale-and-context.md), [26-request-latency-playbook](../research/26-request-latency-playbook.md), [12-performance](../research/12-performance.md), [mobile-consumer](../initiatives/mobile-consumer/), initiative [drive-hotpath](../initiatives/drive-hotpath/)
+- Related: [24-scale-and-context](../research/24-scale-and-context.md), [26-request-latency-playbook](../research/26-request-latency-playbook.md), [12-performance](../research/12-performance.md), [mobile-consumer](../initiatives/mobile-consumer/), [DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md)
 - Does **not** reopen: single-writer hub, events-first stage, rejection of MCP `:7891` room daemon
 
 ## Context
@@ -25,7 +29,7 @@ Mobile and hosted runtime need the same wire to stay honest. MCP as a room bus s
 
 ## Decision
 
-### D1 · Fold checkpoint (slice 1 — land now)
+### H1 · Fold checkpoint (slice 1 — shipped)
 
 When a durable append **trims** the room JSONL, write `checkpoint.json` beside `events.jsonl` / `meta.json`:
 
@@ -41,53 +45,38 @@ Cold hydrate:
 
 This restores ADR-0013’s claim that live state is rebuildable after retention. Path helpers: `resolveDriveRoomCheckpointPath`. Store write site: `DriveRoomStore.commit` when `appendSync` reports `trimmed: true`.
 
-### D2 · Delta publish (slice 2 — next)
+### H2 · Delta publish (slice 2 — shipped)
 
 Default broadcast: `room.delta` = `{ event, seq }` (or event-only envelope clients already fold). Full `room.snapshot` on join, reconnect gap, or idle coalesce. Clients keep `foldIncomingDriveEvent` / hub-ahead reconcile.
 
-### D3 · One stage projector (slice 3)
+### H3 · One stage projector (slice 3 — shipped)
 
 In-process: tool/session end → `recordWork` in the hub host on the same turn as `tool_event`. Remove the extra `call_record_work` client command from the critical path. Show/wave fan-out stays async side effects, not stage-blocking.
 
-### D4 · Layout contract (slice 4)
+### H4 · Layout contract (slice 4 — shipped)
 
 Call surface = Spotlight + one strip + sheets. Plan editor, task bank, audit, meters → sheets/drawers. Same composition root for hub wide and mobile `?app=1`.
 
-### D5 · Signaling topology (slice 5 — owner gate)
+### H5 · Signaling topology (slice 5 — open)
 
-Extend ADR-0009-style profiles to **where the hub runs**: `local` (today) vs `cloud` (hosted single-writer room service) with the **same Drive wire**. Phone uses cloud. Does not amend ADR-0016 until owner accepts path H. MCP stays off the room wire.
+Extend ADR-0009-style profiles to **where the hub runs**: `local` (today) vs `cloud` (hosted single-writer room service) with the **same Drive wire**. Phone / PWA use cloud under path H ([ADR-0016](ADR-0016-distribution-and-positioning.md); [DEC-mobile-consumer-owner](../decisions/DEC-mobile-consumer-owner.md)). MCP stays off the room wire.
 
 ## Consequences
 
 **Positive**
 
-- Long sessions survive restart with correct roster after trim (slice 1).
-- Later slices cut tool-storm bandwidth and stage lag; unlock phone as a real client of one protocol.
+- Long sessions survive restart with correct roster after trim (H1).
+- H2–H4 cut tool-storm bandwidth and stage lag; unlock phone as a real client of one protocol.
+- H5 is unblocked by path H accept; still a delivery track, not a reopen of multi-human rooms.
 
 **Negative**
 
 - Checkpoint is another durable file per room; must stay Zod-parsed (`parseRoomSnapshot`).
-- Rooms trimmed **before** this ships remain unrestorable without a live snapshot (acceptable; new trims write checkpoints).
-- Delta publish and projector need careful test migration (not in slice 1).
+- Rooms trimmed **before** H1 shipped remain unrestorable without a live snapshot (acceptable; new trims write checkpoints).
 
 ## Alternatives considered
 
 - **Raise retention forever / never trim** → rejected; unbounded disk.
 - **Snapshot every append** → works but heavier than trim-triggered write; revisit if hydrate from mid-cap logs is slow.
 - **MCP Streamable HTTP as room transport** → rejected; rooms are sequenced sticky state; MCP 2026-07-28 is stateless request/response for tools.
-- **CRDT multi-writer** → rejected (D2 / ADR-0013).
-
-## Impl notes
-
-| Slice | Status |
-|---|---|
-| D1 fold checkpoint | **partial / this PR** — trim → checkpoint; hydrate prefers checkpoint; hydrate ignores process-global `appliedEventIds` skips |
-| D2 delta publish | **partial / this PR** — `room.event` omits snapshot; clients fold locally; gap refresh via `call_get_room` |
-| D3 one stage projector | **partial / this PR** — daemon projects after `tool.finished`; Hub Chat bridge removed; teammates skipped |
-| D4 layout contract | **partial / this PR** — `?app=1` drops hub nav; Plan / worker audit / captions are strip sheets (not Spotlight flex siblings); gate/recruit overlays stay ephemeral on stage |
-| D5 cloud signaling | **blocked** on owner ADR-0016 path H (self-hosted beta today) |
-
-## Links
-
-- Code: `sdk/packages/core/src/hub/collaboration/{room,eventLog,roomCheckpoint}.ts`
-- Initiative: [drive-hotpath](../initiatives/drive-hotpath/)
+- **CRDT multi-writer** → rejected (Architecture D2 / ADR-0013).

@@ -1,6 +1,7 @@
 # ADR-0028 · Drive Mode is the ADLC control plane
 
-**Status:** Proposed (2026-08-04)
+**Status:** Accepted (2026-08-08) — binding control-plane framing  
+**Impl:** decision — sequences existing planes; no second workflow runtime
 **Owner:** Drivecode SE lead
 **Supersedes:** nothing.
 **Constrained by:** [ADR-0007](ADR-0007-drive-as-cline-mode.md) (Drive as Cline mode),
