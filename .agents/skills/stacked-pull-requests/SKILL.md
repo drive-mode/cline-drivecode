@@ -59,7 +59,7 @@ Every `gh stack` invocation must avoid prompts/TUIs — they hang agents.
 3. Always `gh stack view --json` — never bare `view` / `--short`.
 4. Prefer `git add` + `git commit` over `-Am` so each layer stays deliberate.
 5. Fix lower layers in place: checkout → commit → `gh stack rebase --upstack` → `gh stack push`.
-6. Merge with `gh stack merge --yes` (optionally `--squash` / `--rebase` / `--merge`). **Do not** use `gh pr merge` for stacks.
+6. Merge with `gh stack merge --yes` (optionally `--squash` / `--rebase` / `--merge`). **Do not** use `gh pr merge` for stacks. Observed cost of breaking this rule (2026-08-08): `gh pr merge --delete-branch` on a parent deleted the base branch of its child, GitHub **auto-closed** the child, and a closed PR whose base branch is gone can be neither reopened nor retargeted — #221 and #222 had to be rebased and reopened as #224/#225. A `PreToolUse` hook now blocks this (`.claude/hooks/guard-pr-merge.py`); see "Agent merge authority" in `AGENTS.md`.
 7. Pass `--remote origin` when multiple remotes exist (`push`, `submit`, `sync`, `rebase`, `link`).
 8. On conflict exit code **3**: resolve markers → `git add` → `gh stack rebase --continue` (or `--abort`).
 9. Diverged local/remote stacks: non-interactive `sync` aborts cleanly — unstack and recreate; do not hang on prompts.

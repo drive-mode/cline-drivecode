@@ -59,6 +59,41 @@ A Tauri v2 (Rust) shell + Next.js webview + a Bun "sidecar" backend. Rust and th
 - **System libs (already installed):** `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`, `libssl-dev`, `build-essential`.
 - **Test/typecheck:** `bun run typecheck`, `bun run test:chat-ui` (Vitest). Both trigger `build:ui` first.
 
+## Agent merge authority
+
+Repo-local merge policy. Where a merge skill (`/ship`, `/ship-all`) documents
+default gates, **this section wins**.
+
+**Never `gh pr merge` a PR that another open PR is based on.** Merging with
+`--delete-branch` removes the branch those PRs use as their base; GitHub
+auto-closes them, and a closed PR whose base branch no longer exists can be
+neither reopened nor retargeted — the work must be rebased onto a new base and
+reopened under a new number. This cost PRs #221 and #222 on 2026-08-08.
+
+Before merging any PR, check for dependents:
+
+```bash
+gh pr list --state open --base "$(gh pr view <N> --json headRefName -q .headRefName)"
+```
+
+If that returns anything, take one of two paths:
+
+1. **Retarget first.** `gh pr edit <child> --base <parent's base>` for each
+   child, confirm each is still `MERGEABLE`, then merge the parent.
+2. **Merge the stack as a unit.** `gh stack merge --yes --squash` — bottom-up
+   and contiguous. Never `gh pr merge` a member of a real stack
+   ([stacked-pull-requests](.agents/skills/stacked-pull-requests/SKILL.md)).
+
+Enforcement is `.claude/hooks/guard-pr-merge.py`, a `PreToolUse` hook that
+blocks `gh pr merge` when the target has open dependents and prints the exact
+retarget commands. It fails **open** (warns, allows) when `gh` is unavailable or
+errors, so a rate limit cannot wedge every merge — the written rule above still
+binds in that case.
+
+**Scope.** The hook covers Claude sessions in this repo only. Cursor sessions and
+the Cursor GitHub App bypass it; covering those needs a branch-protection rule or
+a GitHub Action, which is not built.
+
 ## Learned User Preferences
 
 - Use **ADR** (Architecture Decision Record) naming — never **ARD**; files live under `docs/drivecode/plans/cline-drivemode/adr/` as `ADR-NNNN-*`.
