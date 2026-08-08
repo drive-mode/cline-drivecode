@@ -48,8 +48,9 @@ package.
 
 ## Locked styling decisions (MC0)
 
-These are branding locks for the consumer shell. Product forks (hosted ADR,
-voice default, freemium) stay in the mobile-consumer README.
+These are branding locks for the consumer shell. Product forks (hosted path H,
+voice default, freemium/BYOK) stay in
+[DEC-mobile-consumer-owner](../../plans/cline-drivemode/decisions/DEC-mobile-consumer-owner.md).
 
 1. **Light is the default consumer theme.** Dark is a first-class peer, not an
    afterthought. Wireframes that are dark-only get a light pass or defer to iOS.
@@ -157,7 +158,7 @@ Still owner calls in [mobile-consumer README](../../plans/cline-drivemode/initia
 | 2 | Voice default muted vs hold hot | Teaching chip copy on Open / Call |
 | 5 | Force PWA now | Install sheet visual weight |
 
-Not styling blockers: ADR-0016 hosted path, freemium — keep out of the token sheet.
+Not styling blockers: path H / freemium economics — keep out of the token sheet.
 
 ## Implementation checklist
 

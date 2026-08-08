@@ -1,44 +1,51 @@
 import SwiftUI
 
+/// Full consumer demo loop (fixtures only — no hub transport).
+/// Open → Home → Call (hold / raise-hand / captions / approve / leave) → Settings.
 struct ContentView: View {
-	@State private var route: AppRoute = .open
-	@State private var showApproval = false
-	@State private var isPreview = true
+	@StateObject private var demo = DemoSession()
 
 	var body: some View {
 		NavigationStack {
 			Group {
-				switch route {
+				switch demo.route {
 				case .open:
 					OpenView(
-						isPreview: isPreview,
-						onWatchLive: { route = .call },
-						onContinue: { route = .home }
+						isPreview: demo.isPreview,
+						onWatchLive: { demo.watchLive() },
+						onContinue: { demo.continueHome() }
 					)
 				case .home:
 					HomeView(
-						onJoin: { route = .call },
-						onSettings: { route = .settings }
+						leaveNote: demo.leaveNote,
+						onJoin: { demo.joinCall() },
+						onSettings: { demo.openSettings() },
+						onDismissLeaveNote: { _ = demo.consumeLeaveNote() }
 					)
 				case .call:
 					CallView(
-						onBack: { route = .home },
-						onLeave: { showApproval = true },
-						onRaiseHand: {}
+						isPreview: demo.isPreview,
+						holding: demo.holding,
+						handRaised: demo.handRaised,
+						interruptPhase: demo.interruptPhase,
+						captionsVisible: demo.captionsVisible,
+						onBack: { demo.backHome() },
+						onLeave: { demo.leaveCall() },
+						onRaiseHand: { demo.toggleHand() },
+						onHoldToggle: { demo.toggleHold() },
+						onToggleCaptions: { demo.toggleCaptions() },
+						onRequestApproval: { demo.requestApproval() }
 					)
 				case .settings:
-					SettingsView(onBack: { route = .home })
+					SettingsView(onBack: { demo.backHome() })
 				}
 			}
-			.animation(.easeInOut(duration: 0.2), value: route)
+			.animation(.easeInOut(duration: 0.2), value: demo.route)
 		}
-		.sheet(isPresented: $showApproval) {
+		.sheet(isPresented: $demo.showApproval) {
 			ApprovalSheet(
-				onDeny: { showApproval = false },
-				onAllow: {
-					showApproval = false
-					route = .home
-				}
+				onDeny: { demo.denyApproval() },
+				onAllow: { demo.allowApproval() }
 			)
 			.presentationDetents([.medium, .large])
 			.presentationDragIndicator(.visible)

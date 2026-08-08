@@ -19,7 +19,7 @@
 | 2 | Delta `room.event` publish; full snapshot on join/gap/coalesce | Tool-storm WS payload shrinks; clients still catch up | **done** (this branch) — `publishRoomEvent` is event+seq; webview folds without snapshot; seq gap → `refreshDriveRoom` |
 | 3 | In-process agent→stage projector (drop critical-path `call_record_work` RTT) | Daemon `session-event-projector` calls `handleDriveRoomCommand(call_record_work)` after `tool.finished`; remove Hub Chat `recordDriveWorkFromTool` hop atomically | **done** (this branch) — teammates skipped; public `call_record_work` kept |
 | 4 | Layout contract: Spotlight + strip + sheets only | Visible stage ≥320px at 1280×640 (measure clipped rects, not CSS min-height); `?app=1` drops hub nav | **done** (this branch) — `?app=1` omits nav; Plan / audit / captions → strip sheets; keep `min-h-[22rem]` |
-| 5 | Cloud signaling profile (same wire, hosted writer) | Phone real turns without local daemon — owner ADR-0016 | **blocked** — do not start without owner accept on path H |
+| 5 | Cloud signaling profile (same wire, hosted writer) | Phone real turns without local daemon | **todo** — path H accepted ([DEC-mobile-consumer-owner](../../decisions/DEC-mobile-consumer-owner.md)); next after MC1 call verbs unless pulled earlier |
 
 ## Evidence
 
@@ -29,4 +29,7 @@
 
 ## Hand back
 
-Ship slice 1 first (correctness). Do not start slice 5 without owner accept on hosted hub. MCP stays an agent tool plane, not the phone session bus.
+Slices 1–4 landed; MC1–MC3 consumer chrome landed on `?app=1`. Slice 5
+(cloud signaling) remains the next hosted-writer track when a phone real-turn
+demo needs it. MCP stays an agent tool plane,
+not the phone session bus.

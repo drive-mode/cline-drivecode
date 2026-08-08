@@ -645,11 +645,20 @@ const SCREENS = {
       </div>`;
   },
   artifacts() {
+    const land = state.orient === "landscape";
     return `
       ${topBar("Artifacts")}
       <div class="list">
         ${["diagram · auth flow","diff · auth.ts","handoff · session"].map((n)=>`
           <div class="row"><span class="av">◇</span><div class="m"><div class="n">${n}</div><div class="d">Open in Spotlight</div></div></div>`).join("")}
+        <div class="banner" style="margin-top:8px">
+          Diagram · ${land ? "landscape fit (side-by-side ok)" : "phone stack · tap to render"}
+          <div style="margin-top:8px;font-family:var(--mono);font-size:.68rem;line-height:1.5;color:var(--muted)">
+            ${land
+              ? "Join → Spot → Steer · Gate → Leave"
+              : "Join<br>↓ Spot<br>↓ Steer<br>↓ Gate<br>↓ Leave"}
+          </div>
+        </div>
       </div>`;
   },
   agents() {
@@ -677,7 +686,8 @@ const SCREENS = {
       <div class="list">
         <div class="row"><span class="av">●</span><div class="m"><div class="n">Board</div><div class="d">2 blocked · 1 running</div></div></div>
         <div class="row"><span class="av">≡</span><div class="m"><div class="n">Changelog</div><div class="d">Today’s shipped notes</div></div></div>
-        <div class="row"><span class="av">⧉</span><div class="m"><div class="n">Dependency map</div><div class="d">Simplified on phone</div></div></div>
+        <div class="row"><span class="av">⧉</span><div class="m"><div class="n">Dependency map</div><div class="d">Simplified on phone · tap Mermaid</div></div></div>
+        <div class="banner">Full Status Hub stays desk-side. Phone = glance + tap-to-render (≤720px). Ultrawide keeps side-by-side animations.</div>
       </div>`;
   },
   settings() {

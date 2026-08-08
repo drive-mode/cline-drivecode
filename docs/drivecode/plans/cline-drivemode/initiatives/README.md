@@ -18,3 +18,4 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [mobile-consumer](mobile-consumer/) | active (plan) | Phone-first Drive app for less-technical users — PWA before native; hosted ADR fork explicit |
 | [multi-device](multi-device/) | active | Cross-device feature list + backlog (hub / PWA / iOS / TUI); skill `multi-device-backlog` |
 | [drive-hotpath](drive-hotpath/) | active | Room wire hot path — fold checkpoint, delta publish, one stage clock ([ADR-0029](../adr/ADR-0029-room-hotpath-redesign.md)) |
+| [portfolio-now](portfolio-now/) | active (bootstrap) | Remaining **Now** work as a DrivePlan — dogfood via Status `?demoPlans=1` |

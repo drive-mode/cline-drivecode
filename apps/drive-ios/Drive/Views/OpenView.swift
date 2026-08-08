@@ -10,6 +10,7 @@ struct OpenView: View {
 			if isPreview {
 				HStack(spacing: 6) {
 					LiveDot()
+					// Keep in sync with hub PREVIEW_CHIP_LABEL (driveAppCallChrome.ts).
 					Text("Preview · demo call")
 						.font(.system(size: 11, weight: .bold))
 						.tracking(0.6)
@@ -37,7 +38,7 @@ struct OpenView: View {
 						.strokeBorder(DriveTheme.violet.opacity(0.16), lineWidth: 8)
 				)
 
-			Text("Drive")
+			Text("Cline Drive")
 				.font(.system(size: 13, weight: .heavy))
 				.tracking(2.2)
 				.textCase(.uppercase)

@@ -1,14 +1,31 @@
 export type DriveShellMode = "lobby" | "call" | "history";
 
+/** Browse lite surfaces on `?app=1` (not full hub Status / Analytics). */
+export type DriveBrowseSurface = "rooms" | "tasks" | "artifacts" | "status";
+
 export const DRIVE_PATH = "/drive";
 export const DRIVE_SHELL_MODE_QUERY = "mode";
 export const DRIVE_SESSION_QUERY = "id";
 /** Consumer composition — omit hub nav rail (MC1 / ADR-0029 D4). */
 export const DRIVE_APP_QUERY = "app";
+/** Consumer Browse lite page — `?browse=rooms|tasks|artifacts|status`. */
+export const DRIVE_BROWSE_QUERY = "browse";
+
+const BROWSE_SURFACES = new Set<DriveBrowseSurface>([
+	"rooms",
+	"tasks",
+	"artifacts",
+	"status",
+]);
 
 export type DrivePathOptions = {
 	mode?: DriveShellMode;
 	sessionId?: string;
+	/**
+	 * Browse lite surface. `null` clears `browse` from the URL.
+	 * Omitted = leave whatever `preserveSearch` already has (unless call/history).
+	 */
+	browse?: DriveBrowseSurface | null;
 	/** Extra search params to keep (demo flags, `app=1`, etc.). */
 	preserveSearch?: string | URLSearchParams;
 };
@@ -26,12 +43,31 @@ export function drivePath(options: DrivePathOptions = {}): string {
 	const sessionId = options.sessionId?.trim();
 	if (sessionId) {
 		params.set(DRIVE_SESSION_QUERY, sessionId);
+		params.delete(DRIVE_BROWSE_QUERY);
 	} else if (options.mode === "history") {
 		params.set(DRIVE_SHELL_MODE_QUERY, "history");
+		params.delete(DRIVE_BROWSE_QUERY);
+	}
+
+	if (options.browse === null) {
+		params.delete(DRIVE_BROWSE_QUERY);
+	} else if (options.browse) {
+		params.set(DRIVE_BROWSE_QUERY, options.browse);
 	}
 
 	const query = params.toString();
 	return query ? `${DRIVE_PATH}?${query}` : DRIVE_PATH;
+}
+
+/** Parse `?browse=` — only valid surfaces; else undefined. */
+export function parseDriveBrowse(
+	search?: string | URLSearchParams,
+): DriveBrowseSurface | undefined {
+	const raw = toSearchParams(search).get(DRIVE_BROWSE_QUERY)?.trim();
+	if (!raw || !BROWSE_SURFACES.has(raw as DriveBrowseSurface)) {
+		return undefined;
+	}
+	return raw as DriveBrowseSurface;
 }
 
 export function parseDriveSessionId(
@@ -67,7 +103,7 @@ export function appShellHomeRedirect(
 	if (legacy) {
 		return legacy;
 	}
-	return drivePath({ mode: "lobby", preserveSearch: search });
+	return drivePath({ mode: "lobby", preserveSearch: search, browse: null });
 }
 
 /**

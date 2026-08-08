@@ -7,7 +7,7 @@ Click-through surfaces for the Drive / Drivecode stack. Hub owns room state via 
 | Surface | Kind | How to open |
 |---|---|---|
 | Drive tab HTML | Throwaway prototype (locked IA) | Open [`drive-tab-discord-slack.html`](drive-tab-discord-slack.html) in a browser |
-| **iOS consumer demo** | Presenter click-through (light-first) | Open [`mobile-drive-ios-demo.html`](mobile-drive-ios-demo.html) — `→`/`Space` next, `P` autoplay, `L`/`D` theme |
+| **iOS consumer demo** | Presenter click-through (light-first) | Open [`mobile-drive-ios-demo.html`](mobile-drive-ios-demo.html) — `→`/`Space` next, `P` autoplay, `L`/`D` theme. Captures: [`assets/demos/ios-demo-*`](../../assets/demos/). Native twin: [`apps/drive-ios/DEMO.md`](../../../../apps/drive-ios/DEMO.md) |
 | **Power cockpit** | Phone-only pilot IA | Open [`mobile-drive-power.html`](mobile-drive-power.html) — Live stack · power sheet · gate+ |
 | Dependency graph HTML | Throwaway Status Hub map UX ([DRV-DEP-MAP](../../plans/cline-drivemode/features/DRV-DEP-MAP.md)) | Open [`status-dependency-graph.html`](status-dependency-graph.html) in a browser |
 | Overview canvas | Cursor `.canvas.tsx` + HTML twin | Open `drivecode-overview.canvas.tsx` from your Cursor canvases beside chat, or [`overview-canvas.html`](../canvases/overview-canvas.html) |

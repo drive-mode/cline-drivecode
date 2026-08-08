@@ -71,6 +71,11 @@ should grant `microphone=(self)` *only* — camera and geolocation stay denied,
 because Drive has no use for either and a preview site should ask for the
 minimum.
 
+**Hub note (2026-08-07):** local hub HTML responses already send
+`Permissions-Policy: microphone=(self)` (`apps/cline-hub/src/server/http.ts`).
+The public preview site must still set its own `_headers` — hub headers do not
+travel with the static deploy.
+
 ### 2. HSTS is preloaded with `includeSubDomains`
 
 ```

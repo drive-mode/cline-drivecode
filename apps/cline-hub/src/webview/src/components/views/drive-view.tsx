@@ -26,6 +26,11 @@ import {
 	shouldShowCredentialOnboardingBanner,
 	writeCredentialOnboardingDismissed,
 } from "../../drive/credentialOnboarding";
+import {
+	consumeLeaveKeepRunningNote,
+	PREVIEW_CHIP_LABEL,
+	shouldShowPreviewChip,
+} from "../../drive/driveAppCallChrome";
 import type { DriveOpenCallRequest } from "../../drive/driveLaunch";
 import {
 	applyDriveRoomPreviewMessage,
@@ -38,13 +43,19 @@ import {
 	isDriveTransportErrorMessage,
 } from "../../drive/driveRoomPreview";
 import { DRIVE_DEFAULT_ROOM_ID } from "../../drive/types";
+import { readDrivecodeDemoHubBootstrap } from "@cline/drivecode-demo";
 import {
 	type HostMessage,
 	subscribeToHostMessages,
 } from "../../lib/host-message-gateway";
 import { postToHost } from "../../vscode";
 import { DriveMarkIcon } from "../icons/drive-mark";
+import {
+	DriveBrowseLiteIndex,
+	DriveBrowseLitePage,
+} from "../../drive/DriveBrowseLite";
 import { DriveLiveStack } from "../../drive/DriveLiveStack";
+import type { DriveBrowseSurface } from "../../lib/drive-shell";
 import type { DriveRoomsSource } from "../../rooms/drive-rooms-source";
 import {
 	DRIVE_VIEW_MESSAGE_TYPES,
@@ -293,7 +304,9 @@ function RoomPreviewCard({
 }
 
 export function DriveView({
+	browse,
 	composition = "hub",
+	onBrowse,
 	onOpenCall,
 	onOpenDemo,
 	onOpenHistory,
@@ -302,8 +315,12 @@ export function DriveView({
 	roomsSource,
 	workspaceRoot,
 }: {
+	/** Active Browse lite page (`?browse=`), app shell only. */
+	browse?: DriveBrowseSurface;
 	/** `app` = MC1 Join/Continue home; hub keeps Status / feature cards. */
 	composition?: "hub" | "app";
+	/** App shell: open / clear Browse lite (`null` = Browse index). */
+	onBrowse?: (surface: DriveBrowseSurface | null) => void;
 	onOpenCall: (request: DriveOpenCallRequest) => void;
 	onOpenDemo: () => void;
 	onOpenHistory: () => void;
@@ -321,6 +338,23 @@ export function DriveView({
 	const [dismissed, setDismissed] = useState(() =>
 		readCredentialOnboardingDismissed(),
 	);
+	const [leaveNote, setLeaveNote] = useState<string | null>(null);
+	/** App shell tab — Home vs Browse index (page is `browse` query). */
+	const [appTab, setAppTab] = useState<"home" | "browse">(() =>
+		browse ? "browse" : "home",
+	);
+
+	useEffect(() => {
+		if (browse) {
+			setAppTab("browse");
+		}
+	}, [browse]);
+
+	useEffect(() => {
+		if (composition === "app") {
+			setLeaveNote(consumeLeaveKeepRunningNote());
+		}
+	}, [composition]);
 
 	const requestSummary = useCallback(() => {
 		postToHost({ type: "status_summary", requestId: "drive-summary" });
@@ -436,31 +470,129 @@ export function DriveView({
 	});
 
 	if (composition === "app") {
+		const demoBootstrap = readDrivecodeDemoHubBootstrap(
+			typeof window === "undefined" ? "" : window.location.search,
+		);
+		const previewChip = shouldShowPreviewChip({
+			unconfigured: catalogReady && !configured,
+			demoQuery:
+				demoBootstrap.useShareScreenSpotlightDemo ||
+				demoBootstrap.useChatForkDemo,
+		});
+		// NOW-FIRST-OPEN: credential-free Join opens the fixture demo path.
+		const openCallOrPreview = (request: DriveOpenCallRequest) => {
+			if (catalogReady && !configured) {
+				onOpenDemo();
+				return;
+			}
+			onOpenCall(request);
+		};
+		const joinDefault = () =>
+			openCallOrPreview({ action: "join", roomId: DRIVE_DEFAULT_ROOM_ID });
+
+		const showBrowsePage = Boolean(browse && onBrowse);
+		const showBrowseIndex = appTab === "browse" && !browse;
+
+		// Skip PageFrame ScrollArea — app shell owns Home/Browse tabs + scroll.
 		return (
-			<PageFrame>
-				<PageHeader
-					description="Join or continue a call. Watch the agent, then steer when needed."
-					icon={DriveMarkIcon}
-					title="Drive"
-				/>
-				{showCredentialBanner ? (
-					<CredentialOnboardingBanner
-						onDismiss={() => {
-							writeCredentialOnboardingDismissed(true);
-							setDismissed(true);
+			<div
+				className="flex h-full min-h-0 flex-col bg-background px-4 py-5 max-[720px]:px-3 max-[720px]:py-4"
+				data-slot="drive-app-shell"
+			>
+				<div className="min-h-0 flex-1 overflow-auto pb-2">
+					{showBrowsePage && browse && onBrowse ? (
+						<DriveBrowseLitePage
+							onBack={() => onBrowse(null)}
+							onJoin={joinDefault}
+							surface={browse}
+						/>
+					) : showBrowseIndex ? (
+						<DriveBrowseLiteIndex
+							onJoin={joinDefault}
+							onOpen={(surface) => onBrowse?.(surface)}
+						/>
+					) : (
+						<>
+							<PageHeader
+								description="Join or continue a call. Watch the agent, then steer when needed."
+								icon={DriveMarkIcon}
+								title="Cline Drive"
+							/>
+							{previewChip ? (
+								<p
+									className="mb-3 inline-flex rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:text-amber-100"
+									data-slot="preview-chip"
+								>
+									{PREVIEW_CHIP_LABEL}
+								</p>
+							) : null}
+							{leaveNote ? (
+								<p
+									aria-live="polite"
+									className="mb-3 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100"
+									data-slot="leave-keep-running"
+									role="status"
+								>
+									{leaveNote}
+								</p>
+							) : null}
+							{showCredentialBanner ? (
+								<CredentialOnboardingBanner
+									onDismiss={() => {
+										writeCredentialOnboardingDismissed(true);
+										setDismissed(true);
+									}}
+									onOpenDemo={onOpenDemo}
+									onOpenProviders={onOpenProviders}
+								/>
+							) : null}
+							<RoomPreviewCard
+								composition="app"
+								lookupError={roomLookupError}
+								onOpenCall={openCallOrPreview}
+								onRetry={requestRoom}
+								preview={roomPreview}
+							/>
+						</>
+					)}
+				</div>
+				<nav
+					aria-label="App tabs"
+					className="flex shrink-0 border-t px-2 pt-2"
+					data-slot="drive-app-tabs"
+				>
+					<button
+						className={cn(
+							"flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold",
+							appTab === "home" && !browse
+								? "text-primary"
+								: "text-muted-foreground",
+						)}
+						onClick={() => {
+							setAppTab("home");
+							onBrowse?.(null);
 						}}
-						onOpenDemo={onOpenDemo}
-						onOpenProviders={onOpenProviders}
-					/>
-				) : null}
-				<RoomPreviewCard
-					composition="app"
-					lookupError={roomLookupError}
-					onOpenCall={onOpenCall}
-					onRetry={requestRoom}
-					preview={roomPreview}
-				/>
-			</PageFrame>
+						type="button"
+					>
+						Home
+					</button>
+					<button
+						className={cn(
+							"flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold",
+							appTab === "browse" || browse
+								? "text-primary"
+								: "text-muted-foreground",
+						)}
+						onClick={() => {
+							setAppTab("browse");
+							onBrowse?.(null);
+						}}
+						type="button"
+					>
+						Browse
+					</button>
+				</nav>
+			</div>
 		);
 	}
 

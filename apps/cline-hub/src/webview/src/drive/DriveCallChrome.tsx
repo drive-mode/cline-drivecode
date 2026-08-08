@@ -41,6 +41,7 @@ import {
 	interruptChromeCopy,
 	resolveInterruptPhase,
 } from "./agencyChrome";
+import { LEAVE_STRIP_LABEL } from "./driveAppCallChrome";
 import { isDriveHumanId } from "./participantIds";
 import { buildHumanPinDefaults, type HumanPinKind } from "./pinDefaults";
 import type { DriveSubMode, DriveUiState } from "./types";
@@ -183,6 +184,8 @@ function StripButton({
 	onClick,
 	pressed,
 	tone = "neutral",
+	/** Always 44×44 — consumer reach strip (NOW-STRIP-44). */
+	reachTarget = false,
 }: {
 	children: ReactNode;
 	disabled?: boolean;
@@ -192,6 +195,7 @@ function StripButton({
 	/** Omit for controls that are not toggles (settings, leave). */
 	pressed?: boolean;
 	tone?: "neutral" | "live" | "danger";
+	reachTarget?: boolean;
 }) {
 	return (
 		<Tooltip>
@@ -201,7 +205,10 @@ function StripButton({
 						aria-label={label}
 						aria-pressed={pressed}
 						className={cn(
-							"size-[30px] shrink-0 touch-manipulation max-[720px]:size-11 [&_svg]:size-[15px] max-[720px]:[&_svg]:size-[18px]",
+							"shrink-0 touch-manipulation",
+							reachTarget
+								? "size-11 [&_svg]:size-[18px]"
+								: "size-[30px] max-[720px]:size-11 [&_svg]:size-[15px] max-[720px]:[&_svg]:size-[18px]",
 							tone === "live" &&
 								"border-amber-500/55 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:border-amber-400/55 dark:bg-amber-400/10 dark:text-amber-300",
 							tone === "danger" &&
@@ -410,6 +417,7 @@ function DriveModePill({
 
 export function DriveCallStrip({
 	captionsOpen,
+	composition = "hub",
 	drive,
 	disabled,
 	outputVolume,
@@ -438,6 +446,11 @@ export function DriveCallStrip({
 }: {
 	/** CC panel open — the strip button is its only control. */
 	captionsOpen: boolean;
+	/**
+	 * `app` = consumer `?app=1` reach strip (mic / hand / CC / Leave).
+	 * Hub keeps the full desktop control set.
+	 */
+	composition?: "hub" | "app";
 	drive: DriveUiState;
 	disabled?: boolean;
 	/** `driveVoice.hardware.outputVolume` in [0, 1] — never a local copy. */
@@ -526,8 +539,78 @@ export function DriveCallStrip({
 		{ id: "hand", text: drive.handRaised ? "Your hand is raised" : "" },
 	];
 
+	const micLabel = drive.muted ? "Enable microphone" : "Mute microphone";
+	const stripClassName =
+		composition === "app"
+			? // h-11 row + safe-area; buttons are size-11 (44px) reach targets.
+				"flex items-center gap-2.5 border-t border-amber-500/30 bg-amber-500/5 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+			: "flex items-center gap-2 overflow-x-auto border-b border-amber-500/30 bg-amber-500/5 px-4 py-[7px] max-[720px]:gap-2.5 max-[720px]:px-3 max-[720px]:py-2 max-[720px]:pb-[max(0.5rem,env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
+	if (composition === "app") {
+		// NOW-STRIP-44: mic enable · hand · CC · Leave — no horizontal scroll at 360×640.
+		return (
+			<div className={stripClassName} data-slot="drive-call-strip-app">
+				<span className="sr-only" role="status">
+					{statusFacts.map((fact) => (
+						<span key={fact.id}>{fact.text ? `${fact.text}. ` : ""}</span>
+					))}
+				</span>
+				<StripButton
+					disabled={disabled}
+					label={micLabel}
+					onClick={onMuteToggle}
+					pressed={drive.muted}
+					reachTarget
+					tone={drive.muted ? "danger" : "neutral"}
+				>
+					{drive.muted ? <MicOffIcon /> : <MicIcon />}
+				</StripButton>
+				<StripButton
+					disabled={disabled}
+					label={drive.handRaised ? "Lower hand" : "Raise hand"}
+					onClick={onHandToggle}
+					pressed={drive.handRaised}
+					reachTarget
+					tone={drive.handRaised ? "live" : "neutral"}
+				>
+					<HandIcon />
+				</StripButton>
+				<StripButton
+					disabled={disabled}
+					label={
+						captionsOpen
+							? "Hide live captions"
+							: "Show live captions (nothing is saved)"
+					}
+					onClick={onToggleCaptions}
+					pressed={captionsOpen}
+					reachTarget
+					tone={captionsOpen ? "live" : "neutral"}
+				>
+					{captionsOpen ? <CaptionsIcon /> : <CaptionsOffIcon />}
+				</StripButton>
+				{onLeaveDrive ? (
+					<span className="ml-auto shrink-0">
+						<Button
+							aria-label={`${LEAVE_STRIP_LABEL} — room keeps running; rejoin anytime`}
+							className="h-11 shrink-0 touch-manipulation gap-1.5 px-3 text-sm font-semibold text-destructive hover:bg-destructive/10"
+							disabled={disabled}
+							onClick={() => onLeaveDrive()}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							<PhoneIcon className="size-[18px] rotate-[135deg]" />
+							{LEAVE_STRIP_LABEL}
+						</Button>
+					</span>
+				) : null}
+			</div>
+		);
+	}
+
 	return (
-		<div className="flex items-center gap-2 overflow-x-auto border-b border-amber-500/30 bg-amber-500/5 px-4 py-[7px] max-[720px]:gap-2.5 max-[720px]:px-3 max-[720px]:py-2 max-[720px]:pb-[max(0.5rem,env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+		<div className={stripClassName}>
 			<span className="sr-only" role="status">
 				{statusFacts.map((fact) => (
 					// Trailing stop so adjacent facts do not run together aloud.
@@ -731,7 +814,6 @@ export function DriveCallStrip({
 			</span>
 			{spendLabel ? (
 				<span
-					aria-label={`Session spend ${spendLabel}`}
 					className="shrink-0 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-foreground"
 					data-slot="call-spend-pill"
 					role="status"

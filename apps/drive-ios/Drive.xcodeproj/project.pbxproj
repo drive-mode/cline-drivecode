@@ -17,6 +17,7 @@
 		B35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift */; };
 		BD61DDD554EE45FC9069BCEE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD61DDD554EE45FC9069BCEE /* SettingsView.swift */; };
 		BAD3E80762AC43ACA5A46CF9 /* DriveComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD3E80762AC43ACA5A46CF9 /* DriveComponents.swift */; };
+		B1A2B3C4D5E6F708192A3B4C /* BrowseViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2B3C4D5E6F708192A3B4C /* BrowseViews.swift */; };
 		BCC8C31A657F4FA38EE0AF1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5CC8C31A657F4FA38EE0AF1F /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -31,6 +32,7 @@
 		A35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ApprovalSheet.swift"; sourceTree = "<group>"; };
 		AD61DDD554EE45FC9069BCEE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
 		9AD3E80762AC43ACA5A46CF9 /* DriveComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DriveComponents.swift"; sourceTree = "<group>"; };
+		A1A2B3C4D5E6F708192A3B4C /* BrowseViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BrowseViews.swift"; sourceTree = "<group>"; };
 		5CC8C31A657F4FA38EE0AF1F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		46937C9CE38A4FBD98D123B2 /* Drive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Drive.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -104,6 +106,7 @@
 			children = (
 				69CDA0DFFE764F6681E3FF0E /* OpenView.swift */,
 				9DA3ED14BC7349679AE1432A /* HomeView.swift */,
+				A1A2B3C4D5E6F708192A3B4C /* BrowseViews.swift */,
 				73DB229C4B9E4415BA5728FE /* CallView.swift */,
 				A35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift */,
 				AD61DDD554EE45FC9069BCEE /* SettingsView.swift */,
@@ -195,6 +198,7 @@
 				B04AE34D9E97497A9C37AD1E /* DemoModels.swift in Sources */,
 				B9CDA0DFFE764F6681E3FF0E /* OpenView.swift in Sources */,
 				BDA3ED14BC7349679AE1432A /* HomeView.swift in Sources */,
+				B1A2B3C4D5E6F708192A3B4C /* BrowseViews.swift in Sources */,
 				B3DB229C4B9E4415BA5728FE /* CallView.swift in Sources */,
 				B35F6078F7A041C8B952DBC6 /* ApprovalSheet.swift in Sources */,
 				BD61DDD554EE45FC9069BCEE /* SettingsView.swift in Sources */,

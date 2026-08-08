@@ -29,6 +29,8 @@ Detail and scoring still live in
 | F13 | Session return / Recent | yes | yes | yes | history |
 | F14 | Handoff one-liner on leave | yes | yes | yes | print |
 | F15 | Voice & devices mini-settings | yes | yes | yes | config |
+| F16 | Browse lite (rooms / tasks / artifacts / status) | yes | yes | yes | lite |
+| F17 | Viewport-aware diagrams (tap-to-render / stack) | yes | yes | yes | n/a |
 
 ## Device-only (explicit)
 

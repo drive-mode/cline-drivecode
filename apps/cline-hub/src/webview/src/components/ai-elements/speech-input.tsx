@@ -1,7 +1,7 @@
 "use client";
 
 import { MicIcon, SquareIcon } from "lucide-react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -94,6 +94,13 @@ export type SpeechInputProps = ComponentProps<typeof Button> & {
 	 * button simply goes idle, which reads as a dead UI.
 	 */
 	onCaptureError?: (message: string) => void;
+	/**
+	 * Press-and-hold capture (consumer call). Pointer/keyboard down starts;
+	 * up/cancel stops. Click-toggle is disabled in this mode.
+	 */
+	holdToTalk?: boolean;
+	/** Fires when capture listening state flips (for hold auto-send / mute restore). */
+	onListeningChange?: (listening: boolean) => void;
 };
 
 export const SpeechInput = ({
@@ -104,7 +111,10 @@ export const SpeechInput = ({
 	forceMode,
 	deviceId,
 	onCaptureError,
+	holdToTalk = false,
+	onListeningChange,
 	disabled,
+	children,
 	...props
 }: SpeechInputProps) => {
 	const [isListening, setIsListening] = useState(false);
@@ -396,27 +406,41 @@ export const SpeechInput = ({
 		}
 	}, []);
 
-	const toggleListening = useCallback(() => {
+	const startListening = useCallback(() => {
+		if (mode === "speech-recognition" && recognitionRef.current) {
+			if (!isListening) {
+				void startRecognition();
+			}
+			return;
+		}
+		if (mode === "media-recorder" && !isListening) {
+			void startMediaRecorder();
+		}
+	}, [mode, isListening, startRecognition, startMediaRecorder]);
+
+	const stopListening = useCallback(() => {
 		if (mode === "speech-recognition" && recognitionRef.current) {
 			if (isListening) {
 				recognitionRef.current.stop();
-				return;
 			}
-			void startRecognition();
-		} else if (mode === "media-recorder") {
-			if (isListening) {
-				stopMediaRecorder();
-			} else {
-				void startMediaRecorder();
-			}
+			return;
 		}
-	}, [
-		mode,
-		isListening,
-		startRecognition,
-		startMediaRecorder,
-		stopMediaRecorder,
-	]);
+		if (mode === "media-recorder" && isListening) {
+			stopMediaRecorder();
+		}
+	}, [mode, isListening, stopMediaRecorder]);
+
+	const toggleListening = useCallback(() => {
+		if (isListening) {
+			stopListening();
+		} else {
+			startListening();
+		}
+	}, [isListening, startListening, stopListening]);
+
+	useEffect(() => {
+		onListeningChange?.(isListening);
+	}, [isListening, onListeningChange]);
 
 	// Determine if button should be disabled. `disabled` is pulled out of the
 	// spread so a caller passing `disabled={false}` cannot re-enable a button
@@ -428,13 +452,37 @@ export const SpeechInput = ({
 		(mode === "media-recorder" && !onAudioRecorded) ||
 		isProcessing;
 
+	const holdPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+		if (isDisabled) {
+			return;
+		}
+		event.preventDefault();
+		event.currentTarget.setPointerCapture(event.pointerId);
+		startListening();
+	};
+
+	const holdPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+		if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+			event.currentTarget.releasePointerCapture(event.pointerId);
+		}
+		stopListening();
+	};
+
 	return (
-		<div className="relative inline-flex items-center justify-center">
+		<div
+			className={cn(
+				"relative inline-flex items-center justify-center",
+				holdToTalk && "w-full",
+			)}
+		>
 			{/* Animated pulse rings */}
 			{isListening &&
 				[0, 1, 2].map((index) => (
 					<div
-						className="absolute inset-0 animate-ping rounded-full border-2 border-red-400/30"
+						className={cn(
+							"absolute inset-0 animate-ping border-2 border-red-400/30",
+							holdToTalk ? "rounded-2xl" : "rounded-full",
+						)}
 						key={index}
 						style={{
 							animationDelay: `${index * 0.3}s`,
@@ -445,20 +493,56 @@ export const SpeechInput = ({
 
 			{/* Main record button */}
 			<Button
+				{...props}
 				className={cn(
-					"relative z-10 rounded-full transition-all duration-300",
+					"relative z-10 transition-all duration-300",
+					holdToTalk
+						? "h-[52px] w-full touch-manipulation rounded-2xl text-base font-semibold"
+						: "rounded-full",
 					isListening
 						? "bg-destructive text-white hover:bg-destructive/80 hover:text-white"
 						: "bg-primary text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground",
 					className,
 				)}
 				disabled={isDisabled}
-				onClick={toggleListening}
-				{...props}
+				onClick={holdToTalk ? undefined : toggleListening}
+				onKeyDown={
+					holdToTalk
+						? (event) => {
+								if (event.key === " " || event.key === "Enter") {
+									event.preventDefault();
+									if (!event.repeat) {
+										startListening();
+									}
+								}
+							}
+						: undefined
+				}
+				onKeyUp={
+					holdToTalk
+						? (event) => {
+								if (event.key === " " || event.key === "Enter") {
+									event.preventDefault();
+									stopListening();
+								}
+							}
+						: undefined
+				}
+				onPointerCancel={holdToTalk ? holdPointerUp : undefined}
+				onPointerDown={holdToTalk ? holdPointerDown : undefined}
+				onPointerUp={holdToTalk ? holdPointerUp : undefined}
+				type="button"
 			>
 				{isProcessing && <Spinner />}
-				{!isProcessing && isListening && <SquareIcon className="size-4" />}
-				{!(isProcessing || isListening) && <MicIcon className="size-4" />}
+				{!isProcessing &&
+					(children ??
+						(holdToTalk ? (
+							<span>{isListening ? "Listening…" : "Hold to talk"}</span>
+						) : isListening ? (
+							<SquareIcon className="size-4" />
+						) : (
+							<MicIcon className="size-4" />
+						)))}
 			</Button>
 		</div>
 	);

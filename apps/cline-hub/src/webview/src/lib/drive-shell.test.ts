@@ -4,6 +4,7 @@ import {
 	drivePath,
 	legacyChatOrSessionsRedirect,
 	parseDriveAppShell,
+	parseDriveBrowse,
 	parseDriveSessionId,
 	parseDriveShellMode,
 } from "./drive-shell";
@@ -42,6 +43,27 @@ describe("parseDriveAppShell", () => {
 		expect(parseDriveAppShell("?app=0")).toBe(false);
 		expect(parseDriveAppShell("?app=1")).toBe(true);
 		expect(parseDriveAppShell("?demoPlans=1&app=1")).toBe(true);
+	});
+});
+
+describe("parseDriveBrowse / drivePath browse", () => {
+	it("accepts only known surfaces", () => {
+		expect(parseDriveBrowse("?browse=tasks")).toBe("tasks");
+		expect(parseDriveBrowse("?browse=status")).toBe("status");
+		expect(parseDriveBrowse("?browse=analytics")).toBeUndefined();
+		expect(parseDriveBrowse("")).toBeUndefined();
+	});
+
+	it("sets and clears browse on lobby URLs", () => {
+		expect(drivePath({ browse: "artifacts", preserveSearch: "app=1" })).toBe(
+			"/drive?app=1&browse=artifacts",
+		);
+		expect(
+			drivePath({ browse: null, preserveSearch: "app=1&browse=tasks" }),
+		).toBe("/drive?app=1");
+		expect(drivePath({ sessionId: "s1", preserveSearch: "app=1&browse=tasks" })).toBe(
+			"/drive?app=1&id=s1",
+		);
 	});
 });
 

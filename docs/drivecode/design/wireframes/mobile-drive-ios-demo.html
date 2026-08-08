@@ -945,38 +945,82 @@
           </div>
         </section>
 
-        <!-- 2 Browse -->
+        <!-- 2 Browse lite index -->
         <section class="view" data-view="browse">
           <div class="scroll padded-bottom">
             <div class="large-title"><h2>Browse</h2></div>
-            <div class="section-label">Rooms</div>
+            <p style="margin:0 20px 12px;color:var(--ink-55);font-size:13px;line-height:1.4">Glance without hub sprawl. Call stays Home.</p>
+            <div class="section-label">Surfaces</div>
             <div class="list-card">
+              <button type="button" class="list-row" data-go="browse-tasks" style="width:100%;border:0;background:transparent;font:inherit;cursor:pointer;text-align:left">
+                <div class="icon">T</div>
+                <div class="meta"><strong>Tasks</strong><span>NOW / NEXT / blocked on you</span></div>
+              </button>
+              <button type="button" class="list-row" data-go="browse-status" style="width:100%;border:0;background:transparent;font:inherit;cursor:pointer;text-align:left">
+                <div class="icon">S</div>
+                <div class="meta"><strong>Status</strong><span>Board · changelog · deps (lite)</span></div>
+              </button>
+              <button type="button" class="list-row" data-go="browse-artifacts" style="width:100%;border:0;background:transparent;font:inherit;cursor:pointer;text-align:left">
+                <div class="icon">◇</div>
+                <div class="meta"><strong>Artifacts</strong><span>Diagrams · tap to render on phone</span></div>
+              </button>
               <button type="button" class="list-row" data-go="call" style="width:100%;border:0;background:transparent;font:inherit;cursor:pointer;text-align:left">
-                <div class="icon">A</div>
-                <div class="meta"><strong>Auth middleware</strong><span>Live · Maya + Coder</span></div>
+                <div class="icon">R</div>
+                <div class="meta"><strong>Rooms</strong><span>Auth middleware · Live</span></div>
                 <div class="badge">Join</div>
               </button>
-              <div class="list-row">
-                <div class="icon">R</div>
-                <div class="meta"><strong>Release train</strong><span>Quiet · 2 agents idle</span></div>
-              </div>
-            </div>
-            <div class="section-label">Tasks</div>
-            <div class="list-card">
-              <div class="list-row">
-                <div class="icon">T</div>
-                <div class="meta"><strong>Gate JWT refresh</strong><span>In call · Needs approval</span></div>
-              </div>
-              <div class="list-row">
-                <div class="icon">D</div>
-                <div class="meta"><strong>Docs pass</strong><span>Queued</span></div>
-              </div>
             </div>
           </div>
           <div class="tabbar">
             <div class="tab" data-go="home"><div class="dot"></div>Home</div>
             <div class="tab on" data-go="browse"><div class="dot"></div>Browse</div>
             <div class="tab" data-go="settings"><div class="dot"></div>You</div>
+          </div>
+        </section>
+
+        <section class="view" data-view="browse-tasks">
+          <div class="scroll padded-bottom">
+            <div class="call-top" style="padding:8px 16px">
+              <div class="back" data-go="browse">‹</div>
+              <div class="title"><strong>Tasks</strong><span>Browse lite</span></div>
+            </div>
+            <div class="list-card" style="margin:8px 16px">
+              <div class="list-row"><div class="icon">G</div><div class="meta"><strong>Gate JWT refresh</strong><span>NOW · Needs approval</span></div></div>
+              <div class="list-row"><div class="icon">R</div><div class="meta"><strong>Run auth tests</strong><span>NEXT · In call</span></div></div>
+              <div class="list-row"><div class="icon">D</div><div class="meta"><strong>Docs pass</strong><span>Queued</span></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="browse-status">
+          <div class="scroll padded-bottom">
+            <div class="call-top" style="padding:8px 16px">
+              <div class="back" data-go="browse">‹</div>
+              <div class="title"><strong>Status</strong><span>Lite · not full hub</span></div>
+            </div>
+            <div class="list-card" style="margin:8px 16px">
+              <div class="list-row"><div class="icon">●</div><div class="meta"><strong>Board</strong><span>2 blocked · 1 running</span></div></div>
+              <div class="list-row"><div class="icon">≡</div><div class="meta"><strong>Changelog</strong><span>Today’s shipped notes</span></div></div>
+              <div class="list-row"><div class="icon">⧉</div><div class="meta"><strong>Dependency map</strong><span>Tap Mermaid on phone</span></div></div>
+            </div>
+            <p style="margin:12px 20px;color:var(--ink-55);font-size:12px;line-height:1.4">Diagrams stack vertically ≤720px; ultrawide keeps side-by-side.</p>
+          </div>
+        </section>
+
+        <section class="view" data-view="browse-artifacts">
+          <div class="scroll padded-bottom">
+            <div class="call-top" style="padding:8px 16px">
+              <div class="back" data-go="browse">‹</div>
+              <div class="title"><strong>Artifacts</strong><span>Browse lite</span></div>
+            </div>
+            <div class="list-card" style="margin:8px 16px">
+              <div class="list-row"><div class="icon">◇</div><div class="meta"><strong>diagram · auth flow</strong><span>Mermaid · tap to render</span></div></div>
+              <div class="list-row"><div class="icon">◇</div><div class="meta"><strong>diff · auth.ts</strong><span>Open in Spotlight</span></div></div>
+            </div>
+            <div style="margin:12px 16px;padding:12px;border-radius:14px;border:0.8px solid rgba(245,158,11,.4);background:rgba(245,158,11,.08);font-size:12px;line-height:1.45">
+              <div style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.06em;color:var(--ink-55);margin-bottom:8px">DIAGRAM · PHONE STACK</div>
+              Join → Spot → Steer → Gate → Leave
+            </div>
           </div>
         </section>
 
@@ -1135,7 +1179,7 @@
     </button>
     <button type="button" class="beat" data-beat="browse">
       <strong>3 · Browse</strong>
-      <span>Rooms &amp; tasks without hub sprawl</span>
+      <span>Tasks · Status · Artifacts · Rooms lite</span>
     </button>
     <button type="button" class="beat" data-beat="call">
       <strong>4 · Live call</strong>
@@ -1176,14 +1220,15 @@
   }
 
   function show(id) {
-    idx = Math.max(0, order.indexOf(id));
-    if (idx < 0) idx = 0;
-    const view = order[idx];
+    const beatIdx = order.indexOf(id);
+    if (beatIdx >= 0) idx = beatIdx;
+    const view = id;
     document.querySelectorAll(".view").forEach((el) => {
       el.classList.toggle("on", el.dataset.view === view);
     });
+    const beatKey = order.includes(view) ? view : "browse";
     document.querySelectorAll(".beat").forEach((el) => {
-      el.setAttribute("aria-current", el.dataset.beat === view ? "true" : "false");
+      el.setAttribute("aria-current", el.dataset.beat === beatKey ? "true" : "false");
     });
     progress.style.width = ((idx + 1) / order.length * 100) + "%";
     history.replaceState(null, "", "#" + view);

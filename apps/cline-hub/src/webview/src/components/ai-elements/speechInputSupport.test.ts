@@ -97,13 +97,13 @@ describe("describeSpeechInputUnavailable", () => {
 			capabilities: RECORDER_ONLY,
 		});
 		expect(message).toContain("local worker");
-		expect(message).toContain("type your message");
+		expect(message?.toLowerCase()).toContain("safari");
 	});
 
 	it("still offers the keyboard when nothing is available", () => {
-		expect(describeSpeechInputUnavailable({ capabilities: NEITHER })).toContain(
-			"Type your message",
-		);
+		expect(
+			describeSpeechInputUnavailable({ capabilities: NEITHER })?.toLowerCase(),
+		).toContain("type your message");
 	});
 });
 

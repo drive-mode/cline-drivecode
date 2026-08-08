@@ -8,6 +8,8 @@ and brand locks in
 **Not** a second product. Surfaces are the same Drive jobs (glance / decide /
 speak). Demo fixtures only — no hub transport yet.
 
+**Full demo script:** [DEMO.md](DEMO.md)
+
 ## Requirements
 
 - macOS with **Xcode 15+** (Swift 5.9+, iOS 17 SDK)
@@ -30,17 +32,26 @@ open apps/drive-ios/Drive.xcodeproj
 
 Mic permission string is already set for hold-to-talk (STT wiring comes later).
 
-## What’s in v0.1
+## What’s in the full fixture demo
 
 | Screen | Behavior |
 |---|---|
-| Open | Brand mark, Preview chip, Watch live / Continue |
-| Home | Large title, Live hero (green), Recent, glass tab bar |
-| Call | Full-bleed Spotlight + captions/activity + Hold strip |
+| Open | **Cline Drive** mark, Preview chip, Watch live / Continue |
+| Home | Live hero, Recent, leave keep-running banner, glass tab bar |
+| Browse | Rooms / Tasks / Artifacts / Status lite · tap-to-render phone diagram stack |
+| Call | Full-bleed Spotlight · hold-to-talk · raise-hand finishing banner · CC · Leave · Review→approval |
 | Approval | Sheet · Deny / Allow |
 | Settings | Grouped Appearance / Voice / Trust |
 
-Navigation is local `@State` with `DemoData` fixtures.
+Navigation is local `DemoSession` with `DemoData` fixtures. Leave ≠ End
+(room keeps running). Raise-hand mirrors hub interrupt phases.
+
+## Presenter HTML (no Xcode)
+
+```bash
+cd docs/drivecode/design/wireframes && python3 -m http.server 8765
+# open http://127.0.0.1:8765/mobile-drive-ios-demo.html
+```
 
 ## Multi-device
 
@@ -56,11 +67,12 @@ When you add an iOS-only affordance, update the matrix — do not silently fork 
 apps/drive-ios/
 ├── Drive.xcodeproj
 ├── README.md
+├── DEMO.md
 └── Drive/
     ├── DriveApp.swift
     ├── ContentView.swift
     ├── Theme/DriveTheme.swift
-    ├── Models/DemoModels.swift
+    ├── Models/DemoModels.swift   # DemoSession + fixtures
     ├── Views/{Open,Home,Call,Approval,Settings}View.swift
     ├── Views/Components/DriveComponents.swift
     └── Resources/Assets.xcassets

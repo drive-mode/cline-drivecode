@@ -93,9 +93,11 @@ import { useDriveCallPresence } from "./drive/useDriveCallPresence";
 import {
 	type DriveShellMode,
 	appShellHomeRedirect,
+	type DriveBrowseSurface,
 	drivePath,
 	legacyChatOrSessionsRedirect,
 	parseDriveAppShell,
+	parseDriveBrowse,
 	parseDriveSessionId,
 	parseDriveShellMode,
 } from "./lib/drive-shell";
@@ -1562,6 +1564,26 @@ function App() {
 		setLocationSearch(window.location.search);
 	}, [navigate]);
 
+	/** App shell Browse lite — `?browse=` on `/drive` (not full hub Status). */
+	const openDriveBrowse = useCallback(
+		(surface: DriveBrowseSurface | null) => {
+			setDriveLaunchRequest(null);
+			setSelectedSessionId(undefined);
+			setDriveShellMode("lobby");
+			const nextPath = drivePath({
+				mode: "lobby",
+				browse: surface,
+				preserveSearch: persistentRouteSearchParams(),
+			});
+			if (currentPathWithSearch() !== nextPath) {
+				window.history.pushState(null, "", nextPath);
+			}
+			setView("drive");
+			setLocationSearch(window.location.search);
+		},
+		[],
+	);
+
 	const openDriveCredentialDemo = useCallback(() => {
 		setDriveLaunchRequest(null);
 		setSelectedSessionId(undefined);
@@ -1699,6 +1721,7 @@ function App() {
 	}, []);
 
 	const appShell = parseDriveAppShell(locationSearch);
+	const appBrowse = appShell ? parseDriveBrowse(locationSearch) : undefined;
 
 	const content = useMemo(() => {
 		if (view === "drive") {
@@ -1724,13 +1747,29 @@ function App() {
 						driveLaunchRequest={driveLaunchRequest}
 						initialSessionId={selectedSessionId}
 						onDriveLaunchHandled={acknowledgeDriveLaunch}
+						onReturnToLobby={() => {
+							setDriveLaunchRequest(null);
+							setSelectedSessionId(undefined);
+							setDriveShellMode("lobby");
+							const nextPath = drivePath({
+								mode: "lobby",
+								browse: null,
+								preserveSearch: persistentRouteSearchParams(),
+							});
+							if (currentPathWithSearch() !== nextPath) {
+								window.history.pushState(null, "", nextPath);
+							}
+							setLocationSearch(window.location.search);
+						}}
 						onSessionSelected={updateChatSessionRoute}
 					/>
 				);
 			}
 			return (
 				<DriveView
+					browse={appBrowse}
 					composition={appShell ? "app" : "hub"}
+					onBrowse={appShell ? openDriveBrowse : undefined}
 					onOpenCall={openDriveCall}
 					onOpenDemo={openDriveCredentialDemo}
 					onOpenHistory={openDriveHistory}
@@ -1885,7 +1924,9 @@ function App() {
 		if (appShell) {
 			return (
 				<DriveView
+					browse={appBrowse}
 					composition="app"
+					onBrowse={openDriveBrowse}
 					onOpenCall={openDriveCall}
 					onOpenDemo={openDriveCredentialDemo}
 					onOpenHistory={openDriveHistory}
@@ -1917,7 +1958,9 @@ function App() {
 		openRoom,
 		openStatusSessionRoom,
 		openDriveHistory,
+		openDriveBrowse,
 		openDriveCredentialDemo,
+		appBrowse,
 		roomsSource,
 		driveWorkspaceRoot,
 		statusSessionSource,

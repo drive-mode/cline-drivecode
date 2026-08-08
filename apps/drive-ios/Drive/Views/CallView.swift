@@ -1,10 +1,17 @@
 import SwiftUI
 
 struct CallView: View {
+	var isPreview: Bool
+	var holding: Bool
+	var handRaised: Bool
+	var interruptPhase: InterruptPhase
+	var captionsVisible: Bool
 	var onBack: () -> Void
 	var onLeave: () -> Void
 	var onRaiseHand: () -> Void
-	@State private var holding = false
+	var onHoldToggle: () -> Void
+	var onToggleCaptions: () -> Void
+	var onRequestApproval: () -> Void
 
 	var body: some View {
 		ZStack {
@@ -19,17 +26,30 @@ struct CallView: View {
 							.font(.system(size: 14, weight: .bold))
 						HStack(spacing: 4) {
 							LiveDot()
-							Text("Live · 12:04")
+							Text(isPreview ? "Preview · 12:04" : "Live · 12:04")
 								.font(.system(size: 11, weight: .semibold))
-								.foregroundStyle(DriveTheme.liveDark)
+								.foregroundStyle(isPreview ? Color.white.opacity(0.7) : DriveTheme.liveDark)
 						}
 					}
 					.foregroundStyle(.white)
 					Spacer()
-					circleControl("ellipsis", action: {})
+					circleControl("ellipsis", action: onRequestApproval)
 				}
 				.padding(.horizontal, 14)
 				.padding(.top, 4)
+
+				if isPreview {
+					Text(DemoSession.previewChipLabel)
+						.font(.system(size: 10, weight: .bold))
+						.tracking(0.5)
+						.textCase(.uppercase)
+						.foregroundStyle(.white.opacity(0.75))
+						.padding(.horizontal, 10)
+						.padding(.vertical, 4)
+						.background(.white.opacity(0.1))
+						.clipShape(Capsule())
+						.padding(.top, 6)
+				}
 
 				HStack(spacing: 8) {
 					ForEach(DemoData.participants) { p in
@@ -44,7 +64,19 @@ struct CallView: View {
 									.strokeBorder(p.speaking ? DriveTheme.violet : .clear, lineWidth: 2)
 							)
 					}
+					Spacer(minLength: 0)
+					Button(action: onToggleCaptions) {
+						Image(systemName: captionsVisible ? "captions.bubble.fill" : "captions.bubble")
+							.font(.system(size: 14, weight: .semibold))
+							.foregroundStyle(.white)
+							.frame(width: 34, height: 34)
+							.background(.white.opacity(0.1))
+							.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+					}
+					.buttonStyle(.plain)
+					.accessibilityLabel(captionsVisible ? "Hide captions" : "Show captions")
 				}
+				.padding(.horizontal, 14)
 				.padding(.top, 8)
 				.padding(.bottom, 10)
 
@@ -79,6 +111,16 @@ struct CallView: View {
 								.foregroundStyle(.white.opacity(0.5))
 						}
 						Spacer(minLength: 0)
+						Button(action: onRequestApproval) {
+							Text("Review")
+								.font(.system(size: 11, weight: .bold))
+								.foregroundStyle(DriveTheme.violetSoft)
+								.padding(.horizontal, 10)
+								.padding(.vertical, 6)
+								.background(DriveTheme.violet.opacity(0.22))
+								.clipShape(Capsule())
+						}
+						.buttonStyle(.plain)
 					}
 					.padding(12)
 					.background(.white.opacity(0.06))
@@ -89,17 +131,21 @@ struct CallView: View {
 					.clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 					.padding(.horizontal, 12)
 
-					Text(DemoData.caption)
-						.font(.system(size: 12))
-						.foregroundStyle(.white.opacity(0.85))
-						.padding(.horizontal, 12)
-						.padding(.vertical, 8)
-						.frame(maxWidth: .infinity, alignment: .leading)
-						.background(.black.opacity(0.45))
-						.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-						.padding(.horizontal, 12)
-						.padding(.bottom, 12)
-						.padding(.top, 8)
+					if captionsVisible {
+						Text(DemoData.caption)
+							.font(.system(size: 12))
+							.foregroundStyle(.white.opacity(0.85))
+							.padding(.horizontal, 12)
+							.padding(.vertical, 8)
+							.frame(maxWidth: .infinity, alignment: .leading)
+							.background(.black.opacity(0.45))
+							.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+							.padding(.horizontal, 12)
+							.padding(.bottom, 12)
+							.padding(.top, 8)
+					} else {
+						Color.clear.frame(height: 12)
+					}
 				}
 				.frame(maxWidth: .infinity, maxHeight: .infinity)
 				.background(
@@ -119,23 +165,49 @@ struct CallView: View {
 				.clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 				.padding(.horizontal, 10)
 
+				if let title = interruptPhase.title, let hint = interruptPhase.hint {
+					VStack(alignment: .leading, spacing: 2) {
+						Text(title)
+							.font(.system(size: 13, weight: .bold))
+						Text(hint)
+							.font(.system(size: 11))
+							.foregroundStyle(.white.opacity(0.75))
+					}
+					.foregroundStyle(.white)
+					.frame(maxWidth: .infinity, alignment: .leading)
+					.padding(.horizontal, 14)
+					.padding(.vertical, 10)
+					.background(Color(red: 245 / 255, green: 158 / 255, blue: 11 / 255).opacity(0.22))
+					.overlay(
+						Rectangle()
+							.frame(height: 0.8)
+							.foregroundStyle(Color(red: 245 / 255, green: 158 / 255, blue: 11 / 255).opacity(0.45)),
+						alignment: .top
+					)
+					.accessibilityElement(children: .combine)
+				}
+
 				GlassBar {
 					HStack(spacing: 12) {
 						Button(action: onRaiseHand) {
-							Text("✋")
+							Text(handRaised ? "✋↓" : "✋")
 								.frame(width: 48, height: 48)
-								.background(.white.opacity(0.08))
+								.background(
+									handRaised
+										? Color(red: 245 / 255, green: 158 / 255, blue: 11 / 255).opacity(0.28)
+										: .white.opacity(0.08)
+								)
 								.clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 						}
 						.buttonStyle(.plain)
+						.accessibilityLabel(handRaised ? "Lower hand" : "Raise hand")
 
-						Button {
-							holding.toggle()
-						} label: {
-							Text(holding ? "Listening…" : "Hold")
+						Button(action: onHoldToggle) {
+							Text(holding ? "Listening…" : "Hold to talk")
 								.font(.system(size: 12, weight: .bold))
 								.foregroundStyle(.white)
-								.frame(width: 72, height: 52)
+								.frame(maxWidth: .infinity)
+								.frame(height: 52)
 								.background(DriveTheme.violetGradient)
 								.clipShape(RoundedRectangle(cornerRadius: DriveTheme.radiusCTA, style: .continuous))
 								.shadow(color: DriveTheme.violet.opacity(0.35), radius: 12, y: 6)
@@ -147,11 +219,12 @@ struct CallView: View {
 							Text("Leave")
 								.font(.system(size: 11, weight: .bold))
 								.foregroundStyle(Color(red: 1, green: 0.54, blue: 0.66))
-								.frame(width: 48, height: 48)
+								.frame(width: 56, height: 48)
 								.background(DriveTheme.danger.opacity(0.18))
 								.clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 						}
 						.buttonStyle(.plain)
+						.accessibilityHint("Room keeps running. Rejoin anytime.")
 					}
 					.frame(maxWidth: .infinity)
 				}
@@ -206,5 +279,17 @@ private struct WaveformView: View {
 }
 
 #Preview {
-	CallView(onBack: {}, onLeave: {}, onRaiseHand: {})
+	CallView(
+		isPreview: true,
+		holding: false,
+		handRaised: true,
+		interruptPhase: .finishing,
+		captionsVisible: true,
+		onBack: {},
+		onLeave: {},
+		onRaiseHand: {},
+		onHoldToggle: {},
+		onToggleCaptions: {},
+		onRequestApproval: {}
+	)
 }

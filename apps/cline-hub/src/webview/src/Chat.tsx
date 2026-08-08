@@ -36,6 +36,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { parseDriveAppShell } from "@/lib/drive-shell";
 import type {
 	WebviewChatAttachments,
 	WebviewDefaults,
@@ -44,6 +45,7 @@ import type {
 	WebviewReasonLevel,
 	WebviewSessionSummary,
 } from "../../webview-protocol";
+import { writeLeaveKeepRunningNote } from "./drive/driveAppCallChrome";
 import {
 	CHAT_HOST_MESSAGE_TYPES,
 	type ChatHostMessage,
@@ -213,6 +215,8 @@ type ChatProps = {
 	initialSessionId?: string;
 	onDriveLaunchHandled?: (requestId: number) => void;
 	onSessionSelected?: (sessionId?: string) => void;
+	/** Consumer leave → lobby (NOW-LEAVE-COPY). */
+	onReturnToLobby?: () => void;
 };
 
 export default function Chat({
@@ -220,7 +224,13 @@ export default function Chat({
 	initialSessionId,
 	onDriveLaunchHandled,
 	onSessionSelected,
+	onReturnToLobby,
 }: ChatProps) {
+	/** Consumer `?app=1` — hold-to-talk + thin strip (NOW-HOLD-TALK / NOW-STRIP-44). */
+	const appShell = parseDriveAppShell(
+		typeof window === "undefined" ? "" : window.location.search,
+	);
+	const callComposition = appShell ? "app" : "hub";
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [status, setStatus] = useState("Waiting for RPC initialization...");
 	const [sessionId, setSessionId] = useState<string>();
@@ -2048,11 +2058,19 @@ export default function Chat({
 							connectionPhase={connectionPhase}
 							disabled={isHydrating}
 							drive={drive}
-							onEndDrive={endDrive}
+							onEndDrive={appShell ? undefined : endDrive}
 							// Wrapped, not by reference: joinDrive takes an optional
 							// roomId, so onClick would pass the MouseEvent as one.
 							onJoinDrive={() => joinDrive()}
-							onLeaveDrive={leaveDrive}
+							onLeaveDrive={() => {
+								if (appShell) {
+									writeLeaveKeepRunningNote();
+									leaveDrive();
+									onReturnToLobby?.();
+									return;
+								}
+								leaveDrive();
+							}}
 							onToggleStageLayout={toggleStage}
 						/>
 						<Button
@@ -2089,11 +2107,14 @@ export default function Chat({
 					showRoster={!stageLayout}
 				/>
 				<div
-					className={
-						stageLayout
-							? "flex min-h-0 min-w-0 flex-1"
-							: "flex min-h-0 flex-1 flex-col"
-					}
+					className={cn(
+						"flex min-h-0 min-w-0 flex-1",
+						stageLayout ? "" : "flex-col",
+						// NOW-LANDSCAPE: Spotlight | hold+strip (surfaces `.call-land`).
+						appShell &&
+							drive.active &&
+							"landscape:grid landscape:grid-cols-[minmax(0,1.4fr)_minmax(12rem,0.9fr)] landscape:grid-rows-1",
+					)}
 				>
 					{stageLayout ? (
 						<Spotlight
@@ -2103,7 +2124,7 @@ export default function Chat({
 							artifact={presentedArtifact}
 							backlog={showBacklog}
 							cards={drive.stageCards}
-							className="min-h-0 min-w-0 flex-1"
+							className="min-h-0 min-w-0 flex-1 landscape:min-h-0"
 							demo={drive.demo}
 							emptyHint={
 								drive.demo
@@ -2230,108 +2251,147 @@ export default function Chat({
 								Gates active — several high-impact denials this call.
 							</p>
 						) : null}
-						<DriveVoiceBar
-							disabled={isHydrating}
-							onSendSpoken={sendDrivePrompt}
-							onSttError={setStatus}
-							sending={sending}
-							session={driveSession}
-						/>
-						{drive.active ? (
+						{appShell ? null : (
+							<DriveVoiceBar
+								composition={callComposition}
+								disabled={isHydrating}
+								onSendSpoken={sendDrivePrompt}
+								onSttError={setStatus}
+								sending={sending}
+								session={driveSession}
+							/>
+						)}
+						{drive.active && !appShell ? (
 							<DriveAddressChip
 								addressSet={drive.addressSet}
 								onAddressEveryone={() => applyAddressSet(EVERYONE_ADDRESS)}
 								participants={drive.participants}
 							/>
 						) : null}
-						{routeSuggestion ? (
+						{routeSuggestion && !appShell ? (
 							<RouteSuggestChip
 								onAccept={acceptRouteSuggestion}
 								onDismiss={skipRouteSuggestion}
 								suggestion={routeSuggestion}
 							/>
 						) : null}
-						<Composer
-							autoApproveTools={autoApproveTools}
-							disabled={isHydrating}
-							enableSpawn={enableSpawn}
-							enableTeams={enableTeams}
-							enableTools={enableTools}
-							maxIterations={maxIterations}
-							model={model}
-							mode={mode}
-							modelSelectorOpen={modelSelectorOpen}
-							models={models}
-							onAbort={() => {
-								postToHost({ type: "abort" });
-								setStatus("Abort requested...");
-							}}
-							onAutoApproveToolsChange={setAutoApproveTools}
-							onEnableSpawnChange={setEnableSpawn}
-							onEnableTeamsChange={setEnableTeams}
-							onEnableToolsChange={setEnableTools}
-							onModeChange={setMode}
-							onMaxIterationsChange={setMaxIterations}
-							onModelChange={setModel}
-							pendingSteers={pendingSteers}
-							onModelSelectorOpenChange={setModelSelectorOpen}
-							onProviderChange={(nextProvider) => {
-								setProvider(nextProvider);
-								const rememberedModel =
-									lastSelection.lastModelByProvider[nextProvider];
-								const providerModelIds = (
-									modelsByProvider[nextProvider] ?? []
-								).map((item) => item.id);
-								if (
-									rememberedModel &&
-									providerModelIds.includes(rememberedModel)
-								) {
-									setModel(rememberedModel);
-									return;
-								}
-								setModel("");
-							}}
-							onSend={({ prompt, attachments, attachmentCount }) => {
-								gateRouteThenFlush({
-									prompt,
-									attachments,
-									attachmentCount,
-									source: "text",
-								});
-							}}
-							onSystemPromptChange={setSystemPrompt}
-							onReasonLevelChange={setReasonLevel}
-							provider={provider}
-							providers={providers}
-							sending={sending}
-							status={status}
-							systemPrompt={systemPrompt}
-							reasonLevel={effectiveReasonLevel}
-							workspaceRoot={defaults.workspaceRoot}
-						/>
+						{/* App call: hold-to-talk owns send; desk composer steals thumb zone. */}
+						{drive.active && appShell ? null : (
+							<Composer
+								autoApproveTools={autoApproveTools}
+								disabled={isHydrating}
+								enableSpawn={enableSpawn}
+								enableTeams={enableTeams}
+								enableTools={enableTools}
+								maxIterations={maxIterations}
+								model={model}
+								mode={mode}
+								modelSelectorOpen={modelSelectorOpen}
+								models={models}
+								onAbort={() => {
+									postToHost({ type: "abort" });
+									setStatus("Abort requested...");
+								}}
+								onAutoApproveToolsChange={setAutoApproveTools}
+								onEnableSpawnChange={setEnableSpawn}
+								onEnableTeamsChange={setEnableTeams}
+								onEnableToolsChange={setEnableTools}
+								onModeChange={setMode}
+								onMaxIterationsChange={setMaxIterations}
+								onModelChange={setModel}
+								pendingSteers={pendingSteers}
+								onModelSelectorOpenChange={setModelSelectorOpen}
+								onProviderChange={(nextProvider) => {
+									setProvider(nextProvider);
+									const rememberedModel =
+										lastSelection.lastModelByProvider[nextProvider];
+									const providerModelIds = (
+										modelsByProvider[nextProvider] ?? []
+									).map((item) => item.id);
+									if (
+										rememberedModel &&
+										providerModelIds.includes(rememberedModel)
+									) {
+										setModel(rememberedModel);
+										return;
+									}
+									setModel("");
+								}}
+								onSend={({ prompt, attachments, attachmentCount }) => {
+									gateRouteThenFlush({
+										prompt,
+										attachments,
+										attachmentCount,
+										source: "text",
+									});
+								}}
+								onSystemPromptChange={setSystemPrompt}
+								onReasonLevelChange={setReasonLevel}
+								provider={provider}
+								providers={providers}
+								sending={sending}
+								status={status}
+								systemPrompt={systemPrompt}
+								reasonLevel={effectiveReasonLevel}
+								workspaceRoot={defaults.workspaceRoot}
+							/>
+						)}
 					</div>
+					{/*
+					 * App chrome: hold + strip sit under the stage in portrait and in
+					 * the right column in landscape (NOW-LANDSCAPE / NOW-HOLD-TALK).
+					 */}
+					{appShell ? (
+						<div className="flex shrink-0 flex-col landscape:min-h-0 landscape:overflow-y-auto">
+							<DriveVoiceBar
+								composition={callComposition}
+								disabled={isHydrating}
+								onSendSpoken={sendDrivePrompt}
+								onSttError={setStatus}
+								sending={sending}
+								session={driveSession}
+							/>
+							<DriveCallStripDock
+								composition={callComposition}
+								currentModel={currentModelId}
+								disabled={isHydrating}
+								modelShortlist={modelShortlist}
+								onLeaveDrive={() => {
+									writeLeaveKeepRunningNote();
+									leaveDrive();
+									onReturnToLobby?.();
+								}}
+								onSelectModel={selectPowerModel}
+								planOpen={planSheetOpen}
+								session={driveSession}
+								spend={callSpend}
+								turnInFlight={sending}
+							/>
+						</div>
+					) : null}
 				</div>
 				{/*
-				 * Canvas source of truth puts `.call-strip` below the call surface,
-				 * not above it — this is the one piece of Drive chrome that always
-				 * renders last, whichever surface (Spotlight or plain chat) is on
-				 * top of it. DriveCallStrip no-ops (returns null) off a call.
+				 * Hub: strip stays below the call surface. App mounts strip in the
+				 * chrome column above (portrait bottom / landscape side).
 				 */}
-				<DriveCallStripDock
-					currentModel={currentModelId}
-					disabled={isHydrating}
-					modelShortlist={modelShortlist}
-					onSelectModel={selectPowerModel}
-					onTogglePlan={
-						stageLayout
-							? () => setPlanSheetOpen((open) => !open)
-							: undefined
-					}
-					planOpen={planSheetOpen}
-					session={driveSession}
-					spend={callSpend}
-					turnInFlight={sending}
-				/>
+				{appShell ? null : (
+					<DriveCallStripDock
+						composition={callComposition}
+						currentModel={currentModelId}
+						disabled={isHydrating}
+						modelShortlist={modelShortlist}
+						onSelectModel={selectPowerModel}
+						onTogglePlan={
+							stageLayout
+								? () => setPlanSheetOpen((open) => !open)
+								: undefined
+						}
+						planOpen={planSheetOpen}
+						session={driveSession}
+						spend={callSpend}
+						turnInFlight={sending}
+					/>
+				)}
 				{/* ADR-0029 D4: audit is a sheet — not a Spotlight sibling. */}
 				<Dialog
 					onOpenChange={(open) => {

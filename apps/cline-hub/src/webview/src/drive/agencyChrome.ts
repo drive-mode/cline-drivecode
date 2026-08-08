@@ -41,6 +41,26 @@ export function interruptChromeCopy(
 }
 
 /**
+ * Full-width app banner (NOW-RAISE-HAND) — title + hard-cancel teaching.
+ * Null when idle.
+ */
+export function interruptBannerCopy(
+	phase: AgencyInterruptPhase,
+): { title: string; hint: string } | null {
+	const title = interruptChromeCopy(phase);
+	if (!title) {
+		return null;
+	}
+	return {
+		title,
+		hint:
+			phase === "finishing"
+				? "Hand raised — finishing current step. Hard cancel stays one tap away."
+				: "Hand raised — paused on you. Lower hand to resume.",
+	};
+}
+
+/**
  * W1.1 / W-13: announce that Now was rewritten after an interrupt redirect.
  * Feed / strip narration only — no utterance payload.
  */

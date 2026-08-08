@@ -99,6 +99,134 @@ const phase4Tasks: TeamTask[] = [
 ];
 
 /**
+ * Now sequencer — mirrors
+ * `docs/drivecode/plans/cline-drivemode/initiatives/portfolio-now/`.
+ * Dogfood: Status Hub `?demoPlans=1` shows this as the last plan rail.
+ * Keep task ids in sync with that README when flipping status.
+ */
+const nowPortfolioTasks: TeamTask[] = [
+	task(
+		"NOW-APP-SHELL",
+		"?app=1 Join/Continue lobby",
+		"completed",
+		[],
+		"Now · MC1 composition",
+	),
+	task(
+		"NOW-SHEETS",
+		"Plan / audit / captions as strip sheets",
+		"completed",
+		["NOW-APP-SHELL"],
+		"Now · hotpath D4",
+	),
+	task(
+		"NOW-HOLD-TALK",
+		"Hold-to-talk primary on ?app=1",
+		"completed",
+		["NOW-APP-SHELL"],
+		"Now · MC1 call verbs",
+	),
+	task(
+		"NOW-STRIP-44",
+		"44px call strip one-hand reach",
+		"completed",
+		["NOW-APP-SHELL"],
+		"Now · MC1 strip",
+	),
+	task(
+		"NOW-LANDSCAPE",
+		"Landscape call shell usable",
+		"completed",
+		["NOW-HOLD-TALK", "NOW-STRIP-44"],
+		"Now · MC1 gate",
+	),
+	task(
+		"NOW-RAISE-HAND",
+		"Raise-hand finishing chrome on phone",
+		"completed",
+		["NOW-STRIP-44"],
+		"Now · F06",
+	),
+	task(
+		"NOW-LEAVE-COPY",
+		"Leave-without-loss copy",
+		"completed",
+		["NOW-APP-SHELL"],
+		"Now · F07",
+	),
+	task(
+		"NOW-STT-SAFARI",
+		"Hold-to-talk + STT on Safari / iOS",
+		"completed",
+		["NOW-HOLD-TALK"],
+		"Now · B04",
+	),
+	task(
+		"NOW-PREVIEW",
+		"Preview honesty chip all devices",
+		"completed",
+		["NOW-APP-SHELL"],
+		"Now · B05",
+	),
+	task(
+		"NOW-IOS-SMOKE",
+		"SwiftUI demo shell smoke",
+		"completed",
+		[],
+		"Now · B01",
+	),
+	task(
+		"NOW-IOS-GLANCE",
+		"iOS fixtures → hub room glance",
+		"pending",
+		["NOW-IOS-SMOKE"],
+		"Now · B02",
+	),
+	task(
+		"NOW-PWA",
+		"PWA manifest + standalone + mic policy",
+		"completed",
+		["NOW-LANDSCAPE", "NOW-STT-SAFARI"],
+		"Now · MC3",
+	),
+	task(
+		"NOW-FIRST-OPEN",
+		"Credential-free first-open fixture join",
+		"completed",
+		["NOW-HOLD-TALK", "NOW-PREVIEW"],
+		"Now · MC2",
+	),
+	task(
+		"NOW-HOSTED-ADR",
+		"Owner ADR-0016 path H decision",
+		"completed",
+		[],
+		"Now · DEC-mobile-consumer-owner",
+	),
+	task(
+		"NOW-HOTPATH-D5",
+		"Cloud signaling hosted writer",
+		"pending",
+		["NOW-HOSTED-ADR"],
+		"Now · hotpath D5",
+	),
+	task(
+		"NOW-BROWSE-LITE",
+		"Browse lite rooms/tasks/artifacts/status",
+		"completed",
+		["NOW-APP-SHELL"],
+		"Now · F16",
+	),
+	task(
+		"NOW-DIAGRAM-MOBILE",
+		"Viewport-aware diagrams tap/stack",
+		"completed",
+		["NOW-BROWSE-LITE"],
+		"Now · F17",
+	),
+];
+
+/**
  * The demo's plans, in rail order. This array *is* the membership declaration:
  * the tasks of a plan are the tasks in its array, and `planTasks` is nothing
  * but their concatenation, so there is no second list to drift out of step.
@@ -109,6 +237,7 @@ const PLAN_GROUPS: ReadonlyArray<{ title: string; tasks: TeamTask[] }> = [
 	{ title: "Stage, steering and recruiting", tasks: phase2Tasks },
 	{ title: "Voice", tasks: phase3Tasks },
 	{ title: "Parity and multi-agent", tasks: phase4Tasks },
+	{ title: "Now · consumer path", tasks: nowPortfolioTasks },
 ];
 
 const planTasks: TeamTask[] = PLAN_GROUPS.flatMap((group) => group.tasks);

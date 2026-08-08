@@ -13,7 +13,7 @@
  */
 
 import type { MermaidConfig } from "mermaid";
-import { useMemo } from "react";
+import { type ReactNode, useMemo, useRef } from "react";
 import {
 	type ControlsConfig,
 	type MermaidErrorComponentProps,
@@ -38,6 +38,13 @@ import {
 	projectArtifactBody,
 	type WalkthroughLine,
 } from "./artifactBody";
+import {
+	adaptMermaidSourceForFormat,
+	type DiagramSurface,
+	shouldStackPanels,
+	useVisualEngineParams,
+	type VisualEngineParams,
+} from "./visualEngine";
 
 /**
  * The screen is fixed-dark in both themes, so its diagrams are too. Own
@@ -46,13 +53,16 @@ import {
  */
 const SCREEN_STREAMDOWN_PLUGINS = createHubStreamdownPlugins();
 
-const SCREEN_MERMAID_CONFIG = {
-	theme: "dark",
-	// Mermaid measures label boxes from the font; keeping it explicit stops
-	// the diagram reflowing when the app's font stack differs.
-	fontFamily: "monospace",
-	fontSize: 13,
-} satisfies MermaidConfig;
+function screenMermaidConfig(params: VisualEngineParams): MermaidConfig {
+	return {
+		theme: "dark",
+		// Mermaid measures label boxes from the font; keeping it explicit stops
+		// the diagram reflowing when the app's font stack differs. Format comes
+		// from the measured Spotlight frame (visualEngine).
+		fontFamily: "monospace",
+		fontSize: params.mermaidFontSize,
+	};
+}
 
 /** A presented diagram is not a download surface — the room is watching it. */
 const SCREEN_MERMAID_CONTROLS = {
@@ -156,20 +166,33 @@ function ScreenMermaidError({ chart, error }: MermaidErrorComponentProps) {
 	);
 }
 
-/** Stable prop identity — a new object per render churns the block context. */
-const SCREEN_MERMAID_OPTIONS = {
-	config: SCREEN_MERMAID_CONFIG,
-	errorComponent: ScreenMermaidError,
-};
-
-function MermaidArtifact({ source, title }: { source: string; title: string }) {
+function MermaidArtifact({
+	params,
+	source,
+	title,
+}: {
+	params: VisualEngineParams;
+	source: string;
+	title: string;
+}) {
 	// Streamdown renders diagrams from a fenced block, dispatched inside its
 	// own `code` component — so this goes to Streamdown directly rather than
 	// through HubStreamdown, whose `code` override would swallow the fence
 	// and print the source as a code block (which is what the hub stub is).
+	const adapted = useMemo(
+		() => adaptMermaidSourceForFormat(source.trim(), params.format),
+		[source, params.format],
+	);
 	const markdown = useMemo(
-		() => `\`\`\`mermaid\n${source.trim()}\n\`\`\``,
-		[source],
+		() => `\`\`\`mermaid\n${adapted}\n\`\`\``,
+		[adapted],
+	);
+	const mermaid = useMemo(
+		() => ({
+			config: screenMermaidConfig(params),
+			errorComponent: ScreenMermaidError,
+		}),
+		[params],
 	);
 	return (
 		// `self-stretch` overrides screen-body's grid `place-items-center` (which
@@ -180,18 +203,20 @@ function MermaidArtifact({ source, title }: { source: string; title: string }) {
 		// content sizes itself and stretching them would leave empty space under
 		// a short one.
 		<ArtifactCard className="self-stretch">
-			<ArtifactCardHeader eyebrow="mermaid · live render" title={title} />
+			<ArtifactCardHeader
+				eyebrow={`mermaid · ${params.format} · ${params.layout}`}
+				title={title}
+			/>
 			{/* The diagram fits rather than scrolls — a scrolled diagram is half
 			    a diagram, and the room only sees what is on screen. */}
 			<div className="flex min-h-0 flex-1 overflow-hidden p-3">
 				<Streamdown
 					className={MERMAID_BLOCK_CLASS}
-					// Remount per source: without this the diagram node keeps the
-					// last SVG it rendered, so a show whose source fails to parse
-					// would keep presenting the *previous* show's diagram.
-					key={source}
+					// Remount when format/font/source adaptation changes so the
+					// SVG does not keep a previous layout.
+					key={`${adapted}:${params.format}:${params.mermaidFontSize}`}
 					controls={SCREEN_MERMAID_CONTROLS}
-					mermaid={SCREEN_MERMAID_OPTIONS}
+					mermaid={mermaid}
 					plugins={SCREEN_STREAMDOWN_PLUGINS}
 				>
 					{markdown}
@@ -547,19 +572,22 @@ function AnimationPanelColumn({ panel }: { panel: AnimationPanel }) {
 function AnimationArtifact({
 	after,
 	before,
+	params,
 	title,
 }: {
 	after: AnimationPanel;
 	before: AnimationPanel;
+	params: VisualEngineParams;
 	title: string;
 }) {
+	const stack = shouldStackPanels(params);
 	return (
 		<ArtifactCard>
 			<style href="drive-screen-animation" precedence="medium">
 				{SCREEN_ANIMATION_CSS}
 			</style>
 			<ArtifactCardHeader
-				eyebrow="walkthrough.animation · before and after"
+				eyebrow={`walkthrough.animation · ${params.format}${stack ? " · stack" : " · side-by-side"}`}
 				title={title}
 			/>
 			{/* Remount per artifact, for the same reason `MermaidArtifact` keys on
@@ -570,9 +598,15 @@ function AnimationArtifact({
 			    state: no flash, chip already reverted, entering rows already
 			    landed. The payload is the motion, so that is the whole artifact
 			    missing. */}
+			{/* Layout from measured frame (visualEngine) — not CSS @sm alone. */}
 			<div
-				className="screen-anim grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-hidden p-3"
-				key={animationReplayKey(before, after)}
+				className={cn(
+					"screen-anim grid min-h-0 flex-1 gap-3 p-3",
+					stack
+						? "grid-cols-1 overflow-auto"
+						: "grid-cols-2 overflow-hidden",
+				)}
+				key={`${animationReplayKey(before, after)}:${params.format}:${stack}`}
 			>
 				<AnimationPanelColumn panel={before} />
 				<AnimationPanelColumn panel={after} />
@@ -664,18 +698,40 @@ function CaptureArtifact({
 /**
  * Kind-dispatched artifact body. Anything without a client renderer keeps the
  * hub's materialized stub, so a new ShowArtifactKind still lands on screen.
+ * Browse / Status tap-to-render gates live outside (DriveBrowseLite) —
+ * Spotlight always mounts this after a present.
+ *
+ * Measures its host box and feeds `VisualEngineParams` into Mermaid /
+ * animation so layout follows the user's screen frame automatically.
  */
-export function ScreenArtifact({ artifact }: { artifact: ArtifactBodySource }) {
+export function ScreenArtifact({
+	artifact,
+	surface = "spotlight",
+}: {
+	artifact: ArtifactBodySource;
+	surface?: DiagramSurface;
+}) {
+	const hostRef = useRef<HTMLDivElement>(null);
+	const params = useVisualEngineParams(hostRef);
 	const body = useMemo(() => projectArtifactBody(artifact), [artifact]);
 	const title = artifact.title?.trim() || "Presented artifact";
 
+	let content: ReactNode;
 	switch (body.kind) {
 		case "mermaid":
-			return <MermaidArtifact source={body.source} title={title} />;
+			content = (
+				<MermaidArtifact
+					params={params}
+					source={body.source}
+					title={title}
+				/>
+			);
+			break;
 		case "plan":
-			return <PlanArtifact steps={body.steps} title={body.title} />;
+			content = <PlanArtifact steps={body.steps} title={body.title} />;
+			break;
 		case "walkthrough":
-			return (
+			content = (
 				<WalkthroughArtifact
 					endLine={body.endLine}
 					lines={body.lines}
@@ -683,16 +739,19 @@ export function ScreenArtifact({ artifact }: { artifact: ArtifactBodySource }) {
 					startLine={body.startLine}
 				/>
 			);
+			break;
 		case "animation":
-			return (
+			content = (
 				<AnimationArtifact
 					after={body.after}
 					before={body.before}
+					params={params}
 					title={title}
 				/>
 			);
+			break;
 		case "capture":
-			return (
+			content = (
 				<CaptureArtifact
 					caption={artifact.caption}
 					shot={body.shot}
@@ -700,8 +759,9 @@ export function ScreenArtifact({ artifact }: { artifact: ArtifactBodySource }) {
 					url={body.url}
 				/>
 			);
+			break;
 		case "image":
-			return (
+			content = (
 				<figure className="flex max-h-full min-h-0 w-full max-w-3xl flex-col items-center gap-3">
 					{/* The screen scales the artifact; it never scrolls out of frame. */}
 					<img
@@ -717,15 +777,30 @@ export function ScreenArtifact({ artifact }: { artifact: ArtifactBodySource }) {
 					</figcaption>
 				</figure>
 			);
+			break;
 		case "empty":
-			return (
+			content = (
 				<p className="max-w-sm text-center text-sm font-medium text-zinc-100">
 					{title}
 				</p>
 			);
+			break;
 		default: {
 			const _exhaustive: never = body;
-			return _exhaustive;
+			content = _exhaustive;
 		}
 	}
+
+	return (
+		<div
+			className="flex h-full min-h-0 w-full min-w-0 flex-col items-center justify-center"
+			data-visual-chrome={params.compactChrome ? "compact" : "hub"}
+			data-visual-format={params.format}
+			data-visual-layout={params.layout}
+			data-visual-surface={surface}
+			ref={hostRef}
+		>
+			{content}
+		</div>
+	);
 }

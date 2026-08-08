@@ -3,6 +3,7 @@ import type { BankSnapshot } from "@cline/shared";
 import {
 	debugRetentionStripCopy,
 	hasNowLastFailure,
+	interruptBannerCopy,
 	interruptChromeCopy,
 	interruptRedirectNowAnnounce,
 	planAddTreatment,
@@ -40,6 +41,15 @@ describe("resolveInterruptPhase / interruptChromeCopy", () => {
 			resolveInterruptPhase({ handRaised: true, turnInFlight: false }),
 		).toBe("paused");
 		expect(interruptChromeCopy("paused")).toBe("Paused — waiting on you");
+	});
+
+	it("promotes finishing chrome to a full banner with hard-cancel teaching", () => {
+		expect(interruptBannerCopy("idle")).toBeNull();
+		const finishing = interruptBannerCopy("finishing");
+		expect(finishing?.title).toBe("Finishing current step");
+		expect(finishing?.hint.toLowerCase()).toContain("cancel");
+		const paused = interruptBannerCopy("paused");
+		expect(paused?.hint.toLowerCase()).toContain("lower hand");
 	});
 });
 

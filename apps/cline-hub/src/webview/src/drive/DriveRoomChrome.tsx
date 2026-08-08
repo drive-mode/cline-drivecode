@@ -11,8 +11,14 @@ import {
 	planPlanImproveResolve,
 	statusSessionRowFromUnknown,
 } from "@cline/drive";
-import type { RosterPack } from "@cline/shared";
-import { useEffect, useState } from "react";
+import type { RosterPack, SttBackend } from "@cline/shared";
+import { useEffect, useRef, useState } from "react";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
+import {
+	describeSpeechInputUnavailable,
+	readSpeechInputCapabilities,
+	resolveSpeechInputMode,
+} from "@/components/ai-elements/speechInputSupport";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -24,6 +30,14 @@ import {
 import { NowNext } from "../components/NowNext";
 import { downloadTextFile } from "../status/downloadTextFile";
 import { DriveCallStrip } from "./DriveCallChrome";
+import {
+	INTERRUPT_HARD_CANCEL_HINT,
+	muteRestoreAfterHold,
+} from "./driveAppCallChrome";
+import {
+	interruptBannerCopy,
+	resolveInterruptPhase,
+} from "./agencyChrome";
 import {
 	DrivePowerSheet,
 	useDrivePowerChromePref,
@@ -57,6 +71,8 @@ import {
 	type UseDriveSessionResult,
 } from "./useDriveSession";
 import { DriveMicBar } from "./voice/DriveMicBar";
+import type { SpeechInputMode } from "./voice/speechInputModeForBackend";
+import { LocalSttError, transcribeAudioBlob } from "./voice/transcribeAudioBlob";
 import { DriveSettingsPanel } from "./voice/DriveSettingsPanel";
 import { DriveTranscriptPanel } from "./voice/DriveTranscriptPanel";
 import { DRIVE_EARCON_FACET_ID } from "./voice/driveEarcons";
@@ -439,6 +455,7 @@ export function DriveRoomChrome({
 export function DriveCallStripDock({
 	session,
 	disabled,
+	composition = "hub",
 	turnInFlight = false,
 	spend = null,
 	modelShortlist = [],
@@ -446,9 +463,12 @@ export function DriveCallStripDock({
 	onSelectModel,
 	planOpen = false,
 	onTogglePlan,
+	onLeaveDrive,
 }: {
 	session: UseDriveSessionResult;
 	disabled: boolean;
+	/** Consumer `?app=1` uses the thin reach strip. */
+	composition?: "hub" | "app";
 	turnInFlight?: boolean;
 	spend?: CallSpendSnapshot | null;
 	modelShortlist?: readonly string[];
@@ -457,6 +477,8 @@ export function DriveCallStripDock({
 	/** Plan sheet open — owned by Chat so PlanEditor stays off Spotlight. */
 	planOpen?: boolean;
 	onTogglePlan?: () => void;
+	/** Wrap leave (e.g. return to lobby + keep-running note). */
+	onLeaveDrive?: () => void;
 }) {
 	const {
 		captionsOpen,
@@ -472,19 +494,48 @@ export function DriveCallStripDock({
 	const [powerOpen, setPowerOpen] = useState(false);
 	const { powerChrome, setPowerChrome } = useDrivePowerChromePref();
 	const spendLabel = hasCallSpend(spend) && spend ? formatCallSpend(spend) : undefined;
+	const appShell = composition === "app";
+	const interrupt = interruptBannerCopy(
+		resolveInterruptPhase({
+			handRaised: drive.handRaised,
+			turnInFlight,
+		}),
+	);
+	const handleLeave = () => {
+		(onLeaveDrive ?? leaveDrive)();
+	};
 	return (
 		<>
+			{appShell && interrupt ? (
+				<div
+					aria-live="polite"
+					className="border-t border-amber-500/40 bg-amber-500/10 px-3 py-2"
+					data-slot="agency-interrupt-banner"
+					role="status"
+				>
+					<p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+						{interrupt.title}
+					</p>
+					<p className="text-[11px] text-amber-900/90 dark:text-amber-100/80">
+						{interrupt.hint}
+					</p>
+					<p className="sr-only">{INTERRUPT_HARD_CANCEL_HINT}</p>
+				</div>
+			) : null}
 			<DriveCallStrip
 				captionsOpen={captionsOpen}
+				composition={composition}
 				disabled={disabled}
 				drive={drive}
-				onLeaveDrive={leaveDrive}
-				onTogglePlan={onTogglePlan}
-				onTogglePower={() => setPowerOpen((open) => !open)}
+				onLeaveDrive={handleLeave}
+				onTogglePlan={appShell ? undefined : onTogglePlan}
+				onTogglePower={
+					appShell ? undefined : () => setPowerOpen((open) => !open)
+				}
 				outputVolume={driveVoice.hardware.outputVolume}
 				planOpen={planOpen}
 				powerOpen={powerOpen}
-				spendLabel={spendLabel}
+				spendLabel={appShell ? undefined : spendLabel}
 				turnInFlight={turnInFlight}
 				workerCount={chatForks.length}
 				workersOpen={workersPanelOpen}
@@ -531,12 +582,15 @@ export function DriveVoiceBar({
 	session,
 	disabled,
 	sending,
+	composition = "hub",
 	onSendSpoken,
 	onSttError,
 }: {
 	session: UseDriveSessionResult;
 	disabled: boolean;
 	sending: boolean;
+	/** Consumer shell: hold-to-talk primary (NOW-HOLD-TALK). */
+	composition?: "hub" | "app";
 	onSendSpoken: (text: string) => void;
 	onSttError: (message: string) => void;
 }) {
@@ -546,6 +600,7 @@ export function DriveVoiceBar({
 		voiceCaption,
 		setVoiceCaption,
 		driveVoiceResolved,
+		stripHandlers,
 	} = session;
 
 	if (!drive.active) {
@@ -557,6 +612,22 @@ export function DriveVoiceBar({
 			<div className="border-t bg-destructive/10 px-3 py-2 text-xs text-destructive">
 				Voice topology invalid: {driveVoiceResolved.message}
 			</div>
+		);
+	}
+
+	if (composition === "app") {
+		return (
+			<DriveHoldToTalkBar
+				disabled={disabled || sending}
+				forceMode={driveVoiceResolved.forceMode}
+				micDeviceId={driveVoice.hardware.micDeviceId}
+				muted={drive.muted}
+				onMuteToggle={stripHandlers.onMuteToggle}
+				onSendSpoken={onSendSpoken}
+				onSttError={onSttError}
+				sttBackend={driveVoiceResolved.topology.stt}
+				sttConfig={driveVoice.facets["providers.sttConfig"]}
+			/>
 		);
 	}
 
@@ -597,6 +668,154 @@ export function DriveVoiceBar({
 					</Button>
 				</div>
 			) : null}
+		</div>
+	);
+}
+
+/**
+ * NOW-HOLD-TALK: 52px press-and-hold primary. Temp-unmutes for the utterance
+ * so hub mute gate + client flushVoiceSend agree, then restores muted default.
+ */
+function DriveHoldToTalkBar({
+	disabled,
+	forceMode,
+	micDeviceId,
+	muted,
+	sttBackend,
+	sttConfig,
+	onMuteToggle,
+	onSendSpoken,
+	onSttError,
+}: {
+	disabled: boolean;
+	forceMode: SpeechInputMode;
+	micDeviceId?: string;
+	muted: boolean;
+	sttBackend: SttBackend;
+	sttConfig?: Record<string, unknown>;
+	onMuteToggle: () => void;
+	onSendSpoken: (text: string) => void;
+	onSttError: (message: string) => void;
+}) {
+	const captionRef = useRef("");
+	const listeningRef = useRef(false);
+	const releasedRef = useRef(false);
+	const unmutedByHoldRef = useRef(false);
+	const settledRef = useRef(false);
+	const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const mutedRef = useRef(muted);
+	mutedRef.current = muted;
+
+	const capabilities = readSpeechInputCapabilities();
+	const resolvedMode = resolveSpeechInputMode({
+		requested: forceMode,
+		capabilities,
+	});
+	const unavailable = describeSpeechInputUnavailable({
+		requested: forceMode,
+		capabilities,
+	});
+
+	const restoreMute = () => {
+		if (muteRestoreAfterHold({ unmutedByHold: unmutedByHoldRef.current }) === "mute") {
+			onMuteToggle();
+		}
+		unmutedByHoldRef.current = false;
+	};
+
+	const settleHold = () => {
+		if (settledRef.current || listeningRef.current || !releasedRef.current) {
+			return;
+		}
+		settledRef.current = true;
+		if (settleTimerRef.current) {
+			clearTimeout(settleTimerRef.current);
+			settleTimerRef.current = null;
+		}
+		const text = captionRef.current.trim();
+		captionRef.current = "";
+		if (text) {
+			onSendSpoken(text);
+		}
+		restoreMute();
+	};
+
+	return (
+		<div className="space-y-1 border-t bg-background px-3 py-2">
+			<p className="text-center text-[11px] text-muted-foreground">
+				{unavailable ??
+					(muted
+						? "Mic off until you hold — release to send."
+						: "Hold to talk — release to send.")}
+			</p>
+			<SpeechInput
+				aria-label="Hold to talk"
+				deviceId={micDeviceId}
+				disabled={disabled}
+				forceMode={resolvedMode}
+				holdToTalk
+				onAudioRecorded={async (blob) => {
+					try {
+						const text = await transcribeAudioBlob({
+							blob,
+							backend: sttBackend,
+							config: sttConfig,
+						});
+						if (text) {
+							captionRef.current = text.trim();
+							settleHold();
+						} else if (releasedRef.current) {
+							settleHold();
+						}
+						return text;
+					} catch (error) {
+						const message =
+							error instanceof LocalSttError
+								? error.message
+								: `STT failed: ${String(error)}`;
+						onSttError(message);
+						releasedRef.current = true;
+						settleHold();
+						return "";
+					}
+				}}
+				onCaptureError={onSttError}
+				onListeningChange={(listening) => {
+					listeningRef.current = listening;
+					if (listening) {
+						settledRef.current = false;
+						releasedRef.current = false;
+						captionRef.current = "";
+						if (settleTimerRef.current) {
+							clearTimeout(settleTimerRef.current);
+							settleTimerRef.current = null;
+						}
+						if (mutedRef.current) {
+							unmutedByHoldRef.current = true;
+							onMuteToggle();
+						}
+						return;
+					}
+					releasedRef.current = true;
+					// Caption may already be final (Web Speech) or arrive later
+					// (media-recorder). Prefer immediate settle when text exists.
+					if (captionRef.current.trim()) {
+						settleHold();
+						return;
+					}
+					settleTimerRef.current = setTimeout(() => settleHold(), 500);
+				}}
+				onTranscriptionChange={(text) => {
+					const trimmed = text.trim();
+					if (!trimmed) {
+						return;
+					}
+					captionRef.current = trimmed;
+					if (releasedRef.current) {
+						settleHold();
+					}
+				}}
+			/>
 		</div>
 	);
 }

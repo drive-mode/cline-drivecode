@@ -176,7 +176,8 @@ export const DEFAULT_DRIVE_UI: DriveUiState = {
 	postureOverride: null,
 	partnerName: "Cline",
 	agentInks: {},
-	// Joining a call with a hot mic is the wrong privacy default (spotlight S4).
+	// Joining a call with a hot mic is the wrong privacy default (spotlight S4 /
+	// DEC-mobile-consumer-owner): muted start; strip Mute/Unmute enables mic.
 	// Safe only because `deafened` — not this — gates playback.
 	muted: true,
 	deafened: false,

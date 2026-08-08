@@ -7,11 +7,13 @@ Work queue for parity. Prefer small vertical slices that move a MATRIX cell
 
 | ID | Work | Devices | Status | Notes |
 |---|---|---|---|---|
-| B01 | SwiftUI demo shell Open→Home→Call→Approval→Settings | ios | **wip** | [`apps/drive-ios`](../../../../../../apps/drive-ios/) |
+| B01 | SwiftUI demo shell Open→Home→Call→Approval→Settings | ios | **done** | [`apps/drive-ios`](../../../../../../apps/drive-ios/) · [DEMO.md](../../../../../../apps/drive-ios/DEMO.md) |
 | B02 | Wire ios fixtures to hub room snapshot (read-only glance) | ios, hub | todo | After B01 on-device smoke |
-| B03 | PWA / `?app=1` composition matching ios IA | pwa, hub | **wip** | hub: nav strip + Join/Continue lobby (`composition=app`); PWA install still MC3 |
+| B03 | PWA / `?app=1` composition matching ios IA | pwa, hub | **wip** | hub Join/Continue + Browse tabs; Now sequencer: [portfolio-now](../portfolio-now/); PWA = MC3 |
 | B04 | Hold-to-talk + STT on ios + Safari | ios, pwa | todo | Permissions-Policy on hosted |
 | B05 | Shared Preview/demo honesty component contract | all | todo | Same chip semantics |
+| B10 | Browse lite rooms/tasks/artifacts/status | hub, pwa, ios | **wip** | ios fixtures done; hub `DriveBrowseLite` + `?browse=`; live sources later (B02) |
+| B11 | Diagram viewport contract (tap / stack / ultrawide) | hub, pwa, ios | **wip** | `visualEngine.ts` measures Spotlight frame; feeds Mermaid/animation; ios fixture |
 
 ## Next
 

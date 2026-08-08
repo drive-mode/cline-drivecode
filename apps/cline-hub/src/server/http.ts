@@ -15,6 +15,9 @@ export function createTextResponse(text: string, status = 200): Response {
 	});
 }
 
+/** NOW-STT-SAFARI / MC3 — mic capture on Safari / installed PWA. */
+const PERMISSIONS_POLICY = "microphone=(self)";
+
 const NO_STORE_HEADERS = {
 	"cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
 	pragma: "no-cache",
@@ -103,7 +106,11 @@ function renderDevIndexHtml(devServerUrl: string): string {
 <head>
   ${THEME_BOOTSTRAP_SCRIPT}
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cline Drive" />
+  <link rel="manifest" href="${devServerUrl}/manifest.webmanifest" />
   <script type="module">
     import RefreshRuntime from "${devServerUrl}/@react-refresh";
     RefreshRuntime.injectIntoGlobalHook(window);
@@ -113,7 +120,8 @@ function renderDevIndexHtml(devServerUrl: string): string {
   </script>
   <script type="module" src="${devServerUrl}/@vite/client"></script>
   <link rel="icon" type="image/svg+xml" href="${devServerUrl}/cline-logo-filled.svg" />
-  <title>Cline Hub</title>
+  <link rel="apple-touch-icon" href="${devServerUrl}/cline-drive-logo.svg" />
+  <title>Cline Drive</title>
 </head>
 <body>
   <div id="root"></div>
@@ -152,6 +160,7 @@ export class WebviewAssets {
 			return new Response(normalizeWebviewIndexHtml(await indexFile.text()), {
 				headers: {
 					"content-type": "text/html; charset=utf-8",
+					"permissions-policy": PERMISSIONS_POLICY,
 					...NO_STORE_HEADERS,
 				},
 			});
@@ -168,6 +177,7 @@ export class WebviewAssets {
 			return new Response(renderDevIndexHtml(devServerUrl), {
 				headers: {
 					"content-type": "text/html; charset=utf-8",
+					"permissions-policy": PERMISSIONS_POLICY,
 					...NO_STORE_HEADERS,
 				},
 			});

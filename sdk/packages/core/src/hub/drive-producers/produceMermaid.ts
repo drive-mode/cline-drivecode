@@ -31,8 +31,11 @@ export function mermaidCacheKey(source: string): string {
 /**
  * Produce an SVG artifact for a mermaid diagram.
  * Uses a deterministic SVG wrapper (no mermaid runtime required in core).
- * Webview may re-render from embedded source; hub caches by content hash.
- * Fail closed: invalid mermaidSource throws MermaidParseError (no uri).
+ * Webview re-renders from embedded source via ScreenArtifact + visualEngine
+ * (frame size → phone|tablet|desk|ultrawide layout). Producers stay
+ * viewport-blind on purpose — each viewer measures their own Spotlight frame.
+ * Hub caches by content hash. Fail closed: invalid mermaidSource throws
+ * MermaidParseError (no uri).
  */
 export function produceMermaidShowArtifact(
 	input: ProduceMermaidInput,

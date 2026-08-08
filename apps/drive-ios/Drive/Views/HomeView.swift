@@ -1,15 +1,62 @@
 import SwiftUI
 
 struct HomeView: View {
+	var leaveNote: String?
 	var onJoin: () -> Void
 	var onSettings: () -> Void
+	var onDismissLeaveNote: () -> Void
 	@State private var tab = 0
+	@State private var browsePage: BrowsePage?
 
 	var body: some View {
+		Group {
+			if let browsePage {
+				BrowsePageView(
+					page: browsePage,
+					onBack: { self.browsePage = nil },
+					onJoin: onJoin
+				)
+			} else {
+				homeShell
+			}
+		}
+	}
+
+	private var homeShell: some View {
 		VStack(spacing: 0) {
+			if let leaveNote {
+				HStack(alignment: .top, spacing: 10) {
+					VStack(alignment: .leading, spacing: 2) {
+						Text(leaveNote)
+							.font(.system(size: 13, weight: .semibold))
+							.foregroundStyle(Color(red: 6 / 255, green: 95 / 255, blue: 70 / 255))
+						Text("Your room is still live — Join when you’re ready.")
+							.font(.system(size: 11))
+							.foregroundStyle(.secondary)
+					}
+					Spacer(minLength: 0)
+					Button("OK", action: onDismissLeaveNote)
+						.font(.system(size: 12, weight: .bold))
+						.foregroundStyle(DriveTheme.violetDeep)
+				}
+				.padding(12)
+				.background(Color(red: 209 / 255, green: 250 / 255, blue: 229 / 255))
+				.overlay(
+					RoundedRectangle(cornerRadius: 12, style: .continuous)
+						.strokeBorder(Color(red: 52 / 255, green: 211 / 255, blue: 153 / 255).opacity(0.45), lineWidth: 0.8)
+				)
+				.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+				.padding(.horizontal, 16)
+				.padding(.top, 8)
+				.accessibilityAddTraits(.isStaticText)
+			}
+
 			ScrollView {
 				if tab == 1 {
-					browseContent
+					BrowseIndexView(
+						onOpen: { browsePage = $0 },
+						onJoin: onJoin
+					)
 				} else {
 					homeContent
 				}
@@ -41,7 +88,7 @@ struct HomeView: View {
 	@ViewBuilder
 	private var homeContent: some View {
 		VStack(alignment: .leading, spacing: 0) {
-			Text("Drive")
+			Text("Cline Drive")
 				.font(.system(size: 32, weight: .heavy))
 				.tracking(-1.2)
 				.padding(.horizontal, 20)
@@ -156,125 +203,6 @@ struct HomeView: View {
 		}
 	}
 
-	@ViewBuilder
-	private var browseContent: some View {
-		VStack(alignment: .leading, spacing: 0) {
-			Text("Browse")
-				.font(.system(size: 32, weight: .heavy))
-				.tracking(-1.2)
-				.padding(.horizontal, 20)
-				.padding(.top, 4)
-
-			sectionLabel("Rooms")
-			VStack(spacing: 0) {
-				Button(action: onJoin) {
-					HStack(spacing: 12) {
-						Text("A")
-							.font(.system(size: 16, weight: .bold))
-							.foregroundStyle(DriveTheme.violet)
-							.frame(width: 40, height: 40)
-							.background(DriveTheme.violet.opacity(0.1))
-							.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-						VStack(alignment: .leading, spacing: 2) {
-							Text("Auth middleware")
-								.font(.system(size: 15, weight: .semibold))
-								.foregroundStyle(.primary)
-							Text("Live · Maya + Coder")
-								.font(.system(size: 12))
-								.foregroundStyle(.secondary)
-						}
-						Spacer()
-						Text("Join")
-							.font(.system(size: 11, weight: .bold))
-							.foregroundStyle(DriveTheme.violetDeep)
-							.padding(.horizontal, 8)
-							.padding(.vertical, 4)
-							.background(DriveTheme.violet.opacity(0.1))
-							.clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-					}
-					.padding(.horizontal, 14)
-					.padding(.vertical, 12)
-				}
-				.buttonStyle(.plain)
-				Divider().padding(.leading, 66)
-				HStack(spacing: 12) {
-					Text("R")
-						.font(.system(size: 16, weight: .bold))
-						.foregroundStyle(DriveTheme.violet)
-						.frame(width: 40, height: 40)
-						.background(DriveTheme.violet.opacity(0.1))
-						.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-					VStack(alignment: .leading, spacing: 2) {
-						Text("Release train")
-							.font(.system(size: 15, weight: .semibold))
-						Text("Quiet · 2 agents idle")
-							.font(.system(size: 12))
-							.foregroundStyle(.secondary)
-					}
-					Spacer()
-				}
-				.padding(.horizontal, 14)
-				.padding(.vertical, 12)
-			}
-			.background(DriveTheme.secondarySystemBackground)
-			.clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-			.overlay(
-				RoundedRectangle(cornerRadius: 16, style: .continuous)
-					.strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.8)
-			)
-			.padding(.horizontal, 16)
-
-			sectionLabel("Tasks")
-			VStack(spacing: 0) {
-				HStack(spacing: 12) {
-					Text("T")
-						.font(.system(size: 16, weight: .bold))
-						.foregroundStyle(DriveTheme.violet)
-						.frame(width: 40, height: 40)
-						.background(DriveTheme.violet.opacity(0.1))
-						.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-					VStack(alignment: .leading, spacing: 2) {
-						Text("Gate JWT refresh")
-							.font(.system(size: 15, weight: .semibold))
-						Text("In call · Needs approval")
-							.font(.system(size: 12))
-							.foregroundStyle(.secondary)
-					}
-					Spacer()
-				}
-				.padding(.horizontal, 14)
-				.padding(.vertical, 12)
-				Divider().padding(.leading, 66)
-				HStack(spacing: 12) {
-					Text("D")
-						.font(.system(size: 16, weight: .bold))
-						.foregroundStyle(DriveTheme.violet)
-						.frame(width: 40, height: 40)
-						.background(DriveTheme.violet.opacity(0.1))
-						.clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-					VStack(alignment: .leading, spacing: 2) {
-						Text("Docs pass")
-							.font(.system(size: 15, weight: .semibold))
-						Text("Queued")
-							.font(.system(size: 12))
-							.foregroundStyle(.secondary)
-					}
-					Spacer()
-				}
-				.padding(.horizontal, 14)
-				.padding(.vertical, 12)
-			}
-			.background(DriveTheme.secondarySystemBackground)
-			.clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-			.overlay(
-				RoundedRectangle(cornerRadius: 16, style: .continuous)
-					.strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.8)
-			)
-			.padding(.horizontal, 16)
-			.padding(.bottom, 88)
-		}
-	}
-
 	private func sectionLabel(_ text: String) -> some View {
 		Text(text)
 			.font(.system(size: 12, weight: .bold))
@@ -304,5 +232,10 @@ struct HomeView: View {
 }
 
 #Preview {
-	HomeView(onJoin: {}, onSettings: {})
+	HomeView(
+		leaveNote: DemoSession.leaveKeepRunning,
+		onJoin: {},
+		onSettings: {},
+		onDismissLeaveNote: {}
+	)
 }

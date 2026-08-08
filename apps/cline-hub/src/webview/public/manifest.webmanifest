@@ -1,0 +1,25 @@
+{
+	"name": "Cline Drive",
+	"short_name": "Cline Drive",
+	"description": "Watch and steer agent work on a call.",
+	"start_url": "/drive?app=1",
+	"scope": "/",
+	"display": "standalone",
+	"background_color": "#0a0a0a",
+	"theme_color": "#0a0a0a",
+	"lang": "en",
+	"icons": [
+		{
+			"src": "/cline-drive-logo.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any"
+		},
+		{
+			"src": "/cline-logo-filled.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "maskable"
+		}
+	]
+}

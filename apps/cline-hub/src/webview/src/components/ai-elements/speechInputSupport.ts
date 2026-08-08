@@ -59,12 +59,12 @@ export function describeSpeechInputUnavailable(input: {
 		return null;
 	}
 	if (input.requested === "speech-recognition") {
-		return "This browser has no Web Speech API. Switch STT to the local worker in Drive settings, or type your message.";
+		return "This browser has no Web Speech API. On Safari, allow microphone for this site (Permissions-Policy) or switch STT to the local worker in Drive settings.";
 	}
 	if (input.requested === "media-recorder") {
-		return "This browser cannot record audio. Type your message instead.";
+		return "This browser cannot record audio. On iOS Safari, check Site Settings → Microphone, then try hold-to-talk again.";
 	}
-	return "Speech input is not available in this browser. Type your message instead.";
+	return "Speech input is not available in this browser. Allow the microphone, or type your message instead.";
 }
 
 /** Routine end-of-utterance signals — surfacing them would be noise, not news. */

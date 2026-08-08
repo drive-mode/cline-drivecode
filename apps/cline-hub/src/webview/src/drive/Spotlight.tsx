@@ -620,12 +620,14 @@ export function Spotlight({
 				// Every other child here is `shrink-0`/bounded chrome that must fit
 				// in what is left, and this pane (not the page) is what scrolls if
 				// it doesn't — see the column's own `overflow-auto` above.
-				className="min-h-[22rem] flex-1"
+				// Phone landscape is short — drop the 22rem floor so the stage
+				// still shares the row with hold/strip (NOW-LANDSCAPE).
+				className="min-h-[22rem] flex-1 [@media(orientation:landscape)_and_(max-height:500px)]:min-h-0"
 				controls={
 					<>
 						<Badge className="shrink-0 text-[10px]" variant="outline">
 							{demo
-								? "Demo fixture"
+								? "Preview · demo call" // PREVIEW_CHIP_LABEL (driveAppCallChrome)
 								: showHumanPrimary
 									? "Human share"
 									: "Live room"}
