@@ -421,6 +421,17 @@
         "vitest": "^4.1.0",
       },
     },
+    "apps/kanban/packages/desktop-bridge": {
+      "name": "@kanban/desktop-bridge",
+      "version": "0.0.1",
+      "dependencies": {
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.0",
+      },
+    },
     "apps/kanban/web-ui": {
       "name": "@kanban/web",
       "version": "0.1.0",
@@ -1760,6 +1771,8 @@
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
     "@kanban/desktop": ["@kanban/desktop@workspace:apps/kanban/packages/desktop"],
+
+    "@kanban/desktop-bridge": ["@kanban/desktop-bridge@workspace:apps/kanban/packages/desktop-bridge"],
 
     "@kanban/web": ["@kanban/web@workspace:apps/kanban/web-ui"],
 

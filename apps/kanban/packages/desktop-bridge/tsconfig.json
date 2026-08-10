@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		// DOM rather than the base's bare ES2022, and no "node": this package is
+		// consumed by the renderer as well as by the host adapter. Dropping
+		// @types/node is what keeps a `node:` import from compiling in a file
+		// that ships to a browser; DOM is what supplies the `URL` /
+		// `URLSearchParams` / `console` the deep-link parser actually uses.
+		"lib": ["ES2022", "DOM"],
+		"types": ["vitest/globals"]
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts"],
+	"exclude": ["node_modules"]
+}

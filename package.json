@@ -8,6 +8,7 @@
         "apps/vscode/testing-platform",
         "apps/cline-hub/src/webview",
         "apps/kanban/packages/desktop",
+        "apps/kanban/packages/desktop-bridge",
         "apps/kanban/web-ui",
         "apps/examples/*",
         "apps/examples/vscode/src/webview",
