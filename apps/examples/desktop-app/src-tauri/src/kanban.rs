@@ -36,6 +36,7 @@
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -158,9 +159,30 @@ pub struct KanbanRuntimeState {
     endpoint: Mutex<Option<String>>,
     process: Mutex<Option<Child>>,
     shutting_down: Mutex<bool>,
+    /// Bumped on every spawn, so a reader thread can tell whether it still
+    /// speaks for the current child.
+    ///
+    /// The drainer threads outlive the child they were started for: an EOF
+    /// arrives once the process is already gone, and a restart may have
+    /// spawned a replacement in the meantime. Without this, a late EOF from
+    /// the previous child clears the endpoint the *new* one just announced,
+    /// and every project window afterwards opens against nothing. Same shape
+    /// as the wake-lock race fixed earlier in this stack — a stale writer
+    /// applying a snapshot that was true when taken and is not any more.
+    generation: AtomicU64,
 }
 
 impl KanbanRuntimeState {
+    /// Claim the next generation for a child about to be spawned.
+    fn begin_generation(&self) -> u64 {
+        self.generation.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    /// Whether `generation` is still the live child's.
+    fn is_current_generation(&self, generation: u64) -> bool {
+        self.generation.load(Ordering::SeqCst) == generation
+    }
+
     fn is_shutting_down(&self) -> bool {
         self.shutting_down
             .lock()
@@ -435,6 +457,7 @@ pub fn ensure_kanban_runtime_started_with(
         }
     });
 
+    let generation = state.begin_generation();
     let state_for_stdout = state.clone();
     thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
@@ -454,7 +477,11 @@ pub fn ensure_kanban_runtime_started_with(
             if let Ok(parsed) = serde_json::from_str::<DesktopBackendReadyLine>(trimmed) {
                 if parsed.line_type == "ready" {
                     if let Some(endpoint) = parsed.endpoint.or(parsed.ws_endpoint) {
-                        state_for_stdout.set_endpoint(Some(endpoint));
+                        // Ignore an announcement from a superseded child: the
+                        // origin it names is already dead.
+                        if state_for_stdout.is_current_generation(generation) {
+                            state_for_stdout.set_endpoint(Some(endpoint));
+                        }
                     }
                     continue;
                 }
@@ -468,7 +495,14 @@ pub fn ensure_kanban_runtime_started_with(
         // an origin nothing is serving, with no error to explain the blank
         // page. Clearing it here is also what lets the next startup check
         // spawn a replacement instead of handing out a stale address.
-        state_for_stdout.set_endpoint(None);
+        //
+        // Only when this is still the live child. A restart may already have
+        // spawned a successor that announced its own origin, and clearing on
+        // its behalf would take the runtime down from the shell's point of
+        // view while it is in fact running perfectly well.
+        if state_for_stdout.is_current_generation(generation) {
+            state_for_stdout.set_endpoint(None);
+        }
     });
 
     *process_guard = Some(child);
@@ -875,6 +909,20 @@ mod supervision_tests {
         // opens; an unencoded `?` would turn the rest into a query string.
         assert_eq!(urlencode("my app/web"), "my%20app%2Fweb");
         assert_eq!(urlencode("a?b=c"), "a%3Fb%3Dc");
+    }
+
+    #[test]
+    fn a_superseded_child_can_no_longer_touch_the_endpoint() {
+        // The drainer threads outlive their child, so a restart leaves the old
+        // thread still running. Its EOF must not clear the endpoint the new
+        // child announced, or every project window opens against nothing until
+        // someone restarts the runtime again.
+        let state = KanbanRuntimeState::default();
+        let first = state.begin_generation();
+        let second = state.begin_generation();
+
+        assert!(!state.is_current_generation(first), "the old child is superseded");
+        assert!(state.is_current_generation(second), "the live child still speaks");
     }
 
     #[test]

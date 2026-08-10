@@ -337,26 +337,34 @@ describe("check() while a download is already under way", () => {
 	// `available` event clears the latch while the status is still mid-download.
 	// A second check then reset the status to `checking`, discarding progress
 	// the user was watching and firing a redundant round-trip.
-	it("is a no-op once an update is available", async () => {
+	function trackStatus(): string[] {
+		const seen: string[] = [];
+		controller.subscribe((status) => seen.push(status.kind));
+		return seen;
+	}
+
+	it("is a no-op once an update is available", () => {
+		const seen = trackStatus();
 		controller.check();
 		backend.emit({ kind: "available", version: "9.9.9" });
-		expect(controller.status.kind).toBe("available");
+		expect(seen.at(-1)).toBe("available");
 
 		controller.check();
 
-		expect(controller.status.kind).toBe("available");
+		expect(seen.at(-1)).toBe("available");
 		expect(backend.checkForUpdates).toHaveBeenCalledTimes(1);
 	});
 
-	it("is a no-op while downloading", async () => {
+	it("is a no-op while downloading", () => {
+		const seen = trackStatus();
 		controller.check();
 		backend.emit({ kind: "available", version: "9.9.9" });
 		backend.emit({ kind: "progress", percent: 42 });
-		expect(controller.status.kind).toBe("downloading");
+		expect(seen.at(-1)).toBe("downloading");
 
 		controller.check();
 
-		expect(controller.status.kind).toBe("downloading");
+		expect(seen.at(-1)).toBe("downloading");
 		expect(backend.checkForUpdates).toHaveBeenCalledTimes(1);
 	});
 });
@@ -364,8 +372,8 @@ describe("check() while a download is already under way", () => {
 describe("check() whose round-trip emits no event", () => {
 	// Regression: the in-flight latch was only ever cleared inside
 	// applyBackendEvent. A backend that resolved without emitting left it set
-	// for the rest of the session, so every later check() silently no-opped
-	// and the UI was stranded on "checking" with no way back.
+	// for the rest of the session, so every later check() silently no-opped and
+	// the UI was stranded on "checking" with no way back.
 	it("still allows a later check", async () => {
 		controller.check();
 		await Promise.resolve();
@@ -377,12 +385,14 @@ describe("check() whose round-trip emits no event", () => {
 	});
 
 	it("does not invent a result for the silent round-trip", async () => {
+		const seen: string[] = [];
+		controller.subscribe((status) => seen.push(status.kind));
 		controller.check();
 		await Promise.resolve();
 		await Promise.resolve();
 
-		// Nothing was learned, so nothing is claimed — the status stays put
-		// rather than being reported as up-to-date.
-		expect(controller.status.kind).toBe("checking");
+		// Nothing was learned, so nothing is claimed — no up-to-date is
+		// published on the strength of a silent round-trip.
+		expect(seen).toEqual(["checking"]);
 	});
 });
