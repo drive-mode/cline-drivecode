@@ -1,0 +1,45 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"jsx": "react-jsx",
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"baseUrl": ".",
+		"paths": {
+			// Pin React types to this workspace's own React 18 copy. In the bun
+			// workspace, @types/react@19 (from the React 19 hub webview) becomes
+			// resolvable from here, and tsc would otherwise mix the two — the
+			// symptom is 200+ TS2786 "cannot be used as a JSX component" errors
+			// complaining that `bigint` is not a ReactNode. Same fix, same reason,
+			// as apps/vscode/webview-ui/tsconfig.app.json.
+			"react": ["./node_modules/@types/react"],
+			"react-dom": ["./node_modules/@types/react-dom"],
+			"@/*": ["src/*"],
+			"@runtime-agent-catalog": ["../src/core/agent-catalog.ts"],
+			"@runtime-cline-tool-call-display": [
+				"../src/cline-sdk/cline-tool-call-display.ts"
+			],
+			"@runtime-contract": ["../src/core/api-contract.ts"],
+			"@runtime-home-agent-session": ["../src/core/home-agent-session.ts"],
+			"@runtime-trpc": ["../src/trpc/app-router.ts"],
+			"@runtime-shortcuts": ["../src/config/shortcut-utils.ts"],
+			"@runtime-task-id": ["../src/core/task-id.ts"],
+			"@runtime-task-title": ["../src/core/task-title.ts"],
+			"@runtime-task-worktree-path": ["../src/workspace/task-worktree-path.ts"],
+			"@runtime-task-state": ["../src/core/task-board-mutations.ts"]
+		},
+		"types": ["vitest/globals"]
+	},
+	"include": [
+		"src",
+		"vite.config.ts",
+		"vitest.config.ts",
+		"playwright.config.ts"
+	]
+}

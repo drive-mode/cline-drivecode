@@ -1,0 +1,94 @@
+name: kanban-test
+
+# Typecheck and test the Kanban workbench (apps/kanban) inside the workspace.
+#
+# Kanban arrived as a sibling fork and consumed `@cline/*` from npm. In the
+# monorepo it resolves them from `sdk/packages/` instead, so an SDK change can
+# now break Kanban — which is the point, and the reason this lane exists rather
+# than relying on Kanban's old standalone CI.
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "apps/kanban/**"
+            - "sdk/**"
+            # Kanban's workspace membership and install graph live here, so a
+            # change to either can break it without touching apps/kanban.
+            - "package.json"
+            - "bun.lock"
+            - ".github/workflows/kanban-test.yml"
+            - ".github/actions/setup-bun-workspace/**"
+    # Deliberately unfiltered by base branch, matching sdk-test / drive-ci:
+    # `branches: [main]` silently skips mid-stack PRs whose base is another
+    # feature branch, and a PR with no checks reads as a PR that passed.
+    pull_request:
+        paths:
+            - "apps/kanban/**"
+            - "sdk/**"
+            # Kanban's workspace membership and install graph live here, so a
+            # change to either can break it without touching apps/kanban.
+            - "package.json"
+            - "bun.lock"
+            - ".github/workflows/kanban-test.yml"
+            - ".github/actions/setup-bun-workspace/**"
+    workflow_dispatch:
+    workflow_call:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: kanban-test-${{ github.event.pull_request.number || github.run_id }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        name: Kanban (apps/kanban)
+        timeout-minutes: 25
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Bun workspace
+              uses: ./.github/actions/setup-bun-workspace
+              with:
+                  bun-version: "1.3.13"
+
+            # Kanban imports @cline/core and @cline/shared from source now, so
+            # nothing below resolves until the SDK is built.
+            - name: Build SDK
+              run: bun run build:sdk
+
+            - name: Typecheck runtime
+              working-directory: apps/kanban
+              run: bunx tsc -p tsconfig.json --noEmit
+
+            - name: Typecheck web UI
+              working-directory: apps/kanban/web-ui
+              run: bunx tsc --noEmit
+
+            - name: Typecheck desktop shell
+              working-directory: apps/kanban/packages/desktop
+              run: bunx tsc -p tsconfig.json --noEmit
+
+            # Split from the runtime suite because test/integration spawns real
+            # CLI subprocesses and is flaky under parallel load with them. It is
+            # covered separately below, where it is the only thing running.
+            - name: Test runtime
+              working-directory: apps/kanban
+              run: bunx vitest run test/runtime test/utilities
+
+            - name: Test web UI
+              working-directory: apps/kanban/web-ui
+              run: bunx vitest run
+
+            - name: Test desktop shell
+              working-directory: apps/kanban/packages/desktop
+              run: bunx vitest run
+
+            - name: Test integration
+              working-directory: apps/kanban
+              run: bunx vitest run test/integration
