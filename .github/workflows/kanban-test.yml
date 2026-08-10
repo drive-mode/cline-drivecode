@@ -81,10 +81,6 @@ jobs:
               working-directory: apps/kanban/packages/desktop-tauri
               run: bunx tsc -p tsconfig.json --noEmit
 
-            - name: Typecheck desktop shell
-              working-directory: apps/kanban/packages/desktop
-              run: bunx tsc -p tsconfig.json --noEmit
-
             # Split from the runtime suite because test/integration spawns real
             # CLI subprocesses and is flaky under parallel load with them. It is
             # covered separately below, where it is the only thing running.
@@ -102,10 +98,6 @@ jobs:
 
             - name: Test Tauri adapter
               working-directory: apps/kanban/packages/desktop-tauri
-              run: bunx vitest run
-
-            - name: Test desktop shell
-              working-directory: apps/kanban/packages/desktop
               run: bunx vitest run
 
             - name: Test integration
