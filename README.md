@@ -231,12 +231,12 @@ one-shots. Drive is a first-class mode on that surface — not a separate app.
 
 `Ctrl+Shift+D` (or click the status-bar Drive line) joins or leaves the call.
 When Drive is on, the bar shows the partner and sub-mode
-(`plan` / `agent` / `ask` / `debug`). The TUI ships Adam as its default
-partner persona; the product demo's partner persona is Cline.
+(`plan` / `agent` / `ask` / `debug`). Cline is the default partner persona,
+in the TUI and the product demo alike.
 
 ![TUI with Drive off](docs/drivecode/assets/tui/tui-drive-off.png)
 
-![TUI with Drive on — partner Adam in agent sub-mode](docs/drivecode/assets/tui/tui-drive-on.png)
+![TUI with Drive on — partner Cline in agent sub-mode](docs/drivecode/assets/tui/tui-drive-on.png)
 
 **Status Hub in the TUI** — `/status` (or **Opt+T** / the command palette).
 Tab switches Board ↔ Dependency map. Live data comes from a
