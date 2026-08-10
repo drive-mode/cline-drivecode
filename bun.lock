@@ -262,21 +262,6 @@
         "vitest": "^4.0.18",
       },
     },
-    "apps/examples/menubar": {
-      "name": "@cline/menubar",
-      "version": "0.1.0",
-      "dependencies": {
-        "@cline/core": "workspace:*",
-        "@cline/shared": "workspace:*",
-      },
-      "devDependencies": {
-        "@tauri-apps/cli": "^2.0.0",
-        "@types/bun": "^1.3.10",
-        "@types/node": "^25.3.5",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
-    },
     "apps/examples/multi-agent": {
       "name": "@cline/example-multi-agent",
       "version": "0.0.0",
@@ -1223,8 +1208,6 @@
     "@cline/example-quickstart": ["@cline/example-quickstart@workspace:apps/examples/quickstart"],
 
     "@cline/llms": ["@cline/llms@workspace:sdk/packages/llms"],
-
-    "@cline/menubar": ["@cline/menubar@workspace:apps/examples/menubar"],
 
     "@cline/sdk": ["@cline/sdk@workspace:sdk/packages/sdk"],
 

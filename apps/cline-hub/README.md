@@ -107,7 +107,7 @@ Clicking **Restart Hub** in the sidebar:
 3. Calls `ensureDetachedHubServer(workspaceRoot)` to spawn a fresh hub.
 4. Reconnects and broadcasts the new hub state to every open browser tab.
 
-Sessions running on the previous hub are stopped along with the hub. Other clients connected to that hub (CLI, VS Code, menubar) will see their connection drop and reconnect to the new daemon on next request.
+Sessions running on the previous hub are stopped along with the hub. Other clients connected to that hub (CLI, VS Code, desktop app) will see their connection drop and reconnect to the new daemon on next request.
 
 ## Security warning
 
