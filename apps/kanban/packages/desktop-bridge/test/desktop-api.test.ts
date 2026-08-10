@@ -20,6 +20,7 @@ interface Harness {
 	setBadgeCount: Mock;
 	requestAttention: Mock;
 	setSummary: Mock;
+	setWorkInFlight: Mock;
 	emitUpdaterEvent: (event: UpdaterBackendEvent) => void;
 	setFocused: (focused: boolean) => void;
 }
@@ -39,6 +40,7 @@ function makeHarness(overrides: Partial<DesktopHost> = {}): Harness {
 	const setBadgeCount = vi.fn();
 	const requestAttention = vi.fn();
 	const setSummary = vi.fn();
+	const setWorkInFlight = vi.fn();
 
 	const host: DesktopHost = {
 		platform: "darwin",
@@ -66,7 +68,7 @@ function makeHarness(overrides: Partial<DesktopHost> = {}): Harness {
 				onClick: notificationClick,
 			}),
 		},
-		presence: { setBadgeCount, requestAttention, setSummary },
+		presence: { setBadgeCount, requestAttention, setSummary, setWorkInFlight },
 		...overrides,
 	};
 
@@ -83,6 +85,7 @@ function makeHarness(overrides: Partial<DesktopHost> = {}): Harness {
 		setBadgeCount,
 		requestAttention,
 		setSummary,
+		setWorkInFlight,
 		emitUpdaterEvent: (event) => emit(event),
 		setFocused: (next) => {
 			focused = next;

@@ -27,6 +27,16 @@ export interface PresenceView {
 	requestAttention(): void;
 	/** One-line summary for the tray tooltip and menu. */
 	setSummary(summary: string): void;
+	/**
+	 * Whether agents are currently working, so the host can hold the system
+	 * awake. Called only when the answer *changes* — acquiring a wake lock is
+	 * a syscall, and doing it on every board refresh would be wasteful noise.
+	 *
+	 * This is the signal that makes walking away safe. Without it the machine
+	 * suspends mid-run, which is the one failure the product exists to
+	 * prevent and the one a user would blame on the agent rather than the app.
+	 */
+	setWorkInFlight(active: boolean): void;
 }
 
 const EMPTY: PresenceCounts = { running: 0, readyForReview: 0 };
@@ -82,6 +92,14 @@ export class PresenceController {
 		// bouncing when a count drops is meaningless.
 		if (sanitized.readyForReview > previous.readyForReview) {
 			this.view.requestAttention();
+		}
+
+		// Edge-triggered on the zero boundary, not level-triggered on every
+		// update: the host acquires and releases an OS wake lock here.
+		const wasInFlight = previous.running > 0;
+		const isInFlight = sanitized.running > 0;
+		if (wasInFlight !== isInFlight) {
+			this.view.setWorkInFlight(isInFlight);
 		}
 	}
 
