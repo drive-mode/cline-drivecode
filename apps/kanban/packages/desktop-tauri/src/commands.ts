@@ -8,8 +8,8 @@
  *
  * ## Not every name here is registered yet
  *
- * `kanban.rs` currently registers only `kanban_handshake` and
- * `kanban_pick_directory`. The rest are declared here because the adapter
+ * `kanban.rs` registers everything below except `kanban_publish_menu_actions`
+ * and `kanban_set_tray_summary`. Those two are declared because the adapter
  * implements them and the host will grow them — but nothing calls an
  * unregistered one, because the handshake omits its capability and the bridge
  * turns the whole namespace into a no-op. That is the capability model doing
@@ -27,6 +27,9 @@ export const CMD_OPEN_PROJECT_WINDOW = "kanban_open_project_window";
 
 /** Restart the Kanban runtime child process. */
 export const CMD_RESTART_RUNTIME = "kanban_restart_runtime";
+
+/** Origin the Kanban runtime bound to, or null before it announces. */
+export const CMD_RUNTIME_ENDPOINT = "kanban_runtime_endpoint";
 
 /** Native folder picker. Returns the chosen path or null. */
 export const CMD_PICK_DIRECTORY = "kanban_pick_directory";
