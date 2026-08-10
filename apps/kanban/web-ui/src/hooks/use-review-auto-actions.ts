@@ -9,6 +9,9 @@ import { resolveTaskAutoReviewMode } from "@/types";
 const AUTO_REVIEW_ACTION_DELAY_MS = 500;
 
 function isTaskAutoReviewEnabled(task: BoardCard): boolean {
+	if (task.externalRef?.system === "driveplan") {
+		return false;
+	}
 	return task.autoReviewEnabled === true;
 }
 

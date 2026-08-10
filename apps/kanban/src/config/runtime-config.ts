@@ -1,6 +1,7 @@
 // Persists Kanban-owned runtime preferences on disk.
 // This module should store Kanban settings such as selected agents,
 // shortcuts, and prompt templates, not SDK-owned Cline secrets or OAuth data.
+import { existsSync } from "node:fs";
 import { readFile, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -8,6 +9,13 @@ import { getRuntimeAgentCatalogEntry, isRuntimeAgentLaunchSupported } from "../c
 import type { RuntimeAgentId, RuntimeProjectShortcut } from "../core/api-contract";
 import { type LockRequest, lockedFileSystem } from "../fs/locked-file-system";
 import { detectInstalledCommands } from "../terminal/agent-registry";
+import {
+	parseSettingsFileContent,
+	SETTINGS_FILENAMES_BY_PRECEDENCE,
+	SETTINGS_YAML_FILENAME,
+	serializeSettingsFileContent,
+	settingsFormatForPath,
+} from "./settings-file-format";
 import { areRuntimeProjectShortcutsEqual } from "./shortcut-utils";
 
 interface RuntimeGlobalConfigFileShape {
@@ -49,10 +57,9 @@ export interface RuntimeConfigUpdateInput {
 
 const RUNTIME_HOME_PARENT_DIR = ".cline";
 const RUNTIME_HOME_DIR = "kanban";
-const CONFIG_FILENAME = "config.json";
 const PROJECT_CONFIG_PARENT_DIR = ".cline";
 const PROJECT_CONFIG_DIR = "kanban";
-const PROJECT_CONFIG_FILENAME = "config.json";
+// Settings filenames live in `settings-file-format.ts`, which owns format choice.
 const DEFAULT_AGENT_ID: RuntimeAgentId = "cline";
 const AUTO_SELECT_AGENT_PRIORITY: readonly RuntimeAgentId[] = ["claude", "codex", "droid", "kiro"];
 const DEFAULT_AGENT_AUTONOMOUS_MODE_ENABLED = true;
@@ -200,12 +207,30 @@ function hasOwnKey<T extends object>(value: T | null, key: keyof T): boolean {
 	return Object.hasOwn(value, key);
 }
 
+/**
+ * Pick the settings file to use in a directory.
+ *
+ * The first existing candidate wins, so an installation that already has a
+ * legacy `config.json` keeps using it and is never silently rewritten as YAML.
+ * When neither exists — a fresh install, or the first time a project saves
+ * shortcuts — the new file is YAML.
+ */
+function resolveSettingsPathInDir(dir: string): string {
+	for (const { filename } of SETTINGS_FILENAMES_BY_PRECEDENCE) {
+		const candidate = join(dir, filename);
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+	return join(dir, SETTINGS_YAML_FILENAME);
+}
+
 export function getRuntimeGlobalConfigPath(): string {
-	return join(getRuntimeHomePath(), CONFIG_FILENAME);
+	return resolveSettingsPathInDir(getRuntimeHomePath());
 }
 
 export function getRuntimeProjectConfigPath(cwd: string): string {
-	return join(resolve(cwd), PROJECT_CONFIG_PARENT_DIR, PROJECT_CONFIG_DIR, PROJECT_CONFIG_FILENAME);
+	return resolveSettingsPathInDir(join(resolve(cwd), PROJECT_CONFIG_PARENT_DIR, PROJECT_CONFIG_DIR));
 }
 
 interface RuntimeConfigPaths {
@@ -294,10 +319,16 @@ function toRuntimeConfigState({
 	};
 }
 
+/** Write settings in whatever format `configPath` names, atomically. */
+async function writeSettingsFileAtomic(configPath: string, payload: unknown): Promise<void> {
+	const content = serializeSettingsFileContent(payload, settingsFormatForPath(configPath));
+	await lockedFileSystem.writeTextFileAtomic(configPath, content, { lock: null });
+}
+
 async function readRuntimeConfigFile<T>(configPath: string): Promise<T | null> {
 	try {
 		const raw = await readFile(configPath, "utf8");
-		return JSON.parse(raw) as T;
+		return parseSettingsFileContent<T>(raw, settingsFormatForPath(configPath));
 	} catch {
 		return null;
 	}
@@ -375,9 +406,7 @@ async function writeRuntimeGlobalConfigFile(
 		payload.openPrPromptTemplate = openPrPromptTemplate;
 	}
 
-	await lockedFileSystem.writeJsonFileAtomic(configPath, payload, {
-		lock: null,
-	});
+	await writeSettingsFileAtomic(configPath, payload);
 }
 
 async function writeRuntimeProjectConfigFile(
@@ -400,15 +429,9 @@ async function writeRuntimeProjectConfigFile(
 		}
 		return;
 	}
-	await lockedFileSystem.writeJsonFileAtomic(
-		configPath,
-		{
-			shortcuts: normalizedShortcuts,
-		} satisfies RuntimeProjectConfigFileShape,
-		{
-			lock: null,
-		},
-	);
+	await writeSettingsFileAtomic(configPath, {
+		shortcuts: normalizedShortcuts,
+	} satisfies RuntimeProjectConfigFileShape);
 }
 
 interface RuntimeConfigFiles {

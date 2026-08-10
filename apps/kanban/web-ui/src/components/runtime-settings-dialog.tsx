@@ -775,6 +775,22 @@ export function RuntimeSettingsDialog({
 							General
 						</h2>
 					</div>
+					{/* Everything in this section is stored in this file. Power users edit it
+					    directly; clicking opens it. Mirrors the Project section's path row. */}
+					<p
+						className="text-text-secondary font-mono text-xs m-0 mb-3 break-all"
+						style={{ cursor: config?.globalConfigPath ? "pointer" : undefined }}
+						onClick={() => {
+							if (config?.globalConfigPath) {
+								handleOpenFilePath(config.globalConfigPath);
+							}
+						}}
+					>
+						{config?.globalConfigPath
+							? formatPathForDisplay(config.globalConfigPath)
+							: "~/.cline/kanban/settings.yaml"}
+						{config?.globalConfigPath ? <ExternalLink size={12} className="inline ml-1.5 align-middle" /> : null}
+					</p>
 					<div className="rounded-lg border border-border bg-surface-0 px-4 py-3 mb-4">
 						<h6 className="text-[12px] font-semibold uppercase tracking-wider text-text-secondary m-0 mb-1">
 							Agent
@@ -1063,7 +1079,7 @@ export function RuntimeSettingsDialog({
 					>
 						{config?.projectConfigPath
 							? formatPathForDisplay(config.projectConfigPath)
-							: "<project>/.cline/kanban/config.json"}
+							: "<project>/.cline/kanban/settings.yaml"}
 						{config?.projectConfigPath ? <ExternalLink size={12} className="inline ml-1.5 align-middle" /> : null}
 					</p>
 					<div className="rounded-lg border border-border bg-surface-0 px-4 py-3 mb-4">
