@@ -5,6 +5,7 @@ import * as runtimeTaskState from "@runtime-task-state";
 import { createInitialBoardData } from "@/data/board-data";
 import type { RuntimeAgentId, RuntimeClineReasoningEffort, RuntimeTaskClineSettings } from "@/runtime/types";
 import { isAllowedCrossColumnCardMove, type ProgrammaticCardMoveInFlight } from "@/state/drag-rules";
+import { isDriveplanManagedCard } from "@/types/board";
 import {
     type BoardCard,
     type BoardColumn,
@@ -558,7 +559,15 @@ export function updateTask(board: BoardData, taskId: string, draft: TaskDraft): 
 				title: title || card.title,
 				prompt,
 				startInPlanMode: Boolean(draft.startInPlanMode),
-				autoReviewEnabled: Boolean(draft.autoReviewEnabled),
+				// Same rule the runtime's `updateTask` applies, for the same
+				// reason: DrivePlan gates review behind a receipt Kanban cannot
+				// see, so a managed card must not carry auto-review no matter
+				// what the edit draft says. Duplicated here because this is the
+				// browser's optimistic copy — without it the card reads as
+				// auto-review-enabled until the next reload re-parses it from
+				// the runtime, which is exactly the window that made the
+				// server-side version of this bug easy to miss.
+				autoReviewEnabled: isDriveplanManagedCard(card) ? false : Boolean(draft.autoReviewEnabled),
 				autoReviewMode: resolveTaskAutoReviewMode(draft.autoReviewMode ?? DEFAULT_TASK_AUTO_REVIEW_MODE),
 				images:
 					draft.images === undefined

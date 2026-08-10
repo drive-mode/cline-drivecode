@@ -29,9 +29,45 @@ export interface TauriPresenceOptions {
 	hasTray: boolean;
 }
 
+/**
+ * Backoff between wake-lock attempts. Short enough that a transient failure is
+ * corrected long before an idle timer could fire, few enough that a host which
+ * genuinely cannot acquire one — a headless box with no session bus — settles
+ * into a single warning rather than retrying forever.
+ */
+const WAKE_LOCK_RETRY_DELAYS_MS = [250, 1_000, 3_000];
+
 export function createTauriPresenceView(
 	opts: TauriPresenceOptions,
 ): PresenceView {
+	// Distinguishes "this attempt is still the current intent" from "a newer
+	// call has superseded it", so a release arriving mid-retry wins instead of
+	// being overwritten by a retry of the acquire it replaced.
+	let wakeLockGeneration = 0;
+
+	async function assertWakeLock(active: boolean): Promise<void> {
+		const generation = ++wakeLockGeneration;
+		for (let attempt = 0; ; attempt += 1) {
+			try {
+				await opts.surface.invoke(CMD_SET_WAKE_LOCK, { active });
+				return;
+			} catch (err: unknown) {
+				if (generation !== wakeLockGeneration) return;
+				if (attempt >= WAKE_LOCK_RETRY_DELAYS_MS.length) {
+					console.warn(
+						`[desktop] Failed to ${active ? "acquire" : "release"} the wake lock:`,
+						err instanceof Error ? err.message : err,
+					);
+					return;
+				}
+				await new Promise((resolve) =>
+					setTimeout(resolve, WAKE_LOCK_RETRY_DELAYS_MS[attempt]),
+				);
+				if (generation !== wakeLockGeneration) return;
+			}
+		}
+	}
+
 	return {
 		setBadgeCount(count) {
 			// Tauri clears the badge for 0 and undefined alike; passing
@@ -57,18 +93,19 @@ export function createTauriPresenceView(
 				.catch(() => {});
 		},
 		setWorkInFlight(active) {
-			// Not swallowed like the others. A badge that fails to update is
-			// cosmetic; a wake lock that fails to take means the machine
-			// suspends mid-run, and the user needs some record of why their
-			// agents stopped.
-			void opts.surface
-				.invoke(CMD_SET_WAKE_LOCK, { active })
-				.catch((err: unknown) => {
-					console.warn(
-						`[desktop] Failed to ${active ? "acquire" : "release"} the wake lock:`,
-						err instanceof Error ? err.message : err,
-					);
-				});
+			// Neither swallowed nor attempted once. A badge that fails to update
+			// is cosmetic; a wake lock that fails to take means the machine
+			// suspends mid-run.
+			//
+			// Retrying is the part that matters. Presence is edge-triggered by
+			// design — the controller calls this only when the in-flight count
+			// crosses zero — so a single failed acquire is never revisited while
+			// the agents that needed it keep running. The bookkeeping goes on
+			// insisting work is in flight, nothing re-asserts, and the machine
+			// sleeps anyway. The edge-triggering is right for a syscall we do
+			// not want on every board refresh; the missing piece was making a
+			// failed edge try again rather than be lost.
+			void assertWakeLock(active);
 		},
 	};
 }

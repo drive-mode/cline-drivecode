@@ -23,6 +23,7 @@ export interface FocusTracker {
 export function createFocusTracker(window: TauriWindowSurface): FocusTracker {
 	let focused = false;
 	let disposed = false;
+	let sawLiveEvent = false;
 	let unlisten: UnlistenFn | null = null;
 
 	window
@@ -30,7 +31,18 @@ export function createFocusTracker(window: TauriWindowSurface): FocusTracker {
 		.then((value) => {
 			// A dispose() that lands before this resolves must not revive the
 			// tracker with a stale reading.
-			if (!disposed) focused = value;
+			if (disposed) return;
+			// Nor may it overwrite a live event. These two calls start together
+			// and race, so whichever settles last would otherwise win — but this
+			// one is a snapshot taken *before* the subscription existed, and any
+			// event that has landed since is strictly newer. Applying it on top
+			// moves focus backwards, and nothing corrects it until the next real
+			// focus change, which for a window the user is sitting on may never
+			// come. The visible failure is the one this module exists to prevent:
+			// `isAppFocused()` reporting focused while the window is not, so the
+			// "your agent finished" notification is swallowed.
+			if (sawLiveEvent) return;
+			focused = value;
 		})
 		.catch(() => {
 			// Staying with `false` is the safe default; see the module comment.
@@ -38,7 +50,9 @@ export function createFocusTracker(window: TauriWindowSurface): FocusTracker {
 
 	window
 		.onFocusChanged((event) => {
-			if (!disposed) focused = event.payload;
+			if (disposed) return;
+			sawLiveEvent = true;
+			focused = event.payload;
 		})
 		.then((fn) => {
 			if (disposed) {
