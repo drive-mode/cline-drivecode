@@ -432,6 +432,18 @@
         "vitest": "^4.1.0",
       },
     },
+    "apps/kanban/packages/desktop-tauri": {
+      "name": "@kanban/desktop-tauri",
+      "version": "0.0.1",
+      "dependencies": {
+        "@kanban/desktop-bridge": "workspace:*",
+        "@tauri-apps/api": "^2.11.1",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.0",
+      },
+    },
     "apps/kanban/web-ui": {
       "name": "@kanban/web",
       "version": "0.1.0",
@@ -1773,6 +1785,8 @@
     "@kanban/desktop": ["@kanban/desktop@workspace:apps/kanban/packages/desktop"],
 
     "@kanban/desktop-bridge": ["@kanban/desktop-bridge@workspace:apps/kanban/packages/desktop-bridge"],
+
+    "@kanban/desktop-tauri": ["@kanban/desktop-tauri@workspace:apps/kanban/packages/desktop-tauri"],
 
     "@kanban/web": ["@kanban/web@workspace:apps/kanban/web-ui"],
 

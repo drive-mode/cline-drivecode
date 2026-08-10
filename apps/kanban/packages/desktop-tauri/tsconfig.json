@@ -1,0 +1,12 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		// Renderer-side code, same as the bridge it adapts: DOM rather than the
+		// base's bare ES2022, and no @types/node.
+		"lib": ["ES2022", "DOM"],
+		"types": ["vitest/globals"]
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts"],
+	"exclude": ["node_modules"]
+}
