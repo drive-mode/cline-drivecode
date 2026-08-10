@@ -200,9 +200,25 @@ impl KanbanRuntimeState {
             return;
         };
         if let Some(child) = process_guard.as_mut() {
-            // Give it a window to exit on its own before escalating. Kanban
-            // persists board state and worktree bookkeeping on shutdown, and
-            // killing mid-write is how that gets corrupted.
+            // Ask before escalating. The loop below was written to "give it a
+            // window to exit on its own", but nothing was telling it to go —
+            // so the seven seconds always elapsed in full and the `kill()`
+            // afterwards (SIGKILL on Unix) was the only signal the runtime
+            // ever received. Kanban persists board state and worktree
+            // bookkeeping on shutdown, and being killed mid-write is exactly
+            // how that gets corrupted, which is what the grace period was
+            // supposed to prevent.
+            #[cfg(unix)]
+            {
+                // Safety: `id()` is this child's pid and we own the handle, so
+                // it cannot have been reaped and reused underneath us. A pid
+                // that has already exited yields ESRCH, which is ignored.
+                unsafe {
+                    libc::kill(child.id() as libc::pid_t, libc::SIGTERM);
+                }
+            }
+            // Windows has no SIGTERM for a non-console child, so there the
+            // wait below remains a plain grace period before `kill()`.
             for _ in 0..70 {
                 match child.try_wait() {
                     Ok(Some(_)) => break,
@@ -446,6 +462,13 @@ pub fn ensure_kanban_runtime_started_with(
             // Everything else is Kanban's ordinary human-facing CLI output.
             eprintln!("[kanban-runtime] {trimmed}");
         }
+        // Stdout closing means the child is gone — clean exit, crash, or kill.
+        // Either way the endpoint it announced is dead, and leaving it set
+        // makes every later `kanban_open_project_window` open a window against
+        // an origin nothing is serving, with no error to explain the blank
+        // page. Clearing it here is also what lets the next startup check
+        // spawn a replacement instead of handing out a stale address.
+        state_for_stdout.set_endpoint(None);
     });
 
     *process_guard = Some(child);
@@ -486,6 +509,16 @@ struct WakeLockInner {
     /// window finishing suspend the machine while another still had agents
     /// working. The lock is therefore held while *any* window claims it.
     holders: std::collections::HashSet<String>,
+    /// Labels whose window has been destroyed.
+    ///
+    /// `release_window` runs on `WindowEvent::Destroyed`, but the renderer's
+    /// `kanban_set_wake_lock` is fire-and-forget: a `true` sent moments before
+    /// the window went away can still arrive *after* the release, re-inserting
+    /// a holder that no renderer is left to clear. The lock would then be held
+    /// for the life of the app — the same "awake forever" failure `Destroyed`
+    /// exists to prevent, reached through a narrower window. A destroyed label
+    /// is remembered so a late claim is dropped instead.
+    destroyed: std::collections::HashSet<String>,
     guard: Option<keepawake::KeepAwake>,
 }
 
@@ -526,6 +559,13 @@ impl KanbanWakeLockState {
             return Err("failed to lock wake-lock state".to_string());
         };
         if active {
+            // A claim from a window that is already gone: see `destroyed`.
+            // Ok rather than Err — the renderer that sent it no longer exists
+            // to receive an error, and nothing is wrong from the caller's
+            // point of view.
+            if inner.destroyed.contains(window_label) {
+                return Ok(());
+            }
             inner.holders.insert(window_label.to_string());
         } else {
             inner.holders.remove(window_label);
@@ -543,8 +583,22 @@ impl KanbanWakeLockState {
         let Ok(mut inner) = self.inner.lock() else {
             return;
         };
+        inner.destroyed.insert(window_label.to_string());
         if inner.holders.remove(window_label) {
             let _ = inner.reconcile();
+        }
+    }
+
+    /// Forget that a label was destroyed, so a window created under it again
+    /// can claim normally.
+    ///
+    /// Labels are reusable: closing a project window and reopening the same
+    /// project produces the same label. Without this the tombstone from the
+    /// first window would silently swallow every claim the second one makes,
+    /// and the wake lock would never engage for that project again.
+    pub fn forget_window(&self, window_label: &str) {
+        if let Ok(mut inner) = self.inner.lock() {
+            inner.destroyed.remove(window_label);
         }
     }
 
@@ -629,6 +683,10 @@ pub fn kanban_open_project_window(
     let parsed = url
         .parse()
         .map_err(|error| format!("invalid Kanban project URL {url}: {error}"))?;
+
+    // Clear any tombstone left by a previous window under this label before
+    // the new one can send its first claim; see `forget_window`.
+    app.state::<Arc<KanbanWakeLockState>>().forget_window(&label);
 
     tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::External(parsed))
         .title(format!("Kanban — {trimmed}"))
@@ -989,5 +1047,50 @@ mod wake_lock_tests {
         state.release_window("kanban-project-never-claimed");
 
         assert!(state.wants_lock(), "A's claim must survive an unrelated close");
+    }
+
+    #[test]
+    fn a_claim_arriving_after_the_window_died_is_dropped() {
+        // `kanban_set_wake_lock` is fire-and-forget from the renderer, so a
+        // `true` sent just before the window went away can land after
+        // `Destroyed` already released it. Re-inserting the holder there would
+        // hold the machine awake for the life of the app, with no renderer
+        // left to ever send the matching `false`.
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+
+        state.release_window(WIN_A);
+        let _ = state.set(WIN_A, true);
+
+        assert!(
+            !state.wants_lock(),
+            "a late claim must not resurrect a destroyed window's hold"
+        );
+    }
+
+    #[test]
+    fn a_destroyed_window_does_not_block_its_replacement() {
+        // Labels are reusable: reopening the same project produces the same
+        // label. If the tombstone outlived the window, the wake lock would
+        // silently never engage for that project again — trading a permanent
+        // hold for a permanent failure to hold.
+        let state = KanbanWakeLockState::default();
+        state.release_window(WIN_A);
+
+        state.forget_window(WIN_A);
+        let _ = state.set(WIN_A, true);
+
+        assert!(state.wants_lock(), "a new window under a reused label must claim normally");
+    }
+
+    #[test]
+    fn one_windows_death_does_not_silence_another() {
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+        state.release_window(WIN_A);
+
+        let _ = state.set(WIN_B, true);
+
+        assert!(state.wants_lock(), "B's claim is unaffected by A being destroyed");
     }
 }

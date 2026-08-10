@@ -325,13 +325,40 @@ async function writeSettingsFileAtomic(configPath: string, payload: unknown): Pr
 	await lockedFileSystem.writeTextFileAtomic(configPath, content, { lock: null });
 }
 
-async function readRuntimeConfigFile<T>(configPath: string): Promise<T | null> {
+async function readOneRuntimeConfigFile<T>(configPath: string): Promise<T | null> {
 	try {
 		const raw = await readFile(configPath, "utf8");
 		return parseSettingsFileContent<T>(raw, settingsFormatForPath(configPath));
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Read settings for a directory, in precedence order, skipping files that
+ * yield nothing.
+ *
+ * Existing is not the same as winning. A `settings.yaml` that is empty,
+ * comment-only, or corrupt parses to `null` and carries no settings — and
+ * letting it mask a populated legacy `config.json` would silently reset the
+ * user's configuration to defaults. That reads as data loss, and it is the
+ * one outcome this precedence rule exists to prevent: the point of "YAML wins"
+ * is to avoid a confusing merge, not to let an empty file erase a real one.
+ *
+ * The write path is deliberately unchanged. `resolveSettingsPathInDir` still
+ * targets the first file that *exists*, so an installation on `config.json`
+ * keeps being written as JSON and is never silently rewritten as YAML.
+ */
+async function readRuntimeConfigFile<T>(configPath: string): Promise<T | null> {
+	const dir = dirname(configPath);
+	for (const { filename } of SETTINGS_FILENAMES_BY_PRECEDENCE) {
+		const candidate = join(dir, filename);
+		const parsed = await readOneRuntimeConfigFile<T>(candidate);
+		if (parsed !== null) {
+			return parsed;
+		}
+	}
+	return null;
 }
 
 async function writeRuntimeGlobalConfigFile(

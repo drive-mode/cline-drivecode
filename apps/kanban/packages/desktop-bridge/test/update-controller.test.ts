@@ -331,3 +331,58 @@ describe("ready is terminal against unsolicited backend events", () => {
 		});
 	});
 });
+
+describe("check() while a download is already under way", () => {
+	// Regression: `check()` guarded `ready` and the in-flight latch, but an
+	// `available` event clears the latch while the status is still mid-download.
+	// A second check then reset the status to `checking`, discarding progress
+	// the user was watching and firing a redundant round-trip.
+	it("is a no-op once an update is available", async () => {
+		controller.check();
+		backend.emit({ kind: "available", version: "9.9.9" });
+		expect(controller.status.kind).toBe("available");
+
+		controller.check();
+
+		expect(controller.status.kind).toBe("available");
+		expect(backend.checkForUpdates).toHaveBeenCalledTimes(1);
+	});
+
+	it("is a no-op while downloading", async () => {
+		controller.check();
+		backend.emit({ kind: "available", version: "9.9.9" });
+		backend.emit({ kind: "progress", percent: 42 });
+		expect(controller.status.kind).toBe("downloading");
+
+		controller.check();
+
+		expect(controller.status.kind).toBe("downloading");
+		expect(backend.checkForUpdates).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("check() whose round-trip emits no event", () => {
+	// Regression: the in-flight latch was only ever cleared inside
+	// applyBackendEvent. A backend that resolved without emitting left it set
+	// for the rest of the session, so every later check() silently no-opped
+	// and the UI was stranded on "checking" with no way back.
+	it("still allows a later check", async () => {
+		controller.check();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		controller.check();
+
+		expect(backend.checkForUpdates).toHaveBeenCalledTimes(2);
+	});
+
+	it("does not invent a result for the silent round-trip", async () => {
+		controller.check();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		// Nothing was learned, so nothing is claimed — the status stays put
+		// rather than being reported as up-to-date.
+		expect(controller.status.kind).toBe("checking");
+	});
+});

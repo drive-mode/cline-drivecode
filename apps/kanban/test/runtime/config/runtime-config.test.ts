@@ -599,3 +599,64 @@ describe("settings file format", () => {
 		}
 	});
 });
+
+describe("settings precedence when the preferred file yields nothing", () => {
+	// Regression: resolution picked the first file that *existed*. A
+	// `settings.yaml` that is empty or comment-only parses to null, so it
+	// carried no settings but still won — and the populated legacy
+	// `config.json` beside it was never read. The user's configuration
+	// silently reverted to defaults, which reads as data loss.
+	it("falls through to a legacy config.json when settings.yaml is comment-only", async () => {
+		if (process.platform === "win32") {
+			return;
+		}
+		const { path: tempHome, cleanup } = createTempDir("kanban-home-settings-precedence-");
+		try {
+			const settingsDir = join(tempHome, ...SETTINGS_DIR_SEGMENTS);
+			mkdirSync(settingsDir, { recursive: true });
+			writeFileSync(
+				join(settingsDir, "config.json"),
+				JSON.stringify({ selectedAgentId: "codex" }, null, 2),
+				"utf8",
+			);
+			writeFileSync(
+				join(settingsDir, "settings.yaml"),
+				"# migrated later, nothing here yet\n",
+				"utf8",
+			);
+
+			const state = await withTemporaryEnv({ home: tempHome }, async () =>
+				loadGlobalRuntimeConfig(),
+			);
+
+			expect(state.selectedAgentId).toBe("codex");
+		} finally {
+			cleanup();
+		}
+	});
+
+	it("still prefers a populated settings.yaml over config.json", async () => {
+		if (process.platform === "win32") {
+			return;
+		}
+		const { path: tempHome, cleanup } = createTempDir("kanban-home-settings-precedence-yaml-");
+		try {
+			const settingsDir = join(tempHome, ...SETTINGS_DIR_SEGMENTS);
+			mkdirSync(settingsDir, { recursive: true });
+			writeFileSync(
+				join(settingsDir, "config.json"),
+				JSON.stringify({ selectedAgentId: "codex" }, null, 2),
+				"utf8",
+			);
+			writeFileSync(join(settingsDir, "settings.yaml"), "selectedAgentId: claude\n", "utf8");
+
+			const state = await withTemporaryEnv({ home: tempHome }, async () =>
+				loadGlobalRuntimeConfig(),
+			);
+
+			expect(state.selectedAgentId).toBe("claude");
+		} finally {
+			cleanup();
+		}
+	});
+});

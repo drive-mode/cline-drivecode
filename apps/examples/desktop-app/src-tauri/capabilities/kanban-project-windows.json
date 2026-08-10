@@ -1,0 +1,11 @@
+{
+	"$schema": "../gen/schemas/desktop-schema.json",
+	"identifier": "kanban-project-windows",
+	"description": "Permissions for the per-project Kanban windows created by kanban_open_project_window. They are labelled kanban-project-*, run the same Kanban UI as the main window, and drive the desktop bridge from it. Capabilities are matched by window label, so without an entry naming them these windows get no permissions at all and every core window/event call the adapter makes — dock badge, user attention, event subscription — is denied. The bridge would then be inert in exactly the windows it exists to serve, while the main window it never runs in works fine.",
+	"windows": ["kanban-project-*"],
+	"permissions": [
+		"core:default",
+		"core:window:allow-set-title",
+		"core:window:allow-start-dragging"
+	]
+}

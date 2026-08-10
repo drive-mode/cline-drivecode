@@ -18,6 +18,11 @@ rfd = "0.15"
 # exact scenario the product exists to let you walk away from.
 keepawake = "0.6"
 
+[target."cfg(unix)".dependencies]
+# Only for SIGTERM in `kanban::terminate_child`. std::process::Child::kill is
+# SIGKILL, which gives the runtime no chance to flush board state.
+libc = "0.2"
+
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSResponder"] }

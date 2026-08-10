@@ -13,6 +13,7 @@ import {
 	moveTaskToColumn,
 	normalizeBoardData,
 	trashTaskAndGetReadyLinkedTaskIds,
+	updateTask,
 	updateTaskTitle,
 } from "@/state/board-state";
 import type { ProgrammaticCardMoveInFlight } from "@/state/drag-rules";
@@ -867,5 +868,73 @@ describe("board dependency state", () => {
 			modelId: "anthropic/claude-opus-4.6",
 			reasoningEffort: "medium",
 		});
+	});
+});
+
+describe("updateTask on a DrivePlan-managed card", () => {
+	// Regression: the browser's optimistic copy set `autoReviewEnabled` from the
+	// edit draft for every card. The runtime forces it off for managed cards and
+	// the schema re-forces it on parse, so the card looked right again after any
+	// reload — only the window in between was wrong, which is exactly what made
+	// the server-side version of this bug survive review. DrivePlan gates review
+	// behind a receipt Kanban cannot see, so that window is not cosmetic.
+	function boardWithManagedCard() {
+		const board = addTaskToColumn(createInitialBoardData(), "backlog", {
+			prompt: "Managed work item",
+			baseRef: "main",
+		});
+		const columns = board.columns.map((column) =>
+			column.id === "backlog"
+				? {
+						...column,
+						cards: column.cards.map((card) => ({
+							...card,
+							externalRef: {
+								system: "driveplan" as const,
+								driveTaskId: "dt-1",
+								driveRunId: "dr-1",
+							},
+						})),
+					}
+				: column,
+		);
+		return { ...board, columns };
+	}
+
+	const editDraft = {
+		prompt: "Managed work item",
+		baseRef: "main",
+		autoReviewEnabled: true,
+		startInPlanMode: false,
+	};
+
+	it("keeps auto-review off however the draft is edited", () => {
+		const board = boardWithManagedCard();
+		const cardId = board.columns.find((column) => column.id === "backlog")?.cards[0]?.id ?? "";
+
+		const result = updateTask(board, cardId, editDraft);
+
+		const updatedCard = result.board.columns
+			.find((column) => column.id === "backlog")
+			?.cards.find((card) => card.id === cardId);
+		expect(result.updated).toBe(true);
+		expect(updatedCard?.autoReviewEnabled).toBe(false);
+	});
+
+	it("still honours the draft on an unmanaged card", () => {
+		// The guard is per-card, not a blanket stop on automation whenever a
+		// managed card is nearby. A fix that broke this one was too broad.
+		const board = addTaskToColumn(createInitialBoardData(), "backlog", {
+			prompt: "Ordinary task",
+			baseRef: "main",
+		});
+		const cardId = board.columns.find((column) => column.id === "backlog")?.cards[0]?.id ?? "";
+
+		const result = updateTask(board, cardId, { ...editDraft, prompt: "Ordinary task" });
+
+		const updatedCard = result.board.columns
+			.find((column) => column.id === "backlog")
+			?.cards.find((card) => card.id === cardId);
+		expect(updatedCard?.autoReviewEnabled).toBe(true);
 	});
 });

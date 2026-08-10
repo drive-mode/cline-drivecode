@@ -101,15 +101,39 @@ export class UpdateController {
 		// A downloaded update is terminal until the user restarts. Re-checking
 		// would walk the status backwards from `ready` and lose the prompt.
 		if (this.status.kind === "ready") return;
+		// A download already under way is terminal for the same reason, one step
+		// earlier. `available` and `downloading` both mean the provider has
+		// answered and bytes are moving; the `checking` latch is already clear by
+		// then, so without this guard a second `check()` resets the status to
+		// `checking`, discards the progress the user is watching, and starts a
+		// redundant round-trip for an answer we already have.
+		if (this.status.kind === "available" || this.status.kind === "downloading") return;
 
 		this.checking = true;
 		this.setStatus({ kind: "checking" });
-		this.backend.checkForUpdates().catch((error: unknown) => {
-			this.applyBackendEvent({
-				kind: "error",
-				message: error instanceof Error ? error.message : String(error),
+		this.backend
+			.checkForUpdates()
+			.then(() => {
+				// A round-trip that resolved without emitting an event tells us
+				// nothing about the result, so the status is left alone rather
+				// than invented as `up-to-date`. The in-flight latch must clear
+				// regardless: it exists only to collapse concurrent checks, and
+				// leaving it set after the request finished would make every
+				// later `check()` a silent no-op — stranding the UI on
+				// "checking" with no way back for the rest of the session.
+				//
+				// Guarded on the status still being `checking` so this cannot
+				// race an event that already resolved the check.
+				if (this.status.kind === "checking") {
+					this.checking = false;
+				}
+			})
+			.catch((error: unknown) => {
+				this.applyBackendEvent({
+					kind: "error",
+					message: error instanceof Error ? error.message : String(error),
+				});
 			});
-		});
 	}
 
 	/** No-op unless an update is downloaded and waiting. */
