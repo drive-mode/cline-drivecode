@@ -102,6 +102,12 @@ export function resolveAgentHomeSlug(
 			return candidate;
 		}
 	}
+	// `role` and DRIVE_PARTICIPANT_PARTNER identify the partner in every room
+	// created today. The bare "adam" id is a compatibility fallback for rooms
+	// persisted before the default partner was renamed to Cline — not a missed
+	// rename. Renaming it to "cline" would drop those old rooms without gaining
+	// anything, since a current partner is already matched by the two checks
+	// above and never reaches this one.
 	if (
 		participant.role === "partner" ||
 		participant.id === DRIVE_PARTICIPANT_PARTNER ||
