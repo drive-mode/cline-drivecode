@@ -301,8 +301,8 @@ Behavior:
 
 - The CLI starts (or reuses) the local hub daemon, submits the task, then exits. It does not stream output or stay attached to the session.
 - Because there is no human in the loop once the CLI exits, zen sessions run with full tool auto-approval (same semantics as `--yolo`). `spawn`/`team` tools are disabled by default for safety, consistent with yolo-mode defaults.
-- If the Cline menubar app is running, it subscribes to hub `ui.notify` events and will surface a system notification when the task completes.
-- If the menubar app is not running, there is no live UI for the task. Use `cline history` later to find the session and inspect the result.
+- The hub publishes a `ui.notify` event when the task completes, which any subscribed client can surface as a system notification.
+- No client in this repository subscribes to it today, so there is no live UI for the task. Use `cline history` later to find the session and inspect the result.
 - `--zen` is incompatible with `--data-dir` (the implicit sandbox requires a local backend that exits with the CLI) and with `--tui` (there is no terminal UI to render into).
 
 ## Tool approval

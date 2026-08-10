@@ -15,9 +15,12 @@ const ZEN_DISPATCH_ACK_TIMEOUT_MS = 5_000;
  * Unlike a normal CLI run, zen mode does not stay connected to watch the
  * session stream. It submits the turn to the hub and exits immediately. The
  * hub continues to execute the agent loop in the background and, on
- * completion, already publishes a `ui.notify` event which the menubar app
- * (if installed) surfaces as a system notification. If the menubar app is not
- * running, users can still find the result later via `cline history`.
+ * completion, publishes a `ui.notify` event for any subscribed client to
+ * surface. Nothing in this repository subscribes to it today — the menubar
+ * app that used to was removed when the repo consolidated onto a single
+ * desktop shell — so in practice users find the result via `cline history`.
+ * The broadcast is kept because it is the hub's public completion signal,
+ * not menubar-specific plumbing.
  *
  * Because no human is available to approve tool calls once the CLI exits,
  * zen mode forces full tool auto-approval (same semantics as yolo) and only

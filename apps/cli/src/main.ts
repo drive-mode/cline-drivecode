@@ -1202,9 +1202,10 @@ export async function runCli(): Promise<void> {
 				: args.prompt;
 
 		// Zen mode: dispatch the task to the background hub and exit. The CLI
-		// does not stay connected to stream output; completion is delivered via
-		// the hub's existing ui.notify broadcast (picked up by the menubar app
-		// when installed).
+		// does not stay connected to stream output; completion is announced on
+		// the hub's ui.notify broadcast, which any subscribed client may
+		// surface. See run-zen.ts for why that broadcast outlived its only
+		// in-repo consumer.
 		if (isZenMode) {
 			const { runZen } = await import("./runtime/run-zen");
 			await runZen(effectivePrompt, config, userInstructionService);
