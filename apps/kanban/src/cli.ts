@@ -31,6 +31,7 @@ import {
 	setKanbanRuntimeTls,
 } from "./core/runtime-endpoint";
 import { disablePasscode, generateInternalToken, generatePasscode } from "./security/passcode-manager";
+import { emitHostHandshake } from "./server/host-handshake";
 import { terminateProcessForTimeout } from "./server/process-termination";
 import type { RuntimeStateHub } from "./server/runtime-state-hub";
 import { captureNodeException, flushNodeTelemetry } from "./telemetry/sentry-node.js";
@@ -295,6 +296,12 @@ async function tryOpenExistingServer(options: { noOpen: boolean; shouldAutoOpenB
 		? buildKanbanRuntimeUrl(`/${encodeURIComponent(workspaceId)}`)
 		: getKanbanRuntimeOrigin();
 	console.log(`Kanban already running at ${getKanbanRuntimeOrigin()}`);
+	// Attaching counts as being ready. A supervising host spawned us to learn
+	// an origin, and this path reaches one without starting a server — without
+	// announcing here, a host restarting onto an already-live Kanban would
+	// wait forever for a handshake that never comes, and its runtime/windows
+	// features would stay dark next to a perfectly reachable server.
+	emitHostHandshake({ endpoint: getKanbanRuntimeOrigin() });
 	if (!options.noOpen && options.shouldAutoOpenBrowser) {
 		try {
 			const { openInBrowser } = await import("./server/browser.js");
@@ -591,6 +598,10 @@ async function runMainCommand(options: CliOptions, shouldAutoOpenBrowser: boolea
 		throw error;
 	}
 	console.log(`Cline Kanban running at ${runtime.url}`);
+	// Announce the origin to a supervising desktop host, if there is one. The
+	// host cannot know the port in advance — it is configurable and falls back
+	// to a free one — so it reads this line off stdout. No-op otherwise.
+	emitHostHandshake({ endpoint: getKanbanRuntimeOrigin() });
 	if (!options.noOpen && shouldAutoOpenBrowser) {
 		try {
 			openInBrowser(runtime.url, {

@@ -870,6 +870,7 @@ fn set_tray_status(
 
 fn main() {
     let desktop_backend = Arc::new(DesktopBackendState::default());
+    let kanban_runtime = Arc::new(kanban::KanbanRuntimeState::default());
     let launch_cwd = std::env::current_dir()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| ".".to_string());
@@ -885,12 +886,23 @@ fn main() {
         .manage(app_context)
         .manage(Arc::new(UpdateState::default()))
         .manage(DesktopMenuActionState::default())
+        .manage(kanban_runtime.clone())
         .setup(|app| {
             setup_tray_icon(app)?;
             let app_context = app.state::<AppContext>().inner().clone();
             let backend_state = app.state::<Arc<DesktopBackendState>>().inner().clone();
             if let Err(error) = ensure_desktop_backend_started(&backend_state, &app_context) {
                 eprintln!("[desktop-backend] startup failed: {error}");
+            }
+            // Kanban's runtime is optional: a packaged build has no source
+            // checkout to run it from, and a shell without it is still a
+            // working Cline app. So a failure here logs and moves on rather
+            // than aborting setup — the `runtime` and `windows` capabilities
+            // simply have nothing to talk to, which the bridge already treats
+            // as a documented no-op.
+            let kanban_state = app.state::<Arc<kanban::KanbanRuntimeState>>().inner().clone();
+            if let Err(error) = kanban::ensure_kanban_runtime_started(&kanban_state, &app_context) {
+                eprintln!("[kanban-runtime] startup skipped: {error}");
             }
             // Dev builds are not installed app bundles, so there is nothing the
             // updater could meaningfully check or replace.
@@ -930,7 +942,10 @@ fn main() {
             drain_desktop_menu_actions,
             set_tray_status,
             kanban::kanban_handshake,
-            kanban::kanban_pick_directory
+            kanban::kanban_pick_directory,
+            kanban::kanban_runtime_endpoint,
+            kanban::kanban_restart_runtime,
+            kanban::kanban_open_project_window
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri app")
