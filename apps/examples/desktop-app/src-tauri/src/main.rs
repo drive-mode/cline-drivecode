@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod kanban;
+
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::fs;
@@ -926,7 +928,9 @@ fn main() {
             restart_to_apply_update,
             set_app_icon,
             drain_desktop_menu_actions,
-            set_tray_status
+            set_tray_status,
+            kanban::kanban_handshake,
+            kanban::kanban_pick_directory
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri app")
