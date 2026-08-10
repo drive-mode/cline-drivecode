@@ -2,26 +2,26 @@ import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { Command } from "commander";
 
 import type {
-	RuntimeAgentId,
-	RuntimeBoardCard,
-	RuntimeBoardColumnId,
-	RuntimeBoardDependency,
-	RuntimeClineReasoningEffort,
-	RuntimeTaskClineSettings,
-	RuntimeWorkspaceStateResponse,
+    RuntimeAgentId,
+    RuntimeBoardCard,
+    RuntimeBoardColumnId,
+    RuntimeBoardDependency,
+    RuntimeClineReasoningEffort,
+    RuntimeTaskClineSettings,
+    RuntimeWorkspaceStateResponse,
 } from "../core/api-contract";
-import { runtimeAgentIdSchema, runtimeClineReasoningEffortSchema } from "../core/api-contract";
+import { runtimeAgentIdSchema, runtimeClineReasoningEffortSchema, isDriveplanManagedCard } from "../core/api-contract";
 import { buildKanbanRuntimeUrl, getKanbanRuntimeOrigin, getRuntimeFetch } from "../core/runtime-endpoint";
 import {
-	addTaskDependency,
-	addTaskToColumn,
-	deleteTasksFromBoard,
-	getTaskColumnId,
-	moveTaskToColumn,
-	type RuntimeAddTaskDependencyResult,
-	removeTaskDependency,
-	trashTaskAndGetReadyLinkedTaskIds,
-	updateTask,
+    addTaskDependency,
+    addTaskToColumn,
+    deleteTasksFromBoard,
+    getTaskColumnId,
+    moveTaskToColumn,
+    type RuntimeAddTaskDependencyResult,
+    removeTaskDependency,
+    trashTaskAndGetReadyLinkedTaskIds,
+    updateTask,
 } from "../core/task-board-mutations";
 import { resolveProjectInputPath } from "../projects/project-path";
 import { loadWorkspaceContext, mutateWorkspaceState } from "../state/workspace-state";
@@ -483,6 +483,12 @@ async function createTask(input: {
 	autoReviewMode?: "commit" | "pr";
 	agentId?: RuntimeAgentId;
 	clineSettings?: RuntimeTaskClineSettings;
+	externalRef?: {
+		system: "driveplan";
+		driveTaskId: string;
+		driveRunId: string;
+		workItemId?: string;
+	};
 }): Promise<JsonRecord> {
 	const workspaceRepoPath = await resolveWorkspaceRepoPath(input.projectPath, input.cwd);
 	const workspaceId = await ensureRuntimeWorkspace(workspaceRepoPath);
@@ -504,6 +510,7 @@ async function createTask(input: {
 				agentId: input.agentId,
 				clineSettings: input.clineSettings,
 				baseRef: resolvedBaseRef,
+				...(input.externalRef ? { externalRef: input.externalRef } : {}),
 			},
 			() => globalThis.crypto.randomUUID(),
 		);
@@ -526,6 +533,7 @@ async function createTask(input: {
 			autoReviewEnabled: created.autoReviewEnabled === true,
 			autoReviewMode: created.autoReviewMode ?? "commit",
 			...(created.agentId ? { agentId: created.agentId } : {}),
+			...(created.externalRef ? { externalRef: created.externalRef } : {}),
 			...formatTaskClineSettings(created.clineSettings),
 		},
 	};
@@ -848,6 +856,10 @@ async function trashTaskById(input: {
 
 	const autoStartedTasks: JsonRecord[] = [];
 	for (const readyTaskId of mutation.value.readyTaskIds) {
+		const ready = findTaskRecord(mutation.state, readyTaskId);
+		if (ready && isDriveplanManagedCard(ready.task)) {
+			continue;
+		}
 		const started = await startTask({
 			cwd: input.cwd,
 			taskId: readyTaskId,

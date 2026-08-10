@@ -1,9 +1,9 @@
 import type {
-	RuntimeAgentId,
-	RuntimeBoardColumnId,
-	RuntimeTaskAutoReviewMode,
-	RuntimeTaskClineSettings,
-	RuntimeTaskImage,
+    RuntimeAgentId,
+    RuntimeBoardColumnId,
+    RuntimeTaskAutoReviewMode,
+    RuntimeTaskClineSettings,
+    RuntimeTaskImage,
 } from "@/runtime/types";
 
 export type BoardColumnId = RuntimeBoardColumnId;
@@ -49,6 +49,16 @@ export interface BoardCard {
 	baseRef: string;
 	createdAt: number;
 	updatedAt: number;
+	externalRef?: {
+		system: "driveplan";
+		driveTaskId: string;
+		driveRunId: string;
+		workItemId?: string;
+	};
+}
+
+export function isDriveplanManagedCard(card: Pick<BoardCard, "externalRef">): boolean {
+	return card.externalRef?.system === "driveplan";
 }
 
 export interface BoardColumn {

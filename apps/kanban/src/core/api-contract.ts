@@ -154,6 +154,16 @@ export const runtimeBoardCardSchema = z
 		baseRef: z.string(),
 		createdAt: z.number(),
 		updatedAt: z.number(),
+		/** DrivePlan managed projection (ARD-0018). Zod must keep this (not strip). */
+		externalRef: z
+			.object({
+				system: z.literal("driveplan"),
+				driveTaskId: z.string().min(1),
+				driveRunId: z.string().min(1),
+				workItemId: z.string().min(1).optional(),
+			})
+			.strict()
+			.optional(),
 	})
 	.transform(
 		({
@@ -168,14 +178,23 @@ export const runtimeBoardCardSchema = z
 				clineModelId: _legacyModelId,
 				clineReasoningEffort: _legacyReasoningEffort,
 			});
+			const managed = card.externalRef?.system === "driveplan";
 			return {
 				...card,
 				...(clineSettings !== undefined ? { clineSettings } : {}),
 				title: resolveTaskTitle(card.title, card.prompt),
+				// Managed DrivePlan cards: never auto-commit / auto-PR.
+				...(managed ? { autoReviewEnabled: false } : {}),
 			};
 		},
 	);
 export type RuntimeBoardCard = z.infer<typeof runtimeBoardCardSchema>;
+
+export function isDriveplanManagedCard(
+	card: Pick<RuntimeBoardCard, "externalRef"> | { externalRef?: RuntimeBoardCard["externalRef"] },
+): boolean {
+	return card.externalRef?.system === "driveplan";
+}
 
 export const runtimeBoardColumnSchema = z.object({
 	id: runtimeBoardColumnIdSchema,

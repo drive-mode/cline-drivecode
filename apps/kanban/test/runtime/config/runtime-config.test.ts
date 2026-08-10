@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { delimiter, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import {
 	loadGlobalRuntimeConfig,
@@ -11,6 +12,52 @@ import {
 	updateRuntimeConfig,
 } from "../../../src/config/runtime-config";
 import { createTempDir } from "../../utilities/temp-dir";
+
+// Settings live in `settings.yaml` for fresh installs and in a legacy
+// `config.json` where one already exists. These helpers resolve whichever is in
+// play so the assertions below describe behaviour ("settings were persisted")
+// rather than a filename. The YAML parser reads JSON too, since YAML is a
+// superset of it, so one reader covers both.
+const SETTINGS_DIR_SEGMENTS = [".cline", "kanban"] as const;
+
+/** The existing settings file, or null when none has been written yet. */
+function findSettingsFile(root: string): string | null {
+	for (const filename of ["settings.yaml", "config.json"]) {
+		const candidate = join(root, ...SETTINGS_DIR_SEGMENTS, filename);
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+	return null;
+}
+
+/**
+ * The path settings *would* use, mirroring `resolveSettingsPathInDir` in
+ * production: an existing file if there is one, otherwise the YAML path a write
+ * would create.
+ *
+ * This is deliberately distinct from `findSettingsFile`. `globalConfigPath` is
+ * always populated, including before anything has been persisted, so comparing
+ * it against a helper that returns null on a fresh home fails only where no
+ * config gets written — which is CI, where no agent binaries are installed and
+ * so auto-selection never persists anything. That is exactly how this was missed
+ * locally.
+ */
+function settingsPathFor(root: string): string {
+	return findSettingsFile(root) ?? join(root, ...SETTINGS_DIR_SEGMENTS, "settings.yaml");
+}
+
+function settingsFileExists(root: string): boolean {
+	return findSettingsFile(root) !== null;
+}
+
+function readSettings<T>(root: string): T {
+	const path = findSettingsFile(root);
+	if (!path) {
+		throw new Error(`No settings file under ${root}`);
+	}
+	return parseYaml(readFileSync(path, "utf8")) as T;
+}
 
 function withTemporaryEnv<T>(
 	input: {
@@ -98,9 +145,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				await withTemporaryEnv({ home: tempHome, pathPrefix: isolatedPath, replacePath: true }, async () => {
 					const state = await loadRuntimeConfig(tempProject);
 					expect(state.selectedAgentId).toBe("codex");
-					const persisted = JSON.parse(
-						readFileSync(join(tempHome, ".cline", "kanban", "config.json"), "utf8"),
-					) as {
+					const persisted = readSettings(tempHome) as {
 						selectedAgentId?: string;
 						agentAutonomousModeEnabled?: boolean;
 						readyForReviewNotificationsEnabled?: boolean;
@@ -145,7 +190,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				await withTemporaryEnv({ home: tempHome, pathPrefix: tempBin, replacePath: true }, async () => {
 					const state = await loadRuntimeConfig(tempProject);
 					expect(state.selectedAgentId).toBe("cline");
-					expect(existsSync(join(tempHome, ".cline", "kanban", "config.json"))).toBe(false);
+					expect(settingsFileExists(tempHome)).toBe(false);
 				});
 			} finally {
 				if (previousShell === undefined) {
@@ -167,7 +212,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 		try {
 			await withTemporaryEnv({ home: tempHome }, async () => {
 				const state = await loadRuntimeConfig(tempHome);
-				expect(state.globalConfigPath).toBe(join(tempHome, ".cline", "kanban", "config.json"));
+				expect(state.globalConfigPath).toBe(settingsPathFor(tempHome));
 				expect(state.projectConfigPath).toBeNull();
 				expect(state.shortcuts).toEqual([]);
 
@@ -177,9 +222,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				expect(updated.selectedAgentId).toBe("codex");
 				expect(updated.projectConfigPath).toBeNull();
 
-				const globalPayload = JSON.parse(
-					readFileSync(join(tempHome, ".cline", "kanban", "config.json"), "utf8"),
-				) as {
+				const globalPayload = readSettings(tempHome) as {
 					selectedAgentId?: string;
 					shortcuts?: unknown;
 				};
@@ -197,7 +240,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 		try {
 			await withTemporaryEnv({ home: tempHome }, async () => {
 				const state = await loadGlobalRuntimeConfig();
-				expect(state.globalConfigPath).toBe(join(tempHome, ".cline", "kanban", "config.json"));
+				expect(state.globalConfigPath).toBe(settingsPathFor(tempHome));
 				expect(state.projectConfigPath).toBeNull();
 				expect(state.shortcuts).toEqual([]);
 			});
@@ -296,9 +339,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 					openPrPromptTemplate: current.openPrPromptTemplateDefault,
 				});
 
-				const globalPayload = JSON.parse(
-					readFileSync(join(tempHome, ".cline", "kanban", "config.json"), "utf8"),
-				) as {
+				const globalPayload = readSettings(tempHome) as {
 					selectedAgentId?: string;
 					agentAutonomousModeEnabled?: boolean;
 					readyForReviewNotificationsEnabled?: boolean;
@@ -310,7 +351,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				expect(globalPayload.readyForReviewNotificationsEnabled).toBeUndefined();
 				expect(globalPayload.commitPromptTemplate).toBeUndefined();
 				expect(globalPayload.openPrPromptTemplate).toBeUndefined();
-				expect(existsSync(join(tempProject, ".cline", "kanban", "config.json"))).toBe(false);
+				expect(settingsFileExists(tempProject)).toBe(false);
 			});
 		} finally {
 			cleanupProject();
@@ -341,7 +382,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 					openPrPromptTemplate: current.openPrPromptTemplateDefault,
 				});
 
-				expect(existsSync(join(tempProject, ".cline", "kanban", "config.json"))).toBe(false);
+				expect(settingsFileExists(tempProject)).toBe(false);
 			});
 		} finally {
 			cleanupProject();
@@ -367,13 +408,13 @@ describe.sequential("runtime-config auto agent selection", () => {
 					commitPromptTemplate: current.commitPromptTemplateDefault,
 					openPrPromptTemplate: current.openPrPromptTemplateDefault,
 				});
-				expect(existsSync(join(tempProject, ".cline", "kanban", "config.json"))).toBe(true);
+				expect(settingsFileExists(tempProject)).toBe(true);
 
 				await updateRuntimeConfig(tempProject, {
 					shortcuts: [],
 				});
 
-				expect(existsSync(join(tempProject, ".cline", "kanban", "config.json"))).toBe(false);
+				expect(settingsFileExists(tempProject)).toBe(false);
 			});
 		} finally {
 			cleanupProject();
@@ -394,9 +435,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				});
 				expect(updated.selectedAgentId).toBe("codex");
 
-				const globalPayload = JSON.parse(
-					readFileSync(join(tempHome, ".cline", "kanban", "config.json"), "utf8"),
-				) as {
+				const globalPayload = readSettings(tempHome) as {
 					selectedAgentId?: string;
 					selectedShortcutLabel?: string;
 					agentAutonomousModeEnabled?: boolean;
@@ -426,9 +465,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				});
 				expect(updated.agentAutonomousModeEnabled).toBe(false);
 
-				const globalPayload = JSON.parse(
-					readFileSync(join(tempHome, ".cline", "kanban", "config.json"), "utf8"),
-				) as {
+				const globalPayload = readSettings(tempHome) as {
 					agentAutonomousModeEnabled?: boolean;
 				};
 				expect(globalPayload.agentAutonomousModeEnabled).toBe(false);
@@ -469,6 +506,96 @@ describe.sequential("runtime-config auto agent selection", () => {
 		} finally {
 			cleanupProject();
 			cleanupHome();
+		}
+	});
+});
+
+describe("settings file format", () => {
+	it("writes settings.yaml on a fresh install", async () => {
+		const { path: tempHome, cleanup } = createTempDir("kanban-home-settings-fresh-");
+
+		try {
+			await withTemporaryEnv({ home: tempHome }, async () => {
+				await updateRuntimeConfig(tempHome, { selectedAgentId: "codex" });
+
+				const written = findSettingsFile(tempHome);
+				expect(written).toBe(join(tempHome, ".cline", "kanban", "settings.yaml"));
+				expect(existsSync(join(tempHome, ".cline", "kanban", "config.json"))).toBe(false);
+
+				// Readable as YAML, not just as JSON that happens to parse.
+				const raw = readFileSync(written as string, "utf8");
+				expect(raw.startsWith("{")).toBe(false);
+				expect(raw).toContain("selectedAgentId: codex");
+			});
+		} finally {
+			cleanup();
+		}
+	});
+
+	// An installation that already has config.json must keep using it. Silently
+	// rewriting a user's file into another format on first save would be a
+	// surprising thing for an app to do to a file the user may be tracking in git.
+	it("keeps writing json when a legacy config.json already exists", async () => {
+		const { path: tempHome, cleanup } = createTempDir("kanban-home-settings-legacy-");
+
+		try {
+			const configDir = join(tempHome, ".cline", "kanban");
+			mkdirSync(configDir, { recursive: true });
+			writeFileSync(join(configDir, "config.json"), JSON.stringify({ selectedAgentId: "claude" }), "utf8");
+
+			await withTemporaryEnv({ home: tempHome }, async () => {
+				const loaded = await loadRuntimeConfig(tempHome);
+				expect(loaded.selectedAgentId).toBe("claude");
+
+				await updateRuntimeConfig(tempHome, { selectedAgentId: "codex" });
+
+				expect(existsSync(join(configDir, "settings.yaml"))).toBe(false);
+				const raw = readFileSync(join(configDir, "config.json"), "utf8");
+				expect(JSON.parse(raw).selectedAgentId).toBe("codex");
+			});
+		} finally {
+			cleanup();
+		}
+	});
+
+	it("reads a hand-written yaml file, comments and all", async () => {
+		const { path: tempHome, cleanup } = createTempDir("kanban-home-settings-handwritten-");
+
+		try {
+			const configDir = join(tempHome, ".cline", "kanban");
+			mkdirSync(configDir, { recursive: true });
+			writeFileSync(
+				join(configDir, "settings.yaml"),
+				"# turned this off while pairing\nagentAutonomousModeEnabled: false\nselectedAgentId: codex\n",
+				"utf8",
+			);
+
+			await withTemporaryEnv({ home: tempHome }, async () => {
+				const loaded = await loadRuntimeConfig(tempHome);
+				expect(loaded.selectedAgentId).toBe("codex");
+				expect(loaded.agentAutonomousModeEnabled).toBe(false);
+			});
+		} finally {
+			cleanup();
+		}
+	});
+
+	// A settings file the user broke while hand-editing must not stop the runtime
+	// from starting. Falling back to defaults is recoverable; refusing to boot is not.
+	it("falls back to defaults when the yaml is malformed", async () => {
+		const { path: tempHome, cleanup } = createTempDir("kanban-home-settings-malformed-");
+
+		try {
+			const configDir = join(tempHome, ".cline", "kanban");
+			mkdirSync(configDir, { recursive: true });
+			writeFileSync(join(configDir, "settings.yaml"), "{ this: is: not: valid", "utf8");
+
+			await withTemporaryEnv({ home: tempHome }, async () => {
+				const loaded = await loadRuntimeConfig(tempHome);
+				expect(loaded.agentAutonomousModeEnabled).toBe(true);
+			});
+		} finally {
+			cleanup();
 		}
 	});
 });

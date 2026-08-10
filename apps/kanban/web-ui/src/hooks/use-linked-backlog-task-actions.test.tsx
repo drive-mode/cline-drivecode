@@ -272,6 +272,67 @@ describe("useLinkedBacklogTaskActions", () => {
 		expect(trackTasksAutoStartedFromDependencyMock).toHaveBeenCalledWith(1);
 	});
 
+	it("does not auto-start a DrivePlan-managed card unblocked by a trash", async () => {
+		// DrivePlan gates admission for the cards it manages, behind waves its
+		// run spec knows about and Kanban does not. Starting one because an
+		// unrelated task was trashed runs it ahead of a gate that has not
+		// opened. The CLI trash path already skipped these; this covers the
+		// browser path, which is the one users actually take.
+		let latestSnapshot: HookSnapshot | null = null;
+		const kickoffTaskInProgress = vi.fn(async () => true);
+		// Param typed so `mock.calls[0][0]` is a BoardCard rather than an empty
+		// tuple; an untyped `vi.fn(async () => true)` typechecks here but makes
+		// the assertion below unwritable.
+		const startBacklogTaskWithAnimation = vi.fn(async (_task: BoardCard) => true);
+		const boardFactory = () => {
+			const board = createBoard([
+				{ id: "dep-1", fromTaskId: "task-1", toTaskId: "task-2", createdAt: 10 },
+				{ id: "dep-2", fromTaskId: "task-3", toTaskId: "task-2", createdAt: 11 },
+			]);
+			const backlog = board.columns.find((column) => column.id === "backlog");
+			const managed = backlog?.cards.find((card) => card.id === "task-1");
+			if (managed) {
+				managed.externalRef = {
+					system: "driveplan",
+					driveTaskId: "wi-1",
+					driveRunId: "run-1",
+				};
+			}
+			return board;
+		};
+
+		await act(async () => {
+			root.render(
+				<HookHarness
+					boardFactory={boardFactory}
+					kickoffTaskInProgress={kickoffTaskInProgress}
+					startBacklogTaskWithAnimation={startBacklogTaskWithAnimation}
+					onSnapshot={(snapshot) => {
+						latestSnapshot = snapshot;
+					}}
+				/>,
+			);
+		});
+
+		if (latestSnapshot === null) {
+			throw new Error("Expected a hook snapshot.");
+		}
+		const initialSnapshot = latestSnapshot as HookSnapshot;
+		const reviewTask = initialSnapshot.board.columns.find((column) => column.id === "review")?.cards[0];
+		if (!reviewTask) {
+			throw new Error("Expected a review task.");
+		}
+
+		await act(async () => {
+			await initialSnapshot.confirmMoveTaskToTrash(reviewTask, initialSnapshot.board);
+		});
+
+		// task-3 is unmanaged and still starts — the guard is per-card, not a
+		// blanket stop on auto-start once any managed card is involved.
+		expect(startBacklogTaskWithAnimation).toHaveBeenCalledTimes(1);
+		expect(startBacklogTaskWithAnimation.mock.calls[0]?.[0]).toMatchObject({ id: "task-3" });
+	});
+
 	it("stops the main task session and its detail terminal shell when a task is trashed", async () => {
 		let latestSnapshot: HookSnapshot | null = null;
 		const stopTaskSession = vi.fn(async (_taskId: string) => {});

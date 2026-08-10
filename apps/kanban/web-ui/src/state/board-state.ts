@@ -6,16 +6,16 @@ import { createInitialBoardData } from "@/data/board-data";
 import type { RuntimeAgentId, RuntimeClineReasoningEffort, RuntimeTaskClineSettings } from "@/runtime/types";
 import { isAllowedCrossColumnCardMove, type ProgrammaticCardMoveInFlight } from "@/state/drag-rules";
 import {
-	type BoardCard,
-	type BoardColumn,
-	type BoardColumnId,
-	type BoardData,
-	type BoardDependency,
-	type CardSelection,
-	DEFAULT_TASK_AUTO_REVIEW_MODE,
-	resolveTaskAutoReviewMode,
-	type TaskAutoReviewMode,
-	type TaskImage,
+    type BoardCard,
+    type BoardColumn,
+    type BoardColumnId,
+    type BoardData,
+    type BoardDependency,
+    type CardSelection,
+    DEFAULT_TASK_AUTO_REVIEW_MODE,
+    resolveTaskAutoReviewMode,
+    type TaskAutoReviewMode,
+    type TaskImage,
 } from "@/types";
 
 export interface TaskDraft {
@@ -164,6 +164,7 @@ function normalizeCard(rawCard: unknown): BoardCard | null {
 		clineReasoningEffort?: unknown;
 		createdAt?: unknown;
 		updatedAt?: unknown;
+		externalRef?: unknown;
 	};
 	const prompt = typeof card.prompt === "string" ? card.prompt.trim() : "";
 	if (!prompt) {
@@ -185,13 +186,35 @@ function normalizeCard(rawCard: unknown): BoardCard | null {
 	});
 
 	const now = Date.now();
+	const externalRefRaw = card.externalRef;
+	const externalRef =
+		externalRefRaw &&
+		typeof externalRefRaw === "object" &&
+		(externalRefRaw as { system?: unknown }).system === "driveplan" &&
+		typeof (externalRefRaw as { driveTaskId?: unknown }).driveTaskId === "string" &&
+		typeof (externalRefRaw as { driveRunId?: unknown }).driveRunId === "string"
+			? {
+					system: "driveplan" as const,
+					driveTaskId: String((externalRefRaw as { driveTaskId: string }).driveTaskId),
+					driveRunId: String((externalRefRaw as { driveRunId: string }).driveRunId),
+					...((externalRefRaw as { workItemId?: unknown }).workItemId &&
+					typeof (externalRefRaw as { workItemId?: unknown }).workItemId === "string"
+						? { workItemId: String((externalRefRaw as { workItemId: string }).workItemId) }
+						: {}),
+				}
+			: undefined;
+	const managed = externalRef?.system === "driveplan";
 
 	return {
 		id: typeof card.id === "string" && card.id ? card.id : createShortTaskId(createBrowserUuid),
 		title,
 		prompt,
 		startInPlanMode: typeof card.startInPlanMode === "boolean" ? card.startInPlanMode : false,
-		autoReviewEnabled: typeof card.autoReviewEnabled === "boolean" ? card.autoReviewEnabled : false,
+		autoReviewEnabled: managed
+			? false
+			: typeof card.autoReviewEnabled === "boolean"
+				? card.autoReviewEnabled
+				: false,
 		autoReviewMode: resolveTaskAutoReviewMode(
 			typeof card.autoReviewMode === "string" ? (card.autoReviewMode as TaskAutoReviewMode) : undefined,
 		),
@@ -199,6 +222,7 @@ function normalizeCard(rawCard: unknown): BoardCard | null {
 		baseRef,
 		...(typeof card.agentId === "string" && card.agentId ? { agentId: card.agentId as RuntimeAgentId } : {}),
 		...(clineSettings !== undefined ? { clineSettings } : {}),
+		...(externalRef ? { externalRef } : {}),
 		createdAt: typeof card.createdAt === "number" ? card.createdAt : now,
 		updatedAt: typeof card.updatedAt === "number" ? card.updatedAt : now,
 	};

@@ -11,6 +11,7 @@ import {
 	trashTaskAndGetReadyLinkedTaskIds,
 } from "@/state/board-state";
 import { trackTaskDependencyCreated, trackTasksAutoStartedFromDependency } from "@/telemetry/events";
+import { isDriveplanManagedCard } from "@/types/board";
 import type { BoardCard, BoardColumnId, BoardData } from "@/types";
 import { getNextDetailTaskIdAfterTrashMove } from "@/utils/detail-view-task-order";
 
@@ -124,7 +125,14 @@ export function useLinkedBacklogTaskActions({
 
 			const readyTasks = trashed.readyTaskIds
 				.map((readyTaskId) => findCardSelection(trashed.board, readyTaskId)?.card ?? null)
-				.filter((readyTask): readyTask is BoardCard => readyTask !== null);
+				.filter((readyTask): readyTask is BoardCard => readyTask !== null)
+				// DrivePlan owns admission for the cards it manages: its run spec
+				// decides when a work item may start, behind gates Kanban cannot
+				// see. Auto-starting one because an unrelated task was trashed
+				// would run it ahead of a gate that has not opened. The CLI trash
+				// path already skips these; this is the same rule for the browser,
+				// which is the path users actually take.
+				.filter((readyTask) => !isDriveplanManagedCard(readyTask));
 
 			if (readyTasks.length > 0) {
 				maybeRequestNotificationPermissionForTaskStart();
