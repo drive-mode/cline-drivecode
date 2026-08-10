@@ -37,6 +37,9 @@ export const CMD_PICK_DIRECTORY = "kanban_pick_directory";
 /** Replace the app-actions section of the native menu. */
 export const CMD_PUBLISH_MENU_ACTIONS = "kanban_publish_menu_actions";
 
+/** Hold or release the system wake lock while agents work. */
+export const CMD_SET_WAKE_LOCK = "kanban_set_wake_lock";
+
 /** One-line presence summary for the tray tooltip. */
 export const CMD_SET_TRAY_SUMMARY = "kanban_set_tray_summary";
 

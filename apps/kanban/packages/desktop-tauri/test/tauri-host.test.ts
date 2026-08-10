@@ -7,6 +7,7 @@ import {
 	CMD_PUBLISH_MENU_ACTIONS,
 	CMD_RESTART_RUNTIME,
 	CMD_SET_TRAY_SUMMARY,
+	CMD_SET_WAKE_LOCK,
 	EVENT_MENU_ACTION_INVOKED,
 } from "../src/commands.js";
 import { createTauriDesktopHost } from "../src/tauri-host.js";
@@ -411,5 +412,46 @@ describe("declared capabilities", () => {
 		);
 
 		expect(host?.declaredCapabilities).toEqual(["presence"]);
+	});
+});
+
+describe("wake lock", () => {
+	it("asks the host to hold the system awake when work starts", async () => {
+		const fake = makeFake();
+		const host = await makeHost(fake);
+		host?.presence?.setWorkInFlight(true);
+
+		expect(fake.invoke).toHaveBeenCalledWith(CMD_SET_WAKE_LOCK, {
+			active: true,
+		});
+	});
+
+	it("releases it when work stops", async () => {
+		const fake = makeFake();
+		const host = await makeHost(fake);
+		host?.presence?.setWorkInFlight(false);
+
+		expect(fake.invoke).toHaveBeenCalledWith(CMD_SET_WAKE_LOCK, {
+			active: false,
+		});
+	});
+
+	it("logs rather than swallowing a failure", async () => {
+		// The badge and tray failures are swallowed on purpose; this one is
+		// not. A wake lock that fails to take means the machine suspends
+		// mid-run, and the user needs some record of why agents stopped.
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const fake = makeFake();
+		fake.invoke.mockImplementation(async (command: string) => {
+			if (command === CMD_HANDSHAKE) return FULL_HANDSHAKE;
+			throw new Error("no wake lock available");
+		});
+		const host = await makeHost(fake);
+
+		host?.presence?.setWorkInFlight(true);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(warn).toHaveBeenCalled();
 	});
 });

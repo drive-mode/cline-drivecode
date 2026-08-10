@@ -11,7 +11,7 @@
 
 import type { PresenceView } from "@kanban/desktop-bridge";
 
-import { CMD_SET_TRAY_SUMMARY } from "./commands.js";
+import { CMD_SET_TRAY_SUMMARY, CMD_SET_WAKE_LOCK } from "./commands.js";
 import {
 	USER_ATTENTION_INFORMATIONAL,
 	type TauriSurface,
@@ -55,6 +55,20 @@ export function createTauriPresenceView(
 			void opts.surface
 				.invoke(CMD_SET_TRAY_SUMMARY, { summary })
 				.catch(() => {});
+		},
+		setWorkInFlight(active) {
+			// Not swallowed like the others. A badge that fails to update is
+			// cosmetic; a wake lock that fails to take means the machine
+			// suspends mid-run, and the user needs some record of why their
+			// agents stopped.
+			void opts.surface
+				.invoke(CMD_SET_WAKE_LOCK, { active })
+				.catch((err: unknown) => {
+					console.warn(
+						`[desktop] Failed to ${active ? "acquire" : "release"} the wake lock:`,
+						err instanceof Error ? err.message : err,
+					);
+				});
 		},
 	};
 }

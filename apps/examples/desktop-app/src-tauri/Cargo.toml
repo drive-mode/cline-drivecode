@@ -13,6 +13,10 @@ tauri = { version = "2.11.1", features = ["image-png", "tray-icon"] }
 tauri-plugin-updater = "2"
 tokio = { version = "1", features = ["time"] }
 rfd = "0.15"
+# Sleep prevention while agents are working. Replaces the Electron host's
+# powerSaveBlocker, whose loss would let the machine suspend mid-run — the
+# exact scenario the product exists to let you walk away from.
+keepawake = "0.6"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"

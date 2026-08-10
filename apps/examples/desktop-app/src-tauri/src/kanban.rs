@@ -452,6 +452,133 @@ pub fn ensure_kanban_runtime_started_with(
     Ok(())
 }
 
+/// Holds the system awake while Kanban reports work in flight.
+///
+/// This is the Electron host's `powerSaveBlocker.start("prevent-app-suspension")`,
+/// and losing it would quietly undo the product's premise: the whole point of
+/// leaving agents running is that you walk away, and a machine that suspends
+/// ten minutes later stops them mid-task. It is the one desktop feature whose
+/// absence is invisible until it costs someone a run.
+///
+/// Held as an `Option` because the guard releases on drop — clearing it *is*
+/// the release, so the state is the lock.
+/// Holder set and OS guard behind **one** mutex, deliberately.
+///
+/// They were two, and that was a race: `reconcile` read the holder set,
+/// released that lock, then took the guard lock. Between those steps another
+/// window could claim and acquire, and the first thread would then apply its
+/// stale "nobody is holding" snapshot and drop the lock — leaving bookkeeping
+/// that says work is in flight and no lock to match. Presence is
+/// edge-triggered, so the still-working window never re-sends `true` and the
+/// machine sleeps mid-run.
+///
+/// Lock ordering discipline would have fixed it, but not durably: it survives
+/// only as long as everyone touching this remembers. One mutex makes the
+/// inconsistent state unrepresentable. The cost is holding it across the
+/// acquisition syscall, which is short and uncontended.
+#[derive(Default)]
+struct WakeLockInner {
+    /// Labels of windows currently reporting work in flight.
+    ///
+    /// The lock is app-wide but the signal is per-window: every project
+    /// window runs its own renderer with its own `PresenceController` and its
+    /// own running count. Treating the latest `false` as "release" let one
+    /// window finishing suspend the machine while another still had agents
+    /// working. The lock is therefore held while *any* window claims it.
+    holders: std::collections::HashSet<String>,
+    guard: Option<keepawake::KeepAwake>,
+}
+
+impl WakeLockInner {
+    /// Bring the OS guard in line with the holder set. Callers already hold
+    /// the mutex, which is what makes this atomic with respect to the set.
+    fn reconcile(&mut self) -> Result<(), String> {
+        match (!self.holders.is_empty(), self.guard.is_some()) {
+            (true, false) => {
+                let lock = keepawake::Builder::default()
+                    // Idle only: the display may sleep, the machine may not. A
+                    // desktop that also refuses to blank the screen for hours
+                    // of background work is a battery and burn-in problem, and
+                    // is not what the Electron host did either.
+                    .idle(true)
+                    .reason("Cline Kanban agents are working")
+                    .app_name("Cline Code")
+                    .create()
+                    .map_err(|error| format!("failed to acquire wake lock: {error}"))?;
+                self.guard = Some(lock);
+            }
+            // Dropping the guard releases the lock.
+            (false, true) => self.guard = None,
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+pub struct KanbanWakeLockState {
+    inner: Mutex<WakeLockInner>,
+}
+
+impl KanbanWakeLockState {
+    fn set(&self, window_label: &str, active: bool) -> Result<(), String> {
+        let Ok(mut inner) = self.inner.lock() else {
+            return Err("failed to lock wake-lock state".to_string());
+        };
+        if active {
+            inner.holders.insert(window_label.to_string());
+        } else {
+            inner.holders.remove(window_label);
+        }
+        inner.reconcile()
+    }
+
+    /// Drop a window's claim outright.
+    ///
+    /// A window closed mid-run never sends its `false`, and without this its
+    /// claim would outlive it and hold the machine awake forever — the
+    /// mirror-image bug of releasing too early, and the harder one to notice
+    /// because nothing visibly breaks.
+    pub fn release_window(&self, window_label: &str) {
+        let Ok(mut inner) = self.inner.lock() else {
+            return;
+        };
+        if inner.holders.remove(window_label) {
+            let _ = inner.reconcile();
+        }
+    }
+
+    /// Whether any window currently claims the lock.
+    ///
+    /// This, not the OS guard, is what the tests assert on — and the
+    /// distinction is load-bearing. A headless box has no session bus, so
+    /// `keepawake` fails with ENOENT and the guard is never populated there.
+    /// Tests written against the guard passed on such a box by skipping,
+    /// which reads as coverage while asserting nothing. The bug this
+    /// bookkeeping exists to prevent — one window releasing another's claim —
+    /// lives here, so here is where it can be tested honestly.
+    #[cfg(test)]
+    fn wants_lock(&self) -> bool {
+        self.inner
+            .lock()
+            .map(|inner| !inner.holders.is_empty())
+            .unwrap_or(false)
+    }
+}
+
+/// Called by the bridge's presence controller whenever the in-flight count
+/// crosses zero in either direction.
+#[tauri::command]
+pub fn kanban_set_wake_lock(
+    window: tauri::Window,
+    state: State<'_, Arc<KanbanWakeLockState>>,
+    active: bool,
+) -> Result<(), String> {
+    // Keyed on the calling window: see `holders` for why a single boolean is
+    // not enough once more than one project window exists.
+    state.set(window.label(), active)
+}
+
 #[tauri::command]
 pub fn kanban_runtime_endpoint(state: State<'_, Arc<KanbanRuntimeState>>) -> Option<String> {
     state.endpoint()
@@ -695,5 +822,172 @@ mod supervision_tests {
     #[test]
     fn unreserved_url_characters_survive_encoding_unchanged() {
         assert_eq!(urlencode("Aa0-_.~"), "Aa0-_.~");
+    }
+}
+
+#[cfg(test)]
+mod wake_lock_tests {
+    use super::*;
+
+    const WIN_A: &str = "kanban-project-a";
+    const WIN_B: &str = "kanban-project-b";
+
+    // These assert on `wants_lock()` rather than on the OS guard on purpose.
+    // Acquiring a real lock needs a session bus that CI does not have, so
+    // guard-based assertions silently skip exactly where they most need to
+    // run. `set` still returns the acquisition error for the caller to log;
+    // the bookkeeping it updates is correct either way.
+
+    #[test]
+    fn starts_with_no_claim() {
+        assert!(!KanbanWakeLockState::default().wants_lock());
+    }
+
+    #[test]
+    fn a_window_claiming_holds_the_lock() {
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+
+        assert!(state.wants_lock());
+    }
+
+    #[test]
+    fn claiming_twice_still_needs_only_one_release() {
+        // Presence is edge-triggered, but a reconnecting renderer replays the
+        // edge. Stacking claims would mean two releases before the machine
+        // could ever sleep.
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+        let _ = state.set(WIN_A, true);
+
+        let _ = state.set(WIN_A, false);
+
+        assert!(!state.wants_lock());
+    }
+
+    #[test]
+    fn a_release_without_a_claim_is_harmless() {
+        // The first presence update can report zero running tasks, sending
+        // `false` before anything was ever claimed.
+        let state = KanbanWakeLockState::default();
+
+        let _ = state.set(WIN_A, false);
+
+        assert!(!state.wants_lock());
+    }
+
+    #[test]
+    fn one_window_finishing_does_not_release_anothers_claim() {
+        // The regression this pins. Every project window runs its own
+        // PresenceController with its own running count, so window A hitting
+        // zero used to release an app-wide lock window B still needed —
+        // suspending the machine with B's agents mid-task.
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+        let _ = state.set(WIN_B, true);
+
+        let _ = state.set(WIN_A, false);
+
+        assert!(state.wants_lock(), "B still has work in flight");
+    }
+
+    #[test]
+    fn the_claim_drops_once_the_last_window_finishes() {
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+        let _ = state.set(WIN_B, true);
+
+        let _ = state.set(WIN_A, false);
+        let _ = state.set(WIN_B, false);
+
+        assert!(!state.wants_lock());
+    }
+
+    #[test]
+    fn a_closed_window_does_not_claim_the_lock_forever() {
+        // The mirror-image bug, and the harder one to notice: a window closed
+        // mid-run never sends its `false`, so without an explicit release its
+        // claim would outlive it and keep the machine awake indefinitely with
+        // nothing visibly wrong.
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+
+        state.release_window(WIN_A);
+
+        assert!(!state.wants_lock());
+    }
+
+    #[test]
+    fn concurrent_claims_and_releases_leave_consistent_state() {
+        // The race this pins: holder set and OS guard used to sit behind
+        // separate mutexes, so a thread could read "nobody holding", lose the
+        // CPU while another window claimed and acquired, then apply its stale
+        // snapshot and drop the lock. Bookkeeping would say work was in
+        // flight with no lock to match, and edge-triggered presence would
+        // never re-send.
+        //
+        // One mutex makes that unrepresentable. This exercises the interleave
+        // it would have needed, and asserts the invariant afterwards.
+        let state = Arc::new(KanbanWakeLockState::default());
+        let handles: Vec<_> = (0..16)
+            .map(|i| {
+                let state = state.clone();
+                let label = format!("kanban-project-{}", i % 4);
+                thread::spawn(move || {
+                    for _ in 0..50 {
+                        let _ = state.set(&label, true);
+                        let _ = state.set(&label, false);
+                    }
+                })
+            })
+            .collect();
+        for handle in handles {
+            handle.join().expect("no thread should panic");
+        }
+
+        // Every claim was paired with a release, so nothing may be left held.
+        assert!(!state.wants_lock());
+    }
+
+    #[test]
+    fn a_surviving_claim_outlives_a_concurrent_release_storm() {
+        // The asymmetric case, which is the one that actually bites: one
+        // window keeps working while others churn. Its claim must still stand
+        // at the end.
+        let state = Arc::new(KanbanWakeLockState::default());
+        let _ = state.set("kanban-project-long-runner", true);
+
+        let handles: Vec<_> = (0..8)
+            .map(|i| {
+                let state = state.clone();
+                let label = format!("kanban-project-churn-{i}");
+                thread::spawn(move || {
+                    for _ in 0..50 {
+                        let _ = state.set(&label, true);
+                        let _ = state.set(&label, false);
+                    }
+                })
+            })
+            .collect();
+        for handle in handles {
+            handle.join().expect("no thread should panic");
+        }
+
+        assert!(
+            state.wants_lock(),
+            "the long-running window's claim must survive the churn"
+        );
+    }
+
+    #[test]
+    fn closing_an_unrelated_window_leaves_other_claims_alone() {
+        // Every window destroy calls this, including windows that never ran
+        // anything.
+        let state = KanbanWakeLockState::default();
+        let _ = state.set(WIN_A, true);
+
+        state.release_window("kanban-project-never-claimed");
+
+        assert!(state.wants_lock(), "A's claim must survive an unrelated close");
     }
 }
