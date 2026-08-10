@@ -7,7 +7,6 @@
         "apps/vscode/webview-ui",
         "apps/vscode/testing-platform",
         "apps/cline-hub/src/webview",
-        "apps/kanban/packages/desktop",
         "apps/kanban/packages/desktop-bridge",
         "apps/kanban/packages/desktop-tauri",
         "apps/kanban/web-ui",
@@ -96,7 +95,6 @@
     },
     "trustedDependencies": [
         "better-sqlite3",
-        "electron",
         "grpc-tools"
     ],
     "packageManager": "bun@1.3.13",

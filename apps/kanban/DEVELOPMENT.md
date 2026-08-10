@@ -3,12 +3,16 @@
 ## Requirements
 
 - Node.js 20+
-- npm 10+
+- Bun 1.3.13+
 
 ## Install
 
+Kanban is a member of the repository's bun workspace, so dependencies are
+installed from the repository root rather than here — installing in this
+directory alone leaves `@cline/*` unresolved.
+
 ```bash
-npm run install:all
+bun install
 ```
 
 ## Hot reload workflow
