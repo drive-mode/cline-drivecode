@@ -70,6 +70,13 @@ jobs:
               working-directory: apps/kanban/web-ui
               run: bunx tsc --noEmit
 
+            # The bridge carries every desktop policy decision and is compiled
+            # without @types/node on purpose, so a `node:` import that would
+            # break the renderer bundle fails here rather than at bundle time.
+            - name: Typecheck desktop bridge
+              working-directory: apps/kanban/packages/desktop-bridge
+              run: bunx tsc -p tsconfig.json --noEmit
+
             - name: Typecheck desktop shell
               working-directory: apps/kanban/packages/desktop
               run: bunx tsc -p tsconfig.json --noEmit
@@ -83,6 +90,10 @@ jobs:
 
             - name: Test web UI
               working-directory: apps/kanban/web-ui
+              run: bunx vitest run
+
+            - name: Test desktop bridge
+              working-directory: apps/kanban/packages/desktop-bridge
               run: bunx vitest run
 
             - name: Test desktop shell
