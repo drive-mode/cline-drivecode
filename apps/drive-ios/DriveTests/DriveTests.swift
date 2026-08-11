@@ -41,4 +41,30 @@ final class DriveTests: XCTestCase {
 		XCTAssertFalse(session.showApproval)
 		XCTAssertFalse(session.turnInFlight)
 	}
+
+	func testRaisedHandPausesAfterCurrentStepFinishes() async {
+		let session = DemoSession(interruptDelay: .milliseconds(1))
+
+		session.watchLive()
+		session.toggleHand()
+		XCTAssertEqual(session.interruptPhase, .finishing)
+
+		try? await Task.sleep(for: .milliseconds(20))
+
+		XCTAssertEqual(session.interruptPhase, .paused)
+		XCTAssertFalse(session.turnInFlight)
+	}
+
+	func testLoweringHandCancelsPendingPause() async {
+		let session = DemoSession(interruptDelay: .milliseconds(5))
+
+		session.watchLive()
+		session.toggleHand()
+		session.toggleHand()
+
+		try? await Task.sleep(for: .milliseconds(20))
+
+		XCTAssertEqual(session.interruptPhase, .idle)
+		XCTAssertTrue(session.turnInFlight)
+	}
 }
