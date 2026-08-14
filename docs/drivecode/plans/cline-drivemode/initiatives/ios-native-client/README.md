@@ -33,10 +33,10 @@ hand and leave, approval/deny, text steering, then voice.
   Browse, and Settings.
 - Every iOS data surface is backed by `DemoSession` / `DemoData`; there is
   no network client or live Hub state.
-- The Xcode project has one application target and no unit or UI-test target.
-- The checked-in project currently uses Swift language mode 5.
-- The workstation has a Swift 6.3.3 command-line toolchain, but full Xcode is
-  not installed or selected. Bun is also not currently on `PATH`.
+- The shared Xcode scheme now includes application, unit-test, and UI-test
+  targets, with a green Xcode 26.6 Simulator baseline in CI.
+- All three targets use Swift 6 language mode with complete concurrency
+  checking. The fixture delay task is explicitly owned and cancellable.
 
 The shell is therefore a completed **demo slice**, not a completed product
 client. The [multi-device matrix](../multi-device/MATRIX.md) keeps fixture-only
