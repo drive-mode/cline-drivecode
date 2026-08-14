@@ -1,3 +1,4 @@
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { resolveLocalAgentActivitySocket } from "./integration"
 
@@ -8,7 +9,7 @@ describe("resolveLocalAgentActivitySocket", () => {
 
 	it("uses Loco's default state path when enabled", () => {
 		expect(resolveLocalAgentActivitySocket({ DRIVEMODE_LOCAL_AGENT_ACTIVITY: "1" }, "/Users/tester")).toBe(
-			"/Users/tester/.local/state/local-agent/activity.sock",
+			join("/Users/tester", ".local", "state", "local-agent", "activity.sock"),
 		)
 	})
 
@@ -18,7 +19,7 @@ describe("resolveLocalAgentActivitySocket", () => {
 				{ DRIVEMODE_LOCAL_AGENT_ACTIVITY: "1", LOCAL_AGENT_STATE_DIR: "/private/loco-state" },
 				"/Users/tester",
 			),
-		).toBe("/private/loco-state/activity.sock")
+		).toBe(join("/private/loco-state", "activity.sock"))
 	})
 
 	it("lets an absolute socket override opt in directly", () => {
