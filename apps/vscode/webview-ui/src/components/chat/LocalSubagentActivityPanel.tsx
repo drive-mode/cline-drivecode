@@ -117,7 +117,9 @@ function AgentLane({ agent }: { agent: LocalAgentActivityLane }) {
 	const terminalFailure = agent.phase === "failed" || agent.phase === "rejected" || agent.phase === "canceled"
 	const model = shortModelName(agent.model)
 	const timing = agent.ttftMs !== undefined ? `TTFT ${formatDuration(agent.ttftMs)}` : "TTFT —"
-	const speed =
+	const prefillSpeed =
+		agent.prefillTokensPerSecond !== undefined ? `${agent.prefillTokensPerSecond.toFixed(1)} tok/s prefill` : "Prefill rate —"
+	const decodeSpeed =
 		agent.decodeTokensPerSecond !== undefined ? `${agent.decodeTokensPerSecond.toFixed(1)} tok/s decode` : "Decode rate —"
 
 	return (
@@ -163,7 +165,8 @@ function AgentLane({ agent }: { agent: LocalAgentActivityLane }) {
 				<span>{formatCount(agent.promptTokens ?? agent.estimatedInputTokens)} in</span>
 				<span>{formatCount(agent.completionTokens)} out</span>
 				<span>{timing}</span>
-				<span>{speed}</span>
+				<span>{prefillSpeed}</span>
+				<span>{decodeSpeed}</span>
 				<span>{agent.elapsedMs === undefined ? "Elapsed —" : `${formatDuration(agent.elapsedMs)} elapsed`}</span>
 				<span>{agent.slotsReserved === undefined ? "Slot —" : `${agent.slotsReserved} slot weight`}</span>
 			</div>

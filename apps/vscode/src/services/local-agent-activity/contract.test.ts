@@ -13,6 +13,8 @@ describe("local agent activity contract", () => {
 			parent_request_id: "drive:tool-call-17",
 			route: "candidate",
 			model: "mlx-community/Qwen3.8-27B-4bit",
+			prefill_tokens_per_second: 4_150,
+			decode_tokens_per_second: 17.3,
 			slots_total: 4,
 		})
 	})

@@ -61,6 +61,7 @@ export interface LocalAgentActivityLane {
 	queueMs?: number
 	elapsedMs?: number
 	ttftMs?: number
+	prefillTokensPerSecond?: number
 	decodeTokensPerSecond?: number
 	outputValid?: boolean
 	outputNormalized?: boolean

@@ -24,6 +24,9 @@
 			"completion_tokens": 312,
 			"total_tokens": 2304,
 			"elapsed_ms": 18540,
+			"ttft_ms": 480,
+			"prefill_tokens_per_second": 4150.0,
+			"decode_tokens_per_second": 17.3,
 			"slot": 1,
 			"slots_reserved": 1,
 			"slots_total": 4

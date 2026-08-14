@@ -73,6 +73,7 @@ export const LocalAgentActivityEventSchema = z
 		elapsed_ms: nonNegativeInteger.optional(),
 		queue_ms: nonNegativeInteger.optional(),
 		ttft_ms: nonNegativeInteger.optional(),
+		prefill_tokens_per_second: z.number().finite().nonnegative().optional(),
 		decode_tokens_per_second: z.number().finite().nonnegative().optional(),
 		slot: nonNegativeInteger.optional(),
 		slots_reserved: nonNegativeInteger.optional(),
