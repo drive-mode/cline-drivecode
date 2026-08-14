@@ -12,7 +12,7 @@ speak). Demo fixtures only — no hub transport yet.
 
 ## Requirements
 
-- macOS with **Xcode 26.6** (Swift 6.3 compiler; project language-mode upgrade follows in X1)
+- macOS with **Xcode 26.6** (Swift 6.3 compiler and Swift 6 language mode)
 - Apple ID for signing; physical device or simulator
 - Set **Signing Team** on the `Drive` target (bundle id `ai.cline.drive`)
 
@@ -37,6 +37,9 @@ Mic permission string is already set for hold-to-talk (STT wiring comes later).
 
 The shared `Drive` scheme runs deterministic `DemoSession` unit tests and one
 Open → Call → Approval → Leave UI smoke path:
+
+All targets use complete Swift concurrency checking; warnings are not
+suppressed and the fixture delay task is explicitly owned and cancellable.
 
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer

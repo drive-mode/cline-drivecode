@@ -386,15 +386,15 @@ bun sdk/scripts/validate-mermaid.ts docs/drivecode/plans/cline-drivemode/initiat
 bun sdk/scripts/validate-mermaid.ts docs/drivecode/plans/cline-drivemode/initiatives/ios-native-client/testing.md
 ```
 
-## Current workstation blocker
+## Baseline status
 
-At planning time, `xcodebuild` resolves only Command Line Tools and reports
-that full Xcode is required; no Xcode app is installed. Bun is absent from
-`PATH`, so this planning PR used an ephemeral repository-pinned Bun 1.3.13
-binary from `/private/tmp` to run the docs, docs-test, and Mermaid gates.
-Nothing was installed permanently. Xcode, Swift package, Simulator, UI, and
-physical-device gates remain unclaimed until full Xcode is installed and their
-commands actually run.
+X0 and X1 are now proven in GitHub CI: the shared scheme builds and runs its
+unit and UI tests on Xcode 26.6 with an iPhone 17 Pro Simulator, and all targets
+compile in Swift 6 language mode with complete concurrency checking. Local
+contributors still need to select a full Xcode installation with
+`DEVELOPER_DIR` or `xcode-select`; a shell pointed at Command Line Tools alone
+cannot run the Simulator suite. Swift-package, live-Hub, physical-device, and
+production-work gates remain unclaimed until their delivery slices land.
 
 ## Release gate
 
