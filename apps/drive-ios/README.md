@@ -12,11 +12,12 @@ speak). Demo fixtures only — no hub transport yet.
 
 ## Requirements
 
-- macOS with **Xcode 15+** (Swift 5.9+, iOS 17 SDK)
+- macOS with **Xcode 26.6** (Swift 6.3 compiler; project language-mode upgrade follows in X1)
 - Apple ID for signing; physical device or simulator
 - Set **Signing Team** on the `Drive` target (bundle id `ai.cline.drive`)
 
-This Linux cloud environment cannot build or deploy the app. Open the project on a Mac.
+CI uses GitHub's `macos-26` image with Xcode 26.6 and an iPhone 17 Pro
+simulator. The app keeps iOS 17 as its deployment floor.
 
 ## Open & run on device
 
@@ -31,6 +32,27 @@ open apps/drive-ios/Drive.xcodeproj
    (Settings → General → VPN & Device Management).
 
 Mic permission string is already set for hold-to-talk (STT wiring comes later).
+
+## Build and test from Terminal
+
+The shared `Drive` scheme runs deterministic `DemoSession` unit tests and one
+Open → Call → Approval → Leave UI smoke path:
+
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcodebuild \
+  -project apps/drive-ios/Drive.xcodeproj \
+  -scheme Drive \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  CODE_SIGNING_ALLOWED=NO \
+  test
+```
+
+If Xcode is installed elsewhere, replace the `DEVELOPER_DIR` path with that
+bundle's `Contents/Developer` directory.
+
+Use `xcodebuild -project apps/drive-ios/Drive.xcodeproj -scheme Drive
+-showdestinations` if that simulator is not installed locally.
 
 ## What’s in the full fixture demo
 
@@ -66,6 +88,8 @@ When you add an iOS-only affordance, update the matrix — do not silently fork 
 ```text
 apps/drive-ios/
 ├── Drive.xcodeproj
+├── DriveTests/DriveTests.swift
+├── DriveUITests/DriveUITests.swift
 ├── README.md
 ├── DEMO.md
 └── Drive/
