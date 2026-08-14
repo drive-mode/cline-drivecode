@@ -1,0 +1,32 @@
+{
+	"schema_version": 1,
+	"latest_sequence": 42,
+	"content_recording": false,
+	"events": [
+		{
+			"schema_version": 1,
+			"sequence": 42,
+			"timestamp_unix_ms": 1786733400000,
+			"monotonic_ns": 9876543210,
+			"event_type": "inference.completed",
+			"request_id": "4ac633d8-9bb9-48e3-b3d8-46b6f4e04398",
+			"parent_request_id": "drive:tool-call-17",
+			"role": "planner",
+			"phase": "inference",
+			"outcome": "success",
+			"route": "candidate",
+			"profile": "qwen38-32k-4",
+			"model": "mlx-community/Qwen3.8-27B-4bit",
+			"fallback": false,
+			"prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"estimated_input_tokens": 2048,
+			"prompt_tokens": 1992,
+			"completion_tokens": 312,
+			"total_tokens": 2304,
+			"elapsed_ms": 18540,
+			"slot": 1,
+			"slots_reserved": 1,
+			"slots_total": 4
+		}
+	]
+}
