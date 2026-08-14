@@ -168,6 +168,7 @@ export class LocalAgentActivityProjection {
 			queueMs: event.queue_ms ?? previous?.queueMs,
 			elapsedMs: event.elapsed_ms ?? previous?.elapsedMs,
 			ttftMs: event.ttft_ms ?? previous?.ttftMs,
+			prefillTokensPerSecond: event.prefill_tokens_per_second ?? previous?.prefillTokensPerSecond,
 			decodeTokensPerSecond: event.decode_tokens_per_second ?? previous?.decodeTokensPerSecond,
 			outputValid: event.output_valid ?? previous?.outputValid,
 			outputNormalized: event.output_normalized ?? previous?.outputNormalized,

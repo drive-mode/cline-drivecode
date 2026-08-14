@@ -47,9 +47,34 @@ describe("LocalSubagentActivityPanel", () => {
 		expect(screen.getByText("Qwen3.8-27B-4bit")).toBeInTheDocument()
 		expect(screen.getByLabelText("Inference: active")).toBeInTheDocument()
 		expect(screen.getByText("2K in")).toBeInTheDocument()
+		expect(screen.getByText("Prefill rate —")).toBeInTheDocument()
 		expect(screen.getByText("Decode rate —")).toBeInTheDocument()
 		expect(screen.getByText("GPU — not measured")).toBeInTheDocument()
 		expect(screen.queryByText(/0\.0 tok\/s/)).not.toBeInTheDocument()
+	})
+
+	it("shows measured stream timing without inventing missing host utilization", () => {
+		const measuredState: LocalAgentActivityObserverState = {
+			...liveState,
+			view: {
+				...liveState.view,
+				agents: [
+					{
+						...liveState.view.agents[0],
+						ttftMs: 480,
+						prefillTokensPerSecond: 4_150,
+						decodeTokensPerSecond: 39.4,
+					},
+				],
+			},
+		}
+
+		render(<LocalSubagentActivityPanel state={measuredState} />)
+
+		expect(screen.getByText("TTFT 480 ms")).toBeInTheDocument()
+		expect(screen.getByText("4150.0 tok/s prefill")).toBeInTheDocument()
+		expect(screen.getByText("39.4 tok/s decode")).toBeInTheDocument()
+		expect(screen.getByText("Unified memory — not measured")).toBeInTheDocument()
 	})
 
 	it("collapses the detailed activity lanes", () => {
