@@ -5,7 +5,8 @@
 hub web, PWA/phone browser, CLI/TUI, and later Android — not an iOS-only fork.  
 **Skill:** [`.agents/skills/multi-device-backlog/`](../../../../../../.agents/skills/multi-device-backlog/)  
 **Related:** [mobile-consumer](../mobile-consumer/), [drive-web](../drive-web/),
-[ux-quality](../ux-quality/), [FEATURES.md](../mobile-consumer/FEATURES.md)
+[ux-quality](../ux-quality/), [ios-native-client](../ios-native-client/),
+[FEATURES.md](../mobile-consumer/FEATURES.md)
 
 ## Devices (columns)
 
@@ -13,7 +14,7 @@ hub web, PWA/phone browser, CLI/TUI, and later Android — not an iOS-only fork.
 |---|---|---|
 | `hub` | Hub webview (desktop / wide) | `apps/cline-hub` |
 | `pwa` | Phone browser / Add to Home Screen | drive-web + hosted-preview (planned) |
-| `ios` | Native SwiftUI app | [`apps/drive-ios`](../../../../../../apps/drive-ios/) |
+| `ios` | Native SwiftUI app | [`apps/drive-ios`](../../../../../../apps/drive-ios/) · [live-client plan](../ios-native-client/) |
 | `tui` | CLI OpenTUI | `apps/cli` |
 | `android` | Native later | **YAGNI** until ios + pwa prove retention |
 
@@ -46,3 +47,7 @@ Brand: [`MOBILE-BRAND-STYLING.md`](../../../../design/brand/MOBILE-BRAND-STYLING
 Start from [MATRIX.md](MATRIX.md). Ship ios demo shell → wire hub adapter → keep
 pwa/tui rows honest. Do not invent Android until the matrix says ios+pwa are green
 on Tier 1 jobs.
+
+The iOS live path uses the least-authority Mobile Drive Gateway in
+[ios-native-client](../ios-native-client/); it does not expose the core Hub or
+model endpoints to a phone.

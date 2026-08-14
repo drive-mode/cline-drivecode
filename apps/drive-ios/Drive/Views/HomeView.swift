@@ -73,7 +73,9 @@ struct HomeView: View {
 							Text("You")
 								.font(.system(size: 10, weight: .semibold))
 						}
-						.foregroundStyle(tab == 2 ? DriveTheme.violet : .tertiary)
+						.foregroundStyle(
+							tab == 2 ? AnyShapeStyle(DriveTheme.violet) : AnyShapeStyle(.tertiary)
+						)
 						.frame(maxWidth: .infinity)
 					}
 					.buttonStyle(.plain)
@@ -224,7 +226,9 @@ struct HomeView: View {
 				Text(title)
 					.font(.system(size: 10, weight: .semibold))
 			}
-			.foregroundStyle(tab == index ? DriveTheme.violet : .tertiary)
+			.foregroundStyle(
+				tab == index ? AnyShapeStyle(DriveTheme.violet) : AnyShapeStyle(.tertiary)
+			)
 			.frame(maxWidth: .infinity)
 		}
 		.buttonStyle(.plain)

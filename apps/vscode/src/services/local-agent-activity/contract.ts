@@ -2,6 +2,9 @@ import { z } from "zod"
 
 const boundedIdentifier = z.string().min(1).max(128)
 const nonNegativeInteger = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+// Sequence numbers order events. This host-uptime clock may exceed the exact-integer
+// range after roughly 104 days, but its sub-millisecond precision remains sufficient.
+const monotonicNanoseconds = z.number().finite().nonnegative().refine(Number.isInteger)
 
 export const LocalAgentActivityEventTypeSchema = z.enum([
 	"agent.requested",
@@ -44,7 +47,7 @@ export const LocalAgentActivityEventSchema = z
 		schema_version: z.literal(1),
 		sequence: nonNegativeInteger,
 		timestamp_unix_ms: nonNegativeInteger,
-		monotonic_ns: nonNegativeInteger,
+		monotonic_ns: monotonicNanoseconds,
 		event_type: LocalAgentActivityEventTypeSchema,
 		request_id: boundedIdentifier.regex(/^[A-Za-z0-9._:-]+$/),
 		parent_request_id: z
