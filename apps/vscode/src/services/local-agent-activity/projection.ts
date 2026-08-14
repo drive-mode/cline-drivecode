@@ -1,72 +1,17 @@
+import type {
+	LocalAgentActivityLane,
+	LocalAgentActivityView,
+	LocalAgentDisplayPhase,
+	LocalAgentModelActivity,
+} from "@shared/LocalAgentActivity"
 import type { LocalAgentActivityEvent, LocalAgentActivitySnapshot } from "./contract"
 
-export type LocalAgentDisplayPhase =
-	| "requested"
-	| "policy"
-	| "waiting"
-	| "inference"
-	| "prefill"
-	| "decode"
-	| "validating"
-	| "completed"
-	| "failed"
-	| "canceled"
-	| "rejected"
-
-export interface LocalAgentActivityLane {
-	requestId: string
-	parentRequestId?: string
-	role?: LocalAgentActivityEvent["role"]
-	phase: LocalAgentDisplayPhase
-	lastEventType: LocalAgentActivityEvent["event_type"]
-	firstSequence: number
-	latestSequence: number
-	startedAtUnixMs: number
-	updatedAtUnixMs: number
-	terminal: boolean
-	model?: string
-	profile?: string
-	route?: LocalAgentActivityEvent["route"]
-	fallback?: boolean
-	outcome?: LocalAgentActivityEvent["outcome"]
-	leaseHeld: boolean
-	slot?: number
-	slotsReserved?: number
-	slotsTotal?: number
-	estimatedInputTokens?: number
-	promptTokens?: number
-	completionTokens?: number
-	totalTokens?: number
-	queueMs?: number
-	elapsedMs?: number
-	ttftMs?: number
-	decodeTokensPerSecond?: number
-	outputValid?: boolean
-	outputNormalized?: boolean
-	safeErrorType?: string
-}
-
-export interface LocalAgentModelActivity {
-	key: string
-	model?: string
-	profile?: string
-	outcome?: LocalAgentActivityEvent["outcome"]
-	safeErrorType?: string
-	updatedAtUnixMs: number
-	latestSequence: number
-}
-
-export interface LocalAgentActivityView {
-	cursor: number
-	contentRecording: false
-	sequenceGapDetected: boolean
-	observerDropSignals: number
-	lastResourceSampleAtUnixMs?: number
-	activeWeightedSlots: number
-	totalWeightedSlots?: number
-	agents: LocalAgentActivityLane[]
-	models: LocalAgentModelActivity[]
-}
+export type {
+	LocalAgentActivityLane,
+	LocalAgentActivityView,
+	LocalAgentDisplayPhase,
+	LocalAgentModelActivity,
+} from "@shared/LocalAgentActivity"
 
 const REQUEST_EVENT_TYPES = new Set<LocalAgentActivityEvent["event_type"]>([
 	"agent.requested",

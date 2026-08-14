@@ -10,6 +10,7 @@ import { ClineFeatureSetting } from "./ClineFeatureSetting"
 import { BannerCardData } from "./cline/banner"
 import { ClineRulesToggles } from "./cline-rules"
 import { HistoryItem } from "./HistoryItem"
+import type { LocalAgentActivityObserverState } from "./LocalAgentActivity"
 import { McpDisplayMode } from "./McpDisplayMode"
 import { ClineMessageModelInfo } from "./messages"
 import { OnboardingModelGroup } from "./proto/cline/state"
@@ -141,6 +142,8 @@ export interface ExtensionState {
 	banners?: BannerCardData[]
 	welcomeBanners?: BannerCardData[]
 	openAiCodexIsAuthenticated?: boolean
+	/** Sanitized, content-free state from the optional owner-only Loco observer. */
+	localAgentActivity?: LocalAgentActivityObserverState
 }
 
 /**

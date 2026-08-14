@@ -40,6 +40,9 @@ import { ExtensionRegistryInfo } from "@/registry"
 import { OcaAuthService } from "@/services/auth/oca/OcaAuthService"
 import { UrlContentFetcher } from "@/services/browser/UrlContentFetcher"
 import { ClineError } from "@/services/error/ClineError"
+import { createUnixSocketActivityTransport } from "@/services/local-agent-activity/client"
+import { resolveLocalAgentActivitySocket } from "@/services/local-agent-activity/integration"
+import { LocalAgentActivitySession } from "@/services/local-agent-activity/session"
 import { McpHub } from "@/services/mcp/McpHub"
 import { telemetryService } from "@/services/telemetry"
 import type { ClineExtensionContext } from "@/shared/cline"
@@ -186,6 +189,8 @@ export class Controller {
 	private readonly providerConfigStore: ProviderConfigStore
 	private readonly providerCatalog: ProviderCatalog
 	private readonly providerConfigStoreSubscription: Disposable
+	private localAgentActivitySession?: LocalAgentActivitySession
+	private localAgentActivityState?: ExtensionState["localAgentActivity"]
 	private providerConfigStatePostScheduled = false
 
 	// Debounces/coalesces postStateToWebview() calls — see StatePostDebouncer.
@@ -639,6 +644,7 @@ export class Controller {
 
 		// Register the bridge as a session event listener
 		this.onSessionEvent(this.grpcBridge.createListener())
+		this.startLocalAgentActivityObserver()
 
 		// Restore auth state from secrets on startup, then start the remote
 		// config polling timer (enterprise policy enforcement). The timer must
@@ -793,6 +799,8 @@ export class Controller {
 		// Tear down the debounced state-post machinery before downstream resources
 		// are disposed below — see StatePostDebouncer.dispose().
 		await this.statePostDebouncer.dispose()
+		await this.localAgentActivitySession?.stop()
+		this.localAgentActivitySession = undefined
 		await this.invalidateUserInstructionService()
 		this.messages.cancelPendingSave()
 		// Clear MCP tool list change callback before disposing McpHub
@@ -2040,6 +2048,7 @@ export class Controller {
 			const minter = this.messageTranslatorState.getMinter()
 			return {
 				...state,
+				localAgentActivity: this.localAgentActivityState,
 				currentTaskItem: this.task?.taskId
 					? processedTaskHistory.find((item) => item.id === this.task?.taskId)
 					: undefined,
@@ -2052,6 +2061,27 @@ export class Controller {
 		} catch (error) {
 			Logger.error("[SdkController] Failed to get state for webview:", error)
 			throw error
+		}
+	}
+
+	private startLocalAgentActivityObserver(): void {
+		const socketPath = resolveLocalAgentActivitySocket()
+		if (!socketPath) {
+			return
+		}
+		try {
+			const session = new LocalAgentActivitySession({
+				get: createUnixSocketActivityTransport(socketPath),
+				onState: (state) => {
+					this.localAgentActivityState = state
+					void this.postStateToWebview()
+				},
+			})
+			this.localAgentActivityState = session.state
+			this.localAgentActivitySession = session
+			session.start()
+		} catch {
+			Logger.warn("[SdkController] Local-agent activity observer configuration was rejected")
 		}
 	}
 
