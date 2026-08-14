@@ -34,6 +34,7 @@ import {
 	isPendingResponseUnconfirmed,
 	withPendingUserMessage,
 } from "./chat-view/utils/pendingResponse"
+import { LocalSubagentActivityPanel } from "./LocalSubagentActivityPanel"
 
 interface ChatViewProps {
 	isHidden: boolean
@@ -59,6 +60,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		checkpointRestoreInput,
 		queuedPrompts,
 		turnState,
+		localAgentActivity,
 	} = useExtensionState()
 	const isProdHostedApp = userInfo?.apiBaseUrl === "https://app.cline.bot"
 	const shouldShowQuickWins = isProdHostedApp && (!taskHistory || taskHistory.length < QUICK_WINS_HISTORY_THRESHOLD)
@@ -401,6 +403,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						version={version}
 					/>
 				)}
+				{localAgentActivity && <LocalSubagentActivityPanel state={localAgentActivity} />}
 				{task && (
 					<MessagesArea
 						chatState={chatState}
