@@ -22,7 +22,7 @@ function snapshot(sequence: number) {
 		schema_version: 1,
 		latest_sequence: sequence,
 		content_recording: false,
-		events: [],
+		events: sequence === 0 ? [] : [activityEvent(sequence)],
 	})
 }
 
@@ -126,6 +126,38 @@ describe("LocalAgentActivitySession", () => {
 		const unavailable = states.find((state) => state.connection === "unavailable")
 		expect(unavailable).toMatchObject({ attempt: 1, safeErrorType: "LocalAgentActivityClientError" })
 		expect(JSON.stringify(states)).not.toContain("/Users/private")
+	})
+
+	it("reports reconnecting when a previously live stream ends", async () => {
+		const states: LocalAgentActivityObserverState[] = []
+		let retryReached: (() => void) | undefined
+		const retrying = new Promise<void>((resolve) => {
+			retryReached = resolve
+		})
+		const get = vi.fn<LocalActivityHttpGet>(async (path) => {
+			if (path === "/v1/activity/snapshot") {
+				return response(chunks(JSON.stringify(snapshot(1))), "application/json")
+			}
+			return response(chunks(), "text/event-stream")
+		})
+		const session = new LocalAgentActivitySession({
+			get,
+			retryDelaysMs: [0],
+			wait: async (_milliseconds, signal) =>
+				new Promise<void>((resolve) => {
+					retryReached?.()
+					signal.addEventListener("abort", () => resolve(), { once: true })
+				}),
+			onState: (state) => states.push(state),
+		})
+		session.start()
+
+		await retrying
+		await session.stop()
+
+		expect(states.some((state) => state.connection === "live")).toBe(true)
+		expect(states.some((state) => state.connection === "reconnecting" && state.attempt === 1)).toBe(true)
+		expect(states.some((state) => state.connection === "unavailable")).toBe(false)
 	})
 
 	it("rejects an empty retry schedule", () => {
