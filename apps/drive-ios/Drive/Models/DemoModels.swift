@@ -80,6 +80,13 @@ final class DemoSession: ObservableObject {
 	static let previewChipLabel = "Preview · demo call"
 	static let leaveKeepRunning = "Room keeps running · rejoin anytime"
 
+	private let interruptDelay: Duration
+	private var interruptTransitionTask: Task<Void, Never>?
+
+	init(interruptDelay: Duration = .milliseconds(1_400)) {
+		self.interruptDelay = interruptDelay
+	}
+
 	var interruptPhase: InterruptPhase {
 		guard handRaised else { return .idle }
 		return turnInFlight ? .finishing : .paused
@@ -117,14 +124,22 @@ final class DemoSession: ObservableObject {
 	}
 
 	func toggleHand() {
+		cancelInterruptTransition()
 		handRaised.toggle()
 		if handRaised {
 			turnInFlight = true
 			// After a beat the demo “finishes” the tool step → paused.
-			Task { @MainActor in
-				try? await Task.sleep(nanoseconds: 1_400_000_000)
-				guard handRaised else { return }
+			let delay = interruptDelay
+			interruptTransitionTask = Task { @MainActor [weak self] in
+				do {
+					try await Task.sleep(for: delay)
+				} catch {
+					return
+				}
+
+				guard let self, handRaised else { return }
 				turnInFlight = false
+				interruptTransitionTask = nil
 			}
 		} else {
 			turnInFlight = true
@@ -160,11 +175,17 @@ final class DemoSession: ObservableObject {
 	}
 
 	private func resetCallChrome() {
+		cancelInterruptTransition()
 		handRaised = false
 		turnInFlight = true
 		holding = false
 		captionsVisible = true
 		showApproval = false
+	}
+
+	private func cancelInterruptTransition() {
+		interruptTransitionTask?.cancel()
+		interruptTransitionTask = nil
 	}
 }
 

@@ -1,0 +1,45 @@
+name: Drive iOS
+
+on:
+  pull_request:
+    paths:
+      - "apps/drive-ios/**"
+      - ".github/workflows/drive-ios.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/drive-ios/**"
+      - ".github/workflows/drive-ios.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: drive-ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Xcode 26.6 · iPhone 17 Pro
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Report toolchain
+        run: xcodebuild -version
+
+      - name: Build and test
+        run: |
+          xcodebuild \
+            -project apps/drive-ios/Drive.xcodeproj \
+            -scheme Drive \
+            -destination 'platform=iOS Simulator,OS=26.5,name=iPhone 17 Pro' \
+            -derivedDataPath "$RUNNER_TEMP/DriveDerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            test
