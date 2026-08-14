@@ -113,6 +113,13 @@ describe("LocalAgentActivityProjection", () => {
 		})
 	})
 
+	it("rejects sequence regressions", () => {
+		const projection = new LocalAgentActivityProjection()
+		projection.applyEvent(event(2, { event_type: "agent.requested" }))
+
+		expect(() => projection.applyEvent(event(1, { event_type: "agent.requested" }))).toThrow("regressed")
+	})
+
 	it("surfaces sequence gaps and observer drop signals", () => {
 		const projection = new LocalAgentActivityProjection()
 		projection.applyEvent(event(10, { event_type: "agent.requested" }))
@@ -173,5 +180,48 @@ describe("LocalAgentActivityProjection", () => {
 		})
 
 		expect(() => projection.applySnapshot(snapshot)).toThrow("beyond its cursor")
+	})
+
+	it("rejects reordered snapshots and cursors without a matching tail", () => {
+		const projection = new LocalAgentActivityProjection()
+		const reordered = parseLocalAgentActivitySnapshot({
+			schema_version: 1,
+			latest_sequence: 2,
+			content_recording: false,
+			events: [
+				event(2, { event_type: "agent.requested" }),
+				event(1, { event_type: "agent.requested" }),
+			],
+		})
+
+		expect(() => projection.applySnapshot(reordered)).toThrow("strictly increasing")
+		expect(() =>
+			projection.applySnapshot(
+				parseLocalAgentActivitySnapshot({
+					schema_version: 1,
+					latest_sequence: 3,
+					content_recording: false,
+					events: [event(2, { event_type: "agent.requested" })],
+				}),
+			),
+		).toThrow("does not end")
+	})
+
+	it("bounds retained terminal lanes without hiding active work", () => {
+		const projection = new LocalAgentActivityProjection()
+		for (let sequence = 1; sequence <= 205; sequence += 1) {
+			projection.applyEvent(
+				event(sequence, {
+					event_type: "agent.completed",
+					phase: "completed",
+					outcome: "success",
+					request_id: `request-${sequence}`,
+				}),
+			)
+		}
+
+		const view = projection.view()
+		expect(view.agents).toHaveLength(200)
+		expect(view.agents[0].requestId).toBe("request-6")
 	})
 })

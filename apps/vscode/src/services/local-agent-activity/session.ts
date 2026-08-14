@@ -72,11 +72,13 @@ export class LocalAgentActivitySession {
 
 	private async run(signal: AbortSignal): Promise<void> {
 		let attempt = 0
+		let hasConnected = false
 		while (!signal.aborted) {
 			this.emit(attempt === 0 ? "connecting" : "reconnecting", attempt)
 			try {
 				const snapshot = await fetchLocalAgentActivitySnapshot(this.options.get, signal)
 				this.projection.applySnapshot(snapshot)
+				hasConnected = true
 				this.emit("live", 0)
 				attempt = 0
 				await streamLocalAgentActivity(this.options.get, {
@@ -98,7 +100,8 @@ export class LocalAgentActivitySession {
 					break
 				}
 				attempt += 1
-				this.emit(attempt === 1 ? "unavailable" : "reconnecting", attempt, safeErrorType(error))
+				const connection = hasConnected || attempt > 1 ? "reconnecting" : "unavailable"
+				this.emit(connection, attempt, safeErrorType(error))
 				await this.wait(retryDelay(this.retryDelaysMs, attempt), signal).catch(() => {})
 			}
 		}

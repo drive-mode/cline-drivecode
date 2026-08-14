@@ -132,9 +132,6 @@ export async function* parseLocalAgentActivitySse(
 
 	for await (const chunk of chunks) {
 		buffer += typeof chunk === "string" ? chunk : decoder.write(chunk)
-		if (Buffer.byteLength(buffer, "utf8") > MAX_SSE_BUFFER_BYTES) {
-			throw new LocalAgentActivityClientError("local activity stream buffer exceeded its limit")
-		}
 		while (true) {
 			const boundary = findEventBoundary(buffer)
 			if (!boundary) {
@@ -143,11 +140,20 @@ export async function* parseLocalAgentActivitySse(
 			const block = buffer.slice(0, boundary.index)
 			buffer = buffer.slice(boundary.index + boundary.length)
 			const event = parseSseBlock(block)
-			if (!event || event.sequence <= cursor) {
+			if (!event) {
+				continue
+			}
+			if (event.sequence < cursor) {
+				throw new LocalAgentActivityClientError("local activity stream sequence regressed")
+			}
+			if (event.sequence === cursor) {
 				continue
 			}
 			cursor = event.sequence
 			yield event
+		}
+		if (Buffer.byteLength(buffer, "utf8") > MAX_SSE_BUFFER_BYTES) {
+			throw new LocalAgentActivityClientError("local activity stream buffer exceeded its limit")
 		}
 	}
 
@@ -223,7 +229,8 @@ function assertResponse(response: LocalActivityHttpResponse, mediaType: string):
 	}
 	const contentType = response.headers["content-type"]
 	const value = Array.isArray(contentType) ? contentType[0] : contentType
-	if (!value?.toLowerCase().startsWith(mediaType)) {
+	const responseMediaType = value?.split(";", 1)[0].trim().toLowerCase()
+	if (responseMediaType !== mediaType) {
 		throw new LocalAgentActivityClientError("local activity observer returned an invalid content type")
 	}
 }
