@@ -32,6 +32,7 @@ const REQUEST_EVENT_TYPES = new Set<LocalAgentActivityEvent["event_type"]>([
 	"agent.failed",
 	"agent.canceled",
 ])
+const MAX_RETAINED_AGENT_LANES = 200
 
 export class LocalAgentActivityProjection {
 	private cursor = 0
@@ -43,9 +44,20 @@ export class LocalAgentActivityProjection {
 	private readonly models = new Map<string, LocalAgentModelActivity>()
 
 	applySnapshot(snapshot: LocalAgentActivitySnapshot): void {
-		const events = [...snapshot.events].sort((left, right) => left.sequence - right.sequence)
+		const events = snapshot.events
 		if (events.some((event) => event.sequence > snapshot.latest_sequence)) {
 			throw new Error("local activity snapshot contains an event beyond its cursor")
+		}
+		for (let index = 1; index < events.length; index += 1) {
+			if (events[index].sequence <= events[index - 1].sequence) {
+				throw new Error("local activity snapshot sequences are not strictly increasing")
+			}
+		}
+		if (events.length > 0 && events.at(-1)?.sequence !== snapshot.latest_sequence) {
+			throw new Error("local activity snapshot does not end at its cursor")
+		}
+		if (events.length === 0 && snapshot.latest_sequence !== 0) {
+			throw new Error("local activity snapshot cursor has no matching event")
 		}
 		this.reset()
 		for (const event of events) {
@@ -55,7 +67,10 @@ export class LocalAgentActivityProjection {
 	}
 
 	applyEvent(event: LocalAgentActivityEvent): boolean {
-		if (event.sequence <= this.cursor) {
+		if (event.sequence < this.cursor) {
+			throw new Error("local activity event sequence regressed")
+		}
+		if (event.sequence === this.cursor) {
 			return false
 		}
 		if (this.cursor > 0 && event.sequence !== this.cursor + 1) {
@@ -174,6 +189,22 @@ export class LocalAgentActivityProjection {
 			safeErrorType: event.safe_error_type ?? previous?.safeErrorType,
 		}
 		this.agents.set(event.request_id, lane)
+		this.pruneTerminalAgents()
+	}
+
+	private pruneTerminalAgents(): void {
+		if (this.agents.size <= MAX_RETAINED_AGENT_LANES) {
+			return
+		}
+		const terminalAgents = Array.from(this.agents.values())
+			.filter((agent) => agent.terminal)
+			.sort((left, right) => left.latestSequence - right.latestSequence)
+		for (const agent of terminalAgents) {
+			if (this.agents.size <= MAX_RETAINED_AGENT_LANES) {
+				break
+			}
+			this.agents.delete(agent.requestId)
+		}
 	}
 }
 

@@ -49,4 +49,13 @@ describe("local agent activity contract", () => {
 			}),
 		).toThrow()
 	})
+
+	it("accepts the monotonic clock after long host uptime", () => {
+		const event = parseLocalAgentActivityEvent({
+			...fixture.events[0],
+			monotonic_ns: Number.MAX_SAFE_INTEGER * 2,
+		})
+
+		expect(event.monotonic_ns).toBe(Number.MAX_SAFE_INTEGER * 2)
+	})
 })

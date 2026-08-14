@@ -52,6 +52,26 @@ describe("local activity Unix-socket client", () => {
 		expect(observed.map((event) => event.sequence)).toEqual([43])
 	})
 
+	it("rejects a sequence regression instead of treating it as a duplicate", async () => {
+		const previous = { ...fixture.events[0], sequence: 41 }
+		const iterator = parseLocalAgentActivitySse(chunks(sse(previous)), 42)
+
+		await expect(iterator.next()).rejects.toThrow("regressed")
+	})
+
+	it("processes complete events before enforcing the residual buffer limit", async () => {
+		const keepalive = `:${"x".repeat(13_000)}\n\n`
+		const wire = `${keepalive.repeat(21)}${sse(fixture.events[0])}`
+		const observed = []
+
+		for await (const event of parseLocalAgentActivitySse(chunks(wire), 41)) {
+			observed.push(event.sequence)
+		}
+
+		expect(Buffer.byteLength(wire, "utf8")).toBeGreaterThan(262_144)
+		expect(observed).toEqual([42])
+	})
+
 	it("streams validated events from the requested cursor", async () => {
 		const next = { ...fixture.events[0], sequence: 43, event_type: "agent.completed" as const, phase: "completed" as const }
 		const get = vi.fn<LocalActivityHttpGet>(async () => response(chunks(sse(next)), "text/event-stream"))
@@ -79,5 +99,13 @@ describe("local activity Unix-socket client", () => {
 
 	it("rejects non-absolute socket paths before opening a request", () => {
 		expect(() => createUnixSocketActivityTransport("relative/activity.sock")).toThrow(LocalAgentActivityClientError)
+	})
+
+	it("requires an exact response media type", async () => {
+		const get = vi.fn<LocalActivityHttpGet>(async () =>
+			response(chunks(JSON.stringify(fixture)), "application/json-activity"),
+		)
+
+		await expect(fetchLocalAgentActivitySnapshot(get)).rejects.toThrow("invalid content type")
 	})
 })

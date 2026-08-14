@@ -53,6 +53,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [drive-product-demo/](initiatives/drive-product-demo/) | Full-system product demo scene-player ([canvas](../../design/canvases/drive-product-demo.html)) |
 | [driveplan-agent-runtime/](initiatives/driveplan-agent-runtime/) | ADR-0018 DriveRun / lease / receipt + Kanban projection stub |
 | [hub-drive-ia-analytics/](initiatives/hub-drive-ia-analytics/) | Drive owns call+history; Analytics page; Status stays ops |
+| [ios-native-client/](initiatives/ios-native-client/) | Live SwiftUI client architecture, Mobile Drive Gateway, stacked implementation plan, and production-work tests |
 | [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
