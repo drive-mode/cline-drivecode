@@ -1,19 +1,13 @@
+import type { LocalAgentActivityConnection, LocalAgentActivityObserverState } from "@shared/LocalAgentActivity"
 import {
 	fetchLocalAgentActivitySnapshot,
 	type LocalActivityHttpGet,
 	LocalAgentActivityClientError,
 	streamLocalAgentActivity,
 } from "./client"
-import { LocalAgentActivityProjection, type LocalAgentActivityView } from "./projection"
+import { LocalAgentActivityProjection } from "./projection"
 
-export type LocalAgentActivityConnection = "idle" | "connecting" | "live" | "reconnecting" | "unavailable" | "stopped"
-
-export interface LocalAgentActivityObserverState {
-	connection: LocalAgentActivityConnection
-	attempt: number
-	safeErrorType?: string
-	view: LocalAgentActivityView
-}
+export type { LocalAgentActivityConnection, LocalAgentActivityObserverState } from "@shared/LocalAgentActivity"
 
 export interface LocalAgentActivitySessionOptions {
 	get: LocalActivityHttpGet
