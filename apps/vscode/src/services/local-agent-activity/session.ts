@@ -131,6 +131,7 @@ function cloneState(state: LocalAgentActivityObserverState): LocalAgentActivityO
 		...state,
 		view: {
 			...state.view,
+			resources: state.view.resources ? { ...state.view.resources } : undefined,
 			agents: state.view.agents.map((agent) => ({ ...agent })),
 			models: state.view.models.map((model) => ({ ...model })),
 		},

@@ -49,7 +49,9 @@ describe("LocalSubagentActivityPanel", () => {
 		expect(screen.getByText("2K in")).toBeInTheDocument()
 		expect(screen.getByText("Prefill rate —")).toBeInTheDocument()
 		expect(screen.getByText("Decode rate —")).toBeInTheDocument()
+		expect(screen.getByText("Engine CPU — not measured")).toBeInTheDocument()
 		expect(screen.getByText("GPU — not measured")).toBeInTheDocument()
+		expect(screen.getByText("Engine footprint — not measured")).toBeInTheDocument()
 		expect(screen.queryByText(/0\.0 tok\/s/)).not.toBeInTheDocument()
 	})
 
@@ -74,7 +76,36 @@ describe("LocalSubagentActivityPanel", () => {
 		expect(screen.getByText("TTFT 480 ms")).toBeInTheDocument()
 		expect(screen.getByText("4150.0 tok/s prefill")).toBeInTheDocument()
 		expect(screen.getByText("39.4 tok/s decode")).toBeInTheDocument()
-		expect(screen.getByText("Unified memory — not measured")).toBeInTheDocument()
+		expect(screen.getByText("Host memory — not measured")).toBeInTheDocument()
+	})
+
+	it("shows measured engine footprint and host memory headroom", () => {
+		render(
+			<LocalSubagentActivityPanel
+				state={{
+					...liveState,
+					view: {
+						...liveState.view,
+						resources: {
+							updatedAtUnixMs: 1_786_733_405_000,
+							hostMemoryTotalBytes: 51_539_607_552,
+							memoryFreePercent: 47,
+							swapUsedBytes: 5_015_213_179,
+							engineFootprintBytes: 21_992_521_760,
+							engineRssBytes: 100_597_760,
+							engineCpuPercent: 0.6,
+						},
+					},
+				}}
+			/>,
+		)
+
+		expect(screen.getByText("Engine CPU 0.6%")).toBeInTheDocument()
+		expect(screen.getByText("Engine footprint 20.5 GiB")).toBeInTheDocument()
+		expect(screen.getByText("Host memory 47% free / 48.0 GiB")).toBeInTheDocument()
+		expect(screen.getByText("Swap 4.7 GiB")).toBeInTheDocument()
+		expect(screen.getByTitle(/Process RSS: 95\.9 MiB/)).toBeInTheDocument()
+		expect(screen.getByText("GPU — not measured")).toBeInTheDocument()
 	})
 
 	it("collapses the detailed activity lanes", () => {

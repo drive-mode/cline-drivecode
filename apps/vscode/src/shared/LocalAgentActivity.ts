@@ -78,12 +78,23 @@ export interface LocalAgentModelActivity {
 	latestSequence: number
 }
 
+export interface LocalAgentResourceActivity {
+	updatedAtUnixMs: number
+	hostMemoryTotalBytes?: number
+	memoryFreePercent?: number
+	swapUsedBytes?: number
+	engineFootprintBytes?: number
+	engineRssBytes?: number
+	engineCpuPercent?: number
+}
+
 export interface LocalAgentActivityView {
 	cursor: number
 	contentRecording: false
 	sequenceGapDetected: boolean
 	observerDropSignals: number
 	lastResourceSampleAtUnixMs?: number
+	resources?: LocalAgentResourceActivity
 	activeWeightedSlots: number
 	totalWeightedSlots?: number
 	agents: LocalAgentActivityLane[]

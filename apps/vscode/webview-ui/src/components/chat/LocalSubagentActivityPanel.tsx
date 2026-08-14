@@ -49,6 +49,7 @@ export function LocalSubagentActivityPanel({ state }: LocalSubagentActivityPanel
 	const slotText = slotCapacity
 		? `${state.view.activeWeightedSlots}/${slotCapacity} weighted slots`
 		: `${state.view.activeWeightedSlots} weighted slots`
+	const resources = state.view.resources
 
 	return (
 		<section
@@ -79,9 +80,31 @@ export function LocalSubagentActivityPanel({ state }: LocalSubagentActivityPanel
 						<span className="inline-flex items-center gap-1">
 							<LockKeyholeIcon className="size-2.5" /> Metadata only
 						</span>
-						<span>CPU — not measured</span>
+						<span>
+							{resources?.engineCpuPercent === undefined
+								? "Engine CPU — not measured"
+								: `Engine CPU ${resources.engineCpuPercent.toFixed(1)}%`}
+						</span>
 						<span>GPU — not measured</span>
-						<span>Unified memory — not measured</span>
+						<span title={engineMemoryTitle(resources?.engineRssBytes)}>
+							{resources?.engineFootprintBytes === undefined
+								? "Engine footprint — not measured"
+								: `Engine footprint ${formatBytes(resources.engineFootprintBytes)}`}
+						</span>
+						<span>
+							{resources?.memoryFreePercent === undefined
+								? "Host memory — not measured"
+								: `Host memory ${resources.memoryFreePercent}% free${
+										resources.hostMemoryTotalBytes === undefined
+											? ""
+											: ` / ${formatBytes(resources.hostMemoryTotalBytes)}`
+									}`}
+						</span>
+						<span>
+							{resources?.swapUsedBytes === undefined
+								? "Swap — not measured"
+								: `Swap ${formatBytes(resources.swapUsedBytes)}`}
+						</span>
 					</div>
 
 					{state.connection === "unavailable" && (
@@ -206,4 +229,20 @@ function formatDuration(milliseconds: number): string {
 		return `${milliseconds} ms`
 	}
 	return `${(milliseconds / 1_000).toFixed(milliseconds < 10_000 ? 1 : 0)} s`
+}
+
+function formatBytes(bytes: number): string {
+	const units = ["B", "KiB", "MiB", "GiB", "TiB"] as const
+	let value = bytes
+	let unit = 0
+	while (value >= 1_024 && unit < units.length - 1) {
+		value /= 1_024
+		unit += 1
+	}
+	return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
+}
+
+function engineMemoryTitle(rssBytes: number | undefined): string {
+	const detail = rssBytes === undefined ? "" : ` Process RSS: ${formatBytes(rssBytes)}.`
+	return `Physical footprint includes Metal-backed unified memory.${detail}`
 }

@@ -35,7 +35,7 @@ describe("local activity Unix-socket client", () => {
 
 		const snapshot = await fetchLocalAgentActivitySnapshot(get)
 
-		expect(snapshot.latest_sequence).toBe(42)
+		expect(snapshot.latest_sequence).toBe(43)
 		expect(get).toHaveBeenCalledWith("/v1/activity/snapshot", undefined)
 	})
 

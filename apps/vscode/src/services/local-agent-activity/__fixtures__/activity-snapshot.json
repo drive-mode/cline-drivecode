@@ -1,6 +1,6 @@
 {
 	"schema_version": 1,
-	"latest_sequence": 42,
+	"latest_sequence": 43,
 	"content_recording": false,
 	"events": [
 		{
@@ -30,6 +30,23 @@
 			"slot": 1,
 			"slots_reserved": 1,
 			"slots_total": 4
+		},
+		{
+			"schema_version": 1,
+			"sequence": 43,
+			"timestamp_unix_ms": 1786733405000,
+			"monotonic_ns": 14876543210,
+			"event_type": "resource.sample",
+			"request_id": "resource-host",
+			"phase": "resource",
+			"profile": "qwen38-32k-4",
+			"model": "mlx-community/Qwen3.8-27B-4bit",
+			"host_memory_total_bytes": 51539607552,
+			"memory_free_percent": 47,
+			"swap_used_bytes": 5015213179,
+			"engine_footprint_bytes": 21992521760,
+			"engine_rss_bytes": 100597760,
+			"engine_cpu_percent": 0.6
 		}
 	]
 }

@@ -6,7 +6,7 @@ describe("local agent activity contract", () => {
 	it("accepts the versioned Loco snapshot fixture without renaming wire fields", () => {
 		const snapshot = parseLocalAgentActivitySnapshot(fixture)
 
-		expect(snapshot.latest_sequence).toBe(42)
+		expect(snapshot.latest_sequence).toBe(43)
 		expect(snapshot.content_recording).toBe(false)
 		expect(snapshot.events[0]).toMatchObject({
 			event_type: "inference.completed",
@@ -16,6 +16,13 @@ describe("local agent activity contract", () => {
 			prefill_tokens_per_second: 4_150,
 			decode_tokens_per_second: 17.3,
 			slots_total: 4,
+		})
+		expect(snapshot.events[1]).toMatchObject({
+			event_type: "resource.sample",
+			host_memory_total_bytes: 51_539_607_552,
+			memory_free_percent: 47,
+			engine_footprint_bytes: 21_992_521_760,
+			engine_cpu_percent: 0.6,
 		})
 	})
 

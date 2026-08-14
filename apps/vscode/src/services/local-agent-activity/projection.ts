@@ -3,6 +3,7 @@ import type {
 	LocalAgentActivityView,
 	LocalAgentDisplayPhase,
 	LocalAgentModelActivity,
+	LocalAgentResourceActivity,
 } from "@shared/LocalAgentActivity"
 import type { LocalAgentActivityEvent, LocalAgentActivitySnapshot } from "./contract"
 
@@ -11,6 +12,7 @@ export type {
 	LocalAgentActivityView,
 	LocalAgentDisplayPhase,
 	LocalAgentModelActivity,
+	LocalAgentResourceActivity,
 } from "@shared/LocalAgentActivity"
 
 const REQUEST_EVENT_TYPES = new Set<LocalAgentActivityEvent["event_type"]>([
@@ -37,6 +39,7 @@ export class LocalAgentActivityProjection {
 	private sequenceGapDetected = false
 	private observerDropSignals = 0
 	private lastResourceSampleAtUnixMs: number | undefined
+	private resources: LocalAgentResourceActivity | undefined
 	private readonly agents = new Map<string, LocalAgentActivityLane>()
 	private readonly models = new Map<string, LocalAgentModelActivity>()
 
@@ -92,6 +95,7 @@ export class LocalAgentActivityProjection {
 			sequenceGapDetected: this.sequenceGapDetected,
 			observerDropSignals: this.observerDropSignals,
 			lastResourceSampleAtUnixMs: this.lastResourceSampleAtUnixMs,
+			resources: this.resources ? { ...this.resources } : undefined,
 			activeWeightedSlots: activeLeases.reduce((total, agent) => total + (agent.slotsReserved ?? 1), 0),
 			totalWeightedSlots: agents.reduce<number | undefined>((total, agent) => {
 				if (agent.slotsTotal === undefined) {
@@ -109,6 +113,7 @@ export class LocalAgentActivityProjection {
 		this.sequenceGapDetected = false
 		this.observerDropSignals = 0
 		this.lastResourceSampleAtUnixMs = undefined
+		this.resources = undefined
 		this.agents.clear()
 		this.models.clear()
 	}
@@ -120,6 +125,15 @@ export class LocalAgentActivityProjection {
 		}
 		if (event.event_type === "resource.sample") {
 			this.lastResourceSampleAtUnixMs = event.timestamp_unix_ms
+			this.resources = {
+				updatedAtUnixMs: event.timestamp_unix_ms,
+				hostMemoryTotalBytes: event.host_memory_total_bytes,
+				memoryFreePercent: event.memory_free_percent,
+				swapUsedBytes: event.swap_used_bytes,
+				engineFootprintBytes: event.engine_footprint_bytes,
+				engineRssBytes: event.engine_rss_bytes,
+				engineCpuPercent: event.engine_cpu_percent,
+			}
 			return
 		}
 		if (event.event_type === "model.lifecycle") {
