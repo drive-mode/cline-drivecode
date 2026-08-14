@@ -152,6 +152,12 @@ describe("LocalAgentActivityProjection", () => {
 				event_type: "resource.sample",
 				request_id: "resource-host",
 				phase: "resource",
+				host_memory_total_bytes: 51_539_607_552,
+				memory_free_percent: 47,
+				swap_used_bytes: 5_015_213_179,
+				engine_footprint_bytes: 21_992_521_760,
+				engine_rss_bytes: 100_597_760,
+				engine_cpu_percent: 0.6,
 			}),
 		)
 
@@ -165,6 +171,15 @@ describe("LocalAgentActivityProjection", () => {
 			}),
 		])
 		expect(view.lastResourceSampleAtUnixMs).toBe(1_786_733_400_002)
+		expect(view.resources).toEqual({
+			updatedAtUnixMs: 1_786_733_400_002,
+			hostMemoryTotalBytes: 51_539_607_552,
+			memoryFreePercent: 47,
+			swapUsedBytes: 5_015_213_179,
+			engineFootprintBytes: 21_992_521_760,
+			engineRssBytes: 100_597_760,
+			engineCpuPercent: 0.6,
+		})
 	})
 
 	it("rejects a snapshot whose cursor precedes one of its events", () => {
