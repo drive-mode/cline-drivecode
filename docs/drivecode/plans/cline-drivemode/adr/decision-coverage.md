@@ -774,6 +774,7 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | Multi-device parity | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) | Paper |
 | Codebase-map firewall | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) | Paper |
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) | Paper |
+| Operator next-action layer (+ first training-label corpus grant) | [ADR-0036](ADR-0036-next-action-triad.md) | Paper |
 
 ### Still Open (product gaps — not holes in the ADR sense, but undecided product detail)
 
@@ -803,5 +804,6 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | **0033** | Managed cards refuse bank archive from Kanban Done |
 | **0034** | After delivery D1; unified seat role writes only |
 | **0035** | Catch-up line on leave/return + snapshot gap path |
+| **0036** | Triad on tip **and** a kept-rate being measured — not when the hint renders |
 | **DEC-multi-device-parity** | MATRIX Tier 1 rows green on primary devices (or explicit lite) |
 | **DEC-codebase-map-firewall** | Skill + AGENTS refuse path; no write side channel |
