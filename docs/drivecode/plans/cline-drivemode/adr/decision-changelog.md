@@ -29,6 +29,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-08 — Comprehensive git-mined changelog + full binding-clause inventory ([decision-coverage.md](decision-coverage.md)).
 - 2026-08-08 — Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (Proposed).
 - 2026-08-11 — ADR-0036 next-action triad + PRD 11 + research 29 (Proposed); closes the 21-operator-experience gap and answers research 16 open question 3.
+- 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
 
 ---
 
@@ -258,3 +259,8 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## ADR-0036 · Next-action triad
 
 - 2026-08-11 — Proposed (DO/SKIP/UNDO over `predict.*` events; codebase-only provider; tier derived from revertibility and capped by tool policy; passive observation rejected).
+- 2026-08-16 — Decisions 1 and 12 amended by ADR-0037 (invocation-scoped desktop sensing). Decision 2 left standing; decisions 3–11 and 13–15 unchanged.
+
+## ADR-0037 · Invocation-scoped sensing
+
+- 2026-08-16 — Proposed (sensing only inside a hotkey-bracketed window over a closed fact list; sensor is a host not a daemon; forbidden-key guard goes union-wide; consent is a per-session arm + visible indicator + non-empty denylist + audit view; REDO is a stack operation, not a fourth predicted verb; accept gated on the privacy machinery rather than on sensing).

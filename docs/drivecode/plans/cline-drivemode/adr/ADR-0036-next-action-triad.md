@@ -57,6 +57,12 @@ economics, not a sensor stack.
    this record says **signal source** and nothing in this feature may reuse
    `provider`.
 
+   **Amended by [ADR-0037](ADR-0037-invocation-scoped-sensing.md) (Proposed):**
+   desktop sensing is permitted when it is *invocation-scoped* — read only
+   inside a window bracketing an explicit hotkey press, over a closed fact
+   list. Continuous or background sensing, screen and pixel capture, window
+   titles, and synthetic keystrokes stay rejected.
+
 2. **v0 predicts over agent-initiated work only.** `work.*` events exist today
    for work *Cline performed*. Operator-initiated saves, commits, and branch
    switches are not observed anywhere, and `apps/vscode` is now a thin SDK shell
@@ -155,6 +161,12 @@ economics, not a sensor stack.
     ever wanted it needs its own decision and its own consent surface — never a
     settings flag on this feature.
 
+    **Amended by [ADR-0037](ADR-0037-invocation-scoped-sensing.md) (Proposed):**
+    that decision and that consent surface now exist. ADR-0037 keeps the
+    rejection of *unprompted* observation intact and permits only reads
+    bracketed by an operator keypress, gated on a non-empty denylist, a
+    visible armed indicator, and a union-wide forbidden-key guard.
+
 13. **v0 ships no student model.** The planner is Claude; training is research
     ([29](../research/29-large-task-models.md)), out-of-process per 09 rule 3.
     This answers [16](../research/16-task-as-unit-models.md) open question 3: **a
@@ -175,6 +187,8 @@ economics, not a sensor stack.
 ## Non-goals
 
 - Desktop-wide sensing, synthetic keystrokes, screen or pixel capture.
+  ([ADR-0037](ADR-0037-invocation-scoped-sensing.md), Proposed, narrows the
+  first of these to invocation-scoped reads; the rest stay non-goals.)
 - Observing operator-initiated editor, git, or terminal activity (decision 2).
 - Multi-step autonomy. One DO is one verb; chains exist only because the operator
   keeps pressing.

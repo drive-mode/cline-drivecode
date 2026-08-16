@@ -88,6 +88,7 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** | none | Blocked on delivery D1 (`capPreset` on `call_seat`) |
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | none | Wire snapshot/delta + one factual catch-up line |
 | [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | none | DO/SKIP/UNDO over `predict.*` events; tier from revertibility, capped by tool policy; answers research 16 Q3. [PRD 11](../prd/prd-magic-hotkey.md) |
+| [ADR-0037](ADR-0037-invocation-scoped-sensing.md) | Desktop sensing is invocation-scoped, or it does not happen | **Proposed** | none | Amends ADR-0036 decisions 1 and 12. Sensing only inside a hotkey-bracketed window, closed fact list, non-empty denylist; REDO stays a stack op. Accept gated on the privacy machinery, not on sensing |
 
 ## Leadership decisions
 
@@ -137,6 +138,7 @@ Where product / platform work is advancing **without** a binding ADR (or with on
 | Codebase-map firewall | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) **Proposed** | Explain-only |
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) **Proposed** | One factual line + wire snapshot |
 | Operator next-action layer | [ADR-0036](ADR-0036-next-action-triad.md) **Proposed** | Closes the 21-operator-experience gap; answers 16 Q3 with labels |
+| Desktop signal source + consent surface | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) **Proposed** | Amends ADR-0036 1/12; the "own decision and own consent surface" decision 12 demanded |
 
 ### Proposed ADRs — accept when shipped, not sooner
 
