@@ -28,6 +28,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-08 — ADR cleanup on main: reconcile 0023; Accept 0023/0027/0028/0029; path H fold; current-truth hygiene; chronology extracted to this file.
 - 2026-08-08 — Comprehensive git-mined changelog + full binding-clause inventory ([decision-coverage.md](decision-coverage.md)).
 - 2026-08-08 — Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (Proposed).
+- 2026-08-11 — ADR-0036 next-action triad + PRD 11 + research 29 (Proposed); closes the 21-operator-experience gap and answers research 16 open question 3.
 
 ---
 
@@ -253,3 +254,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## DEC-codebase-map-firewall
 
 - 2026-08-08 — Proposed (codebase-map explain-only; no portfolio/Status writes).
+
+## ADR-0036 · Next-action triad
+
+- 2026-08-11 — Proposed (DO/SKIP/UNDO over `predict.*` events; codebase-only provider; tier derived from revertibility and capped by tool policy; passive observation rejected).

@@ -87,6 +87,7 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary (DrivePlan owns truth) | **Proposed** | none | Kanban = workbench; bank/gates/receipts = Drive |
 | [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** | none | Blocked on delivery D1 (`capPreset` on `call_seat`) |
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | none | Wire snapshot/delta + one factual catch-up line |
+| [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | none | DO/SKIP/UNDO over `predict.*` events; tier from revertibility, capped by tool policy; answers research 16 Q3. [PRD 11](../prd/prd-magic-hotkey.md) |
 
 ## Leadership decisions
 
@@ -135,6 +136,7 @@ Where product / platform work is advancing **without** a binding ADR (or with on
 | Multi-device product contract | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) **Proposed** | Semantics parity, not pixel parity |
 | Codebase-map firewall | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) **Proposed** | Explain-only |
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) **Proposed** | One factual line + wire snapshot |
+| Operator next-action layer | [ADR-0036](ADR-0036-next-action-triad.md) **Proposed** | Closes the 21-operator-experience gap; answers 16 Q3 with labels |
 
 ### Proposed ADRs — accept when shipped, not sooner
 
@@ -151,6 +153,7 @@ Where product / platform work is advancing **without** a binding ADR (or with on
 | **0033** | Managed cards refuse bank archive from Kanban Done |
 | **0034** | After delivery D1; unified seat role writes only |
 | **0035** | Catch-up line on leave/return + snapshot gap path |
+| **0036** | Triad on tip **and** a kept-rate being measured — not when the hint renders |
 
 ## Still Open (product gaps)
 
