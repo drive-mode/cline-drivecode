@@ -17,7 +17,9 @@ for any retention widening), [DRV-EVENTS](../features/DRV-EVENTS.md)
 §3 (pixel capture rejected — **not** reopened here),
 [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md).  
 **Product:** [PRD 11](../prd/prd-magic-hotkey.md) · **Research:**
-[29-large-task-models](../research/29-large-task-models.md).
+[29-large-task-models](../research/29-large-task-models.md) · **Wiring:**
+[next-action-triad](../initiatives/next-action-triad/) (answers ADR-0036 Open 6;
+records constraints C1 and C2).
 
 ## Context
 
@@ -153,9 +155,17 @@ bracket — is invisible to the operator and fatal to the product.
    another application's context grants no licence to write to it. Synthetic
    keystrokes stay rejected, as does any cross-application effect. The actuator
    surface is unchanged from ADR-0036 decision 5: one policy resolution, one set
-   of host callbacks, in `sdk/packages/agents/src/agent-runtime.ts`, against the
-   workspace. Sensing must not widen what `ToolPolicy` permits, and a sensed fact
-   is never an input to a tier calculation.
+   of host callbacks, against the workspace. Sensing must not widen what
+   `ToolPolicy` permits, and a sensed fact is never an input to a tier
+   calculation.
+
+   Precise locations, since ADR-0036 decision 5 names only the gate: the gate is
+   `prepareToolExecution` in `sdk/packages/agents/src/agent-runtime.ts`, and the
+   resolution it applies is the single canonical `resolveToolPolicy` in
+   `sdk/packages/shared/src/llms/tools.ts`. Those were two copies until
+   [next-action-triad](../initiatives/next-action-triad/) deleted the private
+   duplicate in `agent-runtime.ts`; that de-duplication is a precondition for
+   this record, because "one policy table" requires one table to reach.
 
 8. **Consequence — desktop context buys information, not reach.** ADR-0036
    decision 8 already binds: a verb whose effect escapes the worktree cannot be
@@ -240,6 +250,16 @@ bracket — is invisible to the operator and fatal to the product.
 7. Whether an invocation while a denylisted app is frontmost should be silently
    dropped or visibly refused. Silence is safer; a refusal teaches the operator
    the boundary exists.
+8. Whether a `beforeTool` policy override makes decision 7 narrower than it
+   reads. [next-action-triad](../initiatives/next-action-triad/) constraint **C2**
+   establishes that `beforeTool` hooks may override a resolved policy and receive
+   turn state, so an operator-initiated DO that skips them resolves a *different*
+   policy than the same tool mid-turn — independent of sensing, and inherited by
+   this record rather than created by it. **This record does not decide it.** It
+   belongs to ADR-0036 decisions 5–6 and is tracked as that initiative's W3,
+   which recommends degrading per session. Noted here only because decision 7
+   leans on the policy path being single, and until W3 lands it is single in
+   resolution but not in outcome.
 
 ## Alternatives rejected
 

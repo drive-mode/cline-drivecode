@@ -264,3 +264,4 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## ADR-0037 · Invocation-scoped sensing
 
 - 2026-08-16 — Proposed (sensing only inside a hotkey-bracketed window over a closed fact list; sensor is a host not a daemon; forbidden-key guard goes union-wide; consent is a per-session arm + visible indicator + non-empty denylist + audit view; REDO is a stack operation, not a fourth predicted verb; accept gated on the privacy machinery rather than on sensing).
+- 2026-08-17 — Decision 7 re-pointed after ADR-0036 Open 6 was answered: the gate is `prepareToolExecution` in `@cline/agents`, the resolution is the canonical `resolveToolPolicy` in `@cline/shared` (private duplicate deleted by the next-action-triad initiative). Open 8 added to record constraint C2 as inherited and undecided here.
