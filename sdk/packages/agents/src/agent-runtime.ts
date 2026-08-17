@@ -39,6 +39,7 @@ import {
 	mergeModelOptions,
 	normalizeJsonLikeStringsForSchema,
 	omitUndefinedValues,
+	resolveToolPolicy,
 	TASK_CANCELLED_EVENT,
 	TASK_FIRST_CHUNK_RECEIVED_EVENT,
 	TASK_PROVIDER_REQUEST_STARTED_EVENT,
@@ -167,16 +168,6 @@ function resolveRuntimeConfig(
 		provider: providerId,
 	};
 	return { ...rest, model, messageModelInfo };
-}
-
-function resolveToolPolicy(
-	toolName: string,
-	policies: BaseAgentRuntimeConfig["toolPolicies"],
-): ToolPolicy {
-	return {
-		...(policies?.["*"] ?? {}),
-		...(policies?.[toolName] ?? {}),
-	};
 }
 
 interface PendingToolAssembly {
