@@ -9,7 +9,7 @@ import {
 	type HostCapabilities,
 	type RoomOp,
 } from "../hostPort.js";
-import { createEmptyRoomSnapshot } from "../reduceRoom.js";
+import { createEmptyRoomSnapshot, reduceRoom } from "../reduceRoom.js";
 
 export type MemoryDriveHost = DriveHostPort & {
 	readonly rooms: Map<string, RoomSnapshot>;
@@ -29,6 +29,7 @@ export function memoryDriveHost(
 		harnessId: "memory",
 		durableConfigIo: false,
 		promptRewrite: false,
+		signedDirectorPolicy: false,
 	},
 ): MemoryDriveHost {
 	const rooms = new Map<string, RoomSnapshot>();
@@ -73,7 +74,11 @@ export function memoryDriveHost(
 							}),
 						);
 					}
-					return rooms.get(op.roomId)!;
+					const created = rooms.get(op.roomId);
+					if (!created) {
+						throw new Error(`room_create_failed:${op.roomId}`);
+					}
+					return created;
 				}
 				case "join": {
 					const current =
@@ -163,16 +168,7 @@ export function memoryDriveHost(
 					if (!current) {
 						throw new Error(`room_not_found:${op.roomId}`);
 					}
-					const next: RoomSnapshot = {
-						...current,
-						stage: {
-							...current.stage,
-							sharer: op.sharer,
-							...(op.pin !== undefined ? { pin: op.pin } : {}),
-						},
-					};
-					rooms.set(op.roomId, next);
-					emit({
+					const event: DriveEvent = {
 						schemaVersion: 1,
 						id: newEventId("stage"),
 						roomId: op.roomId,
@@ -181,7 +177,16 @@ export function memoryDriveHost(
 						track: "control",
 						sharer: op.sharer,
 						...(op.pin !== undefined ? { pin: op.pin } : {}),
-					});
+					};
+					const next = reduceRoom(current, event);
+					if (
+						op.sharer?.kind === "agent" &&
+						next.stage.sharer?.participantId !== op.sharer.participantId
+					) {
+						throw new Error(`presenter_required:${op.sharer.participantId}`);
+					}
+					rooms.set(op.roomId, next);
+					emit(event);
 					return next;
 				}
 				case "setMode": {
@@ -258,6 +263,76 @@ export function memoryDriveHost(
 						participantId: op.participantId,
 						muted: op.muted,
 					});
+					return next;
+				}
+				case "grantTitle":
+				case "revokeTitle":
+				case "transferTitle": {
+					const current = rooms.get(op.roomId);
+					if (!current) {
+						throw new Error(`room_not_found:${op.roomId}`);
+					}
+					const event: DriveEvent =
+						op.type === "grantTitle"
+							? {
+									schemaVersion: 1,
+									id: newEventId("title_grant"),
+									roomId: op.roomId,
+									at: op.grant.grantedAt,
+									type: "control.title_granted",
+									track: "control",
+									actorId: "cline:coordinator",
+									grant: op.grant,
+								}
+							: op.type === "revokeTitle"
+								? {
+										schemaVersion: 1,
+										id: newEventId("title_revoke"),
+										roomId: op.roomId,
+										at: op.revokedAt,
+										type: "control.title_revoked",
+										track: "control",
+										actorId: "cline:coordinator",
+										grantId: op.grantId,
+										revokedAt: op.revokedAt,
+										reason: op.reason,
+									}
+								: {
+										schemaVersion: 1,
+										id: newEventId("title_transfer"),
+										roomId: op.roomId,
+										at: op.transferredAt,
+										type: "control.title_transferred",
+										track: "control",
+										actorId: "cline:coordinator",
+										title: op.title,
+										fromGrantId: op.fromGrantId,
+										toGrant: op.toGrant,
+										transferredAt: op.transferredAt,
+									};
+					const next = reduceRoom(current, event);
+					if (
+						op.type === "grantTitle" &&
+						next.titleGrantsById[op.grant.id] === undefined
+					) {
+						throw new Error("presenter_conflict");
+					}
+					if (
+						op.type === "revokeTitle" &&
+						next.titleGrantsById[op.grantId]?.revokedAt !== op.revokedAt
+					) {
+						throw new Error(`title_grant_not_found:${op.grantId}`);
+					}
+					if (
+						op.type === "transferTitle" &&
+						next.titleGrantsById[op.toGrant.id] === undefined
+					) {
+						throw new Error(
+							`presenter_transfer_source_invalid:${op.fromGrantId}`,
+						);
+					}
+					rooms.set(op.roomId, next);
+					emit(event);
 					return next;
 				}
 				default: {

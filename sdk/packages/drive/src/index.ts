@@ -255,6 +255,8 @@ export {
 	type DriveHarnessRooms,
 	type DriveHarnessScripts,
 	type DriveHarnessShows,
+	type DriveHarnessTitles,
+	type PresenterGrantOptions,
 	type RosterPackMember,
 } from "./harness.js";
 export {
@@ -284,6 +286,7 @@ export {
 	CLINE_HUB_WRITER_ENDPOINT,
 	type DirectorOp,
 	type DirectorOpResult,
+	type DirectorPolicyDescriptor,
 	type DriveHostPort,
 	type HostCapabilities,
 	type PromptRewriteDecision,
@@ -363,7 +366,10 @@ export {
 	recruitNeedIsPrivate,
 } from "./recruit/scoreNeed.js";
 export {
+	activePresenterGrant,
 	createEmptyRoomSnapshot,
+	isTitleGrantActive,
+	projectActiveTitleGrants,
 	projectRoster,
 	projectStage,
 	reduceRoom,

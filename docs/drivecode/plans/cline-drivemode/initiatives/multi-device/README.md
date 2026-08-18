@@ -14,7 +14,7 @@ hub web, PWA/phone browser, CLI/TUI, and later Android — not an iOS-only fork.
 |---|---|---|
 | `hub` | Hub webview (desktop / wide) | `apps/cline-hub` |
 | `pwa` | Phone browser / Add to Home Screen | drive-web + hosted-preview (planned) |
-| `ios` | Native SwiftUI app | [`apps/drive-ios`](../../../../../../apps/drive-ios/) · [live-client plan](../ios-native-client/) |
+| `ios` | Native SwiftUI app | standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) is the product source; in-tree [`apps/drive-ios`](../../../../../../apps/drive-ios/) is a legacy fixture; [live-client plan](../ios-native-client/) defines the least-authority Cline gateway |
 | `tui` | CLI OpenTUI | `apps/cli` |
 | `android` | Native later | **YAGNI** until ios + pwa prove retention |
 
@@ -30,6 +30,12 @@ Wireframe visual SoT for phone chrome remains
 [`mobile-drive-ios.html`](../../../../design/wireframes/mobile-drive-ios.html).
 Brand: [`MOBILE-BRAND-STYLING.md`](../../../../design/brand/MOBILE-BRAND-STYLING.md).
 
+The standalone repository is authoritative for native product status,
+implementation, privacy policy, and App Store readiness. This initiative owns
+only the cross-device contract and parity queue. Its iOS matrix cells therefore
+mean preview behavior exists in the standalone app; they do not mean the open
+PR stack is merged or that a store build is ready.
+
 ## Rules
 
 1. **No silent device forks.** A behavior that only exists on one device is a
@@ -44,9 +50,10 @@ Brand: [`MOBILE-BRAND-STYLING.md`](../../../../design/brand/MOBILE-BRAND-STYLING
 
 ## Hand back
 
-Start from [MATRIX.md](MATRIX.md). Ship ios demo shell → wire hub adapter → keep
-pwa/tui rows honest. Do not invent Android until the matrix says ios+pwa are green
-on Tier 1 jobs.
+Start from [MATRIX.md](MATRIX.md). The standalone iOS stack is landed; next wire
+its managed gateway, account, target, and call adapters while keeping pwa/tui
+rows honest. Do not invent Android until the matrix says ios+pwa are green on
+Tier 1 jobs.
 
 The iOS live path uses the least-authority Mobile Drive Gateway in
 [ios-native-client](../ios-native-client/); it does not expose the core Hub or

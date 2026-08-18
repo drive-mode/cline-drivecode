@@ -7,6 +7,7 @@ import type {
 	AddressSet,
 	AgentParticipant,
 	AgentProfile,
+	AgentTitleGrant,
 	DirectorScript,
 	DriveEvent,
 	DriveSubMode,
@@ -23,6 +24,7 @@ import { planShowIntents } from "./director/planShowIntents.js";
 import { advanceScriptBeat } from "./director/rankBacklogs.js";
 import { capPreset, expandRosterPack } from "./facets/expand.js";
 import type { DirectorOpResult, DriveHostPort } from "./hostPort.js";
+import { activePresenterGrant } from "./reduceRoom.js";
 import { setSpotlight } from "./room/participantControls.js";
 import {
 	applySeatSourceDelta,
@@ -151,6 +153,30 @@ export type DriveHarnessScripts = {
 	advance(roomId: string): Promise<DirectorOpResult>;
 };
 
+export type PresenterGrantOptions = {
+	durationMs?: number;
+	skillBundleRefs?: string[];
+	resourceGrantRefs?: string[];
+	delegatedAgentIds?: string[];
+};
+
+export type DriveHarnessTitles = {
+	grantPresenter(
+		roomId: string,
+		agentId: string,
+		opts?: PresenterGrantOptions,
+	): Promise<RoomSnapshot>;
+	transferPresenter(
+		roomId: string,
+		agentId: string,
+		opts?: PresenterGrantOptions,
+	): Promise<RoomSnapshot>;
+	revokePresenter(
+		roomId: string,
+		reason?: "revoked" | "expired" | "policy",
+	): Promise<RoomSnapshot>;
+};
+
 export type DriveHarness = {
 	readonly host: DriveHostPort;
 	start(): Promise<void>;
@@ -168,7 +194,33 @@ export type DriveHarness = {
 	 * Script attach/advance commits via DriveHostPort.commitDirectorOp.
 	 */
 	readonly scripts: DriveHarnessScripts;
+	/** Temporary host-committed Agent Title grants. */
+	readonly titles: DriveHarnessTitles;
 };
+
+function presenterGrant(
+	roomId: string,
+	agentId: string,
+	opts: PresenterGrantOptions = {},
+	at = new Date(),
+): AgentTitleGrant {
+	const durationMs = Math.min(
+		8 * 60 * 60 * 1_000,
+		Math.max(60_000, opts.durationMs ?? 60 * 60 * 1_000),
+	);
+	return {
+		id: `presenter_${crypto.randomUUID()}`,
+		agentId,
+		title: "presenter",
+		scope: { kind: "stage", ref: roomId },
+		skillBundleRefs: opts.skillBundleRefs ?? ["presenter-stage"],
+		resourceGrantRefs: opts.resourceGrantRefs ?? ["typed-stage"],
+		delegatedAgentIds: opts.delegatedAgentIds ?? [],
+		permissions: ["stage.present"],
+		grantedAt: at.toISOString(),
+		expiresAt: new Date(at.getTime() + durationMs).toISOString(),
+	};
+}
 
 function isRosterPack(value: unknown): value is RosterPack {
 	return (
@@ -304,6 +356,24 @@ export function createDriveHarness(
 				partnerId != null &&
 				!snapshot.driveActive;
 			if (activate && partnerId) {
+				const active = activePresenterGrant(snapshot, new Date().toISOString());
+				const grant = presenterGrant(roomId, partnerId);
+				if (active && active.agentId !== partnerId) {
+					snapshot = await host.commitRoomOp({
+						type: "transferTitle",
+						roomId,
+						title: "presenter",
+						fromGrantId: active.id,
+						toGrant: grant,
+						transferredAt: grant.grantedAt,
+					});
+				} else if (!active) {
+					snapshot = await host.commitRoomOp({
+						type: "grantTitle",
+						roomId,
+						grant,
+					});
+				}
 				snapshot = await host.commitRoomOp({
 					type: "setMode",
 					roomId,
@@ -446,7 +516,7 @@ export function createDriveHarness(
 					const existing = snapshot.participants.find(
 						(participant) => participant.id === action.participantId,
 					);
-					if (!existing || existing.kind !== "agent") {
+					if (existing?.kind !== "agent") {
 						continue;
 					}
 					snapshot = await host.commitRoomOp({
@@ -582,6 +652,52 @@ export function createDriveHarness(
 		},
 	};
 
+	const titles: DriveHarnessTitles = {
+		async grantPresenter(roomId, agentId, opts) {
+			return host.commitRoomOp({
+				type: "grantTitle",
+				roomId,
+				grant: presenterGrant(roomId, agentId, opts),
+			});
+		},
+		async transferPresenter(roomId, agentId, opts) {
+			const snapshot = await requireRoom(roomId);
+			const at = new Date();
+			const active = activePresenterGrant(snapshot, at.toISOString());
+			if (!active) {
+				return host.commitRoomOp({
+					type: "grantTitle",
+					roomId,
+					grant: presenterGrant(roomId, agentId, opts, at),
+				});
+			}
+			const next = presenterGrant(roomId, agentId, opts, at);
+			return host.commitRoomOp({
+				type: "transferTitle",
+				roomId,
+				title: "presenter",
+				fromGrantId: active.id,
+				toGrant: next,
+				transferredAt: next.grantedAt,
+			});
+		},
+		async revokePresenter(roomId, reason = "revoked") {
+			const snapshot = await requireRoom(roomId);
+			const revokedAt = new Date().toISOString();
+			const active = activePresenterGrant(snapshot, revokedAt);
+			if (!active) {
+				return snapshot;
+			}
+			return host.commitRoomOp({
+				type: "revokeTitle",
+				roomId,
+				grantId: active.id,
+				revokedAt,
+				reason,
+			});
+		},
+	};
+
 	return {
 		host,
 		async start() {
@@ -607,5 +723,6 @@ export function createDriveHarness(
 		},
 		shows,
 		scripts,
+		titles,
 	};
 }

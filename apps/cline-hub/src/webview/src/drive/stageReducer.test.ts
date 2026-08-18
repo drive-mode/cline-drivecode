@@ -228,6 +228,7 @@ describe("projectStageFromMessages", () => {
 		);
 
 		expect(stage.sharer).toEqual({ kind: "agent", participantId: "adam" });
+		expect(stage.presenterGrantId).toBeNull();
 		expect(stage.cards).toHaveLength(2);
 		expect(stage.cards.map((card) => card.category)).toEqual([
 			"edit",

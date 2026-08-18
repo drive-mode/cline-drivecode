@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ShowBacklogItem } from "@cline/shared";
 import { afterEach, describe, expect, it } from "vitest";
+import { mintClinePresenterGrant } from "../directorPolicy";
 import {
 	recordShowBacklogArtifacts,
 	resetArtifactLogRetentionCacheForTests,
@@ -100,7 +101,10 @@ describe("DriveRoomStore", () => {
 			at: "2026-07-30T10:00:01.000Z",
 		});
 		expect(first.event.callSessionId).toBeTruthy();
-		const sessionId = first.event.callSessionId!;
+		const sessionId = first.event.callSessionId;
+		if (!sessionId) {
+			throw new Error("expected a callSessionId on first join");
+		}
 		expect(store.getActiveCallSessionId("room_cs")).toBe(sessionId);
 
 		const partner = store.join({
@@ -236,6 +240,13 @@ describe("DriveRoomStore", () => {
 				seatSources: [],
 			},
 		});
+		store.grantTitle({
+			roomId: "room_sync",
+			grant: mintClinePresenterGrant({
+				roomId: "room_sync",
+				agentId: "adam",
+			}),
+		});
 		store.setStage({
 			roomId: "room_sync",
 			sharer: { kind: "agent", participantId: "adam" },
@@ -358,6 +369,11 @@ describe("joinCall", () => {
 			kind: "agent",
 			participantId: "adam",
 		});
+		expect(
+			Object.values(first.snapshot.titleGrantsById).filter(
+				(grant) => grant.revokedAt === undefined,
+			),
+		).toHaveLength(1);
 
 		const second = joinCall({
 			roomId: "call_1",

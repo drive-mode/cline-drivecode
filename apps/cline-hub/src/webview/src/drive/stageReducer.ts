@@ -387,6 +387,8 @@ export function projectStageFromMessages(
 		sharer: options?.sharer ?? null,
 		pin: null,
 		cards: projectStageCardsFromToolEvents(events, { now: options?.now }),
+		// Message-only projections cannot mint host authority.
+		presenterGrantId: null,
 	};
 }
 

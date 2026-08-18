@@ -2,7 +2,12 @@
  * Pure room fold + projections. Apps import these; hub commits separately.
  */
 
-import type { DriveEvent, RoomSnapshot, StageCard } from "@cline/shared";
+import type {
+	AgentTitleGrant,
+	DriveEvent,
+	RoomSnapshot,
+	StageCard,
+} from "@cline/shared";
 
 function rememberEventId(ids: readonly string[], id: string): string[] {
 	if (ids.includes(id)) {
@@ -17,6 +22,54 @@ function upsertStageCard(
 ): StageCard[] {
 	const without = cards.filter((c) => c.category !== card.category);
 	return [...without, card];
+}
+
+export function isTitleGrantActive(
+	grant: AgentTitleGrant,
+	at: string,
+): boolean {
+	const timestamp = Date.parse(at);
+	return (
+		Date.parse(grant.grantedAt) <= timestamp &&
+		timestamp < Date.parse(grant.expiresAt) &&
+		(grant.revokedAt === undefined || timestamp < Date.parse(grant.revokedAt))
+	);
+}
+
+export function activePresenterGrant(
+	snapshot: RoomSnapshot,
+	at: string,
+	agentId?: string,
+): AgentTitleGrant | undefined {
+	return Object.values(snapshot.titleGrantsById).find(
+		(grant) =>
+			grant.title === "presenter" &&
+			(agentId === undefined || grant.agentId === agentId) &&
+			isTitleGrantActive(grant, at),
+	);
+}
+
+function clearExpiredPresenter(
+	snapshot: RoomSnapshot,
+	at: string,
+): RoomSnapshot {
+	const presenterGrantId = snapshot.stage.presenterGrantId;
+	if (!presenterGrantId) {
+		return snapshot;
+	}
+	const grant = snapshot.titleGrantsById[presenterGrantId];
+	if (grant && isTitleGrantActive(grant, at)) {
+		return snapshot;
+	}
+	return {
+		...snapshot,
+		stage: {
+			...snapshot.stage,
+			sharer:
+				snapshot.stage.sharer?.kind === "agent" ? null : snapshot.stage.sharer,
+			presenterGrantId: null,
+		},
+	};
 }
 
 function cardFromWorkEvent(event: DriveEvent): StageCard | null {
@@ -85,7 +138,8 @@ export function createEmptyRoomSnapshot(input: {
 		driveActive: false,
 		subMode: input.subMode ?? "plan",
 		participants: input.host ? [input.host] : [],
-		stage: { sharer: null, pin: null, cards: [] },
+		stage: { sharer: null, pin: null, cards: [], presenterGrantId: null },
+		titleGrantsById: {},
 		addressSet: { mode: "everyone" },
 		muteByParticipantId: {},
 		raisedHandByParticipantId: {},
@@ -109,7 +163,10 @@ export function reduceRoom(
 	}
 
 	const appliedEventIds = rememberEventId(snapshot.appliedEventIds, event.id);
-	const base = { ...snapshot, appliedEventIds };
+	const base = clearExpiredPresenter(
+		{ ...snapshot, appliedEventIds },
+		event.at,
+	);
 
 	switch (event.type) {
 		case "control.join": {
@@ -144,13 +201,32 @@ export function reduceRoom(
 					: {}),
 			};
 		}
-		case "control.leave":
+		case "control.leave": {
+			const presenter = activePresenterGrant(
+				base,
+				event.at,
+				event.participantId,
+			);
+			const clearsStage =
+				base.stage.sharer?.participantId === event.participantId;
 			return {
 				...base,
 				participants: base.participants.filter(
 					(p) => p.id !== event.participantId,
 				),
+				...(presenter
+					? {
+							titleGrantsById: {
+								...base.titleGrantsById,
+								[presenter.id]: { ...presenter, revokedAt: event.at },
+							},
+						}
+					: {}),
+				stage: clearsStage
+					? { ...base.stage, sharer: null, pin: null, presenterGrantId: null }
+					: base.stage,
 			};
+		}
 		case "control.end":
 			return {
 				...base,
@@ -160,7 +236,16 @@ export function reduceRoom(
 					...base.stage,
 					sharer: null,
 					pin: null,
+					presenterGrantId: null,
 				},
+				titleGrantsById: Object.fromEntries(
+					Object.entries(base.titleGrantsById).map(([id, grant]) => [
+						id,
+						isTitleGrantActive(grant, event.at)
+							? { ...grant, revokedAt: event.at }
+							: grant,
+					]),
+				),
 				raisedHandByParticipantId: {},
 			};
 		case "control.mute":
@@ -171,7 +256,26 @@ export function reduceRoom(
 					[event.participantId]: event.muted,
 				},
 			};
-		case "control.stage":
+		case "control.stage": {
+			if (event.sharer?.kind === "agent") {
+				const grant = activePresenterGrant(
+					base,
+					event.at,
+					event.sharer.participantId,
+				);
+				if (!grant) {
+					return base;
+				}
+				return {
+					...base,
+					stage: {
+						...base.stage,
+						sharer: event.sharer,
+						pin: event.pin ?? null,
+						presenterGrantId: grant.id,
+					},
+				};
+			}
 			return {
 				...base,
 				stage: {
@@ -183,8 +287,84 @@ export function reduceRoom(
 							: event.sharer?.kind === "human"
 								? base.stage.pin
 								: null,
+					presenterGrantId: null,
 				},
 			};
+		}
+		case "control.title_granted": {
+			const activePresenter = activePresenterGrant(base, event.at);
+			if (
+				event.grant.title === "presenter" &&
+				activePresenter &&
+				activePresenter.id !== event.grant.id
+			) {
+				return base;
+			}
+			return {
+				...base,
+				titleGrantsById: {
+					...base.titleGrantsById,
+					[event.grant.id]: event.grant,
+				},
+				stage: {
+					...base.stage,
+					presenterGrantId: isTitleGrantActive(event.grant, event.at)
+						? event.grant.id
+						: base.stage.presenterGrantId,
+				},
+			};
+		}
+		case "control.title_revoked": {
+			const grant = base.titleGrantsById[event.grantId];
+			if (!grant) {
+				return base;
+			}
+			const wasPresenter = base.stage.presenterGrantId === event.grantId;
+			return {
+				...base,
+				titleGrantsById: {
+					...base.titleGrantsById,
+					[event.grantId]: { ...grant, revokedAt: event.revokedAt },
+				},
+				stage: wasPresenter
+					? { ...base.stage, sharer: null, presenterGrantId: null }
+					: base.stage,
+			};
+		}
+		case "control.title_transferred": {
+			const from = base.titleGrantsById[event.fromGrantId];
+			if (
+				!from ||
+				from.title !== event.title ||
+				event.toGrant.title !== event.title ||
+				from.scope.kind !== event.toGrant.scope.kind ||
+				from.scope.ref !== event.toGrant.scope.ref ||
+				!isTitleGrantActive(from, event.transferredAt) ||
+				!isTitleGrantActive(event.toGrant, event.transferredAt)
+			) {
+				return base;
+			}
+			return {
+				...base,
+				titleGrantsById: {
+					...base.titleGrantsById,
+					[event.fromGrantId]: {
+						...from,
+						revokedAt: event.transferredAt,
+					},
+					[event.toGrant.id]: event.toGrant,
+				},
+				stage: {
+					...base.stage,
+					sharer: {
+						kind: "agent",
+						participantId: event.toGrant.agentId,
+					},
+					pin: null,
+					presenterGrantId: event.toGrant.id,
+				},
+			};
+		}
 		case "control.mode":
 			return {
 				...base,
@@ -260,6 +440,15 @@ export function reduceRoom(
 			return _exhaustive;
 		}
 	}
+}
+
+export function projectActiveTitleGrants(
+	snapshot: RoomSnapshot,
+	at: string,
+): readonly AgentTitleGrant[] {
+	return Object.values(snapshot.titleGrantsById).filter((grant) =>
+		isTitleGrantActive(grant, at),
+	);
 }
 
 export function projectStage(snapshot: RoomSnapshot): RoomSnapshot["stage"] {

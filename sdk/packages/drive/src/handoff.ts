@@ -9,11 +9,7 @@
  * - Rejoin while-away line → {@link formatWhileAwayLine}
  */
 
-import type {
-	BankDriveEvent,
-	BankSnapshot,
-	DriveEvent,
-} from "@cline/shared";
+import type { BankDriveEvent, BankSnapshot, DriveEvent } from "@cline/shared";
 import type { SessionRollup } from "./sessionRollup.js";
 
 /** Mirrors `@cline/shared` DRIVE_EVENT_FORBIDDEN_KEYS (value-import banned). */
@@ -258,6 +254,9 @@ export function assembleHandoffPacket(
 			case "control.raise_hand":
 			case "control.rename":
 			case "control.address":
+			case "control.title_granted":
+			case "control.title_revoked":
+			case "control.title_transferred":
 			case "conversation.message":
 			case "conversation.narration":
 			case "presence.speaking":
@@ -274,7 +273,8 @@ export function assembleHandoffPacket(
 	}
 
 	const tasksCompleted =
-		input.rollup?.tasksCompleted ?? done.filter((d) => !d.taskId.startsWith("plan:")).length;
+		input.rollup?.tasksCompleted ??
+		done.filter((d) => !d.taskId.startsWith("plan:")).length;
 	const midPlanAddCount = input.rollup?.midPlanAddCount ?? 0;
 	const durationMs = input.rollup?.durationMs ?? null;
 
@@ -348,7 +348,9 @@ export function formatHandoffNarration(packet: HandoffPacket): string {
 	if (packet.open.length > 0) {
 		const labels = packet.open.map((item) => {
 			const base = item.title ?? item.taskId;
-			return item.lastFailure ? `${base} (last failure: ${item.lastFailure})` : base;
+			return item.lastFailure
+				? `${base} (last failure: ${item.lastFailure})`
+				: base;
 		});
 		lines.push(`Open: ${labels.join("; ")}.`);
 	} else {
@@ -410,23 +412,23 @@ function formatEvidenceClause(evidence: HandoffEvidence): string | null {
 	if (evidence.editPaths.length > 0) {
 		bits.push(`edited ${evidence.editPaths.join(", ")}`);
 	}
-	if (evidence.commands.length > 0) {
-		const last = evidence.commands[evidence.commands.length - 1]!;
+	const lastCommand = evidence.commands.at(-1);
+	if (lastCommand) {
 		const outcome =
-			last.failed === true
+			lastCommand.failed === true
 				? "failed"
-				: typeof last.exitCode === "number"
-					? `exit ${last.exitCode}`
+				: typeof lastCommand.exitCode === "number"
+					? `exit ${lastCommand.exitCode}`
 					: "ok";
 		bits.push(
 			evidence.commands.length === 1
-				? `ran ${last.command} (${outcome})`
-				: `${evidence.commands.length} commands (last: ${last.command}, ${outcome})`,
+				? `ran ${lastCommand.command} (${outcome})`
+				: `${evidence.commands.length} commands (last: ${lastCommand.command}, ${outcome})`,
 		);
 	}
-	if (evidence.decisions.length > 0) {
-		const last = evidence.decisions[evidence.decisions.length - 1]!;
-		bits.push(`decision ${last.title}: ${last.choice}`);
+	const lastDecision = evidence.decisions.at(-1);
+	if (lastDecision) {
+		bits.push(`decision ${lastDecision.title}: ${lastDecision.choice}`);
 	}
 	if (bits.length === 0) {
 		return null;

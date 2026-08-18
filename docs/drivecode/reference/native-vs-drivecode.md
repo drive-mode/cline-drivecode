@@ -39,6 +39,7 @@ Three verbs: **the harness proposes, the host commits, apps project.** See [04-r
 |---|---|---|---|---|
 | Interaction model | Turn chat: prompt → wait → transcript | Call room: join, roster, stay in the call | `shipped` | [00-vision.md](../plans/cline-drivemode/foundation/00-vision.md); [DriveCallChrome.tsx](../../../apps/cline-hub/src/webview/src/drive/DriveCallChrome.tsx) |
 | WIP visibility | Transcript wall of tool output | Spotlight / stage cards (edit, command, test, plan, decision) | `shipped` | [DRV-STAGE](../plans/cline-drivemode/features/DRV-STAGE.md); hub `Spotlight.tsx`, `stageReducer.ts` |
+| Temporary presentation authority | No Drive title contract | Exclusive, scoped Presenter grant; signed host-side Director policy | `branch` | [SDK architecture](../../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy); open [PR #17](https://github.com/drive-mode/cline-drivecode/pull/17) |
 | Multi-agent | Team tools / mailbox (runtime groups) | Room roster, address set; RosterPack hub seat path + recruit scoring | `shipped` (library/Add UI open) | [DRV-ROSTER-PACK](../plans/cline-drivemode/features/DRV-ROSTER-PACK.md); [DRV-RECRUIT](../plans/cline-drivemode/features/DRV-RECRUIT.md) |
 | Cross-agent status | Transient hub events; session lifecycle column | Durable Status Hub (`status.db`, Board + Changelog + Dependency map, `seq` cursor) | `shipped` | Hub status views; ADR-0005 |
 | Interruptibility | Cancel / pending-prompt queue | Raise-hand pause-after-tool; mid-turn steer queue | `shipped` | [DRV-INTERRUPT](../plans/cline-drivemode/features/DRV-INTERRUPT.md); [DRV-STEER-QUEUE](../plans/cline-drivemode/features/DRV-STEER-QUEUE.md) |
@@ -71,6 +72,8 @@ Drivecode is an overlay, not a second product stack:
 | RosterPack | Team | Seating preset vs runtime group |
 | AgentProfile | ConfiguredAgent | Appearance overlay vs behavior definition |
 | Spotlight (UI) | `stage` (wire) | Product label vs protocol field |
+| Presenter | Role/persona | Temporary title grant vs durable role or editable identity |
+| Director | Client configuration | Proprietary host policy vs exportable prompt/settings bag |
 | Room | Session | Collaboration unit vs agent turn container |
 
 ## Related links
@@ -79,3 +82,4 @@ Drivecode is an overlay, not a second product stack:
 - Architecture: [01-architecture.md](../plans/cline-drivemode/foundation/01-architecture.md)
 - SDK relationship: [04-relationship-to-cline-drivecode.md](../plans/drivecode-sdk/foundation/04-relationship-to-cline-drivecode.md)
 - Repo handoff: [HANDOFF.md](../plans/cline-drivemode/delivery/HANDOFF.md)
+- Native iOS source of truth: [`drive-ios`](https://github.com/drive-mode/drive-ios)

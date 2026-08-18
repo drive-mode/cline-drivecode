@@ -301,6 +301,8 @@ export function projectShareScreenDemo(
 				: { kind: "agent", participantId: "drive:partner" },
 			pin: humanPin,
 			cards,
+			// Demo projections carry no host-issued Presenter authority.
+			presenterGrantId: null,
 		},
 	};
 }

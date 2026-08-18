@@ -50,7 +50,9 @@ function sampleRoomSnapshot(
 			},
 			pin: null,
 			cards: [],
+			presenterGrantId: null,
 		},
+		titleGrantsById: {},
 		addressSet: { mode: "everyone" },
 		muteByParticipantId: {},
 		raisedHandByParticipantId: {},
@@ -149,6 +151,7 @@ describe("applyRoomSnapshot", () => {
 					},
 					pin,
 					cards,
+					presenterGrantId: null,
 				},
 			}),
 		);
@@ -176,7 +179,12 @@ describe("applyRoomSnapshot", () => {
 				stagePin: { kind: "terminal", label: "shell" },
 			},
 			sampleRoomSnapshot({
-				stage: { sharer: null, pin: null, cards: [] },
+				stage: {
+					sharer: null,
+					pin: null,
+					cards: [],
+					presenterGrantId: null,
+				},
 			}),
 		);
 		expect(next.stageCards).toEqual([]);
@@ -202,6 +210,7 @@ describe("applyRoomSnapshot", () => {
 					},
 					pin: null,
 					cards: [],
+					presenterGrantId: null,
 				},
 			}),
 		);

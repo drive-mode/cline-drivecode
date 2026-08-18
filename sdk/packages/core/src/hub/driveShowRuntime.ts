@@ -11,11 +11,13 @@ import {
 	type ShowPlannerMode,
 	workCategoryFromKind,
 } from "@cline/drive";
-import type { AddressSet, Participant, ShowBacklogItem } from "@cline/shared";
-import {
-	getDriveRoomStore,
-	type DriveRoomStore,
-} from "./collaboration";
+import type {
+	AddressSet,
+	Participant,
+	RoomSnapshot,
+	ShowBacklogItem,
+} from "@cline/shared";
+import { type DriveRoomStore, getDriveRoomStore } from "./collaboration";
 import { produceBrowserSnapshotShowArtifact } from "./drive-producers/produceBrowserSnapshot";
 import { produceChangeAnimationShowArtifact } from "./drive-producers/produceChangeAnimation";
 import { produceCodeWalkthroughShowArtifact } from "./drive-producers/produceCodeWalkthrough";
@@ -80,9 +82,7 @@ export function materializeShowItem(
 						: "mermaid_parse_failed:unknown";
 				return {
 					...showItem,
-					scoreReasons: [
-						...new Set([...showItem.scoreReasons, reason]),
-					],
+					scoreReasons: [...new Set([...showItem.scoreReasons, reason])],
 				};
 			}
 		}
@@ -108,10 +108,7 @@ export function materializeShowItem(
 				uri: produced.item.uri,
 				status: "ready",
 				scoreReasons: [
-					...new Set([
-						...showItem.scoreReasons,
-						...produced.item.scoreReasons,
-					]),
+					...new Set([...showItem.scoreReasons, ...produced.item.scoreReasons]),
 				],
 			};
 		}
@@ -148,10 +145,7 @@ export function materializeShowItem(
 				uri: produced.item.uri,
 				status: "ready",
 				scoreReasons: [
-					...new Set([
-						...showItem.scoreReasons,
-						...produced.item.scoreReasons,
-					]),
+					...new Set([...showItem.scoreReasons, ...produced.item.scoreReasons]),
 				],
 			};
 		}
@@ -184,10 +178,7 @@ export function materializeShowItem(
 				uri: produced.item.uri,
 				status: "ready",
 				scoreReasons: [
-					...new Set([
-						...showItem.scoreReasons,
-						...produced.item.scoreReasons,
-					]),
+					...new Set([...showItem.scoreReasons, ...produced.item.scoreReasons]),
 				],
 			};
 		}
@@ -220,10 +211,7 @@ export function materializeShowItem(
 				uri: produced.item.uri,
 				status: "ready",
 				scoreReasons: [
-					...new Set([
-						...showItem.scoreReasons,
-						...produced.item.scoreReasons,
-					]),
+					...new Set([...showItem.scoreReasons, ...produced.item.scoreReasons]),
 				],
 			};
 		}
@@ -231,7 +219,10 @@ export function materializeShowItem(
 			return {
 				...showItem,
 				scoreReasons: [
-					...new Set([...showItem.scoreReasons, `unknown_produce_tool:${tool}`]),
+					...new Set([
+						...showItem.scoreReasons,
+						`unknown_produce_tool:${tool}`,
+					]),
 				],
 			};
 	}
@@ -310,8 +301,12 @@ export function runShowDirectorTick(input: {
 	preferShowId?: string | null;
 	demoCapture?: boolean;
 	addressedParticipantIds?: ReadonlySet<string>;
+	snapshot?: RoomSnapshot | null;
 }): { room: DriveLiveRoom; presented: ShowBacklogItem | null } {
-	const snapshot = getDriveRoomStore().get(input.room.roomId);
+	const snapshot =
+		input.snapshot !== undefined
+			? input.snapshot
+			: getDriveRoomStore().get(input.room.roomId);
 	/** Prefer stage.sharer (authoritative) over live spotlight (S1.3). */
 	const spotlightParticipantId =
 		snapshot?.stage.sharer?.participantId ??
@@ -404,9 +399,10 @@ export function runShowDirectorTick(input: {
 /**
  * Present the director's activeShowId via materialize + applyPresentedShow.
  */
-export function presentDirectorActiveShow(
-	room: DriveLiveRoom,
-): { room: DriveLiveRoom; presented: ShowBacklogItem | null } {
+export function presentDirectorActiveShow(room: DriveLiveRoom): {
+	room: DriveLiveRoom;
+	presented: ShowBacklogItem | null;
+} {
 	const showId = room.director.activeShowId;
 	if (!showId) {
 		return { room, presented: null };
@@ -436,6 +432,7 @@ export function runShowPlannerFromWork(input: {
 	workKind: "edit" | "command" | "test_result";
 	ownerParticipantId: string;
 	nowMs?: number;
+	snapshot?: RoomSnapshot | null;
 }): {
 	room: DriveLiveRoom;
 	planned: ShowBacklogItem[];
@@ -554,6 +551,7 @@ export function runShowPlannerFromWork(input: {
 		const tick = runShowDirectorTick({
 			room,
 			preferShowId: plannedResult.items[0]?.id,
+			snapshot: input.snapshot,
 		});
 		room = tick.room;
 		presented = tick.presented;

@@ -3,11 +3,13 @@
  * pair_partner agent (DRV-ROOM-MVP).
  */
 
+import { activePresenterGrant } from "@cline/drive";
 import type {
 	AgentParticipant,
 	HumanParticipant,
 	RoomSnapshot,
 } from "@cline/shared";
+import { mintClinePresenterGrant } from "../directorPolicy";
 import { type DriveRoomStore, getDriveRoomStore } from "./room";
 
 export type JoinCallInput = {
@@ -64,6 +66,34 @@ export function joinCall(
 
 	const activate = input.activateDrive !== false;
 	if (activate) {
+		const now = new Date();
+		const current = store.getOrThrow(input.roomId);
+		const active = activePresenterGrant(current, now.toISOString());
+		if (active && active.agentId !== agent.id) {
+			const toGrant = mintClinePresenterGrant({
+				roomId: input.roomId,
+				agentId: agent.id,
+				at: now,
+			});
+			store.transferTitle({
+				roomId: input.roomId,
+				title: "presenter",
+				fromGrantId: active.id,
+				toGrant,
+				transferredAt: toGrant.grantedAt,
+				actorId: "cline:coordinator",
+			});
+		} else if (!active) {
+			store.grantTitle({
+				roomId: input.roomId,
+				grant: mintClinePresenterGrant({
+					roomId: input.roomId,
+					agentId: agent.id,
+					at: now,
+				}),
+				actorId: "cline:coordinator",
+			});
+		}
 		store.setMode({
 			roomId: input.roomId,
 			subMode: "act",

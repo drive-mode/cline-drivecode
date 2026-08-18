@@ -4,6 +4,7 @@ import {
 	DRIVE_HARNESS_HUMAN_ID,
 	DRIVE_HARNESS_PARTNER_ID,
 	memoryDriveHost,
+	projectActiveTitleGrants,
 } from "./index";
 
 describe("createDriveHarness", () => {
@@ -28,6 +29,47 @@ describe("createDriveHarness", () => {
 			kind: "agent",
 			participantId: DRIVE_HARNESS_PARTNER_ID,
 		});
+		const grants = projectActiveTitleGrants(room, new Date().toISOString());
+		expect(grants).toHaveLength(1);
+		expect(grants[0]).toMatchObject({
+			agentId: DRIVE_HARNESS_PARTNER_ID,
+			title: "presenter",
+			permissions: ["stage.present"],
+		});
+	});
+
+	it("transfers and revokes Presenter with Cline-authored audit events", async () => {
+		const host = memoryDriveHost();
+		const events: Array<{ type: string; actorId?: string }> = [];
+		host.subscribe((event) => events.push(event));
+		const drive = createDriveHarness({ host });
+		await drive.rooms.createOrAttach({
+			roomId: "r_titles",
+			humanId: "h1",
+			partner: { id: "a1", displayName: "Maya" },
+		});
+
+		const transferred = await drive.titles.transferPresenter("r_titles", "a2");
+		expect(
+			projectActiveTitleGrants(transferred, new Date().toISOString())[0]
+				?.agentId,
+		).toBe("a2");
+		expect(transferred.stage.sharer?.participantId).toBe("a2");
+
+		const revoked = await drive.titles.revokePresenter("r_titles", "policy");
+		expect(projectActiveTitleGrants(revoked, new Date().toISOString())).toEqual(
+			[],
+		);
+		expect(revoked.stage.sharer).toBeNull();
+		expect(
+			events
+				.filter((event) => event.type.startsWith("control.title_"))
+				.map((event) => [event.type, event.actorId]),
+		).toEqual([
+			["control.title_granted", "cline:coordinator"],
+			["control.title_transferred", "cline:coordinator"],
+			["control.title_revoked", "cline:coordinator"],
+		]);
 	});
 
 	it("createOrAttach honors optional human and partner roles", async () => {
