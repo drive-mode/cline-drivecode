@@ -3,8 +3,8 @@ import {
 	assertFakeHostFailClosed,
 	CLINE_HOST_CAPABILITIES,
 	CLINE_HUB_WRITER_ENDPOINT,
-	fakeHost,
 	FakeHostCapabilityError,
+	fakeHost,
 	runHostConformance,
 } from "../index";
 
@@ -17,9 +17,9 @@ describe("host port conformance", () => {
 		});
 		const report = await runHostConformance(host);
 		expect(report.ok).toBe(false);
-		expect(report.issues.some((i) => i.code === "forbidden_writer_endpoint")).toBe(
-			true,
-		);
+		expect(
+			report.issues.some((i) => i.code === "forbidden_writer_endpoint"),
+		).toBe(true);
 	});
 
 	it("accepts Cline hub writer endpoint", async () => {
@@ -81,7 +81,13 @@ describe("host port conformance", () => {
 					driveActive: false,
 					subMode: "plan" as const,
 					participants: [],
-					stage: { sharer: null, pin: null, cards: [] },
+					stage: {
+						sharer: null,
+						pin: null,
+						cards: [],
+						presenterGrantId: null,
+					},
+					titleGrantsById: {},
 					addressSet: { mode: "everyone" as const },
 					muteByParticipantId: {},
 					raisedHandByParticipantId: {},
@@ -91,8 +97,6 @@ describe("host port conformance", () => {
 		};
 		const report = await assertFakeHostFailClosed(noop);
 		expect(report.ok).toBe(false);
-		expect(report.issues.some((i) => i.code === "capability_noop")).toBe(
-			true,
-		);
+		expect(report.issues.some((i) => i.code === "capability_noop")).toBe(true);
 	});
 });

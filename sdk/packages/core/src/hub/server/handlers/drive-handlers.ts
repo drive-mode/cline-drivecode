@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import {
+	activePresenterGrant,
 	artifactDirectoryTags,
 	assertDeliveryAllowed,
 	filterArtifactDirectory,
@@ -23,16 +24,20 @@ import {
 	readArtifactCorpus,
 	resetDriveRoomStoreForTests,
 } from "../../collaboration";
-import { getHubDriveHarness } from "../../driveHarnessBinding";
-import { type DriveLiveRoom } from "../../driveShowRuntime";
+import {
+	captureHubRoomCommit,
+	getHubDriveHarness,
+	type HubRoomCommit,
+} from "../../driveHarnessBinding";
+import type { DriveLiveRoom } from "../../driveShowRuntime";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 
 export {
 	addressedParticipantIdsFromAddressSet,
+	type MaterializeShowOptions,
 	materializeShowItem,
 	runShowDirectorTick,
 	runShowPlannerFromWork,
-	type MaterializeShowOptions,
 } from "../../driveShowRuntime";
 
 function readString(
@@ -95,8 +100,13 @@ export async function handleDriveCommand(
 	switch (envelope.command) {
 		case "drive.room.get":
 			return handleRoomGet(envelope);
+		case "drive.presenter.grant":
+		case "drive.presenter.transfer":
+		case "drive.presenter.revoke":
+		case "drive.presenter.status":
+			return await handlePresenterCommand(ctx, envelope);
 		case "drive.spotlight.set":
-			return handleSpotlightSet(ctx, envelope);
+			return await handleSpotlightSet(ctx, envelope);
 		case "drive.participant.mute.set":
 			return handleMuteSet(ctx, envelope);
 		case "drive.participant.deafen.set":
@@ -222,10 +232,108 @@ function handleRoomGet(envelope: HubCommandEnvelope): HubReplyEnvelope {
 	return okReply(envelope, { room: store.getOrCreateLive(roomId) });
 }
 
-function handleSpotlightSet(
+function publishRoomCommit(
+	ctx: HubTransportContext,
+	commit: HubRoomCommit,
+): void {
+	ctx.publish(
+		ctx.buildEvent("room.event", {
+			roomId: commit.event.roomId,
+			seq: commit.seq,
+			event: commit.event,
+		}),
+	);
+	ctx.publish(
+		ctx.buildEvent("room.snapshot", {
+			roomId: commit.event.roomId,
+			snapshot: commit.snapshot,
+			seq: commit.seq,
+		}),
+	);
+}
+
+async function handlePresenterCommand(
 	ctx: HubTransportContext,
 	envelope: HubCommandEnvelope,
-): HubReplyEnvelope {
+): Promise<HubReplyEnvelope> {
+	const roomId = readString(envelope.payload, "roomId") ?? "default";
+	const store = getDriveRoomStore();
+	store.create(roomId);
+	const { harness } = getHubDriveHarness({ store });
+
+	if (envelope.command === "drive.presenter.status") {
+		const snapshot = store.getOrThrow(roomId);
+		const active = activePresenterGrant(snapshot, new Date().toISOString());
+		const directorPolicy = await harness.host.getDirectorPolicyDescriptor?.();
+		return okReply(envelope, {
+			presenter: active ?? null,
+			directorPolicy: directorPolicy ?? null,
+			snapshot,
+		});
+	}
+
+	const agentId = readString(envelope.payload, "agentId");
+	if (
+		(envelope.command === "drive.presenter.grant" ||
+			envelope.command === "drive.presenter.transfer") &&
+		!agentId
+	) {
+		return errorReply(envelope, "invalid_payload", "agentId is required");
+	}
+	const durationRaw = envelope.payload?.durationMs;
+	if (
+		durationRaw !== undefined &&
+		(typeof durationRaw !== "number" ||
+			!Number.isFinite(durationRaw) ||
+			durationRaw <= 0)
+	) {
+		return errorReply(
+			envelope,
+			"invalid_payload",
+			"durationMs must be a positive finite number",
+		);
+	}
+	const opts =
+		typeof durationRaw === "number"
+			? { durationMs: Math.floor(durationRaw) }
+			: undefined;
+	const targetAgentId = agentId ?? "";
+
+	try {
+		const commit = await captureHubRoomCommit(store, async () => {
+			switch (envelope.command) {
+				case "drive.presenter.grant":
+					return harness.titles.grantPresenter(roomId, targetAgentId, opts);
+				case "drive.presenter.transfer":
+					return harness.titles.transferPresenter(roomId, targetAgentId, opts);
+				case "drive.presenter.revoke":
+					return harness.titles.revokePresenter(roomId, "revoked");
+				default:
+					return undefined;
+			}
+		});
+		const snapshot = store.getOrThrow(roomId);
+		if (commit) {
+			publishRoomCommit(ctx, commit);
+		}
+		publishRoom(ctx, store.getOrCreateLive(roomId));
+		return okReply(envelope, {
+			presenter:
+				activePresenterGrant(snapshot, new Date().toISOString()) ?? null,
+			snapshot,
+			seq: commit?.seq ?? store.lastSeq(roomId),
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		const code = message.split(":", 1)[0] || "presenter_update_failed";
+		return errorReply(envelope, code, message);
+	}
+}
+
+async function handleSpotlightSet(
+	ctx: HubTransportContext,
+	envelope: HubCommandEnvelope,
+): Promise<HubReplyEnvelope> {
 	const roomId = readString(envelope.payload, "roomId") ?? "default";
 	const participantId = readString(envelope.payload, "participantId");
 	const reason = readString(envelope.payload, "reason") ?? "human";
@@ -261,6 +369,24 @@ function handleSpotlightSet(
 			: "agent";
 	const sharer: StageSharer = { kind, participantId };
 	const from = live.spotlightParticipantId;
+	if (kind === "agent") {
+		try {
+			const { harness } = getHubDriveHarness({ store });
+			const titleCommit = await captureHubRoomCommit(store, () =>
+				harness.titles.transferPresenter(roomId, participantId),
+			);
+			if (titleCommit) {
+				publishRoomCommit(ctx, titleCommit);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return errorReply(
+				envelope,
+				message.split(":", 1)[0] || "presenter_update_failed",
+				message,
+			);
+		}
+	}
 
 	const committed = store.setStage({
 		roomId,
@@ -278,20 +404,7 @@ function handleSpotlightSet(
 			via: "call_set_stage",
 		},
 	});
-	ctx.publish(
-		ctx.buildEvent("room.event", {
-			roomId,
-			seq: committed.seq,
-			event: committed.event,
-		}),
-	);
-	ctx.publish(
-		ctx.buildEvent("room.snapshot", {
-			roomId,
-			snapshot: committed.snapshot,
-			seq: committed.seq,
-		}),
-	);
+	publishRoomCommit(ctx, committed);
 	return okReply(envelope, {
 		room: next,
 		snapshot: committed.snapshot,

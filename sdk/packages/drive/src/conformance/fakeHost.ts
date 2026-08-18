@@ -52,6 +52,9 @@ export function fakeHost(capabilities: HostCapabilities): DriveHostPort {
 		async getRoom() {
 			return refuse("roomOps");
 		},
+		async getDirectorPolicyDescriptor() {
+			return refuse("signedDirectorPolicy");
+		},
 		async broadcast() {
 			return refuse("eventsFirstStage");
 		},
@@ -107,6 +110,13 @@ export async function runHostConformance(
 		issues.push({
 			code: "pixel_share_forbidden",
 			message: "pixelShare must be false for every MVP host",
+		});
+	}
+
+	if (caps.signedDirectorPolicy && !host.getDirectorPolicyDescriptor) {
+		issues.push({
+			code: "director_policy_descriptor_required",
+			message: "signedDirectorPolicy requires a host descriptor reader",
 		});
 	}
 

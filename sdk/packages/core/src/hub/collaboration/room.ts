@@ -7,9 +7,15 @@
  * module-local Map in drive-handlers.
  */
 
-import { createEmptyRoomSnapshot, reduceRoom } from "@cline/drive";
+import {
+	activePresenterGrant,
+	createEmptyRoomSnapshot,
+	reduceRoom,
+} from "@cline/drive";
 import type {
 	AddressSet,
+	AgentTitle,
+	AgentTitleGrant,
 	CallSessionState,
 	DriveEvent,
 	DriveRoomLiveState,
@@ -411,9 +417,7 @@ export class DriveRoomStore {
 			before?.participants.filter((participant) => participant.kind === "human")
 				.length ?? 0;
 		const closesSession =
-			Boolean(session) &&
-			leaving?.kind === "human" &&
-			humansBefore <= 1;
+			Boolean(session) && leaving?.kind === "human" && humansBefore <= 1;
 		const result = this.commit({
 			schemaVersion: 1,
 			id: newEventId("leave"),
@@ -513,16 +517,105 @@ export class DriveRoomStore {
 		actorId?: string;
 		at?: string;
 	}): RoomCommitResult {
+		const at = input.at ?? nowIso();
+		if (input.sharer?.kind === "agent") {
+			const snapshot = this.getOrThrow(input.roomId);
+			if (!activePresenterGrant(snapshot, at, input.sharer.participantId)) {
+				throw new Error(`presenter_required:${input.sharer.participantId}`);
+			}
+		}
 		return this.commit({
 			schemaVersion: 1,
 			id: newEventId("stage"),
 			roomId: input.roomId,
-			at: input.at ?? nowIso(),
+			at,
 			actorId: input.actorId,
 			type: "control.stage",
 			track: "control",
 			sharer: input.sharer,
 			...(input.pin !== undefined ? { pin: input.pin } : {}),
+		});
+	}
+
+	grantTitle(input: {
+		roomId: string;
+		grant: AgentTitleGrant;
+		actorId?: string;
+	}): RoomCommitResult {
+		this.create(input.roomId, input.grant.grantedAt);
+		const snapshot = this.getOrThrow(input.roomId);
+		if (input.grant.scope.ref !== input.roomId) {
+			throw new Error(`title_scope_mismatch:${input.grant.scope.ref}`);
+		}
+		const active = activePresenterGrant(snapshot, input.grant.grantedAt);
+		if (active && active.id !== input.grant.id) {
+			throw new Error(`presenter_conflict:${active.id}`);
+		}
+		return this.commit({
+			schemaVersion: 1,
+			id: newEventId("title_grant"),
+			roomId: input.roomId,
+			at: input.grant.grantedAt,
+			actorId: input.actorId ?? "cline:coordinator",
+			type: "control.title_granted",
+			track: "control",
+			grant: input.grant,
+		});
+	}
+
+	revokeTitle(input: {
+		roomId: string;
+		grantId: string;
+		revokedAt: string;
+		reason?: "revoked" | "expired" | "policy";
+		actorId?: string;
+	}): RoomCommitResult {
+		const snapshot = this.getOrThrow(input.roomId);
+		if (!snapshot.titleGrantsById[input.grantId]) {
+			throw new Error(`title_grant_not_found:${input.grantId}`);
+		}
+		return this.commit({
+			schemaVersion: 1,
+			id: newEventId("title_revoke"),
+			roomId: input.roomId,
+			at: input.revokedAt,
+			actorId: input.actorId ?? "cline:coordinator",
+			type: "control.title_revoked",
+			track: "control",
+			grantId: input.grantId,
+			revokedAt: input.revokedAt,
+			reason: input.reason,
+		});
+	}
+
+	transferTitle(input: {
+		roomId: string;
+		title: AgentTitle;
+		fromGrantId: string;
+		toGrant: AgentTitleGrant;
+		transferredAt: string;
+		actorId?: string;
+	}): RoomCommitResult {
+		const snapshot = this.getOrThrow(input.roomId);
+		const active = activePresenterGrant(snapshot, input.transferredAt);
+		if (!active || active.id !== input.fromGrantId) {
+			throw new Error(`presenter_transfer_source_invalid:${input.fromGrantId}`);
+		}
+		if (input.toGrant.scope.ref !== input.roomId) {
+			throw new Error(`title_scope_mismatch:${input.toGrant.scope.ref}`);
+		}
+		return this.commit({
+			schemaVersion: 1,
+			id: newEventId("title_transfer"),
+			roomId: input.roomId,
+			at: input.transferredAt,
+			actorId: input.actorId ?? "cline:coordinator",
+			type: "control.title_transferred",
+			track: "control",
+			title: input.title,
+			fromGrantId: input.fromGrantId,
+			toGrant: input.toGrant,
+			transferredAt: input.transferredAt,
 		});
 	}
 

@@ -154,11 +154,64 @@ export const StageCardSchema = z
 	.strict();
 export type StageCard = z.infer<typeof StageCardSchema>;
 
+export const AgentTitleSchema = z.enum(["presenter"]);
+export type AgentTitle = z.infer<typeof AgentTitleSchema>;
+
+export const AgentTitleScopeSchema = z
+	.object({
+		kind: z.enum(["room", "session", "stage"]),
+		ref: z.string().min(1),
+	})
+	.strict();
+export type AgentTitleScope = z.infer<typeof AgentTitleScopeSchema>;
+
+export const AgentTitlePermissionSchema = z.enum(["stage.present"]);
+export type AgentTitlePermission = z.infer<typeof AgentTitlePermissionSchema>;
+
+/**
+ * Temporary, reference-only authority. Skill/resource bodies, prompts, model
+ * configuration and tool policy remain on the host and cannot cross here.
+ */
+export const AgentTitleGrantSchema = z
+	.object({
+		id: z.string().min(1),
+		agentId: z.string().min(1),
+		title: AgentTitleSchema,
+		scope: AgentTitleScopeSchema,
+		skillBundleRefs: z.array(z.string().min(1)).max(32).default([]),
+		resourceGrantRefs: z.array(z.string().min(1)).max(64).default([]),
+		delegatedAgentIds: z.array(z.string().min(1)).max(32).default([]),
+		permissions: z.array(AgentTitlePermissionSchema).min(1).max(16),
+		grantedAt: z.string().datetime(),
+		expiresAt: z.string().datetime(),
+		revokedAt: z.string().datetime().optional(),
+	})
+	.strict()
+	.refine(
+		(grant) => Date.parse(grant.expiresAt) > Date.parse(grant.grantedAt),
+		{
+			message: "expiresAt must be after grantedAt",
+			path: ["expiresAt"],
+		},
+	)
+	.refine(
+		(grant) =>
+			grant.title !== "presenter" ||
+			grant.permissions.includes("stage.present"),
+		{
+			message: "Presenter grants require stage.present",
+			path: ["permissions"],
+		},
+	);
+export type AgentTitleGrant = z.infer<typeof AgentTitleGrantSchema>;
+
 export const StageStateSchema = z
 	.object({
 		sharer: StageSharerSchema.nullable().default(null),
 		pin: StagePinSchema.nullable().default(null),
 		cards: z.array(StageCardSchema).default([]),
+		/** Active temporary authority for an agent stage sharer. */
+		presenterGrantId: z.string().min(1).nullable().default(null),
 	})
 	.strict();
 export type StageState = z.infer<typeof StageStateSchema>;
@@ -172,6 +225,7 @@ export const RoomSnapshotSchema = z
 		subMode: DriveSubModeSchema,
 		participants: z.array(ParticipantSchema),
 		stage: StageStateSchema,
+		titleGrantsById: z.record(z.string(), AgentTitleGrantSchema).default({}),
 		addressSet: AddressSetSchema.default(EVERYONE_ADDRESS),
 		muteByParticipantId: z.record(z.string(), z.boolean()).default({}),
 		raisedHandByParticipantId: z.record(z.string(), z.boolean()).default({}),
