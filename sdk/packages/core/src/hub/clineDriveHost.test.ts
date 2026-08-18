@@ -75,6 +75,159 @@ describe("createClineDriveHost", () => {
 		).rejects.toThrow(/promptRewrite not advertised/);
 	});
 
+	it("exposes only a verified, non-exportable Director policy descriptor", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const host = createClineDriveHost({
+			configParent: dir,
+			store: new DriveRoomStore(),
+		});
+		const descriptor = await host.getDirectorPolicyDescriptor?.();
+		expect(descriptor).toEqual({
+			policyId: "drive.director.host-policy",
+			version: "director-host-1",
+			signatureStatus: "verified",
+			exportable: false,
+			overlayKeys: ["pace", "handoffs"],
+		});
+		const encoded = JSON.stringify(descriptor);
+		for (const forbidden of [
+			"prompt",
+			"route",
+			"score",
+			"modelId",
+			"endpoint",
+			"privateKey",
+		]) {
+			expect(encoded).not.toContain(forbidden);
+		}
+		expect(host.capabilities.pixelShare).toBe(false);
+	});
+
+	it("mints, transfers, and revokes sanitized Presenter grants as Cline", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const store = new DriveRoomStore();
+		const host = createClineDriveHost({ configParent: dir, store });
+		await host.commitRoomOp({
+			type: "create",
+			roomId: "title-room",
+			hostParticipantId: "human",
+		});
+		const at = new Date();
+		const proposal = {
+			id: "client-chosen-id",
+			agentId: "maya",
+			title: "presenter" as const,
+			scope: { kind: "room" as const, ref: "title-room" },
+			skillBundleRefs: ["client-private-bundle"],
+			resourceGrantRefs: ["client-screen-capture"],
+			delegatedAgentIds: ["untrusted-delegate"],
+			permissions: ["stage.present" as const],
+			grantedAt: at.toISOString(),
+			expiresAt: new Date(at.getTime() + 60 * 60 * 1_000).toISOString(),
+		};
+		let snapshot = await host.commitRoomOp({
+			type: "grantTitle",
+			roomId: "title-room",
+			grant: proposal,
+		});
+		const first = Object.values(snapshot.titleGrantsById)[0];
+		expect(first).toMatchObject({
+			agentId: "maya",
+			scope: { kind: "stage", ref: "title-room" },
+			skillBundleRefs: ["presenter-stage"],
+			resourceGrantRefs: ["typed-stage"],
+			delegatedAgentIds: [],
+			permissions: ["stage.present"],
+		});
+		expect(first?.id).toMatch(/^cline_presenter_/);
+		expect(first?.id).not.toBe(proposal.id);
+
+		await expect(
+			host.commitRoomOp({
+				type: "grantTitle",
+				roomId: "title-room",
+				grant: { ...proposal, id: "competing", agentId: "scout" },
+			}),
+		).rejects.toThrow(/presenter_conflict/);
+
+		snapshot = await host.commitRoomOp({
+			type: "transferTitle",
+			roomId: "title-room",
+			title: "presenter",
+			fromGrantId: first?.id ?? "missing",
+			toGrant: { ...proposal, id: "client-transfer", agentId: "scout" },
+			transferredAt: new Date().toISOString(),
+		});
+		const transferred = Object.values(snapshot.titleGrantsById).find(
+			(grant) => grant.agentId === "scout" && grant.revokedAt === undefined,
+		);
+		expect(transferred?.id).toMatch(/^cline_presenter_/);
+		expect(snapshot.stage.sharer?.participantId).toBe("scout");
+
+		snapshot = await host.commitRoomOp({
+			type: "revokeTitle",
+			roomId: "title-room",
+			grantId: transferred?.id ?? "missing",
+			revokedAt: new Date().toISOString(),
+			reason: "policy",
+		});
+		expect(snapshot.stage.sharer).toBeNull();
+		const titleEvents = store
+			.getEventLog()
+			.readSinceSync("title-room", 0)
+			.map((record) => record.event)
+			.filter((event) => event.type.startsWith("control.title_"));
+		expect(titleEvents.map((event) => event.type)).toEqual([
+			"control.title_granted",
+			"control.title_transferred",
+			"control.title_revoked",
+		]);
+		expect(
+			titleEvents.every((event) => event.actorId === "cline:coordinator"),
+		).toBe(true);
+	});
+
+	it("rejects a competing agent before mutating the live presentation", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const store = new DriveRoomStore();
+		const host = createClineDriveHost({ configParent: dir, store });
+		const show = (id: string, ownerParticipantId: string) => ({
+			id,
+			ownerParticipantId,
+			title: id,
+			intent: "Explain",
+			artifactKind: "diagram.architecture" as const,
+			mediaClass: "still" as const,
+			caption: id,
+			produce: {
+				tool: "render_mermaid",
+				args: { mermaidSource: "graph TD; A-->B;" },
+			},
+			priority: 1,
+			status: "planned" as const,
+			scoreReasons: [] as string[],
+		});
+
+		const first = await host.commitDirectorOp?.({
+			type: "presentShow",
+			roomId: "exclusive-room",
+			showItem: show("maya-show", "maya"),
+		});
+		expect(first?.presented?.id).toBe("maya-show");
+		const denied = await host.commitDirectorOp?.({
+			type: "presentShow",
+			roomId: "exclusive-room",
+			showItem: show("scout-show", "scout"),
+		});
+		expect(denied?.errorCode).toBe("presenter_conflict");
+		expect(store.getOrCreateLive("exclusive-room").director.activeShowId).toBe(
+			"maya-show",
+		);
+	});
+
 	it("advertises promptRewrite only when rewrite fn is wired", async () => {
 		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
 		dirs.push(dir);

@@ -102,6 +102,75 @@ describe("handleDriveCommand", () => {
 		});
 	});
 
+	it("grants, reports, transfers, and revokes Presenter through Cline", async () => {
+		const { ctx, published } = createCtx();
+		const granted = await handleDriveCommand(
+			ctx,
+			envelope("drive.presenter.grant", {
+				roomId: "r-title",
+				agentId: "maya",
+				durationMs: 120_000,
+			}),
+		);
+		expect(granted.ok).toBe(true);
+		expect(granted.payload?.presenter).toMatchObject({
+			agentId: "maya",
+			title: "presenter",
+			permissions: ["stage.present"],
+		});
+
+		const conflict = await handleDriveCommand(
+			ctx,
+			envelope("drive.presenter.grant", {
+				roomId: "r-title",
+				agentId: "scout",
+			}),
+		);
+		expect(conflict.ok).toBe(false);
+		expect(conflict.error?.code).toBe("presenter_conflict");
+
+		const transferred = await handleDriveCommand(
+			ctx,
+			envelope("drive.presenter.transfer", {
+				roomId: "r-title",
+				agentId: "scout",
+			}),
+		);
+		expect(transferred.ok).toBe(true);
+		expect(transferred.payload?.presenter).toMatchObject({ agentId: "scout" });
+
+		const status = await handleDriveCommand(
+			ctx,
+			envelope("drive.presenter.status", { roomId: "r-title" }),
+		);
+		expect(status.payload?.directorPolicy).toEqual({
+			policyId: "drive.director.host-policy",
+			version: "director-host-1",
+			signatureStatus: "verified",
+			exportable: false,
+			overlayKeys: ["pace", "handoffs"],
+		});
+
+		const revoked = await handleDriveCommand(
+			ctx,
+			envelope("drive.presenter.revoke", { roomId: "r-title" }),
+		);
+		expect(revoked.ok).toBe(true);
+		expect(revoked.payload?.presenter).toBeNull();
+		expect(
+			published
+				.filter((event) => event.event === "room.event")
+				.map(
+					(event) =>
+						(event.payload?.event as { type?: string } | undefined)?.type,
+				),
+		).toEqual([
+			"control.title_granted",
+			"control.title_transferred",
+			"control.title_revoked",
+		]);
+	});
+
 	it("toggles mute independently of deafen", async () => {
 		const { ctx } = createCtx();
 		await handleDriveCommand(
@@ -1065,9 +1134,9 @@ describe("drive artifact corpus", () => {
 			}),
 		);
 		expect(
-			(byKind.payload?.artifacts as Array<{ showItemId: string }>).map(
-				(entry) => entry.showItemId,
-			),
+			(
+				byKind.payload?.artifacts as Array<{ showItemId: string }> | undefined
+			)?.map((entry) => entry.showItemId),
 		).toEqual(["show-artifact-2"]);
 
 		const byTag = await handleDriveCommand(
@@ -1075,9 +1144,9 @@ describe("drive artifact corpus", () => {
 			envelope("drive.artifacts.list", { workspaceRoot, tag: "onboarding" }),
 		);
 		expect(
-			(byTag.payload?.artifacts as Array<{ showItemId: string }>).map(
-				(entry) => entry.showItemId,
-			),
+			(
+				byTag.payload?.artifacts as Array<{ showItemId: string }> | undefined
+			)?.map((entry) => entry.showItemId),
 		).toEqual(["show-artifact-1"]);
 
 		const byRoom = await handleDriveCommand(
@@ -1085,9 +1154,9 @@ describe("drive artifact corpus", () => {
 			envelope("drive.artifacts.list", { workspaceRoot, roomId: "r_b" }),
 		);
 		expect(
-			(byRoom.payload?.artifacts as Array<{ showItemId: string }>).map(
-				(entry) => entry.showItemId,
-			),
+			(
+				byRoom.payload?.artifacts as Array<{ showItemId: string }> | undefined
+			)?.map((entry) => entry.showItemId),
 		).toEqual(["show-artifact-2"]);
 	});
 

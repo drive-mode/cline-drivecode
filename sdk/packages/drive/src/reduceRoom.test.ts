@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
 import type { DriveEvent } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
+	activePresenterGrant,
 	createEmptyRoomSnapshot,
+	projectActiveTitleGrants,
 	projectRoster,
 	projectStage,
 	reduceRoom,
@@ -10,6 +12,188 @@ import {
 const at = "2026-07-25T12:00:00.000Z";
 
 describe("reduceRoom", () => {
+	it("requires one temporary Presenter and replays transfer, revoke, and expiry", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		const firstGrant = {
+			id: "presenter_a1",
+			agentId: "a1",
+			title: "presenter" as const,
+			scope: { kind: "stage" as const, ref: "room_1" },
+			skillBundleRefs: ["presenter-stage"],
+			resourceGrantRefs: ["typed-stage"],
+			delegatedAgentIds: [],
+			permissions: ["stage.present" as const],
+			grantedAt: at,
+			expiresAt: "2026-07-25T13:00:00.000Z",
+		};
+
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "stage_without_title",
+			roomId: "room_1",
+			at: "2026-07-25T12:00:01.000Z",
+			type: "control.stage",
+			track: "control",
+			sharer: { kind: "agent", participantId: "a1" },
+		});
+		expect(room.stage.sharer).toBeNull();
+
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "grant_a1",
+			roomId: "room_1",
+			at,
+			type: "control.title_granted",
+			track: "control",
+			actorId: "cline:coordinator",
+			grant: firstGrant,
+		});
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "stage_a1",
+			roomId: "room_1",
+			at: "2026-07-25T12:00:02.000Z",
+			type: "control.stage",
+			track: "control",
+			sharer: { kind: "agent", participantId: "a1" },
+		});
+		expect(room.stage).toMatchObject({
+			sharer: { kind: "agent", participantId: "a1" },
+			presenterGrantId: firstGrant.id,
+		});
+
+		const secondGrant = {
+			...firstGrant,
+			id: "presenter_a2",
+			agentId: "a2",
+			grantedAt: "2026-07-25T12:05:00.000Z",
+		};
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "competing_grant",
+			roomId: "room_1",
+			at: secondGrant.grantedAt,
+			type: "control.title_granted",
+			track: "control",
+			grant: secondGrant,
+		});
+		expect(room.titleGrantsById[secondGrant.id]).toBeUndefined();
+
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "transfer_a2",
+			roomId: "room_1",
+			at: secondGrant.grantedAt,
+			type: "control.title_transferred",
+			track: "control",
+			actorId: "cline:coordinator",
+			title: "presenter",
+			fromGrantId: firstGrant.id,
+			toGrant: secondGrant,
+			transferredAt: secondGrant.grantedAt,
+		});
+		expect(room.titleGrantsById[firstGrant.id]?.revokedAt).toBe(
+			secondGrant.grantedAt,
+		);
+		expect(room.stage).toMatchObject({
+			sharer: { kind: "agent", participantId: "a2" },
+			presenterGrantId: secondGrant.id,
+		});
+
+		const revokedAt = "2026-07-25T12:06:00.000Z";
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "revoke_a2",
+			roomId: "room_1",
+			at: revokedAt,
+			type: "control.title_revoked",
+			track: "control",
+			actorId: "cline:coordinator",
+			grantId: secondGrant.id,
+			revokedAt,
+			reason: "revoked",
+		});
+		expect(projectActiveTitleGrants(room, revokedAt)).toHaveLength(0);
+		expect(room.stage.sharer).toBeNull();
+
+		const expiringGrant = {
+			...firstGrant,
+			id: "presenter_expiring",
+			grantedAt: "2026-07-25T12:07:00.000Z",
+			expiresAt: "2026-07-25T12:08:00.000Z",
+		};
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "grant_expiring",
+			roomId: "room_1",
+			at: expiringGrant.grantedAt,
+			type: "control.title_granted",
+			track: "control",
+			grant: expiringGrant,
+		});
+		expect(activePresenterGrant(room, expiringGrant.grantedAt)?.id).toBe(
+			expiringGrant.id,
+		);
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "after_expiry",
+			roomId: "room_1",
+			at: expiringGrant.expiresAt,
+			type: "control.mode",
+			track: "control",
+			subMode: "act",
+		});
+		expect(activePresenterGrant(room, expiringGrant.expiresAt)).toBeUndefined();
+		expect(room.stage.presenterGrantId).toBeNull();
+	});
+
+	it("revokes Presenter authority when its agent leaves", () => {
+		const grant = {
+			id: "presenter_leaving",
+			agentId: "a1",
+			title: "presenter" as const,
+			scope: { kind: "stage" as const, ref: "room_1" },
+			skillBundleRefs: ["presenter-stage"],
+			resourceGrantRefs: ["typed-stage"],
+			delegatedAgentIds: [],
+			permissions: ["stage.present" as const],
+			grantedAt: at,
+			expiresAt: "2026-07-25T13:00:00.000Z",
+		};
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "grant_leaving",
+			roomId: "room_1",
+			at,
+			type: "control.title_granted",
+			track: "control",
+			grant,
+		});
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "stage_leaving",
+			roomId: "room_1",
+			at: "2026-07-25T12:00:01.000Z",
+			type: "control.stage",
+			track: "control",
+			sharer: { kind: "agent", participantId: "a1" },
+		});
+		const leftAt = "2026-07-25T12:01:00.000Z";
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "leave_presenter",
+			roomId: "room_1",
+			at: leftAt,
+			type: "control.leave",
+			track: "control",
+			participantId: "a1",
+		});
+		expect(room.titleGrantsById[grant.id]?.revokedAt).toBe(leftAt);
+		expect(room.stage.presenterGrantId).toBeNull();
+		expect(room.stage.sharer).toBeNull();
+	});
+
 	it("folds join/mode/stage/work idempotently", () => {
 		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
 
@@ -321,7 +505,9 @@ describe("reduceRoom", () => {
 			passed: true,
 			summary: "3 pass",
 		});
-		const testCard = projectStage(room).cards.find((c) => c.category === "test");
+		const testCard = projectStage(room).cards.find(
+			(c) => c.category === "test",
+		);
 		expect(testCard?.summary).toBe("3 pass");
 	});
 });

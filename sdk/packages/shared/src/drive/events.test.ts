@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
 	DRIVE_EVENT_FORBIDDEN_KEYS,
 	DRIVE_SCHEMA_VERSION,
+	type DriveEvent,
 	DriveEventSchema,
 	EVERYONE_ADDRESS,
 	parseAddressSet,
 	parseDriveEvent,
 	parseRoomSnapshot,
-	type DriveEvent,
 } from "./index";
 
 const MEDIA_BYTE_KEYS = [
@@ -165,6 +165,45 @@ describe("DriveEvent schemas", () => {
 		expect(address.type).toBe("control.address");
 	});
 
+	it("accepts reference-only Presenter grants and rejects embedded policy", () => {
+		const grant = {
+			id: "grant_presenter_1",
+			agentId: "agent_1",
+			title: "presenter",
+			scope: { kind: "stage", ref: "room_1" },
+			skillBundleRefs: ["presenter-stage"],
+			resourceGrantRefs: ["typed-stage"],
+			delegatedAgentIds: [],
+			permissions: ["stage.present"],
+			grantedAt: "2026-08-18T18:00:00.000Z",
+			expiresAt: "2026-08-18T19:00:00.000Z",
+		} as const;
+		expect(
+			parseDriveEvent({
+				...base,
+				type: "control.title_granted",
+				track: "control",
+				grant,
+			}),
+		).toMatchObject({ type: "control.title_granted", grant });
+		expect(() =>
+			parseDriveEvent({
+				...base,
+				type: "control.title_granted",
+				track: "control",
+				grant: { ...grant, prompt: "private Director prompt" },
+			}),
+		).toThrow();
+		expect(() =>
+			parseDriveEvent({
+				...base,
+				type: "control.title_granted",
+				track: "control",
+				grant: { ...grant, expiresAt: grant.grantedAt },
+			}),
+		).toThrow();
+	});
+
 	it("compiles an exhaustive switch over DriveEvent.type", () => {
 		const event = parseDriveEvent({
 			...base,
@@ -185,6 +224,9 @@ describe("DriveEvent schemas", () => {
 				case "control.raise_hand":
 				case "control.rename":
 				case "control.address":
+				case "control.title_granted":
+				case "control.title_revoked":
+				case "control.title_transferred":
 					return "control";
 				case "conversation.message":
 				case "conversation.narration":
@@ -252,16 +294,15 @@ describe("Room / address schemas", () => {
 
 	it("parses address sets including reserved pack mode", () => {
 		expect(parseAddressSet({ mode: "everyone" })).toEqual(EVERYONE_ADDRESS);
-		expect(
-			parseAddressSet({ mode: "agents", agentIds: ["a1"] }),
-		).toEqual({ mode: "agents", agentIds: ["a1"] });
+		expect(parseAddressSet({ mode: "agents", agentIds: ["a1"] })).toEqual({
+			mode: "agents",
+			agentIds: ["a1"],
+		});
 		expect(parseAddressSet({ mode: "pack", packId: "p1" })).toEqual({
 			mode: "pack",
 			packId: "p1",
 		});
-		expect(() =>
-			parseAddressSet({ mode: "agents", agentIds: [] }),
-		).toThrow();
+		expect(() => parseAddressSet({ mode: "agents", agentIds: [] })).toThrow();
 	});
 });
 

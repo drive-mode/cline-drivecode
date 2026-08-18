@@ -185,6 +185,26 @@ startup-deadlock recovery must not replace them with the workspace-discovered
 hub. This keeps custom local hubs and remote hubs from silently drifting to a
 different process.
 
+#### Drive Presenter authority and Director policy
+
+The Cline hub is the sole coordinator for temporary Drive Agent Titles. Clients
+request a Presenter by agent id and duration; `createClineDriveHost` replaces
+client-proposed ids, permissions, skill/resource references, and delegation
+with host-allowlisted values before appending `control.title_*` events. The room
+fold permits an agent on the typed stage only while that agent owns the one
+active, unexpired Presenter grant. Transfer is atomic, revoke clears the agent
+stage, and competing presentation mutations fail before changing live Director
+state. Human selection/file/terminal sharing remains independent. Pixel sharing
+is not a host capability.
+
+The built-in Director policy stays in `@cline/core`. Clients can read only a
+signed, versioned, non-exportable descriptor and the allowlisted overlay keys
+(`pace`, `handoffs`); prompts, routing, scoring, tool/model maps, endpoints, and
+signing secrets never enter shared protocol payloads. The legacy
+`drive.spotlight.set` command is a compatibility alias that requests an audited
+Presenter transfer before changing an agent stage; new clients should use the
+`drive.presenter.*` command family.
+
 ### Interactive CLI Startup
 
 1. `apps/cli` owns OpenTUI startup and must render the first frame without waiting for detached hub startup.

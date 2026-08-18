@@ -3,6 +3,8 @@
  */
 
 import type {
+	AgentTitle,
+	AgentTitleGrant,
 	DirectorScript,
 	DriveEvent,
 	RoomSnapshot,
@@ -23,6 +25,8 @@ export type HostCapabilities = {
 	readonly worktreeIsolation: boolean;
 	readonly voiceIo: boolean;
 	readonly pixelShare: boolean;
+	readonly agentTitles: boolean;
+	readonly signedDirectorPolicy: boolean;
 	/** Demo / fixture browser capture for drive_browser_snapshot. Default false. */
 	readonly demoCapture: boolean;
 
@@ -67,7 +71,32 @@ export type RoomOp =
 			participantId: string;
 			raised: boolean;
 	  }
-	| { type: "mute"; roomId: string; participantId: string; muted: boolean };
+	| { type: "mute"; roomId: string; participantId: string; muted: boolean }
+	| { type: "grantTitle"; roomId: string; grant: AgentTitleGrant }
+	| {
+			type: "revokeTitle";
+			roomId: string;
+			grantId: string;
+			revokedAt: string;
+			reason?: "revoked" | "expired" | "policy";
+	  }
+	| {
+			type: "transferTitle";
+			roomId: string;
+			title: AgentTitle;
+			fromGrantId: string;
+			toGrant: AgentTitleGrant;
+			transferredAt: string;
+	  };
+
+/** Public attestation only. Director prompts, routing, scoring and model/tool maps stay host-side. */
+export type DirectorPolicyDescriptor = {
+	readonly policyId: string;
+	readonly version: string;
+	readonly signatureStatus: "verified" | "invalid";
+	readonly exportable: false;
+	readonly overlayKeys: readonly ["pace", "handoffs"];
+};
 
 /** Live director mutations (Show backlog). Host implements; harness proposes. */
 export type DirectorOp =
@@ -140,6 +169,7 @@ export type DriveHostPort = {
 	writeDurableFacets(workspaceRoot: string, next: unknown): Promise<void>;
 
 	commitRoomOp(op: RoomOp): Promise<RoomSnapshot>;
+	getDirectorPolicyDescriptor?(): Promise<DirectorPolicyDescriptor>;
 	/** Read current room snapshot (required by DriveHarness for pack/spotlight). */
 	getRoom?(roomId: string): Promise<RoomSnapshot | null>;
 	/**
@@ -169,6 +199,8 @@ export const CLINE_HOST_CAPABILITIES: HostCapabilities = {
 	worktreeIsolation: false,
 	voiceIo: false,
 	pixelShare: false,
+	agentTitles: true,
+	signedDirectorPolicy: true,
 	demoCapture: false,
 	localOnly: true,
 	writerEndpoint: CLINE_HUB_WRITER_ENDPOINT,

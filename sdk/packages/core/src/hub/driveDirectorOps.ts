@@ -108,6 +108,7 @@ export function enqueueShowOnStore(input: {
 			room: next,
 			preferShowId: enqueued.id,
 			demoCapture: input.demoCapture,
+			snapshot: store.get(input.roomId),
 		});
 		next = store.setLive(tick.room);
 		presented = tick.presented;
@@ -196,6 +197,7 @@ export function tickShowOnStore(input: {
 		room,
 		preferShowId: input.preferShowId,
 		demoCapture: input.demoCapture,
+		snapshot: store.get(input.roomId),
 	});
 	if (!tick.presented) {
 		// Persist fail-closed demotions (scoreReasons) even when nothing presented.
@@ -324,6 +326,7 @@ export function planFromWorkOnStore(input: {
 		workKind: input.workKind,
 		ownerParticipantId: input.ownerParticipantId,
 		nowMs: input.nowMs,
+		snapshot: store.get(input.roomId),
 	});
 	if (planner.planned.length === 0) {
 		return {

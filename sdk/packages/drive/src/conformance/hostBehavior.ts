@@ -110,7 +110,6 @@ export const HOST_BEHAVIOR_CASES: readonly HostBehaviorCase[] = [
 					status: "idle",
 				},
 			});
-
 			await host.commitRoomOp({
 				type: "leave",
 				roomId,
@@ -151,6 +150,27 @@ export const HOST_BEHAVIOR_CASES: readonly HostBehaviorCase[] = [
 					seatSources: [{ kind: "manual" }],
 				},
 			});
+			if (host.capabilities.agentTitles) {
+				const grantedAt = new Date();
+				await host.commitRoomOp({
+					type: "grantTitle",
+					roomId,
+					grant: {
+						id: `conformance_presenter_${crypto.randomUUID()}`,
+						agentId: "agent-1",
+						title: "presenter",
+						scope: { kind: "stage", ref: roomId },
+						skillBundleRefs: ["presenter-stage"],
+						resourceGrantRefs: ["typed-stage"],
+						delegatedAgentIds: [],
+						permissions: ["stage.present"],
+						grantedAt: grantedAt.toISOString(),
+						expiresAt: new Date(
+							grantedAt.getTime() + 60 * 60 * 1_000,
+						).toISOString(),
+					},
+				});
+			}
 
 			await host.commitRoomOp({
 				type: "setStage",

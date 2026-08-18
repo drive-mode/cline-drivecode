@@ -9,6 +9,8 @@ import { z } from "zod";
 import { AddressSetSchema } from "./address";
 import { MediaClassSchema, ShowArtifactKindSchema } from "./director";
 import {
+	AgentTitleGrantSchema,
+	AgentTitleSchema,
 	DRIVE_SCHEMA_VERSION,
 	DriveSubModeSchema,
 	ParticipantSchema,
@@ -132,6 +134,29 @@ export const ControlAddressEventSchema = DriveEventBaseSchema.extend({
 	type: z.literal("control.address"),
 	track: z.literal("control"),
 	addressSet: AddressSetSchema,
+}).strict();
+
+export const ControlTitleGrantedEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.title_granted"),
+	track: z.literal("control"),
+	grant: AgentTitleGrantSchema,
+}).strict();
+
+export const ControlTitleRevokedEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.title_revoked"),
+	track: z.literal("control"),
+	grantId: z.string().min(1),
+	revokedAt: IsoTimestampSchema,
+	reason: z.enum(["revoked", "expired", "policy"]).optional(),
+}).strict();
+
+export const ControlTitleTransferredEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.title_transferred"),
+	track: z.literal("control"),
+	title: AgentTitleSchema,
+	fromGrantId: z.string().min(1),
+	toGrant: AgentTitleGrantSchema,
+	transferredAt: IsoTimestampSchema,
 }).strict();
 
 // ── conversation ─────────────────────────────────────────────────────────
@@ -276,6 +301,9 @@ export const DriveEventSchema = z.discriminatedUnion("type", [
 	ControlRaiseHandEventSchema,
 	ControlRenameEventSchema,
 	ControlAddressEventSchema,
+	ControlTitleGrantedEventSchema,
+	ControlTitleRevokedEventSchema,
+	ControlTitleTransferredEventSchema,
 	ConversationMessageEventSchema,
 	ConversationNarrationEventSchema,
 	WorkEditEventSchema,

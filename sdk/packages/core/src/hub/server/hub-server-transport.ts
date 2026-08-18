@@ -451,6 +451,10 @@ export class HubServerTransport implements NativeHubTransport {
 				return await handleConnectorCommand(this.ctx, envelope);
 
 			case "drive.room.get":
+			case "drive.presenter.grant":
+			case "drive.presenter.transfer":
+			case "drive.presenter.revoke":
+			case "drive.presenter.status":
 			case "drive.spotlight.set":
 			case "drive.participant.mute.set":
 			case "drive.participant.deafen.set":
