@@ -25,9 +25,11 @@ answers are mechanical.
 3. **Verb = file** inside a plane (`present.ts`, `materialize.ts`,
    `projectTool.ts`, `layout.ts`). Do not promote verbs to plane folders.
 4. **Banned as ownership / folder nouns:** Engine, WorkflowEngine,
-   OrchestrationEngine, Producer, Projector; **Director** as a plane (role /
-   prompt only); **Spotlight** as a code folder (UI label → `stage/` / `show/`);
-   **Runtime** as a Drive plane (session runtime stays `@cline/core`).
+   OrchestrationEngine, Producer, Projector; **Director** as a plane (it is
+   signed host orchestration policy, not a folder peer); **Spotlight** as a code
+   folder (UI label → `stage/` / `show/`); **Runtime** as a Drive plane (session
+   runtime stays `@cline/core`). A `Presenter` is a temporary Agent Title and
+   likewise does not create a plane.
 5. **Closed noun set.** Adding a new top-level plane noun requires a new ADR
    (or amend this one). Synonym redirects live in nest + sdk `AGENTS.md`.
 6. **Docs matrix (LAYER × PLANE)** may teach placement (contract / kernel / hub /

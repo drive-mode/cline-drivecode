@@ -4,7 +4,24 @@
 
 Drivecode should make Cline feel like a pair-programming call with recruitable agents, shared work, and clear room context. The product north star is a Drive tab with Discord-style information architecture, Slack-like chrome, pair-call interactions, and the cline.bot visual brand.
 
-**Current agent work (2026-08-02):** Tracks A–F of the remaining backlog landed on `feat/drive-remaining-backlog` (GATES feed + reconnect, Recruit/Pack UI, REMAINING residuals, ADR-0018 control + receipt guard, Voice STT, CLI `call_join`). Systems map: [plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md](plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md) §13.0. Living satisfaction checklist: [REMAINING-task-satisfaction.md](plans/cline-drivemode/delivery/REMAINING-task-satisfaction.md). Audit: [research/19-adr-validation-audit.md](plans/cline-drivemode/research/19-adr-validation-audit.md).
+**Current delivery update (2026-08-18):** Presenter authority, temporary Agent
+Titles, and the signed/non-exportable Director descriptor are implemented on
+[PR #17](https://github.com/drive-mode/cline-drivecode/pull/17), but the PR is
+still open and its Hub/CLI integration jobs are red because several stage
+fixtures/projections do not yet supply `presenterGrantId`. The focused title
+tests passing does not make this stack merge-ready. The canonical contract is
+[the SDK architecture](../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy).
+All consumer documentation must keep **Spotlight** as the surface, `stage` as
+the wire projection, **Presenter** as a temporary exclusive title, and
+**Director** as proprietary host policy.
+
+The native App Store candidate is the standalone
+[`drive-ios`](https://github.com/drive-mode/drive-ios) repository. The in-tree
+[`apps/drive-ios`](../../apps/drive-ios/) project is a legacy fixture, not the
+native delivery source of truth. The standalone app's seven-PR preview stack is
+open and unreleased; its canonical release gate is
+[`docs/APP-STORE-REVIEW.md`](https://github.com/drive-mode/drive-ios/blob/main/docs/APP-STORE-REVIEW.md)
+once that documentation branch lands.
 
 ## Requirements
 
@@ -15,6 +32,11 @@ Keep these constraints:
 - Use Bun. Do not use npm, yarn, or pnpm in this repository.
 - Keep privacy-strict defaults. Do not persist audio or transcripts without an explicit and visible debug setting.
 - Build the stage from typed events first. WebRTC and remote media come later.
+- `Spotlight` names the user-facing surface; `stage` names the typed wire
+  projection. `Presenter` is a temporary title authorizing an agent to present
+  on that stage, never another surface or role tier.
+- The built-in Director policy remains signed, versioned, host-owned, and
+  non-exportable. Clients receive only an allowlisted descriptor and overlays.
 - `RosterPack` is a Drive seating preset. It is not Cline `Team`, which remains the runtime execution group.
 - `AgentProfile` is an appearance overlay on Cline's configured agent.
 - Keep prompts, tools, skills, provider settings, and model IDs in Cline-owned agent configuration or `.driveagent/<slug>/` source that compiles into it.
@@ -42,11 +64,17 @@ Leadership planning wave entry. [cline-drivemode/LEADERSHIP-BRIEF.md](plans/clin
 
 Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session notes: [07-agent-handoff.md](plans/drivecode-sdk/delivery/07-agent-handoff.md) (superseded).
 
-### Execution backlog (Kanban)
+### Execution backlog
 
-- **Phase contract** stays in [TASK-GRAPH.md](plans/cline-drivemode/delivery/TASK-GRAPH.md) (phases, gates, DRV lists).
-- **Agent execution backlog** for this workspace lives in drivekanban / `npx kanban` under `~/.cline/kanban/workspaces/cline-drivecode/` (not committed to git). Phase 0–4 DRV + gate cards are linked; meta ARD→ADR rename + nest hygiene cards are Done.
-- Re-seed if needed: `bun scripts/seed-drive-kanban.mjs` from the repo root.
+- The canonical status source is
+  [claims-registry.yaml](plans/cline-drivemode/delivery/claims-registry.yaml).
+- [delivery/BACKLOG.md](plans/cline-drivemode/delivery/BACKLOG.md) is the
+  human-readable work-selection render. If it disagrees with the registry, the
+  registry wins.
+- [TASK-GRAPH.md](plans/cline-drivemode/delivery/TASK-GRAPH.md) and older
+  delivery handoffs are phase/history references, not current status sources.
+- Do **not** re-run `scripts/seed-drive-kanban.mjs`; it seeds the historical
+  graph. Retire or re-point the private board to the claims registry first.
 
 ### Terminology note (2026-08)
 
@@ -71,7 +99,12 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
 - `docs/drivecode/plans/cline-drivemode/initiatives/driveplan-agent-runtime/` ships [ADR-0018](plans/cline-drivemode/adr/ADR-0018-agent-runtime-contract.md) slices (`DriveRun` / lease / receipt; Kanban projection stub). Parallel to phased TASK-GRAPH UX — does not replace Phase 1–3 gates.
 - `docs/drivecode/plans/cline-drivemode/examples/driveagent-pair-partner/` is the concrete agent-home and graph fixture.
 - `docs/drivecode/plans/cline-drivemode/initiatives/mobile-consumer/` phone-first consumer shell (PWA + wireframes).
-- `docs/drivecode/plans/cline-drivemode/initiatives/multi-device/` cross-device feature list + backlog; skill `multi-device-backlog`. Native SwiftUI full fixture demo: [`apps/drive-ios`](../../apps/drive-ios/) · [DEMO.md](../../apps/drive-ios/DEMO.md). Presenter HTML: [`mobile-drive-ios-demo.html`](design/wireframes/mobile-drive-ios-demo.html). Captures: [`assets/demos/ios-demo-*`](assets/demos/).
+- `docs/drivecode/plans/cline-drivemode/initiatives/multi-device/` owns the
+  cross-device contract. The standalone
+  [`drive-ios`](https://github.com/drive-mode/drive-ios) repository is the
+  native implementation source of truth; [`apps/drive-ios`](../../apps/drive-ios/)
+  is a legacy fixture. Presenter HTML:
+  [`mobile-drive-ios-demo.html`](design/wireframes/mobile-drive-ios-demo.html).
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
 - `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the end-to-end systems analysis (context, interfaces, NFRs, as-is/to-be, delivery slices) — **§13.0 is current as-is**.
 
@@ -111,12 +144,12 @@ CLI Status uses the live hub adapter; CLI Drive toggle best-effort `call_join`/`
 
 ### Top gaps
 
-- **Mobile consumer app (plan):** [mobile-consumer](plans/cline-drivemode/initiatives/mobile-consumer/) — phone-first shell for less-technical users. Surfaces: [mobile-drive-surfaces.html](design/wireframes/mobile-drive-surfaces.html) (all pages · portrait/landscape · sizes). First-open: [mobile-drive-app.html](design/wireframes/mobile-drive-app.html). Modern light + iOS: [mobile-drive-ios.html](design/wireframes/mobile-drive-ios.html). Capability/UX gap fill: [GAPS.md](plans/cline-drivemode/initiatives/mobile-consumer/GAPS.md). User-value features: [FEATURES.md](plans/cline-drivemode/initiatives/mobile-consumer/FEATURES.md). Phone-only power: [POWER-USERS.md](plans/cline-drivemode/initiatives/mobile-consumer/POWER-USERS.md). Power roadmap: [ROADMAP.md](plans/cline-drivemode/initiatives/mobile-consumer/ROADMAP.md). **Path H Accepted** ([ADR-0016](plans/cline-drivemode/adr/ADR-0016-distribution-and-positioning.md) + [DEC-mobile-consumer-owner](plans/cline-drivemode/decisions/DEC-mobile-consumer-owner.md)); writer track is [ADR-0029](plans/cline-drivemode/adr/ADR-0029-room-hotpath-redesign.md) **H5**.
+- **Mobile consumer product:** [mobile-consumer](plans/cline-drivemode/initiatives/mobile-consumer/) defines the shared phone-first jobs and path H. The standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) app is now an implemented preview, not merely a plan; its managed chat, target, account, call, and release-service connections remain open. Surfaces: [mobile-drive-surfaces.html](design/wireframes/mobile-drive-surfaces.html). **Path H Accepted** ([ADR-0016](plans/cline-drivemode/adr/ADR-0016-distribution-and-positioning.md) + [DEC-mobile-consumer-owner](plans/cline-drivemode/decisions/DEC-mobile-consumer-owner.md)); writer track is [ADR-0029](plans/cline-drivemode/adr/ADR-0029-room-hotpath-redesign.md) **H5**.
 - **Room hot path (H1–H4 shipped):** [drive-hotpath](plans/cline-drivemode/initiatives/drive-hotpath/) + [ADR-0029](plans/cline-drivemode/adr/ADR-0029-room-hotpath-redesign.md) — checkpoint, delta publish, in-process stage projector, layout sheets; **H5** cloud signaling is open engineering under the accepted path H, no longer owner-gated.
 - **MC1–MC3 on hub (`?app=1`):** Join/Continue; hold-to-talk; 44px Leave strip; landscape two-column; raise-hand banner; Preview chip; credential-free Join→demo; PWA manifest **Cline Drive**. Next: iOS glance / hosted D5.
 - **Now portfolio (dogfood):** [portfolio-now](plans/cline-drivemode/initiatives/portfolio-now/) — remaining consumer work as a DrivePlan; Status Hub `/status?demoPlans=1&statusMode=dependency-map` shows plan **Now · consumer path**.
 - **Owner defaults (2026-08-07):** [DEC-mobile-consumer-owner](plans/cline-drivemode/decisions/DEC-mobile-consumer-owner.md) — path H yes; mic default muted; PWA name **Cline Drive**; MC3 on Now; hosted economics **Cline default (freemium)**, BYOK secondary.
-- **UX quality (web + mobile browser):** [ux-quality](plans/cline-drivemode/initiatives/ux-quality/) — surface inventory, award bar, phases 0–7 over [drive-web](plans/cline-drivemode/initiatives/drive-web/) + [hosted-preview](plans/cline-drivemode/initiatives/hosted-preview/). Native apps YAGNI. Owner open decisions block implementation.
+- **UX quality (web + mobile browser):** [ux-quality](plans/cline-drivemode/initiatives/ux-quality/) — surface inventory, award bar, phases 0–7 over [drive-web](plans/cline-drivemode/initiatives/drive-web/) + [hosted-preview](plans/cline-drivemode/initiatives/hosted-preview/). Native iOS is active in the standalone repository; Android remains YAGNI. Keep web and native on the same room/title contracts.
 - **ADLC factory track (plan):** [adlc-drive-factory](plans/cline-drivemode/initiatives/adlc-drive-factory/) + [ADR-0028](plans/cline-drivemode/adr/ADR-0028-adlc-control-plane.md) (**Accepted**) — first-use on-ramps, Status→Drive offer bridge, traces polish, receipt ship atom. Does not replace [MVP-beta.md](plans/cline-drivemode/delivery/MVP-beta.md) (MVP already delivered).
 - **ADR board cleanup (2026-08-08):** [ADR-0000](plans/cline-drivemode/adr/ADR-0000-status-board.md) — clusters + decision coverage gaps; ADR-0023 reconciled; 0023/0027/0028/0029 Accepted.
 - ADR-0019 full DrivePlan–Kanban Interop wire (after ADR-0018 D1–D2 proved on this branch) — [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/).

@@ -84,12 +84,23 @@ This record's clause 3 remains the operative statement on *raising* depth.
 Converging them is out of scope here. Naming them prevents a fourth from being
 added under the impression that a role vocabulary is missing.
 
+**6. Agent Titles do not add a fourth role vocabulary.**
+
+An Agent Title such as `Presenter` is a temporary, scoped, expiring authority
+grant attached to an existing agent. It may reference a host-owned capability
+bundle, resources, and delegated agents, but it does not change team role,
+router role, `call_join` role, or configured persona. Title grant/transfer/
+revoke events are auditable and must fail closed at the host boundary. See the
+canonical [SDK authority contract](../../../../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy).
+
 ## Consequences
 
 **Positive**
 
 - Teams get hierarchy as prompts immediately, without fake enforcement claims.
 - Clause 1 turns "roles carry no authority" into a named call-site unit of work.
+- Temporary capabilities can be modeled as titles without expanding the role
+  vocabulary or implying permanent hierarchy.
 
 **Negative**
 

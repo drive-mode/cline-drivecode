@@ -5,6 +5,11 @@ Detail and scoring still live in
 [mobile-consumer/FEATURES.md](../mobile-consumer/FEATURES.md) — this file is the
 **cross-device contract**. Status per cell → [MATRIX.md](MATRIX.md).
 
+Native implementation truth lives in the standalone
+[`drive-ios`](https://github.com/drive-mode/drive-ios) repository. The in-tree
+SwiftUI project is a legacy fixture; a feature is not release-ready merely
+because that fixture or an open standalone PR renders it.
+
 ## Tier 1 — every primary device
 
 | ID | Feature | Job | hub | pwa | ios | tui |

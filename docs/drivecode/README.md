@@ -285,7 +285,7 @@ This keeps the model independently testable, lets non-local runtime hosts opt
 into snapshots without coupling to `LocalRuntimeHost`, and prevents the view
 from taking on persistence or task-mutation responsibilities.
 
-## Drive Mode and Spotlight
+## Drive Mode, Spotlight, Presenter, and Director
 
 Vision and naming: [00-vision.md](plans/cline-drivemode/foundation/00-vision.md).
 Architecture: [01-architecture.md](plans/cline-drivemode/foundation/01-architecture.md).
@@ -293,14 +293,16 @@ Runbook: [DEMO.md](design/wireframes/DEMO.md).
 
 ### The hub is the single writer
 
-Room state — roster, Spotlight sharer, pin, cards, mute flags, sub-mode, address
-set — is owned by the hub daemon (preferred default port; discovery / free-port
+Room state — roster, Spotlight sharer, Presenter grant reference, pin, cards,
+mute flags, sub-mode, address set — is owned by the hub daemon (preferred
+default port; discovery / free-port
 fallback unless `CLINE_HUB_PORT` is set) and mutated only
 through hub ops. Clients hold read-only projections. There is exactly one writer
 for the shared room object, so no lock and no CRDT is needed.
 
 Ops: `call_join`, `call_leave`, `call_mute`, `call_set_stage`, `call_set_mode`,
-`call_record_work`, `call_get_room`. Broadcasts: `room.snapshot`, `room.event`.
+`call_record_work`, `call_get_room`, and the `drive.presenter.*` command family.
+Broadcasts: `room.snapshot`, `room.event`.
 
 The live `RoomSnapshot` is a `Map` in hub memory
 (`sdk/packages/core/src/hub/collaboration/room.ts:47`), but it is derived state:
@@ -313,13 +315,15 @@ Join again."
 ### Spotlight is a projection, not pixels
 
 `StageState` (`sdk/packages/shared/src/drive/room.ts`) is
-`{ sharer, pin, cards }`:
+`{ sharer, pin, cards, presenterGrantId }`:
 
 - `sharer` — `{ kind: "human" | "agent", participantId }` or null.
 - `pin` — the human share, `{ kind: "selection" | "file" | "terminal", label, ref? }`
   or null. This is the whole of human share. There is no pixel capture.
 - `cards` — agent work cards, each `{ id, category, title, summary?, workEventId?, updatedAt }`
   where category is `edit | command | test | plan | decision | other`.
+- `presenterGrantId` — the active temporary authority reference when an agent
+  owns the stage; it is null for human sharing and does not embed policy.
 
 Cards are a derived, last-event-wins projection over versioned session events.
 Completed agent edit / command / test tools bridge to `call_record_work`, and the
@@ -338,6 +342,26 @@ in the spotlight right now*. The hub wire protocol still says `stage`:
 renaming the wire is a breaking change across `@cline/shared`, the hub handlers,
 and every client. Surfaces render "Spotlight"; the protocol says `stage`.
 
+### Presenter is authority; Director is host policy
+
+**Presenter** is a temporary, scoped Agent Title. Only one active agent grant
+may authorize the stage at a time; grant, transfer, expiry, and revoke are
+typed events. Leaving or ending clears the agent stage. Presenter is neither a
+fourth role vocabulary nor a renamed Spotlight surface.
+
+**Director** is Cline's built-in orchestration policy. It stays signed,
+versioned, and host-side. Clients receive only a non-exportable descriptor and
+allowlisted overlays; prompts, routing, scoring, tool/model maps, endpoints,
+and signing secrets do not cross the host boundary. The complete contract lives
+in [SDK architecture](../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy);
+do not duplicate its schema in product docs.
+
+The implementation is on open
+[PR #17](https://github.com/drive-mode/cline-drivecode/pull/17). As of
+2026-08-18 its Hub/CLI integration jobs are red on missing
+`presenterGrantId` fixture/projection updates, so it must not be described as
+shipped on `main` yet.
+
 ## Where the code lives
 
 | Concern | Path |
@@ -354,6 +378,7 @@ and every client. Surfaces render "Spotlight"; the protocol says `stage`.
 | Status Hub view (Board / Changelog / Dependency map) | `apps/cline-hub/src/webview/src/components/views/status-view.tsx`, `dependency-map.tsx` |
 | Analytics (session rollups + shipped digest) | `apps/cline-hub/src/webview/src/components/views/analytics-view.tsx` |
 | Drive shell (lobby / call / history) | `apps/cline-hub/src/webview/src/App.tsx`, `lib/drive-shell.ts`, `drive-view.tsx`, `Chat.tsx` |
+| Presenter grants + Director descriptor | `sdk/packages/shared/src/drive/room.ts`, `sdk/packages/core/src/hub/clineDriveHost.ts`, `sdk/packages/core/src/hub/directorPolicy.ts` (open PR #17) |
 | TUI Status Hub port + hub adapter | `apps/cli/src/tui/status/` |
 | TUI Status Hub (`/status`) | `apps/cli/src/tui/views/status-view.tsx` |
 | Drive tab home | `apps/cline-hub/src/webview/src/components/views/drive-view.tsx` |
@@ -378,5 +403,9 @@ Stated plainly so nobody plans around it:
   Interactive pan/zoom graph + Plans rail remains [DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md).
 - **Multi-human rooms.** The room primitive carries `participants[]` so it does
   not need a rewrite later, but no multi-human media plane exists.
+- **Native iOS production connection and App Store release.** The standalone
+  [`drive-ios`](https://github.com/drive-mode/drive-ios) repository is the
+  native source of truth and currently contains an open preview stack. The
+  in-tree `apps/drive-ios` project is a legacy fixture, not the release app.
 - **CLI Drive call parity.** TUI Drive is a local toggle; it does not call `call_join`
   yet ([DRV-CLI-PARITY](plans/cline-drivemode/features/DRV-CLI-PARITY.md)).
