@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	clampPipPosition,
-	defaultPipPosition,
 	DRIVE_PIP_POSITION_STORAGE_KEY,
+	defaultPipPosition,
 	parseDrivePipPositionStorage,
 	readDrivePipPosition,
 	writeDrivePipPosition,
@@ -54,12 +54,14 @@ describe("clampPipPosition / defaultPipPosition", () => {
 	const size = { width: 240, height: 120 };
 
 	it("clamps into the viewport", () => {
-		expect(
-			clampPipPosition({ left: -40, top: 900 }, viewport, size),
-		).toEqual({ left: 0, top: 480 });
-		expect(
-			clampPipPosition({ left: 900, top: -10 }, viewport, size),
-		).toEqual({ left: 560, top: 0 });
+		expect(clampPipPosition({ left: -40, top: 900 }, viewport, size)).toEqual({
+			left: 0,
+			top: 480,
+		});
+		expect(clampPipPosition({ left: 900, top: -10 }, viewport, size)).toEqual({
+			left: 560,
+			top: 0,
+		});
 	});
 
 	it("defaults to bottom-right with a 16px margin", () => {
@@ -84,7 +86,10 @@ describe("drive pip position session persistence", () => {
 		expect(readDrivePipPosition("default")).toEqual({ left: 40, top: 50 });
 		expect(readDrivePipPosition("other")).toEqual({ left: 1, top: 2 });
 		expect(store.get(DRIVE_PIP_POSITION_STORAGE_KEY)).toBe(
-			JSON.stringify({ other: { left: 1, top: 2 }, default: { left: 40, top: 50 } }),
+			JSON.stringify({
+				other: { left: 1, top: 2 },
+				default: { left: 40, top: 50 },
+			}),
 		);
 	});
 

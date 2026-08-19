@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildRecruitNeed,
+	type RecruitCandidate,
 	rankRecruitCandidates,
 	recruitNeedIsPrivate,
-	type RecruitCandidate,
 } from "./scoreNeed.js";
 
 const candidates: RecruitCandidate[] = [
@@ -39,7 +39,14 @@ describe("buildRecruitNeed", () => {
 		expect(need.taskId).toBe("t1");
 		expect(need.title).toBe("Fix auth parser");
 		expect(need.capabilities).toEqual(
-			expect.arrayContaining(["fix", "auth", "parser", "security", "tests", "red"]),
+			expect.arrayContaining([
+				"fix",
+				"auth",
+				"parser",
+				"security",
+				"tests",
+				"red",
+			]),
 		);
 		expect(JSON.stringify(need)).not.toContain("security tests red");
 	});
@@ -55,9 +62,9 @@ describe("rankRecruitCandidates", () => {
 		});
 		const ranked = rankRecruitCandidates(need, candidates, { limit: 3 });
 		expect(ranked[0]?.slug).toBe("security-reviewer");
-		expect(ranked[0]?.reasons.some((reason) => reason.startsWith("label:"))).toBe(
-			true,
-		);
+		expect(
+			ranked[0]?.reasons.some((reason) => reason.startsWith("label:")),
+		).toBe(true);
 		expect(ranked[0]?.suggestedPackIds).toEqual(["security-crew"]);
 	});
 
@@ -86,8 +93,6 @@ describe("recruitNeedIsPrivate", () => {
 	});
 
 	it("rejects utterance keys", () => {
-		expect(recruitNeedIsPrivate({ taskId: "t1", utterance: "hi" })).toBe(
-			false,
-		);
+		expect(recruitNeedIsPrivate({ taskId: "t1", utterance: "hi" })).toBe(false);
 	});
 });

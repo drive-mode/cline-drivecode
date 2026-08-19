@@ -8,13 +8,13 @@ import { ForkConfirmContent } from "../components/dialogs/fork-confirm";
 import { HelpDialogContent } from "../components/dialogs/help-dialog";
 import { withLoadingDialog } from "../components/dialogs/loading-dialog";
 import { useSession } from "../contexts/session-context";
-import type { AppView, TuiProps } from "../types";
-import { hydrateSessionMessages } from "../utils/hydrate-messages";
-import type { LocalSlashCommandInvocation } from "../utils/skill-command-input";
 import type {
 	StatusSnapshotSource,
 	StatusViewBootstrap,
 } from "../status/status-snapshot-source";
+import type { AppView, TuiProps } from "../types";
+import { hydrateSessionMessages } from "../utils/hydrate-messages";
+import type { LocalSlashCommandInvocation } from "../utils/skill-command-input";
 import { HistoryDialogContent } from "../views/history-view";
 import { StatusDialogContent } from "../views/status-view";
 import { runLocalSlashCommandAction } from "./local-command-actions";
@@ -28,6 +28,7 @@ export function useLocalCommandActions(input: {
 	openMcpManager: () => Promise<boolean>;
 	openModelSelector: () => void;
 	openSkills: (invocation?: LocalSlashCommandInvocation) => void;
+	openThemePicker: () => void;
 	refocusTextarea: () => void;
 	setAppView: (view: AppView) => void;
 	onClearConversation: () => Promise<void>;
@@ -54,6 +55,7 @@ export function useLocalCommandActions(input: {
 		openMcpManager,
 		openModelSelector,
 		openSkills,
+		openThemePicker,
 		refocusTextarea,
 		setAppView,
 		onClearConversation,
@@ -273,6 +275,7 @@ export function useLocalCommandActions(input: {
 				openMcpManager,
 				openModelSelector,
 				openSkills,
+				openThemePicker,
 				runCompact,
 				runFork,
 				runUndo: onUndo,
@@ -295,6 +298,7 @@ export function useLocalCommandActions(input: {
 			openStatus,
 			openModelSelector,
 			openSkills,
+			openThemePicker,
 			runCompact,
 			runFork,
 			session.isRunning,

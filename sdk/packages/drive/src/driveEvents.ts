@@ -31,9 +31,7 @@ function withSession<T extends SessionStamp>(
 ): Pick<BankDriveEvent, "roomId" | "callSessionId"> {
 	return {
 		roomId: input.roomId,
-		...(input.callSessionId
-			? { callSessionId: input.callSessionId }
-			: {}),
+		...(input.callSessionId ? { callSessionId: input.callSessionId } : {}),
 	};
 }
 

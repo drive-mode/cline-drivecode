@@ -61,7 +61,6 @@ export const HookOutputSchema = z
 	})
 	.passthrough();
 
-export { HookEventNameSchema, HookEventPayloadSchema, parseHookEventPayload };
 export type {
 	AgentAbortHookPayload,
 	AgentEndHookPayload,
@@ -85,6 +84,7 @@ export type {
 	ToolResultHookPayload,
 	UserPromptSubmitData,
 };
+export { HookEventNameSchema, HookEventPayloadSchema, parseHookEventPayload };
 
 export interface RunHookOptions {
 	command?: string[];

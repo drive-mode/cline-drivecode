@@ -1,9 +1,6 @@
-import { describe, expect, it } from "vitest";
-import {
-	localDefaultsWithOllama,
-	seedFacetsForProfile,
-} from "@cline/drive";
+import { localDefaultsWithOllama, seedFacetsForProfile } from "@cline/drive";
 import { BUILTIN_WEB_SPEECH_STT_ID } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	listDriveSettingsProviders,
 	summarizeProfileSeed,

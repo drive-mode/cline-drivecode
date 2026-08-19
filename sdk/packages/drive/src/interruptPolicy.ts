@@ -81,9 +81,7 @@ export function classifyInterrupt(
 		case "stop":
 			return {
 				intent,
-				action: input.turnInFlight
-					? "pause-after-tool"
-					: "hard-cancel",
+				action: input.turnInFlight ? "pause-after-tool" : "hard-cancel",
 				revise: "revise",
 			};
 		case "clarify":
@@ -96,9 +94,7 @@ export function classifyInterrupt(
 		case "fresh":
 			return {
 				intent,
-				action: input.turnInFlight
-					? "pause-after-tool"
-					: "hard-cancel",
+				action: input.turnInFlight ? "pause-after-tool" : "hard-cancel",
 				revise: "restart",
 			};
 		default: {

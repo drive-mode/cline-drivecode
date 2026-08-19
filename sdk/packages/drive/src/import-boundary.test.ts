@@ -10,11 +10,7 @@ import { describe, expect, it } from "vitest";
 function listTsFiles(dir: string): string[] {
 	const out: string[] = [];
 	for (const name of readdirSync(dir)) {
-		if (
-			name === "node_modules" ||
-			name === "dist" ||
-			name === ".git"
-		) {
+		if (name === "node_modules" || name === "dist" || name === ".git") {
 			continue;
 		}
 		const path = join(dir, name);
@@ -33,8 +29,7 @@ describe("import boundary", () => {
 	it("only type-imports @cline/shared", () => {
 		const root = join(import.meta.dirname, "..");
 		const files = listTsFiles(root);
-		const valueImport =
-			/import\s+(?!type\b)[^;]*from\s+["']@cline\/shared["']/;
+		const valueImport = /import\s+(?!type\b)[^;]*from\s+["']@cline\/shared["']/;
 
 		const offenders: string[] = [];
 		for (const file of files) {

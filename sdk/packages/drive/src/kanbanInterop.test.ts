@@ -5,8 +5,8 @@ import {
 	collectReceipt,
 	execute,
 	getCapabilities,
-	observe,
 	type KanbanInteropHost,
+	observe,
 } from "./kanbanInterop.js";
 
 const fixtureRun = {

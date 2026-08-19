@@ -4,9 +4,9 @@ import {
 	applyPlanImproveAccept,
 	createMemoryPlanImproveStore,
 	diagnoseAndPropose,
+	PLAN_IMPROVE_DEFAULT_SKILL_ID,
 	planImproveIsPrivate,
 	planPlanImproveResolve,
-	PLAN_IMPROVE_DEFAULT_SKILL_ID,
 } from "./planImprove.js";
 
 describe("diagnoseAndPropose", () => {
@@ -52,9 +52,7 @@ describe("diagnoseAndPropose", () => {
 		);
 		expect(proposal?.target.type).toBe("plan_template");
 		expect(planImproveIsPrivate(proposal)).toBe(true);
-		expect(JSON.stringify(proposal).toLowerCase()).not.toContain(
-			"utterance",
-		);
+		expect(JSON.stringify(proposal).toLowerCase()).not.toContain("utterance");
 	});
 });
 
@@ -190,9 +188,7 @@ describe("planPlanImproveResolve + apply", () => {
 		expect(plan.hostBoundary).toBe("enqueue_only");
 		const result = await applyPlanImproveAccept(fs, plan);
 		expect(result.wrote).toBe(true);
-		expect(result.relativePath).toBe(
-			".drive/plan-improve/queue/pp-skill.json",
-		);
+		expect(result.relativePath).toBe(".drive/plan-improve/queue/pp-skill.json");
 		const raw = await fs.read(result.relativePath!);
 		expect(JSON.parse(raw!).skillId).toBe(PLAN_IMPROVE_DEFAULT_SKILL_ID);
 	});

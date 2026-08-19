@@ -24,6 +24,7 @@ import {
 import { listLocalProviders } from "../utils/provider-catalog";
 import { identifyTelemetryAccount } from "../utils/telemetry";
 
+export type { OAuthCredentials };
 export {
 	getPersistedProviderApiKey,
 	isOAuthProvider,
@@ -31,7 +32,6 @@ export {
 	normalizeProviderId,
 	toProviderApiKey,
 };
-export type { OAuthCredentials };
 
 const c = {
 	reset: "\x1b[0m",

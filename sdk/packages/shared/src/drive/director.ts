@@ -56,13 +56,7 @@ export const ShowBacklogItemSchema = z
 			})
 			.strict(),
 		priority: z.number(),
-		status: z.enum([
-			"planned",
-			"ready",
-			"showing",
-			"shown",
-			"cancelled",
-		]),
+		status: z.enum(["planned", "ready", "showing", "shown", "cancelled"]),
 		linkedDoItemId: z.string().min(1).optional(),
 		linkedScriptId: z.string().min(1).optional(),
 		scoreReasons: z.array(z.string()),
@@ -98,12 +92,7 @@ export const ScriptBeatSchema = z
 		say: z.string(),
 		showItemId: z.string().min(1),
 		sticky: StickyPolicySchema,
-		advance: z.enum([
-			"auto_after_say",
-			"on_tool",
-			"on_human",
-			"with_do_item",
-		]),
+		advance: z.enum(["auto_after_say", "on_tool", "on_human", "with_do_item"]),
 	})
 	.strict();
 export type ScriptBeat = z.infer<typeof ScriptBeatSchema>;

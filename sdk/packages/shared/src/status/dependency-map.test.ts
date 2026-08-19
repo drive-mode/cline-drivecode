@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TeamTask } from "../team/types";
 import { buildDependencyMap } from "./dependency-map";
+
 const task = (
 	id: string,
 	dependsOn: string[] = [],

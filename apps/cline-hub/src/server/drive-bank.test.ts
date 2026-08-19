@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { handleDriveBankWebviewCommand } from "./drive-bank";
 import type { HubContext } from "./state";
 import type { BrowserPeer } from "./types";
-import { handleDriveBankWebviewCommand } from "./drive-bank";
 
 function peer(): BrowserPeer {
 	return { id: "peer-1" } as unknown as BrowserPeer;

@@ -4,8 +4,8 @@ import {
 	DEFAULT_DRIVE_UI,
 	DRIVE_PARTICIPANT_HUMAN,
 	DRIVE_PARTICIPANT_PARTNER,
-	EMPTY_BANK_SNAPSHOT,
 	type DriveUiState,
+	EMPTY_BANK_SNAPSHOT,
 } from "./types";
 
 function driveWithNow(nowTitle: string | null): DriveUiState {

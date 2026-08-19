@@ -148,9 +148,7 @@ describe("bankEventLog retention", () => {
 			maxRecords: 4,
 		});
 		expect(again.seq).toBe(11);
-		expect(readBankLogSince(dir, 0).map((e) => e.seq)).toEqual([
-			8, 9, 10, 11,
-		]);
+		expect(readBankLogSince(dir, 0).map((e) => e.seq)).toEqual([8, 9, 10, 11]);
 	});
 
 	it("resolves maxRecords through the live privacy.debugRetention facet, not a fixed default", () => {

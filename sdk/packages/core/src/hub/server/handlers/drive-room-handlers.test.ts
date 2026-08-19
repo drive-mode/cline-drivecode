@@ -22,6 +22,7 @@ function makeCtx(): HubTransportContext & { published: unknown[] } {
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
 		pendingDriveToolInputs: new Map(),
+		activeRpcTurnCountBySession: new Map(),
 		sessionHost: {} as HubTransportContext["sessionHost"],
 		publish(event) {
 			published.push(event);
@@ -862,7 +863,9 @@ describe("handleDriveRoomCommand", () => {
 		expect(ended.ok).toBe(true);
 		expect(ended.payload?.ended).toBe(true);
 		expect(typeof ended.payload?.handoffNarration).toBe("string");
-		expect(String(ended.payload?.handoffNarration)).toContain("Session handoff:");
+		expect(String(ended.payload?.handoffNarration)).toContain(
+			"Session handoff:",
+		);
 		expect(String(ended.payload?.handoffNarration)).toContain("src/handoff.ts");
 		const snap = ended.payload?.snapshot as {
 			participants: unknown[];
@@ -1342,7 +1345,9 @@ describe("handleDriveRoomCommand", () => {
 			},
 		});
 		expect(
-			existsSync(join(tmpdir(), ".cline", "drive", "rooms", "room_no_workspace")),
+			existsSync(
+				join(tmpdir(), ".cline", "drive", "rooms", "room_no_workspace"),
+			),
 		).toBe(false);
 
 		const workspaceRoot = mkdtempSync(join(tmpdir(), "drive-rooms-defect1-"));

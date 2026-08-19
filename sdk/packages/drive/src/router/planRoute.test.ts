@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { SeatedAgentCard } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { assertRouteLegal, planRoute } from "./planRoute";
 
 const partner: SeatedAgentCard = {
@@ -47,10 +47,7 @@ describe("planRoute P4 no-everyone-when-seated", () => {
 			}
 		}
 		expect(
-			assertRouteLegal(
-				plan,
-				new Set(["drive:partner", "drive:security"]),
-			).ok,
+			assertRouteLegal(plan, new Set(["drive:partner", "drive:security"])).ok,
 		).toBe(true);
 	});
 

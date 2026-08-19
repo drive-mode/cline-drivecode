@@ -78,9 +78,7 @@ export function parseDriveSessionId(
 }
 
 /** `?app=1` — phone/PWA shell without hub nav (mobile-consumer MC1). */
-export function parseDriveAppShell(
-	search?: string | URLSearchParams,
-): boolean {
+export function parseDriveAppShell(search?: string | URLSearchParams): boolean {
 	return toSearchParams(search).get(DRIVE_APP_QUERY) === "1";
 }
 

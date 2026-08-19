@@ -34,8 +34,8 @@ import {
 	ScanIcon,
 } from "lucide-react";
 import {
-	type PointerEvent as ReactPointerEvent,
 	type ReactNode,
+	type PointerEvent as ReactPointerEvent,
 	useCallback,
 	useEffect,
 	useRef,
@@ -53,8 +53,8 @@ import {
 } from "@/lib/drive-pip-hidden";
 import {
 	clampPipPosition,
-	defaultPipPosition,
 	type DrivePipPosition,
+	defaultPipPosition,
 	readDrivePipPosition,
 	writeDrivePipPosition,
 } from "@/lib/drive-pip-position";

@@ -8,6 +8,12 @@ export {
 	createMemoryBankFs,
 } from "./bankFs.js";
 export {
+	applyAppendTasksToPlan,
+	type BankOp,
+	type BuildBankOpsForDraftsInput,
+	buildBankOpsForDrafts,
+} from "./bankOps.js";
+export {
 	archivedPlanPath,
 	archivedTaskPath,
 	bankRoot,
@@ -20,14 +26,7 @@ export {
 	serializeDrivePlan,
 	serializeDriveTask,
 } from "./bankSerialize.js";
-export {
-	applyAppendTasksToPlan,
-	type BankOp,
-	buildBankOpsForDrafts,
-	type BuildBankOpsForDraftsInput,
-} from "./bankOps.js";
 export { deriveBankSnapshot } from "./bankSnapshot.js";
-export { commitBankOps } from "./commitBankOps.js";
 export {
 	type BankStore,
 	type CreateBankStoreOptions,
@@ -58,6 +57,7 @@ export {
 	formatCleanDrainNarration,
 	shouldOfferCleanDrain,
 } from "./cleanDrain.js";
+export { commitBankOps } from "./commitBankOps.js";
 export {
 	assertFakeHostFailClosed,
 	type ConformanceIssue,

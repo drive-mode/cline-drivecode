@@ -28,9 +28,7 @@ describe("share schemas", () => {
 
 describe("router schemas", () => {
 	it("rejects empty agent address set", () => {
-		expect(() =>
-			parseAddressSet({ mode: "agents", agentIds: [] }),
-		).toThrow();
+		expect(() => parseAddressSet({ mode: "agents", agentIds: [] })).toThrow();
 	});
 
 	it("parses a single-slice route plan", () => {

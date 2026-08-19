@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { DriveEvent } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { narrate } from "./narrationPolicy";
 
 const base = {

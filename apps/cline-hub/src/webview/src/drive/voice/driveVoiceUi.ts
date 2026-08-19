@@ -12,11 +12,11 @@ import type {
 } from "@cline/shared";
 import {
 	DEFAULT_DRIVE_HARDWARE_PREFS,
-	normalizeDriveHardwarePrefs,
 	type DriveHardwarePrefs,
+	normalizeDriveHardwarePrefs,
 } from "./driveHardwarePrefs";
-import { speechInputModeForBackend } from "./speechInputModeForBackend";
 import type { SpeechInputMode } from "./speechInputModeForBackend";
+import { speechInputModeForBackend } from "./speechInputModeForBackend";
 
 export type DriveVoiceUi = {
 	profile: DeploymentProfile;

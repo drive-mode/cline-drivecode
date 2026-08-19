@@ -1,5 +1,8 @@
 import type { ShowBacklogItem } from "@cline/shared";
-import { showItemFromTemplate, showItemIdForTemplate } from "./showTemplates.js";
+import {
+	showItemFromTemplate,
+	showItemIdForTemplate,
+} from "./showTemplates.js";
 
 export type ShowPlannerMode = "off" | "heuristic";
 
@@ -71,8 +74,7 @@ function backlogHasTemplate(
 ): boolean {
 	return backlog.some(
 		(item) =>
-			item.produce.templateId === templateId &&
-			item.status !== "cancelled",
+			item.produce.templateId === templateId && item.status !== "cancelled",
 	);
 }
 

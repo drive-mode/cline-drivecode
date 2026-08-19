@@ -183,14 +183,16 @@ export const SHARE_SCREEN_DEMO_FIXTURE: ShareScreenDemoFixture = {
 		},
 		{
 			beatId: "beat_edit",
-			narration: "Edit card is live. Spotlight is showing file changes from the script.",
+			narration:
+				"Edit card is live. Spotlight is showing file changes from the script.",
 			nowLabel: "add share-screen fixture + route branch",
 			nextLabel: "run a command check",
 			event: buildToolEvent({
 				id: "tool_edit_share_screen_demo",
 				name: "edit",
 				path: "apps/cline-hub/src/webview/src/App.tsx",
-				newText: "Mount ShareScreenSpotlightDemo when demoShareScreen=1 on /drive.",
+				newText:
+					"Mount ShareScreenSpotlightDemo when demoShareScreen=1 on /drive.",
 				output: { changed: true, files: 1 },
 				updatedAt: "2026-07-29T06:51:00.000Z",
 			}),
@@ -198,7 +200,8 @@ export const SHARE_SCREEN_DEMO_FIXTURE: ShareScreenDemoFixture = {
 		},
 		{
 			beatId: "beat_command",
-			narration: "Command card is live. This represents non-test shell work in Spotlight.",
+			narration:
+				"Command card is live. This represents non-test shell work in Spotlight.",
 			nowLabel: "run build preflight command",
 			nextLabel: "run tests",
 			event: buildToolEvent({
@@ -212,7 +215,8 @@ export const SHARE_SCREEN_DEMO_FIXTURE: ShareScreenDemoFixture = {
 		},
 		{
 			beatId: "beat_test",
-			narration: "Test card is live. The scripted loop now shows edit, command, and test.",
+			narration:
+				"Test card is live. The scripted loop now shows edit, command, and test.",
 			nowLabel: "run hub webview tests",
 			nextLabel: "handoff spotlight to human",
 			event: buildToolEvent({
@@ -247,13 +251,11 @@ export type ShareScreenDemoProjection = {
 	stage: StageState;
 };
 
-export function projectShareScreenDemo(
-	input?: {
-		fixture?: ShareScreenDemoFixture;
-		beatCursor?: number;
-		spotlightOverride?: "fixture" | "human" | "agent";
-	},
-): ShareScreenDemoProjection {
+export function projectShareScreenDemo(input?: {
+	fixture?: ShareScreenDemoFixture;
+	beatCursor?: number;
+	spotlightOverride?: "fixture" | "human" | "agent";
+}): ShareScreenDemoProjection {
 	const fixture = input?.fixture ?? SHARE_SCREEN_DEMO_FIXTURE;
 	const totalBeats = fixture.beats.length;
 	const clampedCursor =
@@ -285,8 +287,8 @@ export function projectShareScreenDemo(
 			? true
 			: input?.spotlightOverride === "agent"
 				? false
-				: beat?.humanTakesSpotlight ?? false;
-	const humanPin = humanSharing ? beat?.humanPin ?? DEMO_HUMAN_PIN : null;
+				: (beat?.humanTakesSpotlight ?? false);
+	const humanPin = humanSharing ? (beat?.humanPin ?? DEMO_HUMAN_PIN) : null;
 
 	return {
 		beatCursor: clampedCursor,

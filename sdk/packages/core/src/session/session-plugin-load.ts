@@ -12,10 +12,10 @@
 import { basename } from "node:path";
 import type { ExtensionContext } from "@cline/shared";
 import {
+	type ResolveAgentPluginPathsOptions,
+	type ResolveAndLoadAgentPluginsOptions,
 	resolveAgentPluginPaths,
 	resolveAndLoadAgentPlugins,
-	type ResolveAndLoadAgentPluginsOptions,
-	type ResolveAgentPluginPathsOptions,
 } from "../extensions/plugin/plugin-config-loader";
 
 export interface ResolveSessionPluginPathsInput
@@ -42,9 +42,7 @@ export function resolveSessionPluginPaths(
 ): string[] {
 	const cwd = input.cwd?.trim() || process.cwd();
 	const workspacePath =
-		input.workspacePath?.trim() ||
-		input.workspaceRoot?.trim() ||
-		cwd;
+		input.workspacePath?.trim() || input.workspaceRoot?.trim() || cwd;
 	return resolveAgentPluginPaths({
 		cwd,
 		workspacePath,
@@ -112,9 +110,7 @@ export async function resolveSessionPluginLoad(
 }> {
 	const cwd = input.cwd?.trim() || process.cwd();
 	const workspacePath =
-		input.workspacePath?.trim() ||
-		input.workspaceRoot?.trim() ||
-		cwd;
+		input.workspacePath?.trim() || input.workspaceRoot?.trim() || cwd;
 	return resolveAndLoadAgentPlugins({
 		...input,
 		cwd,

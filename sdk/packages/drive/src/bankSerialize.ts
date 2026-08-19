@@ -37,9 +37,7 @@ export function deserializeDriveTask(raw: string): DriveTask {
 
 export function deserializeDrivePlan(raw: string): DrivePlan {
 	const { meta } = splitFrontmatter(raw);
-	const taskIds = Array.isArray(meta.taskIds)
-		? meta.taskIds.map(String)
-		: [];
+	const taskIds = Array.isArray(meta.taskIds) ? meta.taskIds.map(String) : [];
 	return {
 		id: String(meta.id ?? ""),
 		title: String(meta.title ?? ""),
@@ -90,9 +88,7 @@ function parseYamlish(raw: string): Record<string, unknown> {
 			if (!Array.isArray(list)) {
 				result[currentListKey] = [];
 			}
-			(result[currentListKey] as unknown[]).push(
-				unquote(listItem[1] ?? ""),
-			);
+			(result[currentListKey] as unknown[]).push(unquote(listItem[1] ?? ""));
 			continue;
 		}
 		const kv = /^([A-Za-z0-9_]+):\s*(.*)$/.exec(line);

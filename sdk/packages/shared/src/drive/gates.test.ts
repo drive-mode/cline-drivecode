@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-	DEFAULT_UNKNOWN_GATE_CLASS,
-	DRIVE_GATE_TAXONOMY_SCHEMA_VERSION,
-	GATE_ACTION_CLASSES,
-	GATE_CLASS_DEFAULT_DISPOSITION,
-	GateActionClassSchema,
 	assertNeverGateActionClass,
 	classifyToolNameForGate,
+	DEFAULT_UNKNOWN_GATE_CLASS,
+	DRIVE_GATE_TAXONOMY_SCHEMA_VERSION,
 	defaultDispositionForGateClass,
-	parseGateActionClass,
+	GATE_ACTION_CLASSES,
+	GATE_CLASS_DEFAULT_DISPOSITION,
 	type GateActionClass,
+	GateActionClassSchema,
+	parseGateActionClass,
 } from "./gates";
 
 describe("DRV-GATES taxonomy", () => {

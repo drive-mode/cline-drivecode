@@ -5,10 +5,10 @@
 
 import {
 	buildRecruitNeed,
-	rankRecruitCandidates,
 	type RankedRecruit,
 	type RecruitCandidate,
 	type RecruitNeed,
+	rankRecruitCandidates,
 } from "@cline/drive";
 
 /** Builtin fixtures so lexical rank has labels beyond the seated pair. */

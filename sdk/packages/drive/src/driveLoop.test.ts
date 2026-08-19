@@ -1,3 +1,4 @@
+import type { BankSnapshot } from "@cline/shared";
 import { describe, expect, it } from "vitest";
 import {
 	allowWorkspaceMutation,
@@ -5,7 +6,6 @@ import {
 	resolveDriveLoop,
 	setPostureOverride,
 } from "./driveLoop.js";
-import type { BankSnapshot } from "@cline/shared";
 
 const empty: BankSnapshot = {
 	activePlanId: null,

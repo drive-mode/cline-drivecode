@@ -43,11 +43,7 @@ export const DriveRunWaveSchema = z
 export const DriveRunGateSchema = z
 	.object({
 		id: z.string().min(1),
-		kind: z.enum([
-			"gate.admission",
-			"gate.wave_checkpoint",
-			"gate.receipt",
-		]),
+		kind: z.enum(["gate.admission", "gate.wave_checkpoint", "gate.receipt"]),
 		label: z.string().min(1),
 	})
 	.strict();
@@ -121,7 +117,9 @@ export const ReceiptSchema = z
 	})
 	.strict();
 
-export type DriveRunWorkItemStatus = z.infer<typeof DriveRunWorkItemStatusSchema>;
+export type DriveRunWorkItemStatus = z.infer<
+	typeof DriveRunWorkItemStatusSchema
+>;
 export type DriveRunIsolation = z.infer<typeof DriveRunIsolationSchema>;
 export type DriveRunWorkItem = z.infer<typeof DriveRunWorkItemSchema>;
 export type DriveRunWave = z.infer<typeof DriveRunWaveSchema>;

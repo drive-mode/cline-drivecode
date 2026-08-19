@@ -1,8 +1,4 @@
-import {
-	type ChatForkRecord,
-	type DriveEvent,
-	type RoomSnapshot,
-} from "@cline/shared";
+import type { ChatForkRecord, DriveEvent, RoomSnapshot } from "@cline/shared";
 import {
 	type HostMessage,
 	isOptionalString,

@@ -1,9 +1,6 @@
 import { z } from "zod";
-import { AgentRefSchema, type AgentRef } from "./agentRef";
-import {
-	DeploymentProfileSchema,
-	EgressClassSchema,
-} from "./topology";
+import { type AgentRef, AgentRefSchema } from "./agentRef";
+import { DeploymentProfileSchema, EgressClassSchema } from "./topology";
 
 /**
  * Minimal facet primitives for Drive settings (DRV-PLATFORM-CONFIG).
@@ -40,7 +37,7 @@ export const ProviderConfigSchema = z
 	.record(z.string(), z.unknown())
 	.superRefine((config, ctx) => {
 		for (const key of ["apiKey", "token", "accessToken", "secret"] as const) {
-			if (Object.prototype.hasOwnProperty.call(config, key)) {
+			if (Object.hasOwn(config, key)) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					message: `secret field '${key}' is forbidden in Drive provider config`,

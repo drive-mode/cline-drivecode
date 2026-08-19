@@ -5,11 +5,11 @@ import {
 	InMemoryWaveCheckpointStore,
 } from "./checkpoint";
 import { failFastReview, scratchPauseReview } from "./reviewGates";
+import { TokenQueue } from "./tokenQueue";
+import type { DriveWorkExecutor, DriveWorkInput } from "./types";
+import { DriveWaveRunner } from "./waveRunner";
 import { DriveWorkMailbox } from "./workMailbox";
 import { DriveWorkScratch } from "./workScratch";
-import { TokenQueue } from "./tokenQueue";
-import { DriveWaveRunner } from "./waveRunner";
-import type { DriveWorkExecutor, DriveWorkInput } from "./types";
 
 function syncHost(handler: DriveWorkExecutor["runTask"]): DriveWorkExecutor {
 	return { runTask: handler };
@@ -113,7 +113,9 @@ describe("DriveWaveRunner", () => {
 				return {
 					ok: true,
 					spawn: [{ id: "child", kind: "implement" }],
-					messages: [{ to: "*", topic: "plan.done", body: { taskId: task.id } }],
+					messages: [
+						{ to: "*", topic: "plan.done", body: { taskId: task.id } },
+					],
 					scratchWrites: { lastPlan: task.id },
 				};
 			}
@@ -142,9 +144,9 @@ describe("DriveWaveRunner", () => {
 			{ id: "b", kind: "work" },
 		]);
 		expect(result.status).toBe("paused");
-		expect(result.tasks.filter((task) => task.status === "succeeded")).toHaveLength(
-			1,
-		);
+		expect(
+			result.tasks.filter((task) => task.status === "succeeded"),
+		).toHaveLength(1);
 	});
 
 	it("aborts remaining work with fail-fast review", async () => {

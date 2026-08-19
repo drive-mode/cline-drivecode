@@ -17,6 +17,7 @@ export type LocalSlashCommandName =
 	| "plugins"
 	| "account"
 	| "model"
+	| "theme"
 	| "compact"
 	| "skills"
 	| "fork"
@@ -62,6 +63,10 @@ const TUI_LOCAL_COMMANDS: Array<{
 	{
 		name: "model",
 		description: "Switch model or provider",
+	},
+	{
+		name: "theme",
+		description: "Change color theme",
 	},
 	{
 		name: "account",
@@ -117,6 +122,7 @@ const TUI_LOCAL_COMMANDS: Array<{
 const SYSTEM_COMMAND_ORDER = [
 	"settings",
 	"model",
+	"theme",
 	"account",
 	"mcp",
 	"plugins",

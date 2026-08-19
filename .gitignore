@@ -102,6 +102,7 @@ apps/examples/desktop-app/webview/.next
 
 # Next.js generated type shim (churns between dev and build)
 apps/examples/desktop-app/webview/next-env.d.ts
-
 # Python bytecode from .claude hook tests
 __pycache__/
+
+apps/examples/desktop-app/.cursor/settings.json

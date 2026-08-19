@@ -1,4 +1,4 @@
-import { newId, nowIso, type DriveWorkMessage } from "./types";
+import { type DriveWorkMessage, newId, nowIso } from "./types";
 
 /** Inter-worker message bus. Supports direct and broadcast (`to: "*"`) delivery. */
 export class DriveWorkMailbox {
@@ -36,7 +36,10 @@ export class DriveWorkMailbox {
 	}
 
 	snapshot(): DriveWorkMessage[] {
-		return this.#messages.map((message) => ({ ...message, body: { ...message.body } }));
+		return this.#messages.map((message) => ({
+			...message,
+			body: { ...message.body },
+		}));
 	}
 
 	restore(messages: readonly DriveWorkMessage[]): void {

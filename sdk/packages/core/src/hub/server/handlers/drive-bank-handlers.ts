@@ -48,9 +48,7 @@ function openLoggedBankStore(
 	const roomId = readString(payload, "roomId");
 	const callSessionId =
 		readString(payload, "callSessionId") ??
-		(roomId
-			? getDriveRoomStore().getActiveCallSessionId(roomId)
-			: undefined);
+		(roomId ? getDriveRoomStore().getActiveCallSessionId(roomId) : undefined);
 	return openWorkspaceBankStore(workspaceRoot, {
 		roomId: roomId ?? "bank",
 		callSessionId,
@@ -109,10 +107,7 @@ export async function handleDriveBankCommand(
 			return okReply(envelope, { snapshot });
 		}
 		case "drive_bank_seed": {
-			const snapshot = await seedDemoIfEmpty(
-				workspaceRoot,
-				envelope.payload,
-			);
+			const snapshot = await seedDemoIfEmpty(workspaceRoot, envelope.payload);
 			return okReply(envelope, { snapshot });
 		}
 		case "drive_bank_create_task": {
@@ -129,10 +124,7 @@ export async function handleDriveBankCommand(
 			const body = typeof bodyRaw === "string" ? bodyRaw : "";
 			const planId = readString(envelope.payload, "planId");
 			try {
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				if (planId) {
 					const plan = await store.getPlan(planId);
 					if (!plan) {
@@ -144,10 +136,7 @@ export async function handleDriveBankCommand(
 					}
 					await store.createTask({ id, title, body });
 					try {
-						await store.editPlanTaskIds(planId, [
-							...plan.taskIds,
-							id,
-						]);
+						await store.editPlanTaskIds(planId, [...plan.taskIds, id]);
 					} catch (error) {
 						// Roll back the orphan task file so the durable bank
 						// stays consistent when the plan update fails.
@@ -182,10 +171,7 @@ export async function handleDriveBankCommand(
 				);
 			}
 			try {
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				await store.editPlanTaskIds(planId, taskIds);
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, { snapshot });
@@ -200,19 +186,12 @@ export async function handleDriveBankCommand(
 		case "drive_bank_complete_task": {
 			const taskId = readString(envelope.payload, "taskId");
 			if (!taskId) {
-				return errorReply(
-					envelope,
-					"invalid_payload",
-					"taskId is required",
-				);
+				return errorReply(envelope, "invalid_payload", "taskId is required");
 			}
 			const agentId = readString(envelope.payload, "agentId");
 			try {
 				const guard = readCompletionGuardPayload(envelope.payload);
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				await store.completeTask(taskId, {
 					...(agentId ? { agentId } : {}),
 					...(guard.boundRun ? { boundRun: guard.boundRun } : {}),
@@ -231,10 +210,7 @@ export async function handleDriveBankCommand(
 		case "drive_bank_bind_now": {
 			const agentId = readString(envelope.payload, "agentId");
 			try {
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				const bound = await store.bindNowTask(
 					agentId ? { agentId } : undefined,
 				);
@@ -255,17 +231,10 @@ export async function handleDriveBankCommand(
 		case "drive_bank_activate_plan": {
 			const planId = readString(envelope.payload, "planId");
 			if (!planId) {
-				return errorReply(
-					envelope,
-					"invalid_payload",
-					"planId is required",
-				);
+				return errorReply(envelope, "invalid_payload", "planId is required");
 			}
 			try {
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				await store.activatePlan(planId);
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, { snapshot });
@@ -288,10 +257,7 @@ export async function handleDriveBankCommand(
 				);
 			}
 			try {
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				const task = await store.recordTaskFailure(taskId, note);
 				const snapshot = await store.getSnapshot();
 				return okReply(envelope, { snapshot, task });
@@ -314,8 +280,7 @@ export async function handleDriveBankCommand(
 					"tasks (non-empty array) is required",
 				);
 			}
-			const slices: Array<{ id?: string; title: string; body?: string }> =
-				[];
+			const slices: Array<{ id?: string; title: string; body?: string }> = [];
 			for (const item of tasksRaw) {
 				if (item === null || typeof item !== "object") {
 					return errorReply(
@@ -339,9 +304,7 @@ export async function handleDriveBankCommand(
 					...(typeof record.id === "string" && record.id.trim()
 						? { id: record.id.trim() }
 						: {}),
-					...(typeof record.body === "string"
-						? { body: record.body }
-						: {}),
+					...(typeof record.body === "string" ? { body: record.body } : {}),
 				});
 			}
 			try {
@@ -353,10 +316,7 @@ export async function handleDriveBankCommand(
 					...(planId ? { planId } : {}),
 					...(planTitle ? { planTitle } : {}),
 				});
-				const store = openLoggedBankStore(
-					workspaceRoot,
-					envelope.payload,
-				);
+				const store = openLoggedBankStore(workspaceRoot, envelope.payload);
 				const result = await applySdlcFreezeAccept(store, acceptPlan);
 				return okReply(envelope, { snapshot: result.snapshot });
 			} catch (error) {

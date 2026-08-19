@@ -9,7 +9,6 @@ import {
 } from "node:fs";
 import { basename, dirname } from "node:path";
 import { resolveProviderSettingsPath } from "@cline/shared/storage";
-import { getLiveModelsCatalog } from "../llms/provider-defaults";
 import { getProviderAuthHandler } from "../../auth/provider-auth-registry";
 import { hashSecret, sdkDebug } from "../../logging/early-logger";
 import {
@@ -22,7 +21,10 @@ import {
 	StoredProviderSettingsSchema,
 	type ToProviderConfigOptions,
 	toProviderConfig,
+	type VoiceInputSettings,
+	VoiceInputSettingsSchema,
 } from "../../types/provider-settings";
+import { getLiveModelsCatalog } from "../llms/provider-defaults";
 import {
 	ensureCustomProvidersLoadedSync,
 	registerConfiguredProvidersFromSettings,
@@ -212,6 +214,23 @@ export class ProviderSettingsManager {
 	getProviderSettings(providerId: string): ProviderSettings | undefined {
 		const state = this.read();
 		return this.resolveProviderSettings(state, providerId);
+	}
+
+	getVoiceInputSettings(): VoiceInputSettings | undefined {
+		return this.read().modes.voiceInput;
+	}
+
+	setVoiceInputSettings(
+		settings: VoiceInputSettings | undefined,
+	): StoredProviderSettings {
+		const state = this.read();
+		if (settings) {
+			state.modes.voiceInput = VoiceInputSettingsSchema.parse(settings);
+		} else {
+			delete state.modes.voiceInput;
+		}
+		this.write(state);
+		return state;
 	}
 
 	private resolveLastUsedProviderId(

@@ -150,7 +150,8 @@ function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 						) {
 							handlers.onError({
 								code: "stt_unsupported",
-								message: "MediaRecorder STT is not available in this environment.",
+								message:
+									"MediaRecorder STT is not available in this environment.",
 							});
 							return;
 						}
@@ -199,9 +200,7 @@ function createBuiltinSttPort(manifest: DriveProviderManifest): SttPort {
 												? error.code
 												: "stt_failed",
 										message:
-											error instanceof Error
-												? error.message
-												: String(error),
+											error instanceof Error ? error.message : String(error),
 									});
 								} finally {
 									if (stream) {

@@ -13,10 +13,7 @@ export type FacetLane = "durable" | "live" | "ephemeral";
 
 export type PrivacyClass = "public" | "sensitive" | "forbidden";
 
-export type ConflictRule =
-	| "workspace_over_user"
-	| "user_only"
-	| "live_wins";
+export type ConflictRule = "workspace_over_user" | "user_only" | "live_wins";
 
 export type FacetPhase = 0 | 1 | 2 | 3 | 4;
 

@@ -97,7 +97,8 @@ describe("readTelemetryEnv", () => {
 	it("skips empty preferred values and uses the next key", () => {
 		stashEnv();
 		process.env.OTEL_EXPORTER_OTLP_ENDPOINT = "";
-		process.env.CLINE_OTEL_EXPORTER_OTLP_ENDPOINT = "http://cline-fallback:4318";
+		process.env.CLINE_OTEL_EXPORTER_OTLP_ENDPOINT =
+			"http://cline-fallback:4318";
 		expect(
 			readTelemetryEnv(
 				"OTEL_EXPORTER_OTLP_ENDPOINT",

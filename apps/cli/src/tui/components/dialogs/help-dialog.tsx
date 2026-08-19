@@ -135,6 +135,12 @@ const HELP_ROWS: HelpRow[] = [
 	},
 	{
 		kind: "entry",
+		id: "c-theme",
+		key: "/theme",
+		desc: "Change color theme",
+	},
+	{
+		kind: "entry",
 		id: "c-mcp",
 		key: "/mcp",
 		desc: "Manage MCP servers",

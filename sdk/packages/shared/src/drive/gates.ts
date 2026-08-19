@@ -32,7 +32,8 @@ export const GateDispositionSchema = z.enum(["approve", "block"]);
 export type GateDisposition = z.infer<typeof GateDispositionSchema>;
 
 /** Fallback class for tools that do not match a narrower bucket. */
-export const DEFAULT_UNKNOWN_GATE_CLASS = "shell.unchecked" as const satisfies GateActionClass;
+export const DEFAULT_UNKNOWN_GATE_CLASS =
+	"shell.unchecked" as const satisfies GateActionClass;
 
 export const GATE_CLASS_DEFAULT_DISPOSITION: Readonly<
 	Record<GateActionClass, GateDisposition>

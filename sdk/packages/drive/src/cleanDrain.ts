@@ -126,9 +126,7 @@ export function countMidPlanAdds(
 	currentOpenOrPlanTaskIds: readonly string[],
 ): number {
 	const baseline =
-		activateTaskIds instanceof Set
-			? activateTaskIds
-			: new Set(activateTaskIds);
+		activateTaskIds instanceof Set ? activateTaskIds : new Set(activateTaskIds);
 	let adds = 0;
 	for (const taskId of currentOpenOrPlanTaskIds) {
 		if (!baseline.has(taskId)) {

@@ -40,9 +40,7 @@ export function ChatForkAuditPanel({
 			fork.workerSessionId === focusedAuditHandle ||
 			fork.promote?.auditHandle === focusedAuditHandle,
 	);
-	const focusedShowIds = focused
-		? showIdsForFork(focused, showBacklog)
-		: [];
+	const focusedShowIds = focused ? showIdsForFork(focused, showBacklog) : [];
 
 	return (
 		<aside
@@ -129,8 +127,7 @@ export function ChatForkAuditPanel({
 							) : null}
 							{focused.seed.linkedShowTemplateIds.length > 0 ? (
 								<p className="text-muted-foreground">
-									Templates:{" "}
-									{focused.seed.linkedShowTemplateIds.join(", ")}
+									Templates: {focused.seed.linkedShowTemplateIds.join(", ")}
 								</p>
 							) : null}
 						</div>

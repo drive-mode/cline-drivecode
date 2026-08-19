@@ -1,14 +1,14 @@
-import { describe, expect, it } from "vitest";
 import {
 	BUILTIN_PROVIDER_MANIFESTS,
 	BUILTIN_WEB_SPEECH_STT_ID,
 	type RuntimeTopology,
 } from "@cline/shared";
-import { assertTopologyLegal } from "./assertTopologyLegal.js";
+import { describe, expect, it } from "vitest";
 import {
 	assertProviderCompatible,
 	listProviders,
 } from "./assertProviderCompatible.js";
+import { assertTopologyLegal } from "./assertTopologyLegal.js";
 import {
 	cloudDefaultsWithAnthropic,
 	defaultFacetValuesFromProfile,
@@ -102,11 +102,7 @@ describe("listProviders", () => {
 	});
 
 	it("includes webSpeech when ceiling is platform-cloud", () => {
-		const stt = listProviders(
-			BUILTIN_PROVIDER_MANIFESTS,
-			"stt",
-			cloudTopology,
-		);
+		const stt = listProviders(BUILTIN_PROVIDER_MANIFESTS, "stt", cloudTopology);
 		expect(stt.map((entry) => entry.id)).toContain(BUILTIN_WEB_SPEECH_STT_ID);
 	});
 });

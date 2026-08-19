@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	buildCleanDrainInvite,
 	cleanDrainInviteIsPrivate,

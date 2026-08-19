@@ -1,7 +1,7 @@
 import {
 	listProviders,
-	resolveTopologyFromFacets,
 	type ProfileFacetSeed,
+	resolveTopologyFromFacets,
 } from "@cline/drive";
 import {
 	BUILTIN_PROVIDER_MANIFESTS,

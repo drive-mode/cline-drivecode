@@ -1,6 +1,6 @@
+import type { StageCard } from "@cline/shared";
 import { describe, expect, it } from "vitest";
 import { buildHumanPinDefaults, lastCardOfCategory } from "./pinDefaults";
-import type { StageCard } from "@cline/shared";
 
 const cards: StageCard[] = [
 	{

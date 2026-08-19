@@ -140,9 +140,7 @@ export function getTelemetryBuildTimeConfig(): OpenTelemetryClientConfig {
 				: undefined;
 		})(),
 		metricExportInterval: parsePositiveInt(metricIntervalRaw),
-		otlpHeaders: headersRaw
-			? parseKeyPairsIntoRecord(headersRaw)
-			: undefined,
+		otlpHeaders: headersRaw ? parseKeyPairsIntoRecord(headersRaw) : undefined,
 		otlpInsecure: otlpInsecureRaw === "true",
 		logBatchSize: parsePositiveInt(logBatchSizeRaw),
 		logBatchTimeout: parsePositiveInt(logBatchTimeoutRaw),

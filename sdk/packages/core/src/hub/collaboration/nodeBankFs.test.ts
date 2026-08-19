@@ -23,14 +23,7 @@ describe("createNodeBankFs", () => {
 		dirs.push(root);
 		const fs = createNodeBankFs();
 		const file = join(root, ".drive", "bank", "tasks", "t1.md");
-		const archive = join(
-			root,
-			".drive",
-			"bank",
-			"archive",
-			"tasks",
-			"t1.md",
-		);
+		const archive = join(root, ".drive", "bank", "archive", "tasks", "t1.md");
 
 		expect(await fs.exists(file)).toBe(false);
 		expect(await fs.read(file)).toBeNull();
@@ -114,14 +107,7 @@ describe("openWorkspaceBankStore", () => {
 		await store.completeTask("t1");
 
 		const fs = createNodeBankFs();
-		const archived = join(
-			root,
-			".drive",
-			"bank",
-			"archive",
-			"tasks",
-			"t1.md",
-		);
+		const archived = join(root, ".drive", "bank", "archive", "tasks", "t1.md");
 		const active = join(root, ".drive", "bank", "tasks", "t1.md");
 		expect(await fs.exists(archived)).toBe(true);
 		expect(await fs.exists(active)).toBe(false);

@@ -1,8 +1,8 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
 import { diagnoseAndPropose } from "@cline/drive";
+import { afterEach, describe, expect, it } from "vitest";
 import {
 	handleDrivePlanImproveWebviewCommand,
 	planImproveAcceptedPath,
@@ -45,16 +45,12 @@ describe("handleDrivePlanImproveWebviewCommand", () => {
 		});
 		expect(proposal).not.toBeNull();
 		const { ctx, sent } = mockCtx();
-		await handleDrivePlanImproveWebviewCommand(
-			ctx,
-			{} as BrowserPeer,
-			{
-				type: "drive_plan_improve_resolve",
-				workspaceRoot: root,
-				decision: "reject",
-				proposal,
-			},
-		);
+		await handleDrivePlanImproveWebviewCommand(ctx, {} as BrowserPeer, {
+			type: "drive_plan_improve_resolve",
+			workspaceRoot: root,
+			decision: "reject",
+			proposal,
+		});
 		expect(sent[0]).toMatchObject({
 			type: "drive_plan_improve_resolved",
 			decision: "reject",
@@ -81,16 +77,12 @@ describe("handleDrivePlanImproveWebviewCommand", () => {
 		});
 		expect(proposal).not.toBeNull();
 		const { ctx, sent } = mockCtx();
-		await handleDrivePlanImproveWebviewCommand(
-			ctx,
-			{} as BrowserPeer,
-			{
-				type: "drive_plan_improve_resolve",
-				workspaceRoot: root,
-				decision: "accept",
-				proposal,
-			},
-		);
+		await handleDrivePlanImproveWebviewCommand(ctx, {} as BrowserPeer, {
+			type: "drive_plan_improve_resolve",
+			workspaceRoot: root,
+			decision: "accept",
+			proposal,
+		});
 		expect(sent[0]).toMatchObject({
 			type: "drive_plan_improve_resolved",
 			decision: "accept",
@@ -110,35 +102,31 @@ describe("handleDrivePlanImproveWebviewCommand", () => {
 		const root = await mkdtemp(join(tmpdir(), "plan-improve-"));
 		dirs.push(root);
 		const { ctx, sent } = mockCtx();
-		await handleDrivePlanImproveWebviewCommand(
-			ctx,
-			{} as BrowserPeer,
-			{
-				type: "drive_plan_improve_resolve",
-				workspaceRoot: root,
-				decision: "accept",
-				proposal: {
-					kind: "planning",
-					id: "pp-bad",
-					offerKey: "x",
-					reasons: ["low_s2"],
-					evidence: {
-						eventIds: [],
-						artifactPaths: [],
-						skillIds: [],
-						taskIds: [],
-						planIds: [],
-					},
-					target: {
-						type: "plan_template",
-						templateId: "t",
-						relativePath: "accepted/pp-bad.json",
-					},
-					label: "bad",
-					utterance: "nope",
+		await handleDrivePlanImproveWebviewCommand(ctx, {} as BrowserPeer, {
+			type: "drive_plan_improve_resolve",
+			workspaceRoot: root,
+			decision: "accept",
+			proposal: {
+				kind: "planning",
+				id: "pp-bad",
+				offerKey: "x",
+				reasons: ["low_s2"],
+				evidence: {
+					eventIds: [],
+					artifactPaths: [],
+					skillIds: [],
+					taskIds: [],
+					planIds: [],
 				},
+				target: {
+					type: "plan_template",
+					templateId: "t",
+					relativePath: "accepted/pp-bad.json",
+				},
+				label: "bad",
+				utterance: "nope",
 			},
-		);
+		});
 		expect(sent[0]).toMatchObject({
 			type: "drive_plan_improve_error",
 			code: "invalid_proposal",

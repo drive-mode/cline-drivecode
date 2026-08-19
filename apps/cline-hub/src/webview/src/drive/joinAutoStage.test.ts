@@ -1,12 +1,12 @@
+import type { RoomSnapshot } from "@cline/shared";
 import { describe, expect, it } from "vitest";
 import {
+	applyRoomSnapshot,
 	DEFAULT_DRIVE_UI,
 	DRIVE_PARTICIPANT_HUMAN,
 	DRIVE_PARTICIPANT_PARTNER,
-	applyRoomSnapshot,
 	type DriveUiState,
 } from "./types";
-import type { RoomSnapshot } from "@cline/shared";
 
 function sampleRoomSnapshot(
 	overrides: Partial<RoomSnapshot> = {},
@@ -64,9 +64,7 @@ describe("join auto-opens stage (slice S2)", () => {
 		const seatedOnCall = true;
 		const next = applyRoomSnapshot(DEFAULT_DRIVE_UI, sampleRoomSnapshot());
 		const withAutoStage: DriveUiState =
-			wasPendingJoin && seatedOnCall
-				? { ...next, stageLayout: true }
-				: next;
+			wasPendingJoin && seatedOnCall ? { ...next, stageLayout: true } : next;
 		expect(withAutoStage.stageLayout).toBe(true);
 		expect(withAutoStage.active).toBe(true);
 	});

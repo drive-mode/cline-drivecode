@@ -10,9 +10,9 @@ import {
 	type GateActionClass,
 } from "@cline/shared";
 import { CheckIcon, Loader2Icon, ShieldAlertIcon, XIcon } from "lucide-react";
+import type { PendingApproval } from "@/components/PendingApprovalsPanel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { PendingApproval } from "@/components/PendingApprovalsPanel";
 import { blastRadiusPaths } from "./gatePaths";
 
 function formatApprovalInput(input: unknown): string {

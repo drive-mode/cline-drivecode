@@ -77,10 +77,7 @@ const FORBIDDEN_PROPOSAL_KEYS = [
 ] as const;
 
 /** Fingerprint for mute / identical re-offer suppression. */
-export function recoveryOfferKey(
-	taskId: string,
-	lastFailure: string,
-): string {
+export function recoveryOfferKey(taskId: string, lastFailure: string): string {
 	return `${taskId}::${lastFailure.trim()}`;
 }
 
@@ -124,7 +121,12 @@ export function resolveRecoveryOfferTarget(input: {
 	nowTaskId: string | null | undefined;
 	nowLastFailure: string | null | undefined;
 	autoStallOffer?: AutoStallRecoveryOffer | null;
-}): { taskId: string; failureNote: string; offerKey: string; source: "manual" | "auto_stall" } | null {
+}): {
+	taskId: string;
+	failureNote: string;
+	offerKey: string;
+	source: "manual" | "auto_stall";
+} | null {
 	const manualTask = input.nowTaskId?.trim();
 	const manualFailure = input.nowLastFailure?.trim();
 	if (manualTask && manualFailure) {
@@ -219,9 +221,7 @@ export function planRecoveryAccept(input: {
 	stallTaskId?: string | null;
 }): RecoveryAcceptPlan | null {
 	const taskId =
-		input.snapshot.nowTaskId?.trim() ||
-		input.stallTaskId?.trim() ||
-		"";
+		input.snapshot.nowTaskId?.trim() || input.stallTaskId?.trim() || "";
 	const failure =
 		input.snapshot.nowLastFailure?.trim() ||
 		input.stallFailureFingerprint?.trim() ||

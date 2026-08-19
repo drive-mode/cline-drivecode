@@ -1,7 +1,4 @@
-import {
-	sendHubCommand,
-	type HubEndpointOverrides,
-} from "@cline/core";
+import { type HubEndpointOverrides, sendHubCommand } from "@cline/core";
 import type {
 	StatusSummary,
 	StatusUpdate,
@@ -11,7 +8,10 @@ import {
 	ensureCliHubServer,
 	parseHubEndpointOverride,
 } from "../../utils/hub-runtime";
-import type { StatusSnapshot, StatusSnapshotSource } from "./status-snapshot-source";
+import type {
+	StatusSnapshot,
+	StatusSnapshotSource,
+} from "./status-snapshot-source";
 
 async function statusCommand(
 	endpoint: HubEndpointOverrides,

@@ -1,4 +1,8 @@
-import type { MediaClass, ShowArtifactKind, ShowBacklogItem } from "@cline/shared";
+import type {
+	MediaClass,
+	ShowArtifactKind,
+	ShowBacklogItem,
+} from "@cline/shared";
 
 export type ShowTemplate = {
 	templateId: string;
@@ -172,9 +176,7 @@ export function getShowTemplate(templateId: string): ShowTemplate | undefined {
 	return SHOW_TEMPLATE_KIT.find((entry) => entry.templateId === templateId);
 }
 
-export function mediaClassForArtifactKind(
-	kind: ShowArtifactKind,
-): MediaClass {
+export function mediaClassForArtifactKind(kind: ShowArtifactKind): MediaClass {
 	switch (kind) {
 		case "diagram.architecture":
 		case "diagram.data_flow":

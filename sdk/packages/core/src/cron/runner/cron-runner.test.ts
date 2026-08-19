@@ -199,53 +199,52 @@ describe("CronRunner", () => {
 		});
 	});
 
-	it.each([
-		"act",
-		"plan",
-		"yolo",
-	] as const)("preserves an explicit %s mode for scheduled runs", async (mode) => {
-		const { handlers, calls } = fakeHandlers();
-		const upserted = store.upsertSpec({
-			externalId: `explicit-${mode}`,
-			sourcePath: `explicit-${mode}.md`,
-			triggerKind: "one_off",
-			sourceHash: `h-${mode}`,
-			parseStatus: "valid",
-			spec: {
+	it.each(["act", "plan", "yolo"] as const)(
+		"preserves an explicit %s mode for scheduled runs",
+		async (mode) => {
+			const { handlers, calls } = fakeHandlers();
+			const upserted = store.upsertSpec({
+				externalId: `explicit-${mode}`,
+				sourcePath: `explicit-${mode}.md`,
 				triggerKind: "one_off",
-				id: `explicit-${mode}`,
-				title: `Explicit ${mode}`,
-				prompt: "Do it",
+				sourceHash: `h-${mode}`,
+				parseStatus: "valid",
+				spec: {
+					triggerKind: "one_off",
+					id: `explicit-${mode}`,
+					title: `Explicit ${mode}`,
+					prompt: "Do it",
+					workspaceRoot,
+					enabled: true,
+					mode,
+				},
+			});
+			store.updateSpecNextRunAt(
+				upserted.record.specId,
+				new Date(Date.now() - 1_000).toISOString(),
+			);
+			const runner = new CronRunner({
+				store,
+				materializer,
+				runtimeHandlers: handlers,
 				workspaceRoot,
-				enabled: true,
-				mode,
-			},
-		});
-		store.updateSpecNextRunAt(
-			upserted.record.specId,
-			new Date(Date.now() - 1_000).toISOString(),
-		);
-		const runner = new CronRunner({
-			store,
-			materializer,
-			runtimeHandlers: handlers,
-			workspaceRoot,
-			specs: { cronSpecsDir: cronDir },
-		});
+				specs: { cronSpecsDir: cronDir },
+			});
 
-		await runner.tick();
-		await runner.dispose();
+			await runner.tick();
+			await runner.dispose();
 
-		const request = requireValue(calls.startRequests[0]);
-		expect(request.mode).toBe(mode);
-		expect(request.toolPolicies?.[DefaultToolNames.ASK]).toEqual({
-			enabled: false,
-			autoApprove: true,
-		});
-		expect(request.toolPolicies?.[DefaultToolNames.SUBMIT_AND_EXIT]).toEqual(
-			mode === "yolo" ? { enabled: true, autoApprove: true } : undefined,
-		);
-	});
+			const request = requireValue(calls.startRequests[0]);
+			expect(request.mode).toBe(mode);
+			expect(request.toolPolicies?.[DefaultToolNames.ASK]).toEqual({
+				enabled: false,
+				autoApprove: true,
+			});
+			expect(request.toolPolicies?.[DefaultToolNames.SUBMIT_AND_EXIT]).toEqual(
+				mode === "yolo" ? { enabled: true, autoApprove: true } : undefined,
+			);
+		},
+	);
 
 	it("marks runs failed when the runtime throws", async () => {
 		const handlers: HubScheduleRuntimeHandlers = {

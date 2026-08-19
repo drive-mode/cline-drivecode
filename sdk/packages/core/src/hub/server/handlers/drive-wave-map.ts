@@ -45,7 +45,8 @@ export function resolveDoItemFromWaveTask(task: {
 	}
 	return {
 		id: task.id,
-		title: typeof task.payload.title === "string" ? task.payload.title : task.id,
+		title:
+			typeof task.payload.title === "string" ? task.payload.title : task.id,
 		goal:
 			typeof task.payload.goal === "string"
 				? task.payload.goal

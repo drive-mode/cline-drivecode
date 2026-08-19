@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	buildPlanReentryChips,
 	buildPlanReentryRow,
-	planReentryRowIsPrivate,
 	planReentryRollupFromUnknown,
+	planReentryRowIsPrivate,
 } from "./planReentry.js";
 
 const open: BankSnapshot = {
@@ -78,9 +78,9 @@ describe("planReentry privacy", () => {
 	});
 
 	it("rejects utterance keys", () => {
-		expect(
-			planReentryRowIsPrivate({ planId: "p1", transcript: "hi" }),
-		).toBe(false);
+		expect(planReentryRowIsPrivate({ planId: "p1", transcript: "hi" })).toBe(
+			false,
+		);
 	});
 
 	it("coerces unknown rollup JSON", () => {

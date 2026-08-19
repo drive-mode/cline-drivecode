@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { Participant } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { resolveAddress } from "./resolveAddress.js";
 
 const participants: Participant[] = [

@@ -3,6 +3,7 @@ import type {
 	AgentMode,
 	AgentResult,
 	RuntimeConfigExtensionKind,
+	TeamRuntimeState,
 } from "@cline/shared";
 import type { HookEventPayload } from "../../hooks";
 import type { CheckpointEntry } from "../../hooks/checkpoint-hooks";
@@ -19,7 +20,6 @@ import type {
 	SessionPendingPrompt,
 } from "../../types/events";
 import type { SessionRecord } from "../../types/sessions";
-import type { TeamRuntimeState } from "@cline/shared";
 import type { RuntimeCapabilities } from "../capabilities";
 import type { ConnectionUpdate } from "../config/connection-update";
 
@@ -49,6 +49,47 @@ export function isSessionNotFoundError(
 			error !== null &&
 			"code" in error &&
 			(error as { code?: unknown }).code === SESSION_NOT_FOUND_ERROR_CODE)
+	);
+}
+
+function errorMessageOf(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	if (typeof error === "object" && error !== null && "message" in error) {
+		const message = (error as { message?: unknown }).message;
+		return typeof message === "string" ? message : "";
+	}
+	return typeof error === "string" ? error : "";
+}
+
+/**
+ * A session that cannot serve another turn, whatever the caller does with it.
+ *
+ * Two distinct causes, one remedy: the session is gone (`session_not_found`,
+ * after a hub restart, a deletion, or retention cleanup), or its runtime is stuck
+ * with a run that never drained (`session_run_in_progress`). A caller holding a
+ * long-lived mapping to that session — a connector thread, for instance — has to
+ * replace the session rather than keep retrying against it.
+ *
+ * Errors reaching a connector have crossed the hub's JSON boundary, so the code
+ * may be gone and only the message survives; both are checked, which also keeps
+ * this working when the hub and the CLI are different versions.
+ */
+export function isUnusableSessionError(error: unknown): boolean {
+	if (isSessionNotFoundError(error)) {
+		return true;
+	}
+	if (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: unknown }).code === "session_run_in_progress"
+	) {
+		return true;
+	}
+	return errorMessageOf(error).includes(
+		"shutdown called while a run is in progress",
 	);
 }
 
@@ -110,11 +151,14 @@ export interface LocalRuntimeStartOptions {
 
 export interface StartSessionInput {
 	config: StartSessionConfig;
+	/** The process/client that starts the session. E.g., "vscode", "cli". */
 	source?: SessionSource;
+	/** How the session was initiated, such as user, automation, or subagent. */
+	mode?: string;
 	prompt?: string;
 	interactive?: boolean;
 	sessionMetadata?: Record<string, unknown>;
-	initialMessages?: LlmsProviders.Message[];
+	initialMessages?: LlmsProviders.MessageWithMetadata[];
 	initialCompactionState?: SessionCompactionState;
 	userImages?: string[];
 	userFiles?: string[];
@@ -285,6 +329,10 @@ export interface SessionConnectionRuntimeService {
 	): Promise<void>;
 }
 
+export interface CommandExecutionRuntimeService {
+	proceedWhileRunning(sessionId: string, toolCallId?: string): Promise<number>;
+}
+
 export interface RuntimeHostSubscribeOptions {
 	sessionId?: string;
 }
@@ -304,7 +352,7 @@ export interface RestoreSessionInput {
 export interface RestoreSessionResult {
 	sessionId?: string;
 	startResult?: StartSessionResult;
-	messages?: LlmsProviders.Message[];
+	messages?: LlmsProviders.MessageWithMetadata[];
 	checkpoint: CheckpointEntry;
 }
 
@@ -339,7 +387,9 @@ export interface RuntimeHost {
 	readSessionCompactionState(
 		sessionId: string,
 	): Promise<SessionCompactionState | undefined>;
-	readSessionMessages(sessionId: string): Promise<LlmsProviders.Message[]>;
+	readSessionMessages(
+		sessionId: string,
+	): Promise<LlmsProviders.MessageWithMetadata[]>;
 	readTeamState?(sessionId: string): Promise<TeamRuntimeState | undefined>;
 	listTeamStates?(): Promise<TeamRuntimeState[]>;
 	/**
@@ -351,7 +401,9 @@ export interface RuntimeHost {
 	 * session for a mode switch. Optional: hosts without live-session access
 	 * (e.g. hub clients) fall back to the persisted transcript.
 	 */
-	readLiveSessionMessages?(sessionId: string): Promise<LlmsProviders.Message[]>;
+	readLiveSessionMessages?(
+		sessionId: string,
+	): Promise<LlmsProviders.MessageWithMetadata[]>;
 	dispatchHookEvent(payload: HookEventPayload): Promise<void>;
 	subscribe(
 		listener: (event: CoreSessionEvent) => void,

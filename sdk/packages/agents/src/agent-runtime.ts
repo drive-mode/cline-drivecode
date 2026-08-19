@@ -13,6 +13,7 @@ import type {
 	AgentModelEvent,
 	AgentModelFinishReason,
 	AgentModelRequest,
+	AgentModelToolActivity,
 	AgentRunResult,
 	AgentRuntimeEvent,
 	AgentRuntimeEventSnapshot,
@@ -458,6 +459,13 @@ export class AgentRuntime {
 		usage: cloneUsage(DEFAULT_USAGE),
 		lastError: undefined as string | undefined,
 		lastErrorClass: undefined as ProviderErrorClass | undefined,
+		/**
+		 * Whether the model layer already recorded `sdk.error` telemetry for
+		 * `lastError` (from `errorReported` on the stream's `finish` event).
+		 * Custom `AgentModel` implementations that do not record their own
+		 * telemetry leave this false, so their failures still get reported.
+		 */
+		lastErrorReported: false,
 	};
 	/** Set when shouldPauseAfterTool fires; cleared when the run aborts. */
 	private pauseAfterToolReason?: string;
@@ -539,6 +547,7 @@ export class AgentRuntime {
 		this.state.usage = cloneUsage(DEFAULT_USAGE);
 		this.state.lastError = undefined;
 		this.state.lastErrorClass = undefined;
+		this.state.lastErrorReported = false;
 		this.state.messages = cloneMessages(messages);
 		this.config = {
 			...this.config,
@@ -671,6 +680,7 @@ export class AgentRuntime {
 		this.state.pendingToolCalls = [];
 		this.state.lastError = undefined;
 		this.state.lastErrorClass = undefined;
+		this.state.lastErrorReported = false;
 		this.state.usage = cloneUsage(DEFAULT_USAGE);
 		this.overflowRecoveryAttempted = false;
 
@@ -830,9 +840,15 @@ export class AgentRuntime {
 					: normalized.message === this.state.lastError
 						? this.state.lastErrorClass
 						: undefined;
+			// Same guard: the model layer's telemetry only covers this failure
+			// if the run failed on that exact recorded error.
+			const errorAlreadyReported =
+				normalized.message === this.state.lastError &&
+				this.state.lastErrorReported;
 			this.state.status = status;
 			this.state.lastError = normalized.message;
 			this.state.lastErrorClass = errorClass;
+			this.state.lastErrorReported = errorAlreadyReported;
 			const lastAssistantMessage = this.findLastAssistantMessage();
 			const result: AgentRunResult = {
 				agentId: this.state.agentId,
@@ -981,6 +997,7 @@ export class AgentRuntime {
 				description: tool.description,
 				inputSchema: tool.inputSchema,
 			})),
+			modelTools: this.config.modelTools,
 			signal: this.abortController?.signal,
 			options: mergeModelOptions(this.config.modelOptions, {
 				metadata: modelRequestMetadata,
@@ -1054,6 +1071,7 @@ export class AgentRuntime {
 
 		const content: AgentMessagePart[] = [];
 		const toolAssemblies = new Map<string, PendingToolAssembly>();
+		const modelToolActivities = new Map<string, AgentModelToolActivity>();
 		const invalidToolCalls: InvalidToolCall[] = [];
 		const sequence: Array<
 			{ type: "tool"; key: string } | { type: "part"; part: AgentMessagePart }
@@ -1083,6 +1101,22 @@ export class AgentRuntime {
 						iteration: this.state.iteration,
 						text: event.text,
 						accumulatedText,
+					});
+					break;
+				}
+				case "media": {
+					sequence.push({
+						type: "part",
+						part: {
+							type: "media",
+							media: event.media,
+						},
+					});
+					await this.emit({
+						type: "assistant-media",
+						snapshot: this.snapshot(),
+						iteration: this.state.iteration,
+						media: event.media,
 					});
 					break;
 				}
@@ -1116,6 +1150,29 @@ export class AgentRuntime {
 					break;
 				}
 				case "tool-call-delta": {
+					if (event.execution) {
+						const toolCall: AgentToolCallPart = {
+							type: "tool-call",
+							toolCallId: event.toolCallId ?? createUID("model_tool"),
+							toolName: event.toolName ?? "tool",
+							input: event.input,
+							metadata: event.metadata,
+							execution: event.execution,
+						};
+						modelToolActivities.set(toolCall.toolCallId, {
+							toolCallId: toolCall.toolCallId,
+							toolName: toolCall.toolName,
+							execution: event.execution,
+							input: toolCall.input,
+						});
+						await this.emit({
+							type: "tool-started",
+							snapshot: this.snapshot(),
+							iteration: this.state.iteration,
+							toolCall,
+						});
+						break;
+					}
 					const key =
 						event.toolCallId ?? `tool_${event.index ?? nextToolIndex}`;
 					if (event.index == null && event.toolCallId == null) {
@@ -1153,6 +1210,43 @@ export class AgentRuntime {
 					}
 					break;
 				}
+				case "tool-result": {
+					const existing = modelToolActivities.get(event.toolCallId);
+					const activity = {
+						...existing,
+						toolCallId: event.toolCallId,
+						toolName: event.toolName,
+						execution: event.execution,
+						input: event.input === undefined ? existing?.input : event.input,
+						output: event.output,
+						isError: event.isError,
+					};
+					modelToolActivities.set(event.toolCallId, activity);
+					const toolCall: AgentToolCallPart = {
+						type: "tool-call",
+						toolCallId: event.toolCallId,
+						toolName: event.toolName,
+						input: activity.input,
+						execution: event.execution,
+					};
+					await this.emit({
+						type: "tool-finished",
+						snapshot: this.snapshot(),
+						iteration: this.state.iteration,
+						toolCall,
+						message: createMessage("tool", [
+							{
+								type: "tool-result",
+								toolCallId: event.toolCallId,
+								toolName: event.toolName,
+								output: event.output,
+								isError: event.isError,
+								execution: event.execution,
+							},
+						]),
+					});
+					break;
+				}
 				case "usage": {
 					await this.updateUsage(event.usage);
 					break;
@@ -1168,6 +1262,7 @@ export class AgentRuntime {
 						// stays eligible for overflow recovery.
 						this.state.lastErrorClass =
 							event.errorClass ?? classifyProviderError(event.error);
+						this.state.lastErrorReported = event.errorReported === true;
 					}
 					break;
 				}
@@ -1211,10 +1306,17 @@ export class AgentRuntime {
 			});
 		}
 
+		const messageMetadata: Record<string, unknown> = {};
+		if (invalidToolCalls.length > 0) {
+			messageMetadata.invalidToolCalls = invalidToolCalls;
+		}
+		if (modelToolActivities.size > 0) {
+			messageMetadata.modelToolActivities = [...modelToolActivities.values()];
+		}
 		const message = createMessage(
 			"assistant",
 			content,
-			invalidToolCalls.length > 0 ? { invalidToolCalls } : undefined,
+			Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
 		);
 		const metrics = usageDelta(usageBeforeModel, this.state.usage);
 		if (metrics) {
@@ -1862,23 +1964,48 @@ export class AgentRuntime {
 					...metadata,
 					error: event.error,
 				});
-				captureSdkError(this.config.telemetry, {
-					component: "agents",
-					operation: "agent.run",
-					error: event.error,
-					severity: "error",
-					handled: false,
-					context: metadata as TelemetryProperties,
-				});
+				// Failures the model layer already recorded at its own error
+				// boundary (`provider.stream`, carried across the stream's
+				// string-flattening boundary as `finish.errorReported`) must not
+				// be re-reported here — that exactly doubled `sdk.error` volume.
+				// Everything else still reports: loop-originated failures, and
+				// failures from model implementations that do not record their
+				// own telemetry.
+				if (!this.state.lastErrorReported) {
+					captureSdkError(this.config.telemetry, {
+						component: "agents",
+						operation: "agent.run",
+						error: event.error,
+						severity: "error",
+						handled: false,
+						context: {
+							...(metadata as TelemetryProperties),
+							providerId: this.getTelemetryProviderId(),
+							modelId: this.getTelemetryModelId(),
+						},
+					});
+				}
 				break;
 			default:
 				this.config.logger?.debug?.("Agent event", metadata);
 				break;
 		}
-		this.config.telemetry?.capture({
-			event: `agent.${event.type}`,
-			properties: metadata as TelemetryProperties,
-		});
+		switch (event.type) {
+			// Per-token/per-chunk stream events are ~97% of agent.* telemetry
+			// volume and are never queried, so they are not mirrored to
+			// telemetry. Listeners and hooks below still receive them.
+			case "assistant-text-delta":
+			case "assistant-reasoning-delta":
+			case "assistant-media":
+			case "tool-updated":
+				break;
+			default:
+				this.config.telemetry?.capture({
+					event: `agent.${event.type}`,
+					properties: metadata as TelemetryProperties,
+				});
+				break;
+		}
 		for (const listener of this.listeners) {
 			listener(event);
 		}

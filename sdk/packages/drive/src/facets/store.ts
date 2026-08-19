@@ -17,15 +17,9 @@ export type FacetStoreSnapshot = {
 };
 
 export type FacetStore = {
-	get<K extends DriveFacetKey>(
-		key: K,
-		instanceId?: string,
-	): DriveFacetValue<K>;
+	get<K extends DriveFacetKey>(key: K, instanceId?: string): DriveFacetValue<K>;
 	/** Update live-lane values only (durable writes go through hub IO). */
-	setLive<K extends DriveFacetKey>(
-		key: K,
-		value: DriveFacetValue<K>,
-	): void;
+	setLive<K extends DriveFacetKey>(key: K, value: DriveFacetValue<K>): void;
 	listDefs: typeof listFacetDefs;
 	/** Replace durable snapshot. live_wins keys are preserved. */
 	reload(disk: DriveFacetDiskSnapshot): void;
@@ -34,9 +28,7 @@ export type FacetStore = {
 	snapshot(): FacetStoreSnapshot;
 };
 
-export function createFacetStore(
-	initial?: DriveFacetDiskSnapshot,
-): FacetStore {
+export function createFacetStore(initial?: DriveFacetDiskSnapshot): FacetStore {
 	let durable: DriveFacetDiskSnapshot = initial ?? {
 		schemaVersion: 1,
 		values: {},

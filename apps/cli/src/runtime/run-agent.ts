@@ -348,9 +348,7 @@ export async function runAgent(
 			sessionManager
 				.abort(
 					activeSessionId,
-					new Error(
-						lastAbortReason ?? "Run-agent runtime abort requested",
-					),
+					new Error(lastAbortReason ?? "Run-agent runtime abort requested"),
 				)
 				.catch(() => {});
 		}

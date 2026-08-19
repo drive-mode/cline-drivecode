@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-	STATUS_SESSION_FIXTURES,
 	buildStatusSessionChips,
 	buildStatusSessionRow,
+	STATUS_SESSION_FIXTURES,
 	statusSessionRowFromUnknown,
 	statusSessionRowIsPrivate,
 } from "./statusSessions.js";
@@ -26,12 +26,12 @@ describe("buildStatusSessionRow", () => {
 	});
 
 	it("renders continue with S2 + E1", () => {
-		expect(buildStatusSessionRow(STATUS_SESSION_FIXTURES.continue).chips).toEqual(
-			[
-				{ id: "S2", label: "1 done" },
-				{ id: "E1", label: "continued" },
-			],
-		);
+		expect(
+			buildStatusSessionRow(STATUS_SESSION_FIXTURES.continue).chips,
+		).toEqual([
+			{ id: "S2", label: "1 done" },
+			{ id: "E1", label: "continued" },
+		]);
 	});
 
 	it("renders stickiness with P2 chip", () => {

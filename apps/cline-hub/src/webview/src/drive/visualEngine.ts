@@ -166,7 +166,8 @@ export function adaptMermaidSourceForFormat(
 
 /** @deprecated Prefer mermaidFontSizeForFormat via resolveVisualEngineParams. */
 export function mermaidFontSizeForViewport(widthPx: number): number {
-	return resolveVisualEngineParams({ widthPx, heightPx: widthPx }).mermaidFontSize;
+	return resolveVisualEngineParams({ widthPx, heightPx: widthPx })
+		.mermaidFontSize;
 }
 
 /** @deprecated Prefer resolveVisualEngineParams(...).layout. */

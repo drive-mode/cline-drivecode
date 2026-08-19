@@ -7,10 +7,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import {
-	deriveSessionRollup,
-	type SessionRollup,
-} from "@cline/drive";
+import { deriveSessionRollup, type SessionRollup } from "@cline/drive";
 import {
 	type BankDriveEvent,
 	type DriveEvent,
@@ -125,9 +122,7 @@ export function listRecentCallSessionIds(
 			latest.set(id, at);
 		}
 	}
-	return [...latest.entries()]
-		.sort((a, b) => b[1] - a[1])
-		.map(([id]) => id);
+	return [...latest.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
 }
 
 /**
@@ -204,10 +199,7 @@ export function formatSessionRollupsDump(rollups: SessionRollup[]): string {
 	if (rollups.length === 0) {
 		return "No session rollups found in local Drive logs.";
 	}
-	const lines: string[] = [
-		`Session rollups (local, n=${rollups.length})`,
-		"",
-	];
+	const lines: string[] = [`Session rollups (local, n=${rollups.length})`, ""];
 	for (const r of rollups) {
 		const duration =
 			r.durationMs == null ? "—" : `${Math.round(r.durationMs / 1000)}s`;

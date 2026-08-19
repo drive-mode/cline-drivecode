@@ -20,7 +20,6 @@ import type {
 	RoomSnapshot,
 	StageSharer,
 } from "@cline/shared";
-import { handleDriveWaveCommand } from "./drive-wave-handlers";
 import {
 	AddressSetSchema,
 	AgentRefSchema,
@@ -40,13 +39,14 @@ import {
 	workRecordFromToolEvent,
 } from "../../collaboration";
 import { openWorkspaceBankStore } from "../../collaboration/workspaceBankStore";
+import { getCatalogDefaultSubMode } from "../../drive-config/driveCatalogFacetStore";
 import {
 	captureHubRoomCommit,
 	getHubDriveHarness,
 } from "../../driveHarnessBinding";
-import { getCatalogDefaultSubMode } from "../../drive-config/driveCatalogFacetStore";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 import { runChatForkDirectorTick } from "./drive-fork-tick";
+import { handleDriveWaveCommand } from "./drive-wave-handlers";
 
 function linkedSessionIds(
 	store: ReturnType<typeof getDriveRoomStore>,
@@ -502,12 +502,7 @@ export async function handleDriveRoomCommand(
 						sessionId: payload.sessionId,
 					});
 					result = { snapshot: committed.snapshot, seq: committed.seq };
-					publishRoomEvent(
-						ctx,
-						payload.roomId,
-						committed.event,
-						committed.seq,
-					);
+					publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				} else {
 					const { harness } = getHubDriveHarness({
 						store,
@@ -567,12 +562,7 @@ export async function handleDriveRoomCommand(
 				} else {
 					syncDrivePauseAfterToolForRoom(committed.snapshot, sessionIds);
 				}
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq, [], {
@@ -634,12 +624,7 @@ export async function handleDriveRoomCommand(
 					actorId: payload.actorId,
 					packet,
 				});
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					narration.event,
-					narration.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, narration.event, narration.seq);
 
 				const ended = store.end({
 					roomId: payload.roomId,
@@ -647,12 +632,7 @@ export async function handleDriveRoomCommand(
 					reason: payload.reason,
 				});
 				clearDrivePauseAfterToolForSessions(sessionIds);
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					ended.event,
-					ended.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, ended.event, ended.seq);
 
 				return okReply(
 					envelope,
@@ -674,12 +654,7 @@ export async function handleDriveRoomCommand(
 			case "call_mute": {
 				const payload = CallMutePayloadSchema.parse(envelope.payload ?? {});
 				const committed = store.mute(payload);
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -708,12 +683,7 @@ export async function handleDriveRoomCommand(
 					committed.snapshot,
 					linkedSessionIds(store, payload.roomId),
 				);
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -724,12 +694,7 @@ export async function handleDriveRoomCommand(
 					envelope.payload ?? {},
 				);
 				const committed = store.renameParticipant(payload);
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -752,12 +717,7 @@ export async function handleDriveRoomCommand(
 						"setStage did not produce a room commit",
 					);
 				}
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -779,12 +739,7 @@ export async function handleDriveRoomCommand(
 						"setAddress did not produce a room commit",
 					);
 				}
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -807,12 +762,7 @@ export async function handleDriveRoomCommand(
 						"setMode did not produce a room commit",
 					);
 				}
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq),
@@ -832,12 +782,7 @@ export async function handleDriveRoomCommand(
 						? `work_${payload.tool.toolCallId}`
 						: undefined,
 				});
-				publishRoomEvent(
-					ctx,
-					roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, roomId, committed.event, committed.seq);
 				const live = store.getOrCreateLive(roomId);
 				const ownerParticipantId =
 					live.spotlightParticipantId ??
@@ -979,10 +924,7 @@ export async function handleDriveRoomCommand(
 				const agentCount = before.participants.filter(
 					(participant) => participant.kind === "agent",
 				).length;
-				if (
-					payload.seatCap != null &&
-					agentCount >= payload.seatCap
-				) {
+				if (payload.seatCap != null && agentCount >= payload.seatCap) {
 					return errorReply(
 						envelope,
 						"seat_cap_exceeded",
@@ -1002,12 +944,7 @@ export async function handleDriveRoomCommand(
 					roomId: payload.roomId,
 					participant: agent,
 				});
-				publishRoomEvent(
-					ctx,
-					payload.roomId,
-					committed.event,
-					committed.seq,
-				);
+				publishRoomEvent(ctx, payload.roomId, committed.event, committed.seq);
 				return okReply(
 					envelope,
 					snapshotPayload(committed.snapshot, committed.seq, [], {

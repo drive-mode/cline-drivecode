@@ -8,9 +8,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { DriveOpenCallRequest } from "./driveLaunch";
 import type { DriveRoomsSource } from "../rooms/drive-rooms-source";
 import { roomCardModel } from "../rooms/roomCardModel";
+import type { DriveOpenCallRequest } from "./driveLaunch";
 
 const LIVE_STACK_CAP = 3;
 
@@ -70,7 +70,9 @@ export function DriveLiveStack({
 					Live
 				</h2>
 				<span className="text-[11px] text-muted-foreground">
-					{live.length === LIVE_STACK_CAP ? `Up to ${LIVE_STACK_CAP}` : live.length}{" "}
+					{live.length === LIVE_STACK_CAP
+						? `Up to ${LIVE_STACK_CAP}`
+						: live.length}{" "}
 					{live.length === 1 ? "room" : "rooms"}
 				</span>
 			</div>

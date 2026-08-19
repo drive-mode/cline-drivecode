@@ -29,24 +29,18 @@ import {
 } from "@/components/ui/dialog";
 import { NowNext } from "../components/NowNext";
 import { downloadTextFile } from "../status/downloadTextFile";
-import { DriveCallStrip } from "./DriveCallChrome";
-import {
-	INTERRUPT_HARD_CANCEL_HINT,
-	muteRestoreAfterHold,
-} from "./driveAppCallChrome";
-import {
-	interruptBannerCopy,
-	resolveInterruptPhase,
-} from "./agencyChrome";
-import {
-	DrivePowerSheet,
-	useDrivePowerChromePref,
-} from "./DrivePowerSheet";
+import { interruptBannerCopy, resolveInterruptPhase } from "./agencyChrome";
 import {
 	type CallSpendSnapshot,
 	formatCallSpend,
 	hasCallSpend,
 } from "./callSpend";
+import { DriveCallStrip } from "./DriveCallChrome";
+import { DrivePowerSheet, useDrivePowerChromePref } from "./DrivePowerSheet";
+import {
+	INTERRUPT_HARD_CANCEL_HINT,
+	muteRestoreAfterHold,
+} from "./driveAppCallChrome";
 import { PlanImproveGate } from "./PlanImproveGate";
 import { PlanReentryRow } from "./PlanReentryRow";
 import { requestPlanImproveResolve } from "./planImproveResolve";
@@ -71,11 +65,14 @@ import {
 	type UseDriveSessionResult,
 } from "./useDriveSession";
 import { DriveMicBar } from "./voice/DriveMicBar";
-import type { SpeechInputMode } from "./voice/speechInputModeForBackend";
-import { LocalSttError, transcribeAudioBlob } from "./voice/transcribeAudioBlob";
 import { DriveSettingsPanel } from "./voice/DriveSettingsPanel";
 import { DriveTranscriptPanel } from "./voice/DriveTranscriptPanel";
 import { DRIVE_EARCON_FACET_ID } from "./voice/driveEarcons";
+import type { SpeechInputMode } from "./voice/speechInputModeForBackend";
+import {
+	LocalSttError,
+	transcribeAudioBlob,
+} from "./voice/transcribeAudioBlob";
 import { clearVoiceCaptionDraft } from "./voice/voiceCaptionState";
 
 /**
@@ -493,7 +490,8 @@ export function DriveCallStripDock({
 	} = session;
 	const [powerOpen, setPowerOpen] = useState(false);
 	const { powerChrome, setPowerChrome } = useDrivePowerChromePref();
-	const spendLabel = hasCallSpend(spend) && spend ? formatCallSpend(spend) : undefined;
+	const spendLabel =
+		hasCallSpend(spend) && spend ? formatCallSpend(spend) : undefined;
 	const appShell = composition === "app";
 	const interrupt = interruptBannerCopy(
 		resolveInterruptPhase({
@@ -717,7 +715,10 @@ function DriveHoldToTalkBar({
 	});
 
 	const restoreMute = () => {
-		if (muteRestoreAfterHold({ unmutedByHold: unmutedByHoldRef.current }) === "mute") {
+		if (
+			muteRestoreAfterHold({ unmutedByHold: unmutedByHoldRef.current }) ===
+			"mute"
+		) {
 			onMuteToggle();
 		}
 		unmutedByHoldRef.current = false;

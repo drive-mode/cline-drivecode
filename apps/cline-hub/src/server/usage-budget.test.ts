@@ -7,7 +7,9 @@ import {
 describe("readHubMaxSessionCostUsd", () => {
 	it("returns undefined when unset or invalid", () => {
 		expect(readHubMaxSessionCostUsd({})).toBeUndefined();
-		expect(readHubMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "" })).toBeUndefined();
+		expect(
+			readHubMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "" }),
+		).toBeUndefined();
 		expect(
 			readHubMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "0" }),
 		).toBeUndefined();
@@ -17,9 +19,9 @@ describe("readHubMaxSessionCostUsd", () => {
 	});
 
 	it("parses a positive USD budget", () => {
-		expect(
-			readHubMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "1.25" }),
-		).toBe(1.25);
+		expect(readHubMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "1.25" })).toBe(
+			1.25,
+		);
 	});
 });
 

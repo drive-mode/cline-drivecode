@@ -37,9 +37,10 @@ function parsePositiveBytes(
 	return bytes;
 }
 
-function parsePort(
-	value: string | undefined,
-): { port: number; explicit: boolean } {
+function parsePort(value: string | undefined): {
+	port: number;
+	explicit: boolean;
+} {
 	if (!value?.trim()) return { port: DEFAULT_PORT, explicit: false };
 	const port = Number.parseInt(value, 10);
 	if (!Number.isInteger(port) || port < 1 || port > 65535) {

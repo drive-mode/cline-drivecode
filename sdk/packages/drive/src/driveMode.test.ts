@@ -12,9 +12,10 @@ describe("transitionDriveMode", () => {
 			subMode: "act",
 		});
 		expect(active).toEqual({ active: true, subMode: "act" });
-		expect(
-			transitionDriveMode(active, { type: "deactivate" }),
-		).toEqual({ active: false, subMode: "act" });
+		expect(transitionDriveMode(active, { type: "deactivate" })).toEqual({
+			active: false,
+			subMode: "act",
+		});
 	});
 
 	it("sets sub-mode while active", () => {

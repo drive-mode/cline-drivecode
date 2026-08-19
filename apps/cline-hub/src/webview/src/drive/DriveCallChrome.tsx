@@ -839,7 +839,9 @@ export function DriveStagePanel({
 	return (
 		<div className="flex min-h-0 min-w-0 flex-1 flex-col border-l bg-muted/20">
 			<div className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
-				<span className="text-emerald-600 dark:text-emerald-400">● sharing</span>
+				<span className="text-emerald-600 dark:text-emerald-400">
+					● sharing
+				</span>
 				<span className="truncate">{sharingLabel}</span>
 			</div>
 			<div className="min-h-0 flex-1 overflow-auto p-3">{children}</div>
@@ -868,12 +870,11 @@ export function DriveStageCards({ cards }: { cards: readonly StageCard[] }) {
 				Latest Spotlight updates from the shared event stream.
 			</p>
 			{cards.map((card) => (
-				<div
-					className="rounded-md border bg-background p-2"
-					key={card.id}
-				>
+				<div className="rounded-md border bg-background p-2" key={card.id}>
 					<div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-						<span className="rounded border px-1.5 py-0.5">{card.category}</span>
+						<span className="rounded border px-1.5 py-0.5">
+							{card.category}
+						</span>
 						<span className="truncate font-medium normal-case text-foreground">
 							{card.title}
 						</span>

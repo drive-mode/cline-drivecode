@@ -131,8 +131,7 @@ export function planDismissParticipant(
 				continue;
 			}
 			const next = sources.filter(
-				(source) =>
-					!(source.kind === "spawn" && leaving.has(source.parentId)),
+				(source) => !(source.kind === "spawn" && leaving.has(source.parentId)),
 			);
 			if (next.length !== sources.length) {
 				sourcesById.set(id, next);

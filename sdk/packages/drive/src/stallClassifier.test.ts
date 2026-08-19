@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
 	classifyStall,
 	DEFAULT_STALL_POLICY,
+	type StallRollupSlice,
 	stallClassificationIsPrivate,
 	stallRollupSliceFromCounters,
-	type StallRollupSlice,
 } from "./stallClassifier.js";
 
 const empty: StallRollupSlice = {

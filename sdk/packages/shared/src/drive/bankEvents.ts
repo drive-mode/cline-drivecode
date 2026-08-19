@@ -114,9 +114,7 @@ export function assertNoForbiddenBankPayloadKeys(
 		return;
 	}
 	for (const [key, child] of Object.entries(value)) {
-		if (
-			(BANK_FORBIDDEN_PAYLOAD_KEYS as readonly string[]).includes(key)
-		) {
+		if ((BANK_FORBIDDEN_PAYLOAD_KEYS as readonly string[]).includes(key)) {
 			throw new Error(
 				`Drive event payload must not include forbidden key "${key}" at ${[...path, key].join(".") || "(root)"}`,
 			);

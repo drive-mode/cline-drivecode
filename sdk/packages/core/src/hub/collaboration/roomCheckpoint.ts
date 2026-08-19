@@ -16,8 +16,8 @@ import {
 } from "node:fs";
 import { dirname } from "node:path";
 import {
-	type RoomSnapshot,
 	parseRoomSnapshot,
+	type RoomSnapshot,
 	resolveDriveRoomCheckpointPath,
 } from "@cline/shared";
 

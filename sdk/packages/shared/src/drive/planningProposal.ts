@@ -19,11 +19,7 @@ export const PLANNING_PROPOSAL_FORBIDDEN_KEYS = [
 	"audio",
 ] as const;
 
-export const StallReasonCodeSchema = z.enum([
-	"low_s2",
-	"high_p1",
-	"sticky_p2",
-]);
+export const StallReasonCodeSchema = z.enum(["low_s2", "high_p1", "sticky_p2"]);
 export type SharedStallReasonCode = z.infer<typeof StallReasonCodeSchema>;
 
 /** Evidence pointers only — no embedded prose blobs. */

@@ -1,18 +1,18 @@
-import { AdaptiveConcurrency } from "./adaptiveConcurrency";
+import type { AdaptiveConcurrency } from "./adaptiveConcurrency";
 import { evaluateReviews } from "./reviewGates";
-import type { DriveWorkMailbox } from "./workMailbox";
-import type { DriveWorkScratch } from "./workScratch";
-import { TokenQueue } from "./tokenQueue";
+import type { TokenQueue } from "./tokenQueue";
 import {
 	createWorkItem,
-	nowIso,
-	type DriveReviewGate,
 	type DriveReviewDecision,
-	type DriveWorkExecutor,
+	type DriveReviewGate,
 	type DriveWaveLogEntry,
-	type DriveWorkItem,
+	type DriveWorkExecutor,
 	type DriveWorkInput,
+	type DriveWorkItem,
+	nowIso,
 } from "./types";
+import type { DriveWorkMailbox } from "./workMailbox";
+import type { DriveWorkScratch } from "./workScratch";
 
 export type DriveWaveExecutorOptions = {
 	host: DriveWorkExecutor;
@@ -32,7 +32,10 @@ export type DriveWaveExecution = {
 	hadFailure: boolean;
 };
 
-function depsSatisfied(task: DriveWorkItem, byId: Map<string, DriveWorkItem>): boolean {
+function depsSatisfied(
+	task: DriveWorkItem,
+	byId: Map<string, DriveWorkItem>,
+): boolean {
 	return task.dependsOn.every((depId) => {
 		const dep = byId.get(depId);
 		return dep?.status === "succeeded";
@@ -42,10 +45,11 @@ function depsSatisfied(task: DriveWorkItem, byId: Map<string, DriveWorkItem>): b
 function selectReady(tasks: DriveWorkItem[], limit: number): DriveWorkItem[] {
 	const byId = new Map(tasks.map((task) => [task.id, task]));
 	return tasks
-		.filter(
-			(task) => task.status === "pending" && depsSatisfied(task, byId),
+		.filter((task) => task.status === "pending" && depsSatisfied(task, byId))
+		.sort(
+			(a, b) =>
+				b.priority - a.priority || a.createdAt.localeCompare(b.createdAt),
 		)
-		.sort((a, b) => b.priority - a.priority || a.createdAt.localeCompare(b.createdAt))
 		.slice(0, limit);
 }
 
@@ -68,8 +72,16 @@ export class DriveWaveExecutor {
 		wave: number;
 		tasks: DriveWorkItem[];
 	}): Promise<DriveWaveExecution> {
-		const { host, concurrency, tokenQueue, scratch, workMailbox, gates, logs, signal } =
-			this.options;
+		const {
+			host,
+			concurrency,
+			tokenQueue,
+			scratch,
+			workMailbox,
+			gates,
+			logs,
+			signal,
+		} = this.options;
 		const tasks = input.tasks;
 
 		const emergency = await evaluateReviews(gates, {
@@ -164,8 +176,7 @@ export class DriveWaveExecutor {
 					}
 				} catch (error) {
 					task.status = "failed";
-					task.error =
-						error instanceof Error ? error.message : String(error);
+					task.error = error instanceof Error ? error.message : String(error);
 					hadFailure = true;
 					if (/429|rate.?limit/i.test(task.error)) {
 						concurrency.onRateLimited();

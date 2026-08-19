@@ -37,10 +37,10 @@ export interface ResolveProductSessionFeaturesInput {
 	/** Explicit maxIterations; wins over applyDefaultMaxIterations. */
 	maxIterations?: number;
 	/**
- * When true and `maxIterations` is unset, apply
- * {@link PRODUCT_DEFAULT_MAX_ITERATIONS}. Hosts that want D4 budgets
- * should pass `true` (Phase 5). Default remains false for callers that
- * only need multi-agent flags.
+	 * When true and `maxIterations` is unset, apply
+	 * {@link PRODUCT_DEFAULT_MAX_ITERATIONS}. Hosts that want D4 budgets
+	 * should pass `true` (Phase 5). Default remains false for callers that
+	 * only need multi-agent flags.
 	 */
 	applyDefaultMaxIterations?: boolean;
 }

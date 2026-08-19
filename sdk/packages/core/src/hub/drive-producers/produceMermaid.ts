@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import type { ShowBacklogItem } from "@cline/shared";
 import {
 	assertMermaidSource,
 	getShowTemplate,
 	MermaidParseError,
 } from "@cline/drive";
+import type { ShowBacklogItem } from "@cline/shared";
 
 export type ProduceMermaidInput = {
 	templateId?: string;

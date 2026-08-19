@@ -1,9 +1,9 @@
 "use client";
 
 import type { Participant } from "@cline/shared";
+import { GeneratedMediaContent } from "@cline/ui";
 import { GitBranchIcon, Loader2Icon } from "lucide-react";
 import type { ReactElement } from "react";
-import { DriveMarkMotion } from "@/components/icons/drive-mark-motion";
 import {
 	Checkpoint,
 	CheckpointIcon,
@@ -31,6 +31,7 @@ import {
 	ToolHeader,
 	ToolOutput,
 } from "@/components/ai-elements/tool";
+import { DriveMarkMotion } from "@/components/icons/drive-mark-motion";
 import TeamTasks, { type TeamToolEvent } from "@/components/TeamTasks";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -213,6 +214,14 @@ function renderMessageBlocks(
 						<ReasoningTrigger />
 						<ReasoningContent>{block.text}</ReasoningContent>
 					</Reasoning>,
+				];
+			case "media":
+				return [
+					<GeneratedMediaContent
+						className={options.isMeta ? "mt-3" : "mb-3"}
+						key={block.id}
+						media={block.media}
+					/>,
 				];
 			case "text":
 				if (options.isMeta) {

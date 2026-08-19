@@ -19,7 +19,9 @@ function read(rel: string): string {
 describe("ADR-0025 enforcement consumers (delegation authority)", () => {
 	it("createSessionSpawnTool forwards parent policies and approval", () => {
 		const source = read("runtime/host/local/spawn-tool.ts");
-		expect(source).toMatch(/getParentToolPolicies:\s*\(\)\s*=>\s*parentAuthority/);
+		expect(source).toMatch(
+			/getParentToolPolicies:\s*\(\)\s*=>\s*parentAuthority/,
+		);
 		expect(source).toMatch(
 			/requestToolApproval:\s*parentAuthority\?\.requestToolApproval/,
 		);
@@ -31,7 +33,9 @@ describe("ADR-0025 enforcement consumers (delegation authority)", () => {
 	it("local host passes SpawnParentAuthority into createSessionSpawnTool", () => {
 		const source = read("runtime/host/local-runtime-host.ts");
 		expect(source).toMatch(/createSessionSpawnTool\(/);
-		expect(source).toMatch(/getToolPolicies:\s*\(\)\s*=>\s*bootstrap\.toolPolicies/);
+		expect(source).toMatch(
+			/getToolPolicies:\s*\(\)\s*=>\s*bootstrap\.toolPolicies/,
+		);
 		expect(source).toMatch(
 			/requestToolApproval:\s*bootstrap\.requestToolApproval/,
 		);
@@ -51,9 +55,7 @@ describe("ADR-0025 enforcement consumers (delegation authority)", () => {
 		const source = read("runtime/orchestration/runtime-builder.ts");
 		expect(source).toMatch(/parentAuthority:\s*\{/);
 		expect(source).toMatch(/toolPolicies:\s*effectiveToolPolicies/);
-		expect(source).toMatch(
-			/requestToolApproval:\s*input\.requestToolApproval/,
-		);
+		expect(source).toMatch(/requestToolApproval:\s*input\.requestToolApproval/);
 	});
 
 	it("buildDelegatedAgentConfig intersects parent policies (refusal funnel)", () => {

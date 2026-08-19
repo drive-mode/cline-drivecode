@@ -91,9 +91,9 @@ import { ShareScreenSpotlightDemo } from "./drive/ShareScreenSpotlightDemo";
 import { DRIVE_DEFAULT_ROOM_ID } from "./drive/types";
 import { useDriveCallPresence } from "./drive/useDriveCallPresence";
 import {
-	type DriveShellMode,
 	appShellHomeRedirect,
 	type DriveBrowseSurface,
+	type DriveShellMode,
 	drivePath,
 	legacyChatOrSessionsRedirect,
 	parseDriveAppShell,
@@ -1565,24 +1565,21 @@ function App() {
 	}, [navigate]);
 
 	/** App shell Browse lite — `?browse=` on `/drive` (not full hub Status). */
-	const openDriveBrowse = useCallback(
-		(surface: DriveBrowseSurface | null) => {
-			setDriveLaunchRequest(null);
-			setSelectedSessionId(undefined);
-			setDriveShellMode("lobby");
-			const nextPath = drivePath({
-				mode: "lobby",
-				browse: surface,
-				preserveSearch: persistentRouteSearchParams(),
-			});
-			if (currentPathWithSearch() !== nextPath) {
-				window.history.pushState(null, "", nextPath);
-			}
-			setView("drive");
-			setLocationSearch(window.location.search);
-		},
-		[],
-	);
+	const openDriveBrowse = useCallback((surface: DriveBrowseSurface | null) => {
+		setDriveLaunchRequest(null);
+		setSelectedSessionId(undefined);
+		setDriveShellMode("lobby");
+		const nextPath = drivePath({
+			mode: "lobby",
+			browse: surface,
+			preserveSearch: persistentRouteSearchParams(),
+		});
+		if (currentPathWithSearch() !== nextPath) {
+			window.history.pushState(null, "", nextPath);
+		}
+		setView("drive");
+		setLocationSearch(window.location.search);
+	}, []);
 
 	const openDriveCredentialDemo = useCallback(() => {
 		setDriveLaunchRequest(null);

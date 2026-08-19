@@ -1,7 +1,14 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { materializeUserFiles } from "./attachments";
 import {
 	buildCoreSessionConfig,
@@ -14,6 +21,7 @@ import {
 	mergeSessionConfig,
 	prewarmWorkspaceMetadata,
 	resolveDesktopSessionCompaction,
+	rewriteDesktopTeamPrompt,
 	shouldUpdateSessionConnection,
 	WORKSPACE_METADATA_PREWARM_TTL_MS,
 } from "./chat-session";
@@ -72,9 +80,7 @@ describe("buildDesktopSessionPluginInjection (BL-4.1)", () => {
 	it("discovers fixture plugins under .cline/plugins/", () => {
 		const root = makeFixturePluginRoot();
 		const injected = buildDesktopSessionPluginInjection(root);
-		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(
-			true,
-		);
+		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(true);
 	});
 });
 
@@ -193,6 +199,46 @@ describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
 			Array.isArray(config.pluginPaths) &&
 				config.pluginPaths.some((p: string) => p.endsWith("index.ts")),
 		).toBe(true);
+	});
+});
+
+describe("rewriteDesktopTeamPrompt", () => {
+	it("rewrites /team for the core runtime", () => {
+		expect(
+			rewriteDesktopTeamPrompt("/team inspect the app", {
+				disabledTools: new Set(),
+			}),
+		).toBe(
+			'<user_command slash="team">spawn a team of agents for the following task: inspect the app</user_command>',
+		);
+	});
+
+	it("rejects /team when the Teams tool is disabled", () => {
+		expect(() =>
+			rewriteDesktopTeamPrompt("/team inspect the app", {
+				disabledTools: new Set(["teams"]),
+			}),
+		).toThrow("Agent teams are disabled");
+	});
+
+	it("rejects /team when the mode's tool preset has no team tools", () => {
+		expect(() =>
+			rewriteDesktopTeamPrompt("/team inspect the app", {
+				mode: "yolo",
+				disabledTools: new Set(),
+			}),
+		).toThrow("Agent teams are not available in yolo mode");
+	});
+
+	it("accepts /team in act and plan modes", () => {
+		for (const mode of ["act", "plan", undefined]) {
+			expect(
+				rewriteDesktopTeamPrompt("/team inspect the app", {
+					mode,
+					disabledTools: new Set(),
+				}),
+			).toContain('<user_command slash="team">');
+		}
 	});
 });
 
@@ -315,6 +361,8 @@ describe("pathless session starts", () => {
 		const start = vi.fn(async (input: { config: Record<string, unknown> }) => {
 			expect(input.config).not.toHaveProperty("cwd");
 			expect(input.config).not.toHaveProperty("workspaceRoot");
+			expect(input.config).not.toHaveProperty("enableSpawnAgent");
+			expect(input.config).not.toHaveProperty("enableAgentTeams");
 			return {
 				sessionId: "session-pathless",
 				manifest: {
@@ -337,6 +385,10 @@ describe("pathless session starts", () => {
 				provider: "cline",
 				model: "anthropic/claude-sonnet-4.6",
 				enableTools: true,
+				// Legacy desktop capability flags must not override the SDK's
+				// current tool preset or global tool customizations.
+				enableSpawn: false,
+				enableTeams: false,
 			},
 		})) as {
 			sessionId: string;
@@ -473,7 +525,6 @@ describe("session forks", () => {
 		expect(result).toEqual({
 			sessionId: "edited-fork",
 			forkedFromSessionId: sourceSessionId,
-			messages: expectedMessages,
 		});
 		expect(ctx.liveSessions.get("edited-fork")?.messages).toEqual(
 			expectedMessages,
@@ -907,64 +958,65 @@ describe("first-send connection updates", () => {
 		});
 	});
 
-	it.each([
-		undefined,
-		"queue",
-	] as const)("forwards file attachments for %s delivery", async (delivery) => {
-		const { ctx, send, sessionId } = createContext();
-		const previousSessionDataDir = process.env.CLINE_SESSION_DATA_DIR;
-		const testSessionDataDir = join(
-			tmpdir(),
-			`cline-desktop-attachments-${Date.now()}-${delivery ?? "immediate"}`,
-		);
-		let sentFileContent: string | undefined;
-		send.mockImplementation(async (input?: unknown) => {
-			const files = (input as { userFiles?: string[] } | undefined)?.userFiles;
-			if (files?.[0]) {
-				sentFileContent = readFileSync(files[0], "utf8");
-			}
-			return { text: "done", finishReason: "completed", messages: [] };
-		});
-
-		try {
-			process.env.CLINE_SESSION_DATA_DIR = testSessionDataDir;
-			await handleChatSessionCommand(ctx, {
-				action: "send",
-				sessionId,
-				prompt: "",
-				delivery,
-				attachments: {
-					userFiles: [{ name: "notes.txt", content: "hello" }],
-				},
+	it.each([undefined, "queue"] as const)(
+		"forwards file attachments for %s delivery",
+		async (delivery) => {
+			const { ctx, send, sessionId } = createContext();
+			const previousSessionDataDir = process.env.CLINE_SESSION_DATA_DIR;
+			const testSessionDataDir = join(
+				tmpdir(),
+				`cline-desktop-attachments-${Date.now()}-${delivery ?? "immediate"}`,
+			);
+			let sentFileContent: string | undefined;
+			send.mockImplementation(async (input?: unknown) => {
+				const files = (input as { userFiles?: string[] } | undefined)
+					?.userFiles;
+				if (files?.[0]) {
+					sentFileContent = readFileSync(files[0], "utf8");
+				}
+				return { text: "done", finishReason: "completed", messages: [] };
 			});
 
-			const input = send.mock.calls[0]?.[0] as
-				| { userFiles?: string[] }
-				| undefined;
-			expect(send).toHaveBeenCalledWith({
-				sessionId,
-				prompt: "",
-				delivery,
-				userImages: undefined,
-				userFiles: [expect.stringMatching(/notes\.txt$/)],
-			});
-			expect(sentFileContent).toBe("hello");
-			if (delivery === "queue") {
-				// Queued attachments stay on disk until the prompt is consumed.
-				expect(existsSync(input?.userFiles?.[0] ?? "")).toBe(true);
-			} else {
-				// Immediate turns delete the materialized file once the send resolves.
-				expect(existsSync(input?.userFiles?.[0] ?? "")).toBe(false);
+			try {
+				process.env.CLINE_SESSION_DATA_DIR = testSessionDataDir;
+				await handleChatSessionCommand(ctx, {
+					action: "send",
+					sessionId,
+					prompt: "",
+					delivery,
+					attachments: {
+						userFiles: [{ name: "notes.txt", content: "hello" }],
+					},
+				});
+
+				const input = send.mock.calls[0]?.[0] as
+					| { userFiles?: string[] }
+					| undefined;
+				expect(send).toHaveBeenCalledWith({
+					sessionId,
+					prompt: "",
+					delivery,
+					userImages: undefined,
+					userFiles: [expect.stringMatching(/notes\.txt$/)],
+				});
+				expect(sentFileContent).toBe("hello");
+				if (delivery === "queue") {
+					// Queued attachments stay on disk until the prompt is consumed.
+					expect(existsSync(input?.userFiles?.[0] ?? "")).toBe(true);
+				} else {
+					// Immediate turns delete the materialized file once the send resolves.
+					expect(existsSync(input?.userFiles?.[0] ?? "")).toBe(false);
+				}
+			} finally {
+				if (previousSessionDataDir === undefined) {
+					delete process.env.CLINE_SESSION_DATA_DIR;
+				} else {
+					process.env.CLINE_SESSION_DATA_DIR = previousSessionDataDir;
+				}
+				rmSync(testSessionDataDir, { recursive: true, force: true });
 			}
-		} finally {
-			if (previousSessionDataDir === undefined) {
-				delete process.env.CLINE_SESSION_DATA_DIR;
-			} else {
-				process.env.CLINE_SESSION_DATA_DIR = previousSessionDataDir;
-			}
-			rmSync(testSessionDataDir, { recursive: true, force: true });
-		}
-	});
+		},
+	);
 
 	it("deletes materialized attachments when a queued prompt is removed", async () => {
 		const { ctx, send, sessionId } = createContext();
@@ -1253,49 +1305,49 @@ describe("first-send connection updates", () => {
 		await switching;
 	});
 
-	it.each([
-		"queue",
-		"steer",
-	] as const)("locks provider-switch preparation for explicit %s delivery", async (delivery) => {
-		let resolveMessages:
-			| ((messages: Array<{ role: string; content: string }>) => void)
-			| undefined;
-		const messages = new Promise<Array<{ role: string; content: string }>>(
-			(resolve) => {
-				resolveMessages = resolve;
-			},
-		);
-		const { ctx, readMessages, sessionId } = createContext();
-		readMessages.mockImplementationOnce(async () => await messages);
+	it.each(["queue", "steer"] as const)(
+		"locks provider-switch preparation for explicit %s delivery",
+		async (delivery) => {
+			let resolveMessages:
+				| ((messages: Array<{ role: string; content: string }>) => void)
+				| undefined;
+			const messages = new Promise<Array<{ role: string; content: string }>>(
+				(resolve) => {
+					resolveMessages = resolve;
+				},
+			);
+			const { ctx, readMessages, sessionId } = createContext();
+			readMessages.mockImplementationOnce(async () => await messages);
 
-		const switching = handleChatSessionCommand(ctx, {
-			action: "send",
-			sessionId,
-			prompt: "queue this for Codex",
-			delivery,
-			config: {
-				...baseConfig,
-				provider: "openai-codex",
-				model: "gpt-5.3-codex",
-			},
-		});
-		await vi.waitFor(() => expect(readMessages).toHaveBeenCalledOnce());
-
-		await expect(
-			handleChatSessionCommand(ctx, {
+			const switching = handleChatSessionCommand(ctx, {
 				action: "send",
 				sessionId,
-				prompt: "racing prompt",
-				config: { ...baseConfig },
-			}),
-		).rejects.toThrow("A provider switch is already in progress");
+				prompt: "queue this for Codex",
+				delivery,
+				config: {
+					...baseConfig,
+					provider: "openai-codex",
+					model: "gpt-5.3-codex",
+				},
+			});
+			await vi.waitFor(() => expect(readMessages).toHaveBeenCalledOnce());
 
-		resolveMessages?.([
-			{ role: "user", content: "first prompt" },
-			{ role: "assistant", content: "first response" },
-		]);
-		await switching;
-	});
+			await expect(
+				handleChatSessionCommand(ctx, {
+					action: "send",
+					sessionId,
+					prompt: "racing prompt",
+					config: { ...baseConfig },
+				}),
+			).rejects.toThrow("A provider switch is already in progress");
+
+			resolveMessages?.([
+				{ role: "user", content: "first prompt" },
+				{ role: "assistant", content: "first response" },
+			]);
+			await switching;
+		},
+	);
 
 	it("restores the previous provider runtime when replacement startup fails", async () => {
 		const { ctx, send, sessionId, start, stop } = createContext();
@@ -1436,6 +1488,7 @@ describe("first-send connection updates", () => {
 		});
 
 		expect(updateSessionConnection).toHaveBeenCalledTimes(1);
+		expect(ctx.liveSessions.get(sessionId)?.attachedViaHub).toBe(false);
 	});
 });
 
@@ -1505,5 +1558,150 @@ describe("workspace metadata prewarming", () => {
 			),
 		).resolves.toBe("current metadata");
 		expect(load).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("runtime slash command expansion on send", () => {
+	const tempRoots: string[] = [];
+
+	afterEach(() => {
+		for (const dir of tempRoots) {
+			rmSync(dir, { recursive: true, force: true });
+		}
+		tempRoots.length = 0;
+	});
+
+	function createWorkspaceWithSkill(): string {
+		const workspace = mkdtempSync(join(tmpdir(), "desktop-slash-send-"));
+		tempRoots.push(workspace);
+		const skillDir = join(workspace, ".cline", "skills", "desktop-send-skill");
+		mkdirSync(skillDir, { recursive: true });
+		writeFileSync(
+			join(skillDir, "SKILL.md"),
+			`---
+name: desktop-send-skill
+---
+Follow the desktop send skill instructions.`,
+		);
+		return workspace;
+	}
+
+	function createContext(workspace: string) {
+		const sessionId = "slash-expansion-session";
+		const send = vi.fn(async (_input?: unknown) => ({
+			text: "done",
+			finishReason: "completed",
+			messages: [],
+		}));
+		const session = {
+			config: { provider: "cline", model: "test-model", cwd: workspace },
+			messages: [],
+			promptsInQueue: [],
+			busy: false,
+			startedAt: Date.now(),
+			status: "idle",
+			prompt: undefined as string | undefined,
+		};
+		const updatePendingPrompt = vi.fn(
+			async (input: { promptId: string; prompt?: string }) => ({
+				updated: true,
+				prompt: { id: input.promptId, prompt: input.prompt },
+				prompts: [],
+			}),
+		);
+		const ctx = {
+			workspaceRoot: workspace,
+			liveSessions: new Map([[sessionId, session]]),
+			restoringWorkspacePaths: new Set(),
+			streamIndices: new Map(),
+			wsClients: new Set(),
+			sessionManager: {
+				send,
+				pendingPrompts: {
+					list: vi.fn(async () => []),
+					update: updatePendingPrompt,
+				},
+			},
+		} as unknown as SidecarContext;
+		return { ctx, send, session, sessionId, updatePendingPrompt };
+	}
+
+	it("expands a leading skill command into its instructions", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, send, session, sessionId } = createContext(workspace);
+
+		await handleChatSessionCommand(ctx, {
+			action: "send",
+			sessionId,
+			prompt: "/desktop-send-skill write the docs",
+		});
+
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				prompt: "Follow the desktop send skill instructions. write the docs",
+			}),
+		);
+		// The session's display prompt keeps the raw token.
+		expect(session.prompt).toBe("/desktop-send-skill write the docs");
+	});
+
+	it("expands a skill command when a queued prompt is edited", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, sessionId, updatePendingPrompt } = createContext(workspace);
+
+		await handleChatSessionCommand(ctx, {
+			action: "update_pending_prompt",
+			sessionId,
+			promptId: "queued-1",
+			prompt: "/desktop-send-skill later please",
+		});
+
+		expect(updatePendingPrompt).toHaveBeenCalledWith({
+			sessionId,
+			promptId: "queued-1",
+			prompt: "Follow the desktop send skill instructions. later please",
+		});
+	});
+
+	it("rewrites a team command when a queued prompt is edited", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, sessionId, updatePendingPrompt } = createContext(workspace);
+
+		await handleChatSessionCommand(ctx, {
+			action: "update_pending_prompt",
+			sessionId,
+			promptId: "queued-team",
+			prompt: "/team inspect the app",
+		});
+
+		expect(updatePendingPrompt).toHaveBeenCalledWith({
+			sessionId,
+			promptId: "queued-team",
+			prompt:
+				'<user_command slash="team">spawn a team of agents for the following task: inspect the app</user_command>',
+		});
+	});
+
+	it("leaves built-in and unknown slash commands untouched", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, send, sessionId } = createContext(workspace);
+
+		await handleChatSessionCommand(ctx, {
+			action: "send",
+			sessionId,
+			prompt: "/fork",
+		});
+		expect(send).toHaveBeenLastCalledWith(
+			expect.objectContaining({ prompt: "/fork" }),
+		);
+
+		await handleChatSessionCommand(ctx, {
+			action: "send",
+			sessionId,
+			prompt: "/not-a-real-command hello",
+		});
+		expect(send).toHaveBeenLastCalledWith(
+			expect.objectContaining({ prompt: "/not-a-real-command hello" }),
+		);
 	});
 });

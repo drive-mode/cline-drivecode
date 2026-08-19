@@ -12,7 +12,7 @@ description: "Visual + actionable plan to close public @cline/sdk leverage gaps 
 
 **Companion detail:** task acceptance criteria below (and [Usage analysis](/sdk/architecture/usage-analysis)).
 
-**Monorepo SDK version policy:** Product hosts and examples resolve `@cline/*` via `workspace:*` (always the packages under `sdk/packages/`). Published npm latest for `@cline/sdk` is currently **0.0.66**, matching workspace `@cline/{sdk,core,agents,llms,shared,drive}`. Do not pin numeric `@cline/*` versions inside this monorepo. Keep package `version` fields in lockstep via `sdk/scripts/version.ts` when cutting releases.
+**Monorepo SDK version policy:** Product hosts and examples resolve `@cline/*` via `workspace:*` (always the packages under `sdk/packages/`). This tree is synchronized to upstream SDK **0.0.75** at Cline commit `61b95a62e`; the Drive-only `@cline/drive` package remains versioned in lockstep with `@cline/{sdk,core,agents,llms,shared}`. Do not pin numeric `@cline/*` versions inside this monorepo. Keep package `version` fields in lockstep via `sdk/scripts/version.ts` when cutting releases.
 
 Turns usage analysis into a sequenced build against the **advertised public SDK**. Phases are ordered by dependency — **no calendar estimates**. Each **agent task** is one focused PR.
 
@@ -55,7 +55,7 @@ This is intentional adapter debt, not a one-line flip. **SDK-7.2 spike: Done —
 ## Visual structure
 
 ```txt
-[@cline/sdk @ 0.0.66 workspace:*]
+[@cline/sdk @ 0.0.75 workspace:*]
         ↓
 [North star | Non-goals]
         ↓
@@ -324,7 +324,7 @@ Incremental OTEL / event-projection alignment. Do **not** rewrite host telemetry
 You are executing task <SDK-X.Y> from docs/sdk/architecture/integration-build.mdx
 (+ visual plan canvas giaumqy8).
 Public API: https://docs.cline.bot/sdk/overview
-Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
+Monorepo: use workspace:* @cline/* at SDK package version 0.0.75 (lockstep).
 1. Respect LOCKED D1–D4.
 2. One task only. No drive-by refactors.
 3. After @cline/* edits: bun run build:sdk before host tests.
@@ -338,7 +338,7 @@ Monorepo: use workspace:* @cline/* at sdk package version 0.0.66 (lockstep).
 | SDK-0.1 Decisions | **Done** |
 | SDK-0.2 Skill/docs drift | **Done** |
 | SDK-0.3 MCP split brain note | **Done** |
-| SDK version lockstep (`@cline/drive` → 0.0.66) | **Done** |
+| SDK version lockstep (`@cline/drive` → 0.0.75) | **Done** |
 | SDK-1.1 Product session features helper | **Done** |
 | SDK-1.2 Session plugin load helper | **Done** |
 | SDK-2.1–2.4 Multi-agent hosts | **Done** |

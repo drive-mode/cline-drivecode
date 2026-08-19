@@ -1,16 +1,16 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
 import { BUILTIN_WEB_SPEECH_STT_ID } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { loadDriveProviderRegistry } from "./loadDriveProviderRegistry";
 
 describe("loadDriveProviderRegistry", () => {
 	it("always includes builtins", () => {
 		const registry = loadDriveProviderRegistry({});
-		expect(registry.some((entry) => entry.id === BUILTIN_WEB_SPEECH_STT_ID)).toBe(
-			true,
-		);
+		expect(
+			registry.some((entry) => entry.id === BUILTIN_WEB_SPEECH_STT_ID),
+		).toBe(true);
 	});
 
 	it("loads a workspace provider manifest", () => {
@@ -58,8 +58,6 @@ describe("loadDriveProviderRegistry", () => {
 		);
 
 		const registry = loadDriveProviderRegistry({ workspaceRoot: root });
-		expect(registry.some((entry) => entry.id === "workspace.bad")).toBe(
-			false,
-		);
+		expect(registry.some((entry) => entry.id === "workspace.bad")).toBe(false);
 	});
 });

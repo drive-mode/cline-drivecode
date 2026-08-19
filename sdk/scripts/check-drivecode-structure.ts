@@ -270,11 +270,17 @@ export async function checkDrivecodeStructure(
 	for (const entry of await list(join(nest, "assets"))) {
 		const rel = report(`assets/${entry.name}`);
 		if (!entry.isDir) {
-			fail(rel, "no loose files in assets/ — use logos/, hub/, tui/, demos/, fonts/, or changelog/");
+			fail(
+				rel,
+				"no loose files in assets/ — use logos/, hub/, tui/, demos/, fonts/, or changelog/",
+			);
 			continue;
 		}
 		if (!ASSET_BUCKETS.has(entry.name)) {
-			fail(rel, `unknown asset bucket (allowed: ${[...ASSET_BUCKETS].join(", ")})`);
+			fail(
+				rel,
+				`unknown asset bucket (allowed: ${[...ASSET_BUCKETS].join(", ")})`,
+			);
 		}
 	}
 
@@ -322,7 +328,9 @@ export async function checkDrivecodeStructure(
 		}
 	}
 
-	for (const entry of await list(join(nest, "plans", "cline-drivemode", "adr"))) {
+	for (const entry of await list(
+		join(nest, "plans", "cline-drivemode", "adr"),
+	)) {
 		if (entry.isDir) {
 			fail(
 				report(`plans/cline-drivemode/adr/${entry.name}`),

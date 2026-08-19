@@ -1,8 +1,11 @@
-import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HubCommandEnvelope, HubEventEnvelope } from "@cline/shared";
-import { resolveDriveRoomEventsPath, resolveDriveRoomsDir } from "@cline/shared";
+import {
+	resolveDriveRoomEventsPath,
+	resolveDriveRoomsDir,
+} from "@cline/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { appendBankLogEvent } from "../../collaboration/bankEventLog";
 import type { HubTransportContext } from "./context";
@@ -28,6 +31,8 @@ function ctx(): HubTransportContext {
 		pendingApprovals: new Map(),
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
+		pendingDriveToolInputs: new Map(),
+		activeRpcTurnCountBySession: new Map(),
 		sessionHost: {} as HubTransportContext["sessionHost"],
 		publish: () => {},
 		buildEvent: (

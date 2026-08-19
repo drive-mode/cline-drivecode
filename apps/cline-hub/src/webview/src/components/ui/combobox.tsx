@@ -105,7 +105,7 @@ function ComboboxContent({
 				align={align}
 				alignOffset={alignOffset}
 				anchor={anchor}
-				className="isolate z-50"
+				className="pointer-events-auto isolate z-[60]"
 			>
 				<ComboboxPrimitive.Popup
 					data-slot="combobox-content"
@@ -282,18 +282,18 @@ function useComboboxAnchor() {
 
 export {
 	Combobox,
-	ComboboxInput,
-	ComboboxContent,
-	ComboboxList,
-	ComboboxItem,
-	ComboboxGroup,
-	ComboboxLabel,
-	ComboboxCollection,
-	ComboboxEmpty,
-	ComboboxSeparator,
-	ComboboxChips,
 	ComboboxChip,
+	ComboboxChips,
 	ComboboxChipsInput,
+	ComboboxCollection,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxGroup,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxLabel,
+	ComboboxList,
+	ComboboxSeparator,
 	ComboboxTrigger,
 	ComboboxValue,
 	useComboboxAnchor,

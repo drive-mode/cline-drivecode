@@ -61,9 +61,9 @@ describe("parseDriveBrowse / drivePath browse", () => {
 		expect(
 			drivePath({ browse: null, preserveSearch: "app=1&browse=tasks" }),
 		).toBe("/drive?app=1");
-		expect(drivePath({ sessionId: "s1", preserveSearch: "app=1&browse=tasks" })).toBe(
-			"/drive?app=1&id=s1",
-		);
+		expect(
+			drivePath({ sessionId: "s1", preserveSearch: "app=1&browse=tasks" }),
+		).toBe("/drive?app=1&id=s1");
 	});
 });
 

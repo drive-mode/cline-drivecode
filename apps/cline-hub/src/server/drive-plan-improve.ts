@@ -9,14 +9,8 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import {
-	planPlanImproveResolve,
-	type PlanImproveDecision,
-} from "@cline/drive";
-import {
-	parsePlanningProposal,
-	type PlanningProposal,
-} from "@cline/shared";
+import { type PlanImproveDecision, planPlanImproveResolve } from "@cline/drive";
+import { type PlanningProposal, parsePlanningProposal } from "@cline/shared";
 import { enqueueHostDriveagentSkillCompile } from "./host-driveagent-compile";
 import type { HubContext } from "./state";
 import type { BrowserPeer } from "./types";
@@ -30,7 +24,10 @@ export type DrivePlanImproveWebviewFrame = {
 	[key: string]: unknown;
 };
 
-function assertUnderPlanImprove(workspaceRoot: string, relativePath: string): string {
+function assertUnderPlanImprove(
+	workspaceRoot: string,
+	relativePath: string,
+): string {
 	const root = resolve(workspaceRoot);
 	const abs = resolve(root, relativePath);
 	const allowed = resolve(root, ".drive/plan-improve");
@@ -153,5 +150,9 @@ export function planImproveAcceptedPath(
 	workspaceRoot: string,
 	proposalId: string,
 ): string {
-	return join(workspaceRoot, ".drive/plan-improve/accepted", `${proposalId}.json`);
+	return join(
+		workspaceRoot,
+		".drive/plan-improve/accepted",
+		`${proposalId}.json`,
+	);
 }

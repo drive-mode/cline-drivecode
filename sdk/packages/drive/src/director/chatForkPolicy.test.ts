@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import type { DoBacklogItem, StageDirectorState } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
-	IllegalChatForkError,
 	applyPromotePacket,
 	assertForkLegal,
 	buildSeedPacket,
+	IllegalChatForkError,
 } from "./chatForkPolicy.js";
 
 const queuedDo: DoBacklogItem = {
@@ -254,7 +254,9 @@ describe("applyPromotePacket", () => {
 			linkedShowTemplateIds: ["walk.code"],
 		});
 		expect(result.createdShowItemIds.length).toBe(3);
-		const kinds = result.state.showBacklog.map((item) => item.artifactKind).sort();
+		const kinds = result.state.showBacklog
+			.map((item) => item.artifactKind)
+			.sort();
 		expect(kinds).toEqual([
 			"diagram.architecture",
 			"doc.plan",

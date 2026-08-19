@@ -45,9 +45,7 @@ describe("buildAcpSessionPluginInjection (SDK-4.1)", () => {
 
 		const injected = buildAcpSessionPluginInjection(root, root);
 
-		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(
-			true,
-		);
+		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(true);
 		expect(injected.workspace.rootPath).toBe(root);
 	});
 });

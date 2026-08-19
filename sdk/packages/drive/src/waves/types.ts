@@ -70,7 +70,9 @@ export type DriveReviewContext = {
 export type DriveReviewGate = {
 	name: string;
 	kinds: readonly DriveReviewKind[];
-	evaluate: (ctx: DriveReviewContext) => DriveReviewDecision | Promise<DriveReviewDecision>;
+	evaluate: (
+		ctx: DriveReviewContext,
+	) => DriveReviewDecision | Promise<DriveReviewDecision>;
 };
 
 export type DriveWorkMessage = {
@@ -148,7 +150,9 @@ export type DriveWorkOutcome = {
 	/** Scratch writes (last-write-wins per key). */
 	scratchWrites?: Record<string, unknown>;
 	/** Outbound worker messages. */
-	messages?: Array<Omit<DriveWorkMessage, "id" | "createdAt" | "from"> & { from?: string }>;
+	messages?: Array<
+		Omit<DriveWorkMessage, "id" | "createdAt" | "from"> & { from?: string }
+	>;
 };
 
 /** Host port: run one wave task. Core stays free of agent/session deps. */
@@ -171,7 +175,9 @@ export type DriveWaveRunnerOptions = {
 
 export type DriveWaveCheckpointStore = {
 	save: (checkpoint: DriveWaveCheckpoint) => Promise<void> | void;
-	load: (waveRunId: string) => Promise<DriveWaveCheckpoint | null> | DriveWaveCheckpoint | null;
+	load: (
+		waveRunId: string,
+	) => Promise<DriveWaveCheckpoint | null> | DriveWaveCheckpoint | null;
 };
 
 export function nowIso(): string {

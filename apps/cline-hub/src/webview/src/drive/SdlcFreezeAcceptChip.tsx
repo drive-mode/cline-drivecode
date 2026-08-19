@@ -41,8 +41,8 @@ export function SdlcFreezeAcceptChip({
 						{summary}
 					</div>
 					<p className="text-[10px] text-muted-foreground">
-						Accept creates DriveTasks + active plan so S2 can credit this
-						guided session.
+						Accept creates DriveTasks + active plan so S2 can credit this guided
+						session.
 					</p>
 				</div>
 				<div className="flex shrink-0 gap-1.5">

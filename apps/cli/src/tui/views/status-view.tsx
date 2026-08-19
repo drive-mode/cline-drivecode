@@ -56,7 +56,9 @@ function StatusHubContent({
 	bootstrap,
 }: {
 	onDismiss: () => void;
-	registerKeyHandler?: (handler: (key: StatusKeyEvent | undefined) => void) => void;
+	registerKeyHandler?: (
+		handler: (key: StatusKeyEvent | undefined) => void,
+	) => void;
 	source: StatusSnapshotSource;
 	bootstrap?: StatusViewBootstrap;
 }) {
@@ -70,7 +72,9 @@ function StatusHubContent({
 	const [summary, setSummary] = useState<StatusSummary | null>(null);
 	const [teams, setTeams] = useState<TeamRuntimeState[]>([]);
 	const [selected, setSelected] = useState(0);
-	const handlerRef = useRef<(key: StatusKeyEvent | undefined) => void>(() => {});
+	const handlerRef = useRef<(key: StatusKeyEvent | undefined) => void>(
+		() => {},
+	);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -125,10 +129,7 @@ function StatusHubContent({
 		[boardRows],
 	);
 
-	const maxVisible = Math.min(
-		14,
-		Math.max(8, Math.min(height - 14, 18)),
-	);
+	const maxVisible = Math.min(14, Math.max(8, Math.min(height - 14, 18)));
 	// Dialog is narrower than the full terminal; truncate for the content column.
 	const titleWidth = Math.max(28, Math.min(width - 24, 88));
 
@@ -159,9 +160,7 @@ function StatusHubContent({
 				return;
 			}
 			const count =
-				lens === "board"
-					? selectableBoardIndexes.length
-					: graph.nodes.length;
+				lens === "board" ? selectableBoardIndexes.length : graph.nodes.length;
 			if (count === 0) return;
 			if (key.name === "up" || (key.ctrl && key.name === "p")) {
 				setSelected((i) => (i - 1 + count) % count);
@@ -171,12 +170,7 @@ function StatusHubContent({
 				setSelected((i) => (i + 1) % count);
 			}
 		};
-	}, [
-		graph.nodes.length,
-		lens,
-		onDismiss,
-		selectableBoardIndexes.length,
-	]);
+	}, [graph.nodes.length, lens, onDismiss, selectableBoardIndexes.length]);
 
 	useEffect(() => {
 		registerKeyHandler?.((key) => handlerRef.current(key));
@@ -216,10 +210,8 @@ function StatusHubContent({
 
 			{summary ? (
 				<text fg={palette.muted}>
-					{summary.byState.blocked ?? 0} blocked ·{" "}
-					{summary.byState.failed ?? 0} failed ·{" "}
-					{summary.byState.running ?? 0} running ·{" "}
-					{summary.total} live
+					{summary.byState.blocked ?? 0} blocked · {summary.byState.failed ?? 0}{" "}
+					failed · {summary.byState.running ?? 0} running · {summary.total} live
 				</text>
 			) : banner ? (
 				<text fg={palette.muted}>
@@ -315,8 +307,7 @@ function StatusHubContent({
 											? selectedNode.dependsOnKeys
 													.map(
 														(key) =>
-															graph.nodes.find((n) => n.key === key)?.id ??
-															key,
+															graph.nodes.find((n) => n.key === key)?.id ?? key,
 													)
 													.join(", ")
 											: "—"}
@@ -327,8 +318,7 @@ function StatusHubContent({
 											? selectedNode.dependentKeys
 													.map(
 														(key) =>
-															graph.nodes.find((n) => n.key === key)?.id ??
-															key,
+															graph.nodes.find((n) => n.key === key)?.id ?? key,
 													)
 													.join(", ")
 											: "—"}

@@ -124,7 +124,8 @@ export async function handleDriveForkTickCommand(
 	envelope: HubCommandEnvelope,
 ): Promise<HubReplyEnvelope> {
 	const roomId =
-		typeof envelope.payload?.roomId === "string" && envelope.payload.roomId.trim()
+		typeof envelope.payload?.roomId === "string" &&
+		envelope.payload.roomId.trim()
 			? envelope.payload.roomId.trim()
 			: "default";
 	const parentSessionId =

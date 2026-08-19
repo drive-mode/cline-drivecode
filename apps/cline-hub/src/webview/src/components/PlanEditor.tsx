@@ -55,9 +55,7 @@ export function PlanEditor({
 			data-recovery={recovery ? "true" : undefined}
 			data-slot="plan-editor"
 		>
-			<div className="text-xs font-medium">
-				Plan · {planTitle ?? planId}
-			</div>
+			<div className="text-xs font-medium">Plan · {planTitle ?? planId}</div>
 			{treatment.hint ? (
 				<p
 					className="text-[11px] text-rose-700 dark:text-rose-300"

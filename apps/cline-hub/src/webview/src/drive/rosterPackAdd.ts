@@ -3,15 +3,8 @@
  * expandRosterPack proposes; UI fail-closes on seatCap before hub seats.
  */
 
-import {
-	expandRosterPack,
-	type SeatProposal,
-} from "@cline/drive";
-import type {
-	AgentProfile,
-	PermissionPreset,
-	RosterPack,
-} from "@cline/shared";
+import { expandRosterPack, type SeatProposal } from "@cline/drive";
+import type { AgentProfile, PermissionPreset, RosterPack } from "@cline/shared";
 
 const ink = { kind: "token" as const, token: "foreground" as const };
 
@@ -141,7 +134,5 @@ export function lookupFixtureRosterPack(
 	if (!key) {
 		return null;
 	}
-	return (
-		packs.find((pack) => pack.id === key || pack.slug === key) ?? null
-	);
+	return packs.find((pack) => pack.id === key || pack.slug === key) ?? null;
 }

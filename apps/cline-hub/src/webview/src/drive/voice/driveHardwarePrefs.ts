@@ -92,8 +92,7 @@ export async function applyAudioOutputSinkId(
 		await target.setSinkId(sinkId);
 		return { ok: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : "setSinkId_failed";
+		const message = error instanceof Error ? error.message : "setSinkId_failed";
 		return { ok: false, reason: message };
 	}
 }

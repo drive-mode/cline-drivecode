@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	buildRecoveryProposal,
 	planRecoveryAccept,
@@ -130,9 +130,7 @@ describe("buildRecoveryProposal privacy", () => {
 		expect(proposal.planId).toBe("p1");
 		expect(proposal.newTaskId).toBe("t-fixup-1");
 		expect(recoveryProposalIsPrivate(proposal)).toBe(true);
-		expect(JSON.stringify(proposal).toLowerCase()).not.toContain(
-			"utterance",
-		);
+		expect(JSON.stringify(proposal).toLowerCase()).not.toContain("utterance");
 	});
 
 	it("rejects smuggled utterance fields", () => {

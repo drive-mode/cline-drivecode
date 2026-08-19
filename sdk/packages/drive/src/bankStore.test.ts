@@ -43,9 +43,7 @@ describe("bankStore", () => {
 		});
 		await store.completeTask("t1");
 		expect(await fs.exists(archivedTaskPath(ROOT, "t1"))).toBe(true);
-		expect(await fs.exists(`${ROOT}/.drive/bank/tasks/t1.md`)).toBe(
-			false,
-		);
+		expect(await fs.exists(`${ROOT}/.drive/bank/tasks/t1.md`)).toBe(false);
 		const snap = await store.getSnapshot();
 		expect(snap.nowTaskId).toBe("t2");
 	});
@@ -109,9 +107,9 @@ describe("bankStore", () => {
 			taskIds: ["t1"],
 		});
 		await store.closeAndArchivePlan("p1");
-		await expect(
-			store.editPlanTaskIds("p1", ["t1"]),
-		).rejects.toThrow(/read-only/);
+		await expect(store.editPlanTaskIds("p1", ["t1"])).rejects.toThrow(
+			/read-only/,
+		);
 	});
 
 	it("records failure without archiving", async () => {
@@ -145,9 +143,7 @@ describe("bankStore", () => {
 		await store.recordTaskFailure("t1", "tests red");
 		const failed = events.find((e) => e.type === "drive_task_failed");
 		expect(failed).toBeDefined();
-		expect(failed && "taskId" in failed ? failed.taskId : undefined).toBe(
-			"t1",
-		);
+		expect(failed && "taskId" in failed ? failed.taskId : undefined).toBe("t1");
 		expect(failed && "note" in failed).toBe(false);
 	});
 

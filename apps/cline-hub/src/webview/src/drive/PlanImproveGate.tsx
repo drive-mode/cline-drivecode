@@ -48,23 +48,21 @@ export function PlanImproveGate({
 				</span>
 			</div>
 			<p className="text-[10px] text-muted-foreground">
-				Reasons{" "}
-				<span className="font-mono">{proposal.reasons.join("+")}</span>
+				Reasons <span className="font-mono">{proposal.reasons.join("+")}</span>
 				{" · "}
 				target <span className="font-mono">{targetLabel}</span>
 				{proposal.callSessionId ? (
 					<>
 						{" · "}
-						session{" "}
-						<span className="font-mono">{proposal.callSessionId}</span>
+						session <span className="font-mono">{proposal.callSessionId}</span>
 					</>
 				) : null}
 			</p>
 			<p className="text-[10px] text-muted-foreground">
 				Evidence: {proposal.evidence.eventIds.length} events ·{" "}
 				{proposal.evidence.taskIds.length} tasks ·{" "}
-				{proposal.evidence.skillIds.length} skills — no utterances.
-				Accept writes under .drive/plan-improve/ only.
+				{proposal.evidence.skillIds.length} skills — no utterances. Accept
+				writes under .drive/plan-improve/ only.
 			</p>
 			<div className="flex flex-wrap gap-1.5">
 				<Button

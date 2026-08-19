@@ -19,18 +19,18 @@ import type {
 	SeedWorkspace,
 } from "@cline/shared";
 import {
+	createSessionId,
 	DoBacklogItemSchema,
 	ForkReasonSchema,
 	PromotePacketSchema,
 	SeedWorkspaceSchema,
-	createSessionId,
 } from "@cline/shared";
 import {
 	getDriveRoomStore,
 	resetDriveRoomStoreForTests,
 } from "../../collaboration";
-import { errorReply, type HubTransportContext, okReply } from "./context";
 import { runShowDirectorTick } from "../../driveShowRuntime";
+import { errorReply, type HubTransportContext, okReply } from "./context";
 
 function readString(
 	payload: Record<string, unknown> | undefined,
@@ -80,10 +80,7 @@ function publishRoom(
 	ctx: HubTransportContext,
 	room: ReturnType<ReturnType<typeof getDriveRoomStore>["getOrCreateLive"]>,
 	extraEvent?: {
-		event:
-			| "drive.fork.changed"
-			| "drive.fork.promoted"
-			| "drive.fork.dropped";
+		event: "drive.fork.changed" | "drive.fork.promoted" | "drive.fork.dropped";
 		payload: Record<string, unknown>;
 	},
 ): void {
@@ -185,7 +182,11 @@ export async function handleDriveForkCommand(
 		case "drive.fork.retain.set":
 			return handleForkRetainSet(ctx, envelope);
 		default:
-			return errorReply(envelope, "not_implemented", "Unknown drive fork command");
+			return errorReply(
+				envelope,
+				"not_implemented",
+				"Unknown drive fork command",
+			);
 	}
 }
 
@@ -207,7 +208,9 @@ async function handleForkClaim(
 		envelope.payload?.workspace ?? { mode: "shared_readonly" },
 	);
 	const doParse = DoBacklogItemSchema.safeParse(envelope.payload?.doItem);
-	const allowedPathPrefixes = Array.isArray(envelope.payload?.allowedPathPrefixes)
+	const allowedPathPrefixes = Array.isArray(
+		envelope.payload?.allowedPathPrefixes,
+	)
 		? (envelope.payload?.allowedPathPrefixes as unknown[]).filter(
 				(entry): entry is string => typeof entry === "string",
 			)
@@ -363,7 +366,9 @@ async function handleForkClaim(
 		visibleToHuman: false,
 	};
 
-	const doBacklog = room.director.doBacklog.some((item) => item.id === doItem.id)
+	const doBacklog = room.director.doBacklog.some(
+		(item) => item.id === doItem.id,
+	)
 		? room.director.doBacklog.map((item) =>
 				item.id === doItem.id ? { ...item, status: "active" as const } : item,
 			)
@@ -512,11 +517,15 @@ async function handleForkCancel(
 ): Promise<HubReplyEnvelope> {
 	const roomId = readString(envelope.payload, "roomId") ?? "default";
 	const workerSessionId = readString(envelope.payload, "workerSessionId");
-	const summary =
-		readString(envelope.payload, "summary") ?? "Worker cancelled";
-	const retainForAudit = readBoolean(envelope.payload, "retainForAudit") ?? false;
+	const summary = readString(envelope.payload, "summary") ?? "Worker cancelled";
+	const retainForAudit =
+		readBoolean(envelope.payload, "retainForAudit") ?? false;
 	if (!workerSessionId) {
-		return errorReply(envelope, "invalid_payload", "workerSessionId is required");
+		return errorReply(
+			envelope,
+			"invalid_payload",
+			"workerSessionId is required",
+		);
 	}
 
 	const store = getDriveRoomStore();
@@ -627,11 +636,7 @@ function handleForkRetainSet(
 		return errorReply(envelope, "fork_not_found", "Unknown workerSessionId");
 	}
 	if (!existing.promote) {
-		return errorReply(
-			envelope,
-			"not_promoted",
-			"Retain applies after promote",
-		);
+		return errorReply(envelope, "not_promoted", "Retain applies after promote");
 	}
 
 	const updated: ChatForkRecord = {

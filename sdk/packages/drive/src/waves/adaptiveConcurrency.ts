@@ -24,11 +24,7 @@ export class AdaptiveConcurrency {
 		if (this.config.max < this.config.min) {
 			throw new Error("AdaptiveConcurrency max must be >= min");
 		}
-		this.#window = clamp(
-			this.config.initial,
-			this.config.min,
-			this.config.max,
-		);
+		this.#window = clamp(this.config.initial, this.config.min, this.config.max);
 	}
 
 	get window(): number {
@@ -46,7 +42,10 @@ export class AdaptiveConcurrency {
 
 	onFailure(): number {
 		this.#window = clamp(
-			Math.max(this.config.min, Math.floor(this.#window * this.config.decrease)),
+			Math.max(
+				this.config.min,
+				Math.floor(this.#window * this.config.decrease),
+			),
 			this.config.min,
 			this.config.max,
 		);

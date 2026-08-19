@@ -98,9 +98,7 @@ function firstCommandFromInput(input: unknown): string | undefined {
 		);
 	}
 	return (
-		asString(record.command) ??
-		asString(record.cmd) ??
-		asString(record.script)
+		asString(record.command) ?? asString(record.cmd) ?? asString(record.script)
 	);
 }
 
@@ -136,16 +134,11 @@ export function classifyToolEvent(
 	return classifyStageToolName(event.name, commandHint);
 }
 
-function titleForEvent(
-	category: StageCategory,
-	event: StageToolEvent,
-): string {
+function titleForEvent(category: StageCategory, event: StageToolEvent): string {
 	switch (category) {
 		case "edit": {
 			const path =
-				pathFromInput(event.input) ??
-				pathFromPatch(event.input) ??
-				event.name;
+				pathFromInput(event.input) ?? pathFromPatch(event.input) ?? event.name;
 			const base = path.split(/[/\\]/).pop() ?? path;
 			return base;
 		}
@@ -153,9 +146,7 @@ function titleForEvent(
 			const command = firstCommandFromInput(event.input);
 			if (command) {
 				const firstLine = command.split("\n")[0] ?? command;
-				return firstLine.length > 64
-					? `${firstLine.slice(0, 61)}…`
-					: firstLine;
+				return firstLine.length > 64 ? `${firstLine.slice(0, 61)}…` : firstLine;
 			}
 			return event.name;
 		}
@@ -163,9 +154,7 @@ function titleForEvent(
 			const command = firstCommandFromInput(event.input);
 			if (command) {
 				const firstLine = command.split("\n")[0] ?? command;
-				return firstLine.length > 64
-					? `${firstLine.slice(0, 61)}…`
-					: firstLine;
+				return firstLine.length > 64 ? `${firstLine.slice(0, 61)}…` : firstLine;
 			}
 			return event.name;
 		}
@@ -185,8 +174,7 @@ function summaryForEvent(
 	}
 	switch (category) {
 		case "edit": {
-			const path =
-				pathFromInput(event.input) ?? pathFromPatch(event.input);
+			const path = pathFromInput(event.input) ?? pathFromPatch(event.input);
 			const detail =
 				stringifyCompact(asRecord(event.input)?.new_text, 240) ??
 				stringifyCompact(event.output, 240) ??
@@ -219,9 +207,7 @@ function summaryForEvent(
 				);
 			}
 			return (
-				firstCommandFromInput(event.input) ??
-				asString(event.text) ??
-				"running"
+				firstCommandFromInput(event.input) ?? asString(event.text) ?? "running"
 			);
 		}
 		default: {
@@ -284,9 +270,7 @@ export function toolEventToDriveEvent(
 	switch (category) {
 		case "edit": {
 			const path =
-				pathFromInput(event.input) ??
-				pathFromPatch(event.input) ??
-				event.name;
+				pathFromInput(event.input) ?? pathFromPatch(event.input) ?? event.name;
 			const baseName = path.split(/[/\\]/).pop() ?? path;
 			return {
 				schemaVersion: DRIVE_SCHEMA_VERSION,

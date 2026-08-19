@@ -1,5 +1,5 @@
-import type { ShowBacklogItem } from "@cline/shared";
 import { getShowTemplate } from "@cline/drive";
+import type { ShowBacklogItem } from "@cline/shared";
 import { buildCardSvg, svgDataUri } from "./svgStub";
 
 export type ProduceBrowserSnapshotInput = {

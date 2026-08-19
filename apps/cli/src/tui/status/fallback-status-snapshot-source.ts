@@ -1,4 +1,7 @@
-import type { StatusSnapshot, StatusSnapshotSource } from "./status-snapshot-source";
+import type {
+	StatusSnapshot,
+	StatusSnapshotSource,
+} from "./status-snapshot-source";
 
 export function createFallbackStatusSnapshotSource(
 	primary: StatusSnapshotSource,

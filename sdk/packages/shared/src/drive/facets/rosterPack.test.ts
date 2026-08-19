@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	parseRosterPack,
-	RosterPackSchema,
-} from "./rosterPack";
+import { parseRosterPack, RosterPackSchema } from "./rosterPack";
 
 describe("RosterPackSchema", () => {
 	it("round-trips a refs-only pack and preserves member order", () => {

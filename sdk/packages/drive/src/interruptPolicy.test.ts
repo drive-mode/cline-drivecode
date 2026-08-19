@@ -7,9 +7,7 @@ import {
 
 describe("classifyInterrupt", () => {
 	it("degrades empty intent to stop + pause-after-tool while in flight", () => {
-		expect(
-			classifyInterrupt({ intent: null, turnInFlight: true }),
-		).toEqual({
+		expect(classifyInterrupt({ intent: null, turnInFlight: true })).toEqual({
 			intent: "stop",
 			action: "pause-after-tool",
 			revise: "revise",
@@ -64,9 +62,9 @@ describe("classifyInterrupt", () => {
 
 describe("expectsPauseAfterTool", () => {
 	it("is true for stop while a turn is in flight", () => {
-		expect(
-			expectsPauseAfterTool({ intent: "stop", turnInFlight: true }),
-		).toBe(true);
+		expect(expectsPauseAfterTool({ intent: "stop", turnInFlight: true })).toBe(
+			true,
+		);
 	});
 
 	it("is false for hard-cancel or idle stop", () => {
@@ -77,18 +75,16 @@ describe("expectsPauseAfterTool", () => {
 				hardCancel: true,
 			}),
 		).toBe(false);
-		expect(
-			expectsPauseAfterTool({ intent: "stop", turnInFlight: false }),
-		).toBe(false);
+		expect(expectsPauseAfterTool({ intent: "stop", turnInFlight: false })).toBe(
+			false,
+		);
 	});
 });
 
 describe("decideReviseOrRestart", () => {
 	it("defaults to revise-not-restart", () => {
 		expect(decideReviseOrRestart({})).toBe("revise");
-		expect(decideReviseOrRestart({ explicitRestart: true })).toBe(
-			"restart",
-		);
+		expect(decideReviseOrRestart({ explicitRestart: true })).toBe("restart");
 		expect(decideReviseOrRestart({ hardCancel: true })).toBe("restart");
 	});
 });

@@ -1,5 +1,6 @@
 // type that represents json data that is sent from extension to webview, called ExtensionMessage and has 'type' enum which can be 'plusButtonClicked' or 'settingsButtonClicked' or 'hello'
 
+import type { GeneratedMedia } from "@cline/shared"
 import { WorkspaceRoot } from "@shared/multi-root/types"
 import { RemoteConfigFields } from "@shared/storage/state-keys"
 import type { Environment } from "../config"
@@ -117,9 +118,9 @@ export interface ExtensionState {
 	remoteWorkflowToggles?: ClineRulesToggles
 	localAgentsRulesToggles: ClineRulesToggles
 	mcpResponsesCollapsed?: boolean
-	yoloModeToggled?: boolean
 	useAutoCondense?: boolean
 	compactionStrategy?: string
+	webSearchEnabled?: boolean
 	subagentsEnabled?: boolean
 	worktreesEnabled?: ClineFeatureSetting
 	favoritedModelIds: string[]
@@ -134,10 +135,12 @@ export interface ExtensionState {
 	dismissedBanners?: Array<{ bannerId: string; dismissedAt: number }>
 	hooksEnabled?: boolean
 	remoteConfigSettings?: Partial<RemoteConfigFields>
+	remoteConfigRevision?: number
 	globalSkillsToggles?: Record<string, boolean>
 	localSkillsToggles?: Record<string, boolean>
 	backgroundEditEnabled?: boolean
 	optOutOfRemoteConfig?: boolean
+	remoteConfigAvailable?: boolean
 	showFeatureTips?: boolean
 	banners?: BannerCardData[]
 	welcomeBanners?: BannerCardData[]
@@ -182,6 +185,7 @@ export interface ClineMessage {
 	text?: string
 	reasoning?: string
 	images?: string[]
+	media?: GeneratedMedia[]
 	files?: string[]
 	partial?: boolean
 	/**
