@@ -77,7 +77,6 @@ describe("SdkSessionConfigBuilder", () => {
 		const builder = new SdkSessionConfigBuilder({
 			stateManager: stateManager as never,
 			emitHookMessage,
-			onSwitchToActMode: vi.fn(),
 		})
 
 		await builder.build({ cwd: "/workspace", mode: "act", isResume: true })
