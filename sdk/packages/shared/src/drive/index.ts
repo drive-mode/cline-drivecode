@@ -38,6 +38,18 @@ export {
 	parseDriveTaskDraft,
 } from "./bank";
 export {
+	isProjectMap,
+	isProjectMapSnapshot,
+	type ProjectMap,
+	type ProjectMapItem,
+	type ProjectMapItemStatus,
+	type ProjectMapLane,
+	type ProjectMapSnapshot,
+	type ProjectMapSystem,
+	PROJECT_MAP_SYSTEMS,
+	type ProjectMapUnavailableReason,
+} from "./projectMap";
+export {
 	type DriveRun,
 	type DriveRunGate,
 	DriveRunGateSchema,

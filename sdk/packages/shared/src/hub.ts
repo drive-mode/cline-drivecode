@@ -500,6 +500,7 @@ export type HubCommandName =
 	| "drive_bank_activate_plan"
 	| "drive_bank_record_failure"
 	| "drive_bank_accept_sdlc_freeze"
+	| "drive_project_map_get"
 	| "drive_session_rollups"
 	| "drive_agent_home_get"
 	| "drive_agent_home_list"

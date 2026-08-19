@@ -47,6 +47,78 @@ describe("parseClaimsRegistry", () => {
 		expect(issues).toEqual([]);
 		expect(registry?.claims).toHaveLength(1);
 	});
+
+	test("accepts a complete acyclic project map", () => {
+		const { registry, issues } = parseClaimsRegistry({
+			claims: [
+				{
+					id: "drv-foundation",
+					status: "active_partial",
+					displayId: "GP0",
+					lane: "now",
+					dependsOn: [],
+					owner: "Platform",
+					systems: ["data", "software"],
+					acceptance: "Contract fixtures pass.",
+				},
+				{
+					id: "drv-client",
+					status: "planned",
+					displayId: "GP1",
+					lane: "next",
+					dependsOn: ["drv-foundation"],
+					owner: "Client",
+					systems: ["people", "hardware", "networks"],
+					acceptance: "Client reconnects.",
+				},
+			],
+		});
+		expect(issues).toEqual([]);
+		expect(registry?.claims[1]?.dependsOn).toEqual(["drv-foundation"]);
+	});
+
+	test("rejects partial metadata, cycles, and backward lane dependencies", () => {
+		const { issues } = parseClaimsRegistry({
+			claims: [
+				{
+					id: "drv-partial",
+					status: "planned",
+					displayId: "GP2",
+				},
+				{
+					id: "drv-now",
+					status: "planned",
+					displayId: "GP0",
+					lane: "now",
+					dependsOn: ["drv-next"],
+					owner: "Now",
+					systems: ["software"],
+					acceptance: "Now passes.",
+				},
+				{
+					id: "drv-next",
+					status: "planned",
+					displayId: "GP1",
+					lane: "next",
+					dependsOn: ["drv-now"],
+					owner: "Next",
+					systems: ["software"],
+					acceptance: "Next passes.",
+				},
+			],
+		});
+		expect(
+			issues.some((issue) => issue.message.includes("must provide displayId")),
+		).toBe(true);
+		expect(
+			issues.some((issue) =>
+				issue.message.includes("cannot depend on later lane"),
+			),
+		).toBe(true);
+		expect(
+			issues.some((issue) => issue.message.includes("dependency cycle")),
+		).toBe(true);
+	});
 });
 
 describe("ADJECTIVE_TO_STATUS", () => {
@@ -117,9 +189,7 @@ describe("checkDrivecodeDone", () => {
 			repoRoot,
 			reportPrefix: "fixture",
 		});
-		expect(issues.some((i) => i.message.includes("active_partial"))).toBe(
-			true,
-		);
+		expect(issues.some((i) => i.message.includes("active_partial"))).toBe(true);
 	});
 
 	test("verified_shipped without evidence fails", async () => {
@@ -143,9 +213,9 @@ describe("checkDrivecodeDone", () => {
 			repoRoot,
 			reportPrefix: "fixture",
 		});
-		expect(
-			issues.some((i) => i.message.includes("no evidence entries")),
-		).toBe(true);
+		expect(issues.some((i) => i.message.includes("no evidence entries"))).toBe(
+			true,
+		);
 	});
 
 	test("valid citation passes", async () => {
