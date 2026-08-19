@@ -22,10 +22,30 @@ function fail(message: string): void {
 const rootPackage = readJson("package.json");
 const engines = rootPackage.engines as Record<string, unknown> | undefined;
 const bunVersion = engines?.bun;
+const nodeRequirement = engines?.node;
 if (typeof bunVersion !== "string" || bunVersion.length === 0) {
 	fail("package.json engines.bun must be a non-empty version");
 } else if (rootPackage.packageManager !== `bun@${bunVersion}`) {
 	fail(`package.json packageManager must match engines.bun (${bunVersion})`);
+}
+if (
+	typeof nodeRequirement !== "string" ||
+	!/^>=\d+$/.test(nodeRequirement)
+) {
+	fail("package.json engines.node must use the >=<major> form");
+}
+
+const cliPreflightSource = readFileSync(
+	resolve(repoRoot, "apps/cli/src/commands/preflight.ts"),
+	"utf8",
+);
+for (const selector of [
+	"rootPackage.engines.bun",
+	"rootPackage.engines.node",
+]) {
+	if (!cliPreflightSource.includes(selector)) {
+		fail(`CLI preflight must resolve ${selector} from root package.json`);
+	}
 }
 
 const workflowDir = resolve(repoRoot, ".github", "workflows");

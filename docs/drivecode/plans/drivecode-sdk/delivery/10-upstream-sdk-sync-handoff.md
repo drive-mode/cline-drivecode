@@ -90,7 +90,7 @@ The first hosted E2E passes also exposed a VS Code `1.134` automation change in 
 
 Keep mutable toolchain and test selectors in the smallest versioned source that owns them:
 
-- Root [`package.json`](../../../../../package.json) is the single Bun-version source for local development, the shared workspace setup action, and direct CI setup steps. Workflows use `bun-version-file`; do not copy a numeric Bun version into workflow YAML.
+- Root [`package.json`](../../../../../package.json) is the single Bun-version and minimum-Node source for local development, CLI preflight diagnostics, the shared workspace setup action, and direct CI setup steps. Workflows use `bun-version-file`; do not copy numeric toolchain versions into runtime code or workflow YAML.
 - [`apps/vscode/test-runtime.config.json`](../../../../../apps/vscode/test-runtime.config.json) owns VS Code unit-test, E2E, interactive-test, and debug-harness runtime selectors. Environment variables remain explicit one-run overrides, not a second committed default.
 - Package compatibility declarations such as `engines.vscode` and `@types/vscode` stay in the extension package manifest. They describe the supported API floor and are not interchangeable with a test download channel.
 

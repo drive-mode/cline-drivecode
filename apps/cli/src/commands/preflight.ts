@@ -5,7 +5,7 @@
  * the question before that one — "why will this not work at all" — for someone
  * who just cloned the fork and has never run it.
  *
- * Deliberately imports node builtins only, so
+ * Deliberately imports only node builtins and the root toolchain manifest, so
  * `bun apps/cli/src/commands/preflight.ts` runs on a fresh clone *before*
  * `bun install`, which is exactly when "wrong Bun" and "nothing installed yet"
  * are worth hearing. `cline doctor preflight` runs the same checks after.
@@ -16,6 +16,7 @@ import { existsSync, readFileSync } from "node:fs";
 import net from "node:net";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import rootPackage from "../../../../package.json" with { type: "json" };
 
 export type PreflightStatus = "ok" | "warn" | "fail";
 
@@ -36,9 +37,11 @@ export type PreflightReport = {
 };
 
 /** Bun pinned by `packageManager` / `engines.bun`; CI installs exactly this. */
-export const PINNED_BUN_VERSION = "1.3.13";
+export const PINNED_BUN_VERSION = rootPackage.engines.bun;
 /** `engines.node` is `>=22`. */
-export const MINIMUM_NODE_MAJOR = 22;
+export const MINIMUM_NODE_MAJOR = Number(
+	/^>=(\d+)/.exec(rootPackage.engines.node)?.[1],
+);
 
 /** Hub daemon (WebSocket single writer) — `CLINE_HUB_PORT` in shared/rpc. */
 export const HUB_DAEMON_PORT = 25463;
