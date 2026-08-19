@@ -32,8 +32,8 @@ Work queue for parity. Prefer small vertical slices that move a MATRIX cell
 | B07 | Captions sticky preference | hub, pwa, ios | todo |
 | B08 | Invite deep link `…/r/:id` | pwa, ios | todo |
 | B09 | Official Drive mark asset in ios (layered SVG → PDF/SVG) | ios | todo |
-| B14 | Replace preview account/billing/usage/analytics with Cline account-service projections and in-app deletion | ios, hub | todo |
-| B15 | Validate standalone iOS on physical iPhone/iPad: permissions, local AI, files, VoiceOver, thermals, offline/restart | ios | todo |
+| B25 | Replace preview account/billing/usage/analytics with Cline account-service projections and in-app deletion | ios, hub | todo |
+| B26 | Validate standalone iOS on physical iPhone/iPad: permissions, local AI, files, VoiceOver, thermals, offline/restart | ios | todo |
 
 ## Later / YAGNI
 
@@ -41,7 +41,7 @@ Work queue for parity. Prefer small vertical slices that move a MATRIX cell
 |---|---|---|
 | B20 | Android Kotlin shell | ios + pwa Tier 1 green |
 | B21 | Live Activities | ios retention evidence |
-| B22 | Submit an App Store build and publish listing | B12–B15 complete + release DRI go/no-go; PWA retention gate does not block readiness planning |
+| B27 | Submit an App Store build and publish listing | B12–B15 and B25–B26 complete + release DRI go/no-go; PWA retention gate does not block readiness planning |
 
 ## Done
 

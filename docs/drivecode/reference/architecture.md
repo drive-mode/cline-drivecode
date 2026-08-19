@@ -58,6 +58,50 @@ Two collaboration planes share the hub process but not storage (Director bags ha
 1. **Status plane** — durable log; survives hub restart; cross-agent.
 2. **Room plane** — roster, Spotlight/`stage`, mute/deafen. Derived state is ephemeral; the log it is folded from is durable.
 
+## Product golden path and implementation gaps
+
+The architecture is only proven when a user can traverse one real path across
+the client, host, persistence, and runtime. The canonical task and evidence
+sequencer is the
+[portfolio-now implementation map](../plans/cline-drivemode/initiatives/portfolio-now/).
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant IOS as Drive iOS
+  participant Host as Trusted Cline host
+  participant Store as Durable event store
+  participant Agent as Managed agent runtime
+
+  User->>IOS: Choose repository target
+  IOS->>Host: Resolve opaque target with credential
+  Host-->>IOS: Access posture and target label
+  User->>IOS: Start or resume chat
+  IOS->>Host: Send command with resume cursor
+  Host->>Agent: Execute in authorized target scope
+  Agent->>Store: Append typed work events
+  Store-->>IOS: Ordered deltas and approvals
+  User->>IOS: Approve, redirect, or call
+  IOS->>Host: Mutate room through coordinator
+  Host->>Store: Append room and title events
+  Store-->>IOS: Folded state plus new cursor
+```
+
+| Boundary | Existing seam | Implementation gap |
+|---|---|---|
+| Trust | Hub discovery and room commands | Authenticated pairing, secure credential lifecycle, workspace authorization |
+| Target | Target-aware iOS preview types | Host-resolved opaque targets, connection state, stale-access revocation |
+| Chat | Local composer and writer operation | Managed conversation catalog, assistant stream, cancellation, approvals, terminal state |
+| Resume | Durable Cline status/room logs | One cursor contract spanning chat, approvals, and client reconnect without gaps or duplicates |
+| Call | Call presets and coordinator commands | iOS binding to a real host-authoritative room and reconnect lifecycle |
+| Presentation | Cline Presenter coordinator and signed Director policy | Native live grants, descriptor retrieval, exclusive transfer/revoke projection |
+| Verification | Per-repository tests | Deterministic cross-repository `drive-dev` golden-path and failure scenarios |
+| Release | Preview account/settings surfaces | Production account, consent, usage, privacy, accessibility, reviewer backend |
+
+Use “golden path” for the supported implementation route and “happy path” for
+the ideal user journey. The acceptance bundle must also cover denial,
+disconnection, retry, and resume.
+
 ## Layering
 
 | Layer | Owner | Responsibility |

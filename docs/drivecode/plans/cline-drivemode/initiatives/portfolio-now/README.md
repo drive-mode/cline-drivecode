@@ -1,185 +1,141 @@
-# portfolio-now · remaining work as a DrivePlan
+# portfolio-now · golden-path implementation map
 
-**Status:** active (bootstrap)  
-**Why:** Dogfood Drive’s own bank / Status dependency map / multi-device backlog
-instead of a second spreadsheet. This file is the **Now** sequencer; the demo
-fixture mirrors it under `?demoPlans=1`.
+**Status:** active
+**Purpose:** one dependency-backed execution map for the architecture work that
+turns the shipped Drive protocol seams into a connected user journey. Delivery
+status remains authoritative in
+[`claims-registry.yaml`](../../delivery/claims-registry.yaml); this initiative
+orders those claims and defines their acceptance evidence.
 
-**Related:** [mobile-consumer](../mobile-consumer/), [multi-device](../multi-device/),
-[drive-hotpath](../drive-hotpath/), [adlc-drive-factory](../adlc-drive-factory/),
-[ux-quality](../ux-quality/), [ADR-0000 status board](../../adr/ADR-0000-status-board.md)
+**Related:** [reference architecture](../../../../reference/architecture.md),
+[mobile consumer](../mobile-consumer/), [multi-device](../multi-device/),
+[iOS native client](../ios-native-client/), [room hot path](../drive-hotpath/),
+[ADR-0037 sensing](../../adr/ADR-0037-invocation-scoped-sensing.md)
 
-## How to dogfood
+## Happy path and golden path
 
-```bash
-# Status Hub dependency map — Now plan is the last rail group
-bun run --cwd apps/cline-hub dev
-# open printed URL → /status?demoPlans=1&statusMode=dependency-map
+The happy path is the ideal user journey:
 
-# Consumer call shell
-# open printed URL → /drive?app=1
-```
+> Open Drive → establish trust → choose a target → start or resume a managed
+> chat → receive typed work events → approve or redirect → optionally start a
+> call and grant Presenter → leave → resume without losing durable work.
 
-| Surface | What you see |
-|---|---|
-| Status `?demoPlans=1` | Plan **P006 · Now · consumer path** with NOW-* tasks + edges |
-| Multi-device BACKLOG / MATRIX | Device parity for the same jobs |
-| This README | Owner gates, YAGNI, and the prose contract |
-| DriveKanban (optional) | `bun scripts/seed-drive-kanban.mjs` still seeds historic TASK-GRAPH; Now cards stay here until Interop ADR-0019 hosts write them |
+The golden path is the supported, observable, and recoverable implementation
+route that makes that journey dependable. It proves one real vertical slice
+across iOS, the Cline host, the writer contract, durable storage, and agent
+execution before expanding the surrounding surfaces.
 
-## Done on the hotpath PR track (context, not Now)
-
-Slices **1–4** of [drive-hotpath](../drive-hotpath/) / [ADR-0029](../../adr/ADR-0029-room-hotpath-redesign.md):
-fold checkpoint, delta publish, in-process stage projector, layout sheets +
-`?app=1` Join/Continue lobby. **Slice 5** (cloud signaling) is **unblocked** —
-path H accepted ([DEC-mobile-consumer-owner](../../decisions/DEC-mobile-consumer-owner.md));
-keep it behind MC1 call verbs unless a real-turn demo forces it.
-
-## Dependency map (Now)
+## Architecture dependency map
 
 ```mermaid
 flowchart LR
-  subgraph done [Landed]
-    HP14[Hotpath D1-D4]
-    APP1["?app=1 lobby"]
-  end
-  subgraph mc1 [MC1 finish]
-    HTT[NOW-HOLD-TALK]
-    STRIP[NOW-STRIP-44]
-    LAND[NOW-LANDSCAPE]
-  end
-  subgraph speak [Speak / Decide]
-    STT[NOW-STT-SAFARI]
-    HAND[NOW-RAISE-HAND]
-    LEAVE[NOW-LEAVE-COPY]
-  end
-  subgraph habit [Habit]
-    PWA[NOW-PWA]
-    PREV[NOW-PREVIEW]
-  end
-  subgraph ios [iOS parity]
-    B01[NOW-IOS-SMOKE]
-    B02[NOW-IOS-GLANCE]
-  end
-  subgraph browse [Browse lite]
-    BL[NOW-BROWSE-LITE]
-    DM[NOW-DIAGRAM-MOBILE]
-  end
-  subgraph cloud [Path H]
-    H5[NOW-HOSTED-ADR]
-    D5[NOW-HOTPATH-D5]
-  end
-  HP14 --> APP1
-  APP1 --> HTT
-  APP1 --> STRIP
-  HTT --> LAND
-  STRIP --> LAND
-  HTT --> STT
-  STRIP --> HAND
-  APP1 --> LEAVE
-  LAND --> PWA
-  STT --> PWA
-  APP1 --> PREV
-  APP1 --> BL
-  BL --> DM
-  B01 --> B02
-  H5 --> D5
-  D5 -.->|same wire| STT
+  Foundation["GP0 Protocol foundation"]
+  Trust["GP1 Trusted host"]
+  Target["GP2 Target registry"]
+  Chat["GP3 Managed chat runtime"]
+  IOS["GP4 iOS binding"]
+  Resume["GP5 Durable resume"]
+  Call["GP6 Remote call"]
+  Present["GP7 Presenter projection"]
+  Conformance["GP8 Conformance gate"]
+  Release["GP9 Release services"]
+
+  Foundation -->|authorizes| Trust
+  Foundation -->|types| Target
+  Trust -->|protects| Target
+  Target -->|scopes| Chat
+  Chat -->|projects through| IOS
+  Chat -->|persists into| Resume
+  IOS -->|launches| Call
+  Call -->|hosts| Present
+  Resume -->|replays in| IOS
+  Present -->|is verified by| Conformance
+  Resume -->|is verified by| Conformance
+  Conformance -->|unblocks| Release
 ```
 
-Caption:
+Caption: solid arrows are hard delivery dependencies. A task may be developed
+in parallel, but it cannot be accepted before its incoming dependencies pass.
 
-- Solid edges = preferred build order (MC1 verbs before hosted ops).
-- Path H owner gate is **closed** (accepted); D5 is engineering.
-- Browse lite + mobile diagram contract landed; glance (B02) wires live sources.
-- PWA display name: **Cline Drive**. Mic default: **muted** (enable via strip).
+Six-system tags keep each task honest: **P** people, **D** data, **H** hardware,
+**S** software, **Pr** process, and **N** network.
 
-## Now plan (DrivePlan shape)
+## Now · prove one connected vertical slice
 
-Status vocabulary matches multi-device: `done` · `wip` · `todo` · `blocked` · `yagni`.
+| Task | Claim | Owner | Systems | Depends on | Acceptance evidence |
+|---|---|---|---|---|---|
+| **GP0 Protocol foundation** | `claim:drv-golden-path-contract` | Protocol maintainers | D, S, Pr | — | Lifecycle and title fixtures pass in Cline, collaboration-harness, and drivemode-mcp; leave/end cleanup and coordinator-idempotent end agree. |
+| **GP1 Trusted host** | `claim:drv-host-trust` | Cline host + security | P, D, S, Pr, N | GP0 | A fresh client pairs with an authenticated host, stores the credential in platform secure storage, reconnects after restart, and cannot mutate another workspace. |
+| **GP2 Target registry** | `claim:drv-target-resolution` | Cline host | D, S, N | GP0, GP1 | The host resolves opaque repository/folder references, returns access posture and connection state, rejects stale grants, and never exposes raw host paths unnecessarily. |
+| **GP3 Managed chat runtime** | `claim:drv-managed-chat` | Cline runtime | P, D, S, Pr, N | GP2 | Create/list/send/cancel/resume operate against a real conversation catalog; assistant output, approval requests, failures, and terminal state arrive as ordered typed events. |
+| **GP4 iOS managed-chat binding** | `claim:drv-ios-managed-chat` | drive-ios | P, H, S, N | GP3 | Work opens to the selected target, sends through the managed runtime, renders live assistant/work events, exposes truthful offline/error states, and never substitutes seeded data. |
+| **GP5 Durable resume** | `claim:drv-return-loop` | Hub persistence | D, S, Pr, N | GP3, GP4 | Kill and restart host and client; reconnect from a cursor without duplicates or gaps, restore the conversation and approvals, and label any expired transient state. |
+| **GP8 Cross-repo conformance** | `claim:drv-cross-repo-conformance` | Release engineering | P, D, H, S, Pr, N | GP1–GP5 | One `drive-dev` scenario boots deterministic fixtures and verifies schemas, event folds, auth refusal, reconnect, target loss, chat completion, and cleanup across all four repositories. |
 
-| Task id | Title | Status | Depends on | Gate / note |
-|---|---|---|---|---|
-| NOW-APP-SHELL | `?app=1` nav strip + Join/Continue lobby | **done** | — | Hotpath D4 + MC1 partial |
-| NOW-SHEETS | Plan / audit / captions as strip sheets | **done** | NOW-APP-SHELL | Hotpath D4 residual |
-| NOW-HOLD-TALK | Hold-to-talk primary on `?app=1` call | **done** | NOW-APP-SHELL | 52px press-hold; temp-unmute for utterance; desk mic/composer demoted |
-| NOW-STRIP-44 | 44px call strip + one-hand reach | **done** | NOW-APP-SHELL | App strip: mic · hand · CC · Leave (`size-11`) |
-| NOW-LANDSCAPE | Landscape call shell usable | **done** | NOW-HOLD-TALK, NOW-STRIP-44 | App grid Spotlight \| hold+strip; short-height min-h override |
-| NOW-RAISE-HAND | Raise-hand finishing chrome on phone | **done** | NOW-STRIP-44 | Full-width interrupt banner above strip |
-| NOW-LEAVE-COPY | Leave-without-loss copy (not End) | **done** | NOW-APP-SHELL | Visible Leave + lobby keep-running note |
-| NOW-STT-SAFARI | Hold-to-talk + STT on Safari / iOS | **done** | NOW-HOLD-TALK | Hub `Permissions-Policy: microphone=(self)`; Safari copy |
-| NOW-PREVIEW | Preview honesty chip contract all devices | **done** | NOW-APP-SHELL | `PREVIEW_CHIP_LABEL` on app lobby + demo Spotlight |
-| NOW-IOS-SMOKE | SwiftUI Open→Home→Call→Approval→Settings smoke | **done** | — | B01 full `DemoSession` loop; [DEMO.md](../../../../../../apps/drive-ios/DEMO.md) |
-| NOW-IOS-GLANCE | iOS reads live gateway room snapshot (glance) | todo | NOW-IOS-SMOKE | B12–B14 + B17 → B02; [native stack](../ios-native-client/delivery.md) |
-| NOW-PWA | Web manifest + standalone + mic policy | **done** | NOW-LANDSCAPE, NOW-STT-SAFARI | `manifest.webmanifest` name **Cline Drive**; `?app=1` start |
-| NOW-FIRST-OPEN | Credential-free first-open → fixture room | **done** | NOW-HOLD-TALK, NOW-PREVIEW | Unconfigured Join → demo fixture + Preview chip |
-| NOW-HOSTED-ADR | Owner accept ADR-0016 path H | **done** | — | [DEC-mobile-consumer-owner](../../decisions/DEC-mobile-consumer-owner.md) |
-| NOW-HOTPATH-D5 | Cloud signaling (same wire, hosted writer) | todo | NOW-HOSTED-ADR | Prefer after NOW-HOLD-TALK / NOW-STRIP-44 |
-| NOW-BROWSE-LITE | Browse lite: rooms / tasks / artifacts / status | **done** | NOW-APP-SHELL | hub `?browse=` + ios `BrowseViews`; not full Status Hub |
-| NOW-DIAGRAM-MOBILE | Viewport-aware diagrams (tap / stack / ultrawide) | **done** | NOW-BROWSE-LITE | `visualEngine` frame params → ScreenArtifact; phone tap-to-render off Spotlight |
+### Now exit gate
 
-## Broader portfolio (not Now — still open)
+A reviewer can complete the golden path against a synthetic repository from a
+fresh install without source edits, local-only fake state, manual database
+seeding, or knowledge of a developer port. The same evidence bundle must show
+the normal journey, permission denial, host loss, retry, and resume.
 
-These are real gaps. They stay **out of the Now sequencer** so agents do not
-thrash. Pull a row into Now only when it unblocks a consumer job.
+## Next · add live collaboration and release truth
 
-### ADLC factory ([adlc-drive-factory](../adlc-drive-factory/))
+| Task | Claim | Owner | Systems | Depends on | Acceptance evidence |
+|---|---|---|---|---|---|
+| **GP6 Remote call binding** | `claim:drv-remote-call-binding` | Cline host + clients | P, D, H, S, N | GP4, GP5 | Default preset and configurator join the real room; roster, leave/end, reconnect, and call history are host-authoritative. |
+| **GP7 Native Presenter projection** | `claim:drv-presenter-native` | Cline + drive-ios | P, D, H, S, Pr, N | GP6 | Exclusive, expiring grants transfer/revoke through the coordinator; Spotlight projects typed `stage` events; no pixel capture; the signed Director descriptor is fetched rather than fabricated locally. |
+| **GP9 Release services** | `claim:drv-release-services` | Account, data, and iOS release owners | P, D, H, S, Pr, N | GP8 | Real auth/deletion, Billing/Usage/Analytics projections, consent, privacy manifest, reviewer tenant, accessibility evidence, and the App Store release gates agree with production behavior. |
 
-| Phase | Work | Status |
-|---|---|---|
-| 2 | Credential onboarding banner | landed |
-| 3 | First-call TTS enable (B2) | open |
-| 4 | Voice facets via `drive_config_put` | open |
-| 5 | Status→Drive stall offer bridge | open |
-| 6 | Traces as product | open |
-| 7 | Receipt ship atom on complete | open |
+## Later · valuable, not a golden-path dependency
 
-### Authority / evidence
-
-| Track | What’s left |
+| Work | Why later / entry condition |
 |---|---|
-| [ADR-0025](../../adr/ADR-0025-enforced-authority.md) | Finding 1 rows after E1 L1 |
-| [ADR-0026](../../adr/ADR-0026-evidence-backed-done.md) | Full claim class + BACKLOG render |
-| [ADR-0019](../../adr/ADR-0019-driveplan-kanban-interop-wire.md) | Thick Kanban/hub host adapters (managed execution, not board sync) |
+| Invocation-scoped sensing from Cline #15 / ADR-0037 | Preserve the Proposed decision, but keep it non-selectable and write no runtime sensor code until the ADR is accepted and a denylist, visible per-session arming, union-wide forbidden-field guard, retention policy, and audit tooling exist. |
+| Downloadable Core AI/MLX coding models | Revisit after the bounded Apple system-model spike is validated on supported hardware. |
+| Automatic A/B testing | Requires consent, stable assignment, exposure/outcome events, guardrails, and a data-policy revision. |
+| Showcase expansion and hosted feedback | Does not unblock target-aware chat, resume, or call coordination. |
+| Multi-region cloud optimization | Start only after production traffic and SLOs identify a real bottleneck; keep the first hosted topology simple. |
 
-### UX quality / drive-web
+Merging Cline #15 records a design option; it does **not** authorize collection,
+background sensing, or runtime implementation.
 
-[ux-quality](../ux-quality/) phases over real webview + [hosted-preview](../hosted-preview/)
-tiers 1–3. Brand align (green Live, light-first) before restyling demos —
-[MOBILE-BRAND-STYLING](../../../../design/brand/MOBILE-BRAND-STYLING.md).
+## Delivered foundation and superseded queue
 
-### Historic TASK-GRAPH DRV rows
+The previous consumer-path sequencer proved the native/PWA shell: `?app=1`,
+hold-to-talk, compact call strip, landscape, raise hand, leave-without-loss,
+Safari STT, Preview labeling, PWA metadata, Browse lite, mobile diagrams, and the
+standalone iOS smoke loop. Those tasks remain historical evidence and are not
+reopened here.
 
-Many Phase 1–4 `DRV-*` cards in the demo fixture are still `pending` /
-`in_progress` relative to the original graph. Prefer **Now** for consumer
-delivery; use historic DRV ids only when a Now task explicitly cites one.
+Two old open rows are subsumed rather than duplicated:
 
-## Owner decisions (closed 2026-08-07)
+- `NOW-IOS-GLANCE` → **GP4 iOS managed-chat binding**.
+- `NOW-HOTPATH-D5` → **GP1 Trusted host**, **GP3 Managed chat runtime**, and
+  **GP6 Remote call binding**.
 
-Canonical: [DEC-mobile-consumer-owner](../../decisions/DEC-mobile-consumer-owner.md).
+The Status Hub `?demoPlans=1` fixture still renders those historical `NOW-*`
+IDs. It is a showcase, not the current delivery board, until it projects the
+claims registry.
 
-| # | Answer | Effect |
-|---|---|---|
-| 1 | **Yes** — path H | NOW-HOSTED-ADR done; NOW-HOTPATH-D5 todo |
-| 2 | **Default muted**; strip = enable-mic toggle | NOW-HOLD-TALK teaching assumes muted start |
-| 3 | **Cline Drive** | NOW-PWA manifest `name` / `short_name` |
-| 4 | **Yes** — force MC3 | NOW-PWA stays in Now |
-| 5 | **Cline default (freemium)**; BYOK secondary | Hosted turns = Sign in with Cline; no Drive plan chrome |
+This is the zero-sum scope trade: sensing, Showcase, App Store submission, and
+cloud optimization stay out while GP1–GP5 and GP8 prove the core journey.
 
-Owner gates closed. Browse lite + mobile diagram contract landed. Next: iOS
-glance (NOW-IOS-GLANCE) / **NOW-HOTPATH-D5** when a hosted real-turn demo needs it.
+## Operating the map
 
-## Explicit YAGNI (still)
-
-- Android before ios + pwa Tier 1 green  
-- Live Activities / App Store before PWA retention evidence  
-- MCP as phone↔room bus  
-- Pixel WebRTC stage / multi-human TikTok rooms  
-- Offline hub on device  
+1. Select work only from a claim in the registry; do not mint a parallel task
+   list or re-seed the historical DriveKanban graph.
+2. Update the claim first when status changes. `verified_shipped` requires a
+   real repository evidence path and command under ADR-0026.
+3. Keep each PR on one dependency edge or one vertical acceptance scenario.
+4. A UI seam may be `active_partial`; it is not complete until the named host,
+   persistence, security, and failure evidence passes.
+5. Reflect device capability changes in the multi-device matrix, but keep this
+   file as the only sequencer for the golden-path implementation.
 
 ## Hand back
 
-1. Next: **NOW-IOS-GLANCE** / iOS smoke finish, or pull **NOW-HOTPATH-D5** for hosted turns.  
-2. Keep Status Hub open on `?demoPlans=1` while implementing — the map is the board.  
-3. Hosted site `_headers` should still grant `microphone=(self)` (hub already does).  
-4. After a Now task ships: flip status here, in [multi-device MATRIX](../multi-device/MATRIX.md), and in the demo fixture (same id).
+Start with **GP1 Trusted host** and **GP2 Target registry** in parallel with the
+test harness for **GP8**. Once those contracts are stable, drive **GP3 → GP4 →
+GP5** as one end-to-end slice. Do not pull GP6, GP7, GP9, or sensing into Now
+unless they unblock that slice.
