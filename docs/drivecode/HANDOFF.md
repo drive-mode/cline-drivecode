@@ -8,9 +8,11 @@ Drivecode should make Cline feel like a pair-programming call with recruitable a
 Titles, and the signed/non-exportable Director descriptor are **merged on
 `main`** — [PR #17](https://github.com/drive-mode/cline-drivecode/pull/17)
 landed 2026-08-18 after its Hub/CLI `presenterGrantId` fixture/projection
-failures were fixed in `9647c40`. The standalone collaboration-harness fold is
-being reconciled to this coordinator's leave/room-end title cleanup in
-[collaboration-harness #4](https://github.com/drive-mode/collaboration-harness/pull/4).
+failures were fixed in `9647c40`. The standalone collaboration-harness fold
+was reconciled to this coordinator's leave/room-end title cleanup in merged
+[collaboration-harness #4](https://github.com/drive-mode/collaboration-harness/pull/4),
+and the writer's coordinator-idempotent room end landed in merged
+[drivemode-mcp #4](https://github.com/drive-mode/drivemode-mcp/pull/4).
 The canonical contract is
 [the SDK architecture](../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy).
 All consumer documentation must keep **Spotlight** as the surface, `stage` as
@@ -77,6 +79,9 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
   delivery handoffs are phase/history references, not current status sources.
 - Do **not** re-run `scripts/seed-drive-kanban.mjs`; it seeds the historical
   graph. Retire or re-point the private board to the claims registry first.
+- [portfolio-now](plans/cline-drivemode/initiatives/portfolio-now/) is the
+  canonical dependency sequencer for the connected golden path. It orders
+  registry claims; it does not replace their status.
 
 ### Terminology note (2026-08)
 
@@ -149,7 +154,8 @@ CLI Status uses the live hub adapter; CLI Drive toggle best-effort `call_join`/`
 - **Mobile consumer product:** [mobile-consumer](plans/cline-drivemode/initiatives/mobile-consumer/) defines the shared phone-first jobs and path H. The standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) app is now an implemented preview, not merely a plan; its managed chat, target, account, call, and release-service connections remain open. Surfaces: [mobile-drive-surfaces.html](design/wireframes/mobile-drive-surfaces.html). **Path H Accepted** ([ADR-0016](plans/cline-drivemode/adr/ADR-0016-distribution-and-positioning.md) + [DEC-mobile-consumer-owner](plans/cline-drivemode/decisions/DEC-mobile-consumer-owner.md)); writer track is [ADR-0029](plans/cline-drivemode/adr/ADR-0029-room-hotpath-redesign.md) **H5**.
 - **Room hot path (H1–H4 shipped):** [drive-hotpath](plans/cline-drivemode/initiatives/drive-hotpath/) + [ADR-0029](plans/cline-drivemode/adr/ADR-0029-room-hotpath-redesign.md) — checkpoint, delta publish, in-process stage projector, layout sheets; **H5** cloud signaling is open engineering under the accepted path H, no longer owner-gated.
 - **MC1–MC3 on hub (`?app=1`):** Join/Continue; hold-to-talk; 44px Leave strip; landscape two-column; raise-hand banner; Preview chip; credential-free Join→demo; PWA manifest **Cline Drive**. Next: iOS glance / hosted D5.
-- **Now portfolio (dogfood):** [portfolio-now](plans/cline-drivemode/initiatives/portfolio-now/) — remaining consumer work as a DrivePlan; Status Hub `/status?demoPlans=1&statusMode=dependency-map` shows plan **Now · consumer path**.
+- **Golden-path project map:** [portfolio-now](plans/cline-drivemode/initiatives/portfolio-now/) sequences trusted host → target registry → managed chat → iOS binding → durable resume → cross-repo conformance. The older `?demoPlans=1` map remains a historical showcase until it projects registry claims.
+- **Invocation-scoped sensing:** [ADR-0037](plans/cline-drivemode/adr/ADR-0037-invocation-scoped-sensing.md) is preserved as a Proposed decision after merged [PR #15](https://github.com/drive-mode/cline-drivecode/pull/15). Runtime implementation is Later and is not authorized by the merge.
 - **Owner defaults (2026-08-07):** [DEC-mobile-consumer-owner](plans/cline-drivemode/decisions/DEC-mobile-consumer-owner.md) — path H yes; mic default muted; PWA name **Cline Drive**; MC3 on Now; hosted economics **Cline default (freemium)**, BYOK secondary.
 - **UX quality (web + mobile browser):** [ux-quality](plans/cline-drivemode/initiatives/ux-quality/) — surface inventory, award bar, phases 0–7 over [drive-web](plans/cline-drivemode/initiatives/drive-web/) + [hosted-preview](plans/cline-drivemode/initiatives/hosted-preview/). Native iOS is active in the standalone repository; Android remains YAGNI. Keep web and native on the same room/title contracts.
 - **ADLC factory track (plan):** [adlc-drive-factory](plans/cline-drivemode/initiatives/adlc-drive-factory/) + [ADR-0028](plans/cline-drivemode/adr/ADR-0028-adlc-control-plane.md) (**Accepted**) — first-use on-ramps, Status→Drive offer bridge, traces polish, receipt ship atom. Does not replace [MVP-beta.md](plans/cline-drivemode/delivery/MVP-beta.md) (MVP already delivered).

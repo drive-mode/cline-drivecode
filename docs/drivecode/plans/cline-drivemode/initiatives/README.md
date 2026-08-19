@@ -19,4 +19,4 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [multi-device](multi-device/) | active | Cross-device feature list + backlog (hub / PWA / iOS / TUI); skill `multi-device-backlog` |
 | [ios-native-client](ios-native-client/) | active (plan) | Secure live SwiftUI client, least-authority Mobile Drive Gateway, stacked delivery + production-work gates |
 | [drive-hotpath](drive-hotpath/) | active | Room wire hot path — fold checkpoint, delta publish, one stage clock ([ADR-0029](../adr/ADR-0029-room-hotpath-redesign.md)) |
-| [portfolio-now](portfolio-now/) | active (bootstrap) | Remaining **Now** work as a DrivePlan — dogfood via Status `?demoPlans=1` |
+| [portfolio-now](portfolio-now/) | active | Canonical golden-path architecture implementation map; claims-registry-backed Now / Next / Later sequencing |

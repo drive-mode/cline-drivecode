@@ -4,7 +4,10 @@
 
 **What this is not.** A status source. The registry is the only source of delivery truth ([AGENT-RUNBOOK](AGENT-RUNBOOK.md)). Every status word here traces to a `claim:<id>`, an ADR, or a linked plan — if this file and the registry disagree, **the registry wins and this file is stale**.
 
-**Baseline.** Rendered against `main` `9e1593e160`. Rows citing PRs [#216](https://github.com/hhalperin/cline-drivecode/pull/216) / [#217](https://github.com/hhalperin/cline-drivecode/pull/217) describe work not yet on main.
+**Baseline.** Reconciled against `main` `8448d8d59` on 2026-08-19. The
+golden-path sequence is ordered by
+[portfolio-now](../initiatives/portfolio-now/); claim status in the registry
+remains authoritative.
 
 **Status vocabulary.** `verified shipped` · `active partial` · `planned` · `decision-gated` · `candidate patch review` · `reference/historical` — defined in [PLAN-backlog-reconciliation.md](PLAN-backlog-reconciliation.md#status-vocabulary).
 
@@ -16,7 +19,7 @@ Recorded here as the delivery consequence; the binding records are the linked AD
 
 | # | Decision | Outcome | Consequence for this backlog |
 |---|---|---|---|
-| 1 | ADR-0016 path H — hosted consumer runtime | **Opened as a real fork.** Hosted single-writer room service on the same Drive wire; multi-human rooms stay a non-goal | `NOW-HOSTED-ADR` / hotpath D5 stop being owner-blocked and become scoped engineering. The binding record is `DEC-mobile-consumer-owner` plus the ADR-0016 Status amendment, both landing on PR [#217](https://github.com/hhalperin/cline-drivecode/pull/217) — this row does not duplicate them. The ADR-0000 "Explicitly not open anymore" hosted-beta line still needs a status flip. **Freemium vs BYOK economics for hosted turns remains open** (see DG-HOSTED-ECON) |
+| 1 | ADR-0016 path H — hosted consumer runtime | **Opened as a real fork.** Hosted single-writer room service on the same Drive wire; multi-human rooms stay a non-goal | The binding `DEC-mobile-consumer-owner` and ADR-0016 amendment are on main. The work is decomposed into GP1 trusted host, GP3 managed chat, and GP6 remote call in [portfolio-now](../initiatives/portfolio-now/). Cline-default freemium with BYOK secondary is the settled posture; implementation economics stay account-service-owned. |
 | 2 | Voice backend for the beta | **`browser-speechSynthesis` floor now**; Kokoro-82M slices land after, behind the same `TtsPort`, with no change to the default-off `tts.enabled` posture | Beta is unblocked with zero voice build work. [drive-audio](../initiatives/drive-audio/overview.md) slices 1–7 stay queued as product work, not beta blockers |
 | 3 | ux-quality #1 — [research/22](../research/22-default-posture.md) as shipping defaults | **Accepted, with one variance: add an opt-in spend cap.** Always-visible spend stays the headline; the user may set a cap explicitly and is warned before it fires | Adds the spend-cap row below. Fork depth 1 and the earcon split are accepted as written |
 | 4 | ux-quality #5 / mobile PWA | **Committed to the roadmap now.** Minimal scope: manifest, icons, standalone, mic policy — no offline hub | PWA leaves YAGNI; stays sequenced behind landscape + Safari STT |
@@ -42,7 +45,6 @@ Not engineering tasks. Per [ADR-0000](../adr/ADR-0000-status-board.md), an unres
 | DG-0028 | Accept ADLC control plane | Frames the [adlc-drive-factory](../initiatives/adlc-drive-factory/) phases below | PM | [ADR-0028](../adr/ADR-0028-adlc-control-plane.md) |
 | DG-0020 | Accept session delivery CI/CD | Hold + rewind, coalesced projection, `run_expensive` wiring. No product path yet | SE lead | [ADR-0020](../adr/ADR-0020-session-delivery-cicd.md) |
 | DG-BETA | Beta support path | GitHub issues on the fork vs something managed. Named as a beta-open blocker | Harrison | [MVP-beta](MVP-beta.md), [ops/beta-support](../ops/beta-support.md) |
-| DG-HOSTED-ECON | Freemium vs BYOK economics for hosted turns | Opened by decision 1 and explicitly left unanswered in `DEC-mobile-consumer-owner` (PR [#217](https://github.com/hhalperin/cline-drivecode/pull/217)). Do not invent pricing UX until answered | Harrison | mobile-consumer owner Q4 |
 | DG-0017 | Narration-bound cues | Deferred, not open — sits behind S9, which decision 7 above holds | — | [ADR-0017](../adr/ADR-0017-narration-bound-presentation-cues.md) |
 
 ---
@@ -60,6 +62,11 @@ Foundations exist; a bounded acceptance condition does not. Each row names one c
 | RECRUIT-ADD | General Add → Recruit entry point | active partial | Recruit is reachable outside the stall path | `claim:drv-recruit`, `claim:drv-recruit-stall` |
 | INTEROP-HOST | Thicken ADR-0019 Kanban/hub host adapters | active partial | Managed execution through the interop wire, not board sync | [ADR-0019](../adr/ADR-0019-driveplan-kanban-interop-wire.md) |
 | SAT-RESID | Task-satisfaction residuals | active partial | Detailed queue stays in [REMAINING-task-satisfaction.md](REMAINING-task-satisfaction.md) — one row here by design, per the reconciliation plan | `claim:drv-task-metrics` et al |
+| GOLDEN-CONTRACT | Cross-repository lifecycle and Agent Title convergence | active partial | Cline, harness, and writer agree; connected mobile conformance remains | `claim:drv-golden-path-contract` |
+| GOLDEN-CHAT | Target-aware managed chat runtime | active partial | Real catalog/output/approval primitives exist, but the remote consumer contract is incomplete | `claim:drv-managed-chat` |
+| GOLDEN-RESUME | Durable leave, restart, and resume | active partial | Resume from a cursor without event gaps or duplicates across host/client restart | `claim:drv-return-loop` |
+| GOLDEN-CONFORMANCE | Deterministic cross-repository golden-path scenario | active partial | One `drive-dev` evidence bundle covers auth, targets, chat, reconnect, failures, and cleanup | `claim:drv-cross-repo-conformance` |
+| PRESENTER-NATIVE | Native Presenter and signed Director projection | active partial | Standalone iOS uses live exclusive grants and fetches the host descriptor | `claim:drv-presenter-native` |
 
 ---
 
@@ -67,17 +74,19 @@ Foundations exist; a bounded acceptance condition does not. Each row names one c
 
 Direction exists; `main` has no product implementation evidence for the named boundary.
 
-### C1 · Consumer call path
+### C1 · Connected golden path
 
-The Now sequencer lives in `initiatives/portfolio-now/` on PR [#217](https://github.com/hhalperin/cline-drivecode/pull/217) (not yet on main). Its recommended next build is hold-to-talk plus the 44px call strip. Link this section to the merged path once #217 lands.
+The canonical dependency and evidence sequence is
+[portfolio-now](../initiatives/portfolio-now/). The previous `NOW-*` fixture is
+historical UI evidence; it is not the current delivery board.
 
-| ID | Work | Depends on | Acceptance boundary |
-|---|---|---|---|
-| NOW-HOLD-TALK | Hold-to-talk primary on the `?app=1` call | `?app=1` shell (landed on #217 track) | Consumer-primary mic verb on phone; hub mic already exists |
-| NOW-STRIP-44 | 44px call strip + one-hand reach | `?app=1` shell | Every strip action reachable at 360×640 without hover |
-| NOW-LANDSCAPE | Landscape call shell | NOW-HOLD-TALK, NOW-STRIP-44 | Usable landscape call in the webview, not only in the surfaces HTML |
-| NOW-PWA | Manifest + standalone + mic policy | NOW-LANDSCAPE, Safari STT | **Committed** per decision 4. Minimal scope only |
-| HOTPATH-D5 | Cloud signaling — hosted single-writer, same wire | ADR-0016 amendment (decision 1) | **No longer owner-blocked.** Needs a scoped ADR amendment before implementation |
+| ID | Work | Depends on | Acceptance boundary | Claim |
+|---|---|---|---|---|
+| GP1 | Authenticated host discovery and pairing | Protocol foundation | Secure credential lifecycle and workspace authority survive reconnect | `claim:drv-host-trust` |
+| GP2 | Opaque target registry | GP1 | Host resolves access posture without leaking unnecessary raw paths | `claim:drv-target-resolution` |
+| GP4 | Standalone iOS managed-chat binding | GP3 managed chat | Target-aware assistant events and truthful failure states replace seeded state | `claim:drv-ios-managed-chat` |
+| GP6 | Host-authoritative remote call | GP4, durable resume | Preset/configurator joins the real room and restores its lifecycle | `claim:drv-remote-call-binding` |
+| GP9 | Production release services | Cross-repo conformance | Account/deletion, consent, analytics, accessibility, privacy, and reviewer backend agree | `claim:drv-release-services` |
 
 ### C2 · UX quality
 
@@ -117,7 +126,9 @@ S9 (`walkthrough.animation`) is held per decision 7 — it is unblocked technica
 
 ### C5 · Multi-device
 
-[multi-device/BACKLOG.md](../initiatives/multi-device/BACKLOG.md) owns the device-parity queue: B01 in progress (`apps/drive-ios`), B02–B08 open. One row here by design.
+[multi-device/BACKLOG.md](../initiatives/multi-device/BACKLOG.md) owns device
+parity. The standalone `drive-ios` repository is the native source of truth;
+the in-tree app is a legacy fixture. One row stays here by design.
 
 ### C6 · Status dependency map
 
@@ -139,14 +150,9 @@ S9 (`walkthrough.animation`) is held per decision 7 — it is unblocked technica
 
 ## Candidate patch review
 
-| Ref | Disposition needed |
-|---|---|
-| PR [#216](https://github.com/hhalperin/cline-drivecode/pull/216) | Room hot path slices 1–2 (fold checkpoint, delta publish) + ADR-0029. Open |
-| PR [#217](https://github.com/hhalperin/cline-drivecode/pull/217) | `portfolio-now` initiative, hotpath D3–D4, `?app=1` lobby, **`DEC-mobile-consumer-owner` + the ADR-0016 path H amendment**. Draft |
-
-Until these land, four files could not be updated to point here without conflicting: [HANDOFF.md](../../../HANDOFF.md), [ADR-0000 status board](../adr/ADR-0000-status-board.md), [initiatives/README.md](../initiatives/README.md), and [ADR-0016](../adr/ADR-0016-distribution-and-positioning.md). Folding them in is the first follow-up after #216/#217 merge.
-
-Owner decisions 1 and 4 above were recorded concurrently by the #217 session as `DEC-mobile-consumer-owner`; the two records agree. That DEC also settles two questions not asked here — mic muted on join (the strip Mute control **is** the enable-microphone toggle) and the home-screen product string **"Cline Drive"**. Treat the DEC as binding for those; this table does not restate them.
+The historical #216/#217 work is already represented on current main; there is
+no candidate patch queue here. New work must advance a claim and cite its
+backlog disposition in the PR.
 
 ---
 
