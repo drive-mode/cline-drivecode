@@ -1,6 +1,9 @@
 # status-dependency-graph · Delivery slices
 
-Implements [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md) against the [UX.md](UX.md) experience. No calendar estimates — slice by dependency and verifiable exit.
+Implements [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md) against the [UX.md](UX.md)
+experience. **S0–S4 are delivered**; their sections remain as the acceptance
+contract, not open work. **S5** is the only active slice. No calendar estimates
+— slice by dependency and verifiable exit.
 
 ```mermaid
 flowchart LR
@@ -10,7 +13,8 @@ flowchart LR
   S2b[S2b Fit and density]
   S3[S3 Plans rail]
   S4[S4 Artifacts + polish]
-  S0 --> S1 --> S2 --> S2b --> S3 --> S4
+  S5[S5 Live claims source]
+  S0 --> S1 --> S2 --> S2b --> S3 --> S4 --> S5
 ```
 
 ## S0 · UX lock (docs)
@@ -56,3 +60,15 @@ Implements the [UX fit ladder](UX.md#fit--density-all-tasks-on-screen-at-start):
 - Demo fixture supplies sample artifacts; production stays unlabeled until a real source exists.
 - Responsive rail collapse; reduced-motion camera; DEMO.md + assets updated.
 - Exit: DEMO runbook path works; a11y smoke (keyboard + alert + live region).
+
+## S5 · Live architecture claims source
+
+- [x] Extend the claims registry with validated project-map metadata for GP0–GP9.
+- [x] Expose it through a scoped, read-only host operation and neutral shared model.
+- Render that source in `/tasks`; keep Team runtime as the fallback when a
+  repository has no claims registry and keep `?demoPlans=1` explicitly demo-only.
+- Do not fabricate TeamTask dates/assignees, write `.drive/bank`, or synchronize
+  claim and DriveTask states.
+- Exit: duplicate IDs, missing references, cycles, lane inversions, missing
+  registry, and host-path leakage are covered; the live view shows exactly
+  GP0–GP9 and no historical `NOW-*` identities.

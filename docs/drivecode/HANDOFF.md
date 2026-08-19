@@ -161,7 +161,9 @@ CLI Status uses the live hub adapter; CLI Drive toggle best-effort `call_join`/`
 - **ADLC factory track (plan):** [adlc-drive-factory](plans/cline-drivemode/initiatives/adlc-drive-factory/) + [ADR-0028](plans/cline-drivemode/adr/ADR-0028-adlc-control-plane.md) (**Accepted**) — first-use on-ramps, Status→Drive offer bridge, traces polish, receipt ship atom. Does not replace [MVP-beta.md](plans/cline-drivemode/delivery/MVP-beta.md) (MVP already delivered).
 - **ADR board cleanup (2026-08-08):** [ADR-0000](plans/cline-drivemode/adr/ADR-0000-status-board.md) — clusters + decision coverage gaps; ADR-0023 reconciled; 0023/0027/0028/0029 Accepted.
 - ADR-0019 full DrivePlan–Kanban Interop wire (after ADR-0018 D1–D2 proved on this branch) — [driveplan-agent-runtime](plans/cline-drivemode/initiatives/driveplan-agent-runtime/).
-- Optional composers: `/recruit`, `/pack`; Spatial Dependency map (`DRV-DEP-MAP`) still card-grid only.
+- Optional composers: `/recruit`, `/pack`; the spatial Dependency map ships,
+  as do the neutral GP0–GP9 model and scoped host read. Their lifecycle-neutral
+  `/tasks` adapter remains the bounded `DRV-DEP-MAP` residual.
 - Isolation required before `teamOpt` multi-seat beyond fail-closed seatCap.
 - Discord channels IA polish (out of Tracks A–F).
 

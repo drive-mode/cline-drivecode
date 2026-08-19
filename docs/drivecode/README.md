@@ -215,11 +215,15 @@ task database and not a scheduling engine. It projects the canonical
 That keeps task ownership and writes in the team runtime, while the Hub is only
 responsible for transport and presentation.
 
-The hub UI today renders that projection as a layered **card grid** with a text
-detail aside. The planned interactive graph (pan / zoom, labeled artifact edges,
-Plans rail) is specified in [DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md)
-and [status-dependency-graph/UX.md](plans/cline-drivemode/initiatives/status-dependency-graph/UX.md);
-throwaway wireframe: [status-dependency-graph.html](design/wireframes/status-dependency-graph.html).
+The hub UI renders that projection as an interactive spatial graph with pan,
+zoom, deterministic Fit, keyboard navigation, task detail, optional artifact
+labels, and a Plans rail. Team runtime powers the operational graph and explicit
+demo adapters provide historical plan annotations. The canonical architecture
+map now has a separate neutral model and scoped `drive_project_map_get` host
+read over the claims registry; the remaining boundary is adapting that neutral
+model into `/tasks` without fabricating TeamTask or DriveTask lifecycle. See
+[DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md) and
+[status-dependency-graph/UX.md](plans/cline-drivemode/initiatives/status-dependency-graph/UX.md).
 
 Each node has a stable view identity of `teamId:taskId`. The team prefix avoids
 colliding task IDs when several active teams use common names such as `build` or
@@ -398,8 +402,11 @@ Stated plainly so nobody plans around it:
 - **Recruit product Add + RosterPack library UI.** Kernel `scoreNeed` / pack expand and
   hub `call_add_roster_pack` / remove exist; stall→seat UI exists. There is no general
   Add→Recruit flow or pack library / `/pack` surface yet.
-- **Spatial Dependency map.** Status Hub ships a **card-grid** Dependency map lens.
-  Interactive pan/zoom graph + Plans rail remains [DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md).
+- **Live architecture-project UI binding.** The spatial Dependency map and the
+  validated, read-only GP0–GP9 host source ship independently. The bounded
+  [DRV-DEP-MAP](plans/cline-drivemode/features/DRV-DEP-MAP.md) residual is a
+  lifecycle-neutral adapter between them; demo membership must never stand in
+  for production truth.
 - **Multi-human rooms.** The room primitive carries `participants[]` so it does
   not need a rewrite later, but no multi-human media plane exists.
 - **Native iOS production connection and App Store release.** The standalone

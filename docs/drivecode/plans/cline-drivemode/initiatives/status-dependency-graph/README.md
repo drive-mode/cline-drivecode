@@ -1,10 +1,13 @@
 # status-dependency-graph · Initiative index
 
-**Status:** active (UX locked for implementation)  
+**Status:** active (spatial graph shipped; live claims projection open)
 **Primary DRV:** [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md)  
 **Related:** Status Hub product reference in [nest README](../../../../README.md#dependency-map), [DRV-TASK-BANK](../../features/DRV-TASK-BANK.md)
 
-Upgrade the Status Hub **Dependency map** lens from a layered card grid into an interactive task graph with a right-hand Plans rail.
+The Status Hub **Dependency map** is now an interactive task graph with a
+right-hand Plans rail. The neutral, read-only architecture-claims model and
+host command also ship. This initiative remains active only for their `/tasks`
+binding and visual evidence refresh.
 
 | File | What |
 |---|---|
