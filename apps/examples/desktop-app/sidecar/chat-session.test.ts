@@ -158,6 +158,24 @@ describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
 		expect(config.maxIterations).toBe(7);
 	});
 
+	it("leaves capability selection to the mode preset and global tool policy", () => {
+		const root = mkdtempSync(join(tmpdir(), "desktop-tool-policy-"));
+
+		const config = buildCoreSessionConfig({
+			provider: "cline",
+			model: "anthropic/claude-sonnet-4.6",
+			cwd: root,
+			workspaceRoot: root,
+			enableSpawn: false,
+			enableTeams: false,
+			teamName: "desktop-team",
+		});
+
+		expect(config).not.toHaveProperty("enableSpawnAgent");
+		expect(config).not.toHaveProperty("enableAgentTeams");
+		expect(config.teamName).toBe("desktop-team");
+	});
+
 	it("includes compaction: { enabled: true } when global mode unset (BL-6.5)", () => {
 		const root = mkdtempSync(join(tmpdir(), "desktop-compaction-"));
 

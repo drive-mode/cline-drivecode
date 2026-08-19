@@ -27,7 +27,7 @@ Keep these ownership rules while resolving future upstream merges:
 - Preserve the signed/non-exportable Director policy, typed Presenter grants, resource policy, project map, task bank, and Drive UI when upstream touches adjacent exports or clients.
 - Do not expose Drive-only package internals through `@cline/sdk` merely to avoid a direct `@cline/drive` import.
 
-The 2026-08-19 refresh had one overlapping test file. The resolution retained Drive's desktop plugin/compaction coverage and upstream's session-mode plus skill-command coverage. No production conflict required a Drive-specific fork.
+The 2026-08-19 refresh had one overlapping test file. The resolution retained Drive's desktop plugin/compaction coverage and upstream's session-mode plus skill-command coverage. Post-merge validation also removed legacy desktop capability flags that could override the current mode preset; Drive's max-iteration, plugin, and compaction behavior remains additive.
 
 ## Repeatable sync procedure
 

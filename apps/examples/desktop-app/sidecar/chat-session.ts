@@ -466,16 +466,6 @@ export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 			? { maxIterations: explicitMaxIterations }
 			: {}),
 	});
-	const enableSpawnAgent =
-		config.enableSpawn ??
-		config.enableSpawnAgent ??
-		config.enable_spawn ??
-		sessionFeatures.enableSpawnAgent;
-	const enableAgentTeams =
-		config.enableTeams ??
-		config.enableAgentTeams ??
-		config.enable_teams ??
-		sessionFeatures.enableAgentTeams;
 	const pluginCwd = cwd || workspaceRoot || process.cwd();
 	const sessionPlugins = buildDesktopSessionPluginInjection(
 		pluginCwd,
@@ -497,14 +487,10 @@ export function buildCoreSessionConfig(config: JsonRecord): JsonRecord {
 			? { maxIterations: sessionFeatures.maxIterations }
 			: {}),
 		enableTools: config.enableTools ?? config.enable_tools ?? true,
-		enableSpawnAgent,
-		enableAgentTeams,
 		...(thinking !== undefined ? { thinking } : {}),
 		...(reasoningEffort ? { reasoningEffort } : {}),
 		...(thinkingBudgetTokens !== undefined ? { thinkingBudgetTokens } : {}),
-		teamName: enableAgentTeams
-			? (config.teamName ?? config.team_name)
-			: undefined,
+		teamName: config.teamName ?? config.team_name,
 		missionLogIntervalSteps:
 			config.missionStepInterval ?? config.missionLogIntervalSteps,
 		missionLogIntervalMs:
