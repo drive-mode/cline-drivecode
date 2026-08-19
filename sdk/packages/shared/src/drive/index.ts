@@ -280,6 +280,8 @@ export {
 export {
 	type AgentParticipant,
 	AgentParticipantSchema,
+	type AgentRuntimeBadge,
+	AgentRuntimeBadgeSchema,
 	type AgentTitle,
 	type AgentTitleGrant,
 	AgentTitleGrantSchema,

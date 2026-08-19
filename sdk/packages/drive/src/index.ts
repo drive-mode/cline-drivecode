@@ -322,6 +322,7 @@ export {
 	type ProjectedKanbanCard,
 } from "./kanbanInterop.js";
 export {
+	allowNarrationByRate,
 	type NarrationCandidate,
 	type NarrationDensity,
 	narrate,

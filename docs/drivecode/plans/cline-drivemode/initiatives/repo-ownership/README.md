@@ -54,7 +54,7 @@ drive-ios · WriterClient.swift           re-declares the title vocabulary in Sw
 
 Four consequences follow, in descending severity.
 
-### 1 · The drifted copy is the one that ships
+### 1 · The drifted copy is the one that ships — and the drift runs both ways
 
 `drivemode-mcp` imports `reduceRoom` from `@drive-mode/collaboration-harness`,
 not from `@cline/drive`, and `drive-ios` polls `drivemode-mcp`. The whole iOS
@@ -69,6 +69,15 @@ exports that the canonical kernel has:
 
 The Presenter exclusivity work is live in the canonical kernel and absent from
 the copy every downstream consumer actually uses.
+
+The drift is **not one-way**. Three symbols existed only in the harness, so the
+canonical kernel was not a superset of it:
+
+| Harness-only symbol | Resolution |
+|---|---|
+| `AgentRuntimeBadgeSchema` / `AgentRuntimeBadge` | **Ported** to `@cline/shared/drive/room.ts`. `docs/drivecode/README.md` already documents a sanitized runtime badge as distinct from persona, Agent Title, and activity — the concept was described in this repository while only implemented in the one being retired. |
+| `allowNarrationByRate` | **Ported** to `@cline/drive/narrationPolicy.ts` and exported from the barrel. |
+| `LoggedEventSchema` / `LoggedEvent` | **Not ported — superseded.** `DriveLogEnvelope` ([ADR-0013](../../adr/ADR-0013-state-partition.md) phase 6) is the later model: a `family` union over room/bank/artifact carrying `roomId`, where `LoggedEvent` is room-only. Porting it would reintroduce a retired concept. `drivemode-mcp` migrates to the envelope instead; note `seq` moves from non-negative to positive, and `roomId` becomes required. |
 
 ### 2 · The dependency is a path link, so drift is silent
 
@@ -133,13 +142,13 @@ become a second definition site.
 
 Ordered so each step removes duplication permanently rather than relocating it.
 
-1. **Reconcile the fold once, in the direction of the canonical kernel.** Port
-   the missing title-grant exports into whatever copy survives, so downstream
-   consumers stop running behind. This is the only step with a live correctness
-   consequence.
-2. **Resolve `collaboration-harness` (D1).** Either fold it back into
-   `cline-drivecode` and retire it, or make it the generated distribution of the
-   canonical kernel. Either way the hand-maintained copy stops.
+1. **Reconcile the kernels.** *Partly done:* the two harness-only symbols worth
+   keeping are ported into `cline-drivecode` and the third is recorded as
+   superseded, so the canonical kernel is now a superset. What remains is
+   repointing `drivemode-mcp` — blocked on D1a — after which the title-grant
+   exclusivity work reaches the iOS path for the first time.
+2. **Retire `collaboration-harness`** (D1 decided). Archive the repository once
+   `drivemode-mcp` no longer imports it.
 3. **Replace the sibling path dependency with a versioned one**, so a future
    divergence fails loudly at install rather than silently at runtime.
 4. **Decide room-state authority (D2)** and record it in
@@ -153,11 +162,19 @@ Ordered so each step removes duplication permanently rather than relocating it.
 
 ## Open decisions
 
-- **D1 — does `collaboration-harness` become the generated standalone
-  distribution, or get retired?** Its zero-dependency shape (only `zod`) makes it
-  a better artifact for third parties than `@cline/drive`, which is entangled
-  with `@cline/shared`. Single-source discipline argues for retiring it. Both are
-  defensible; a hand-maintained second copy is not.
+- **D1 — resolved 2026-08-19: retire `collaboration-harness` and fold it back
+  into `cline-drivecode`.** `@cline/drive` is the single kernel. The
+  harness-only symbols have been reconciled (see finding 1), so the canonical
+  kernel is now a superset of what the harness offered.
+- **D1a — how does `drivemode-mcp` consume the kernel once the harness is
+  gone?** This is the open consequence of D1. `@cline/drive` is not published to
+  npm and depends on `@cline/shared`, whereas the harness was a standalone
+  `zod`-only package consumed through a sibling path. Options: publish a
+  generated bundle from `cline-drivecode` under a scope the organization owns;
+  absorb `drivemode-mcp` into the monorepo; or depend on `cline-drivecode`
+  directly by git ref. Retiring the *repository* is compatible with publishing a
+  *generated artifact* from the canonical source — what stops either way is the
+  hand-maintained copy.
 - **D2 — who owns room-state authority when a hub and an MCP writer are both
   live?** Today both repositories claim it in prose and the MCP writer holds real
   state. This needs an ADR answer, not a convention.
