@@ -21,3 +21,4 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [drive-hotpath](drive-hotpath/) | active | Room wire hot path — fold checkpoint, delta publish, one stage clock ([ADR-0029](../adr/ADR-0029-room-hotpath-redesign.md)) |
 | [portfolio-now](portfolio-now/) | active | Canonical golden-path architecture implementation map; claims-registry-backed Now / Next / Later sequencing |
 | [drive-cloud-beta](drive-cloud-beta/) | active (decision-gated) | Hybrid control-plane implementation plan beneath `portfolio-now`; outbound local host, strict cloud projection, private beta gates |
+| [repo-ownership](repo-ownership/) | active (plan) | One concept, one owner — org-wide repository map, duplication audit, and deduplication sequence |
