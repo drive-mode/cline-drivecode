@@ -68,6 +68,19 @@ Leadership planning wave entry. [cline-drivemode/LEADERSHIP-BRIEF.md](plans/clin
 
 Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session notes: [07-agent-handoff.md](plans/drivecode-sdk/delivery/07-agent-handoff.md) (superseded).
 
+### Upstream Cline and SDK baseline
+
+[PR #23](https://github.com/drive-mode/cline-drivecode/pull/23) is the active
+upstream-integration boundary. As captured 2026-08-19, it carries the official
+Cline SDK `0.0.75` line and fetched `cline/cline` source head
+[`98d3e52a0`](https://github.com/cline/cline/commit/98d3e52a028c8b8426852baa4154e4aabf284dab).
+Those are separate parity checks: upstream source can advance without an SDK
+version bump. Land this PR with a **merge commit only**, after its full hosted
+matrix is green, so the repaired upstream ancestry is preserved. The exact
+sync procedure, ownership boundary, validation commands, and continuation
+checklist live in
+[10-upstream-sdk-sync-handoff.md](plans/drivecode-sdk/delivery/10-upstream-sdk-sync-handoff.md).
+
 ### Execution backlog
 
 - The canonical status source is
