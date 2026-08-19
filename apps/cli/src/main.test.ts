@@ -355,6 +355,9 @@ describe("runCli lightweight command dispatch", () => {
 		vi.resetModules();
 	});
 
+	// Root CI runs every SDK, Hub, CLI, and example suite in parallel. Loading the
+	// command graph can exceed Vitest's default timeout on a contended runner even
+	// though this route remains lightweight and avoids the runtime imports below.
 	it("does not load runtime modules for history json listing", async () => {
 		mockState.runAgentImports = 0;
 		mockState.runInteractiveImports = 0;
@@ -376,7 +379,7 @@ describe("runCli lightweight command dispatch", () => {
 		expect(historyListCalls[0]?.[0]).not.toHaveProperty("workspaceRoot");
 		expect(mockState.runAgentImports).toBe(0);
 		expect(mockState.runInteractiveImports).toBe(0);
-	}, 30_000);
+	}, 60_000);
 
 	it("routes connector restart arguments through the restart lifecycle", async () => {
 		process.argv = [
