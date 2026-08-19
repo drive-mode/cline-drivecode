@@ -281,9 +281,13 @@ jobs:
             # `test:e2e:build` script invokes `vsce` via `bun run`, which puts the local
             # .bin on PATH. No global install needed.
 
-            - name: Install xvfb on Linux
+            # GitHub's ubuntu-24.04 runner image includes xvfb. Avoid an
+            # unconditional apt refresh here: an unavailable package mirror
+            # must not prevent the already-provisioned E2E environment from
+            # running.
+            - name: Verify xvfb on Linux
               if: matrix.runner == 'ubuntu'
-              run: sudo apt-get update && sudo apt-get install -y xvfb
+              run: command -v xvfb-run
 
             # Run optimized E2E tests (eliminates redundant builds)
             - name: Run E2E tests - Linux
