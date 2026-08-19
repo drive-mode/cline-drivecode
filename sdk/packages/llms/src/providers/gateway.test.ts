@@ -19,7 +19,7 @@ import {
 	type ITelemetryService,
 	resetSdkErrorRateLimiterForTests,
 } from "@cline/shared";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeModelsDevProviderModels } from "../catalog/catalog-live";
 import { createOpenAICompatibleProvider } from "./ai-sdk";
 import {
@@ -320,6 +320,15 @@ function readCaptureRecords(dir: string): Array<Record<string, unknown>> {
 }
 
 describe("sdk-gateway", () => {
+	beforeAll(async () => {
+		// The first Codex/Claude CLI assertion otherwise pays for the cold dynamic
+		// import of the shared community provider module. Under the repository's
+		// parallel package matrix that import can consume the whole per-test budget,
+		// even though the stream under test completes immediately. Keep production
+		// lazy, but warm this test dependency outside any individual assertion.
+		await import("./vendors/community");
+	});
+
 	beforeEach(() => {
 		resetSdkErrorRateLimiterForTests();
 		streamTextSpy.mockReset();

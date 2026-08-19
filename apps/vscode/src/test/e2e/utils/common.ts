@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import { expect, type Page } from "@playwright/test"
 
 export const openTab = async (_page: Page, tabName: string) => {
 	await _page
@@ -14,11 +14,14 @@ export const addSelectedCodeToClineWebview = async (_page: Page) => {
 	// Open Code Actions via keyboard for cross-platform reliability
 	await _page.keyboard.press("ControlOrMeta+.")
 
-	// Target the explicit action instead of pressing Enter on the first item.
-	// The first item can vary by platform or diagnostics.
+	// Identify the explicit action because ordering varies by platform and
+	// diagnostics. VS Code places a pointer-blocking layer over this widget, so a
+	// mouse click cannot reach even a visible row; activate the focused row with
+	// the widget's documented Enter interaction instead.
 	const addToCline = _page.getByRole("option", { name: /Add to Cline/i })
 	await addToCline.waitFor({ state: "visible" })
-	await addToCline.click()
+	await expect(addToCline).toHaveClass(/focused/)
+	await _page.keyboard.press("Enter")
 	await addToCline.waitFor({ state: "hidden" })
 }
 

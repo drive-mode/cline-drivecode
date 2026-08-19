@@ -82,9 +82,9 @@ bun -F @cline/vscode test
 bun --cwd apps/examples/desktop-app test
 ```
 
-The first local PR #23 full-suite pass exposed one five-second timeout in `sdk/packages/llms/src/providers/gateway.test.ts`. Its isolated rerun passed in 4.3 seconds, and the hosted SDK matrix then passed. If it repeats, isolate that test under the same Node/matrix job and fix its deterministic completion—do not mask a runtime deadlock by widening production timeouts.
+The first local PR #23 full-suite pass exposed one five-second timeout in `sdk/packages/llms/src/providers/gateway.test.ts`. Its isolated rerun passed in 4.3 seconds, but the same test later repeated under the hosted parallel package matrix. The suite now warms the lazily imported community-provider test dependency in `beforeAll`, outside any individual assertion's timeout; production provider loading remains lazy and no runtime timeout was widened.
 
-The first hosted E2E pass also exposed a VS Code `1.134` automation change in the code-action widget. PR #23 targets the action's accessible `option` row instead of its inner label text and fixes the workflow artifact path so failed recordings are retained. Keep E2E exercising the current stable VS Code rather than hiding compatibility failures behind an old-version pin.
+The first hosted E2E passes also exposed a VS Code `1.134` automation change in the code-action widget. PR #23 identifies the action by its accessible `option` row, then uses the focused widget's Enter interaction because VS Code's pointer-blocking layer intentionally intercepts mouse clicks. The workflow artifact path is also fixed so failed recordings are retained. Keep E2E exercising the current stable VS Code rather than hiding compatibility failures behind an old-version pin.
 
 ## Configuration sources
 
