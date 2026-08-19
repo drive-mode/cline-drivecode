@@ -4461,7 +4461,7 @@
     title: "drive-product-demo.html · the guard",
     body: {
       file: "drive-product-demo.html",
-      range: "L7221–L7224",
+      range: "L7227–L7230",
       // debug presents the walkthrough as a paused debug session: bp is
       // the breakpoint line, step orders the CSS step-through (s3 is the
       // "remember the new one" assignment), ghost/ret are inline-value
@@ -4471,10 +4471,10 @@
       // true.
       debug: true,
       lines: [
-        { n: 7221, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
-        { n: 7222, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
-        { n: 7223, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
-        { n: 7224, t: '      feed.innerHTML = "";' },
+        { n: 7227, t: "    const feedSig = JSON.stringify(feedSlice);", step: 1, ghost: "feedSig = '{\"m\":[{\"id\":\"m0\",…'" },
+        { n: 7228, t: "    if (feedSig !== R.feedSig) {", hl: true, bp: true, step: 2, ghost: "R.feedSig = '{\"m\":[{\"id\":\"m0\",…'", ret: "→ equal · block skipped" },
+        { n: 7229, t: "      R.feedSig = feedSig;", hl: true, step: 3 },
+        { n: 7230, t: '      feed.innerHTML = "";' },
       ],
     },
   };
@@ -4768,9 +4768,9 @@
             // and text are literal (verify.js re-runs the search).
             term: [
               { t: '$ rg -n \'^ {6}\\w+\\.innerHTML = "";$\' drive-product-demo.html' },
-              { t: '7224:      feed.innerHTML = "";', cls: "dim" },
-              { t: '7263:      memberList.innerHTML = "";', cls: "dim" },
-              { t: '7299:      spot.innerHTML = "";', cls: "dim" },
+              { t: '7230:      feed.innerHTML = "";', cls: "dim" },
+              { t: '7269:      memberList.innerHTML = "";', cls: "dim" },
+              { t: '7305:      spot.innerHTML = "";', cls: "dim" },
             ],
             spin: false,
             activity: "locating the flash",
