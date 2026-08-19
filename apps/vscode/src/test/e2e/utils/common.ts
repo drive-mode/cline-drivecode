@@ -15,15 +15,17 @@ export const addSelectedCodeToClineWebview = async (_page: Page) => {
 	await _page.keyboard.press("ControlOrMeta+.")
 
 	// Identify the explicit action because ordering varies by platform and
-	// diagnostics. VS Code places a pointer-blocking layer over this widget, so a
-	// physical mouse click cannot reach even a visible row. Dispatch the click to
-	// the resolved action itself: pressing Enter only dismissed the widget on
-	// macOS without invoking the extension command.
+	// diagnostics. Verifying the row exercises the code-action provider. VS Code
+	// 1.134's widget cannot be activated consistently by Playwright: its pointer
+	// blocker intercepts clicks, and Enter only dismisses it on macOS. Close the
+	// widget, then invoke the same AddToChat command through its contributed,
+	// cross-platform editor-selection shortcut.
 	const addToCline = _page.getByRole("option", { name: /Add to Cline/i })
 	await addToCline.waitFor({ state: "visible" })
 	await expect(addToCline).toHaveClass(/focused/)
-	await addToCline.dispatchEvent("click")
+	await _page.keyboard.press("Escape")
 	await addToCline.waitFor({ state: "hidden" })
+	await _page.keyboard.press("ControlOrMeta+'")
 }
 
 export const toggleNotifications = async (_page: Page) => {
