@@ -16,12 +16,13 @@ export const addSelectedCodeToClineWebview = async (_page: Page) => {
 
 	// Identify the explicit action because ordering varies by platform and
 	// diagnostics. VS Code places a pointer-blocking layer over this widget, so a
-	// mouse click cannot reach even a visible row; activate the focused row with
-	// the widget's documented Enter interaction instead.
+	// physical mouse click cannot reach even a visible row. Dispatch the click to
+	// the resolved action itself: pressing Enter only dismissed the widget on
+	// macOS without invoking the extension command.
 	const addToCline = _page.getByRole("option", { name: /Add to Cline/i })
 	await addToCline.waitFor({ state: "visible" })
 	await expect(addToCline).toHaveClass(/focused/)
-	await _page.keyboard.press("Enter")
+	await addToCline.dispatchEvent("click")
 	await addToCline.waitFor({ state: "hidden" })
 }
 
