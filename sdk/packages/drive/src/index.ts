@@ -367,12 +367,14 @@ export {
 } from "./recruit/scoreNeed.js";
 export {
 	activePresenterGrant,
+	activeTitleGrantByExclusivityKey,
 	createEmptyRoomSnapshot,
 	isTitleGrantActive,
 	projectActiveTitleGrants,
 	projectRoster,
 	projectStage,
 	reduceRoom,
+	titleGrantExclusivityKey,
 } from "./reduceRoom.js";
 export {
 	artifactDirectoryTags,

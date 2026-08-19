@@ -373,6 +373,23 @@ export {
 	StructuredSharePayloadSchema,
 } from "./share";
 export {
+	type AgentTitleAuthorizationRequest,
+	AgentTitleAuthorizationRequestSchema,
+	type AgentTitleAuthorizationResult,
+	type AgentTitleConcurrencyRule,
+	AgentTitleConcurrencyRuleSchema,
+	type AgentTitleDefinition,
+	AgentTitleDefinitionSchema,
+	type AgentTitleDelegationPolicy,
+	AgentTitleDelegationPolicySchema,
+	type AgentTitleObligation,
+	AgentTitleObligationSchema,
+	type AgentTitleResourceKind,
+	AgentTitleResourceKindSchema,
+	type AgentTitleRiskTier,
+	AgentTitleRiskTierSchema,
+} from "./titles";
+export {
 	type DeploymentProfile,
 	DeploymentProfileSchema,
 	defaultEgressCeiling,

@@ -13,7 +13,7 @@ silhouette. Motion rules (event- vs location-oriented waits):
 
 | File | Use |
 |---|---|
-| `source.png` | Original raster. **Source of truth** — regenerate everything else from it rather than editing the derived files. |
+| `source.png` | Exact approved 1254×1254 inverse-pair raster. **Source of truth** — SHA-256 `d7f89cad545dfbb87cb0e119c56d5fbd3baa1bb23f5b0de2ca919f7a36f0bcb3`; regenerate everything else from it rather than editing derived files. |
 | `cline-drive-dark-on-transparent.svg` | The mark in `#000000` on transparent. This is the one served at `/cline-drive-logo.svg`. |
 | `cline-drive-light-on-transparent.svg` | The mark in `#FFFFFF` on transparent, for dark surfaces. |
 | `cline-drive-light.svg` / `cline-drive-dark.svg` | Same mark on a solid tile. |
@@ -23,6 +23,8 @@ silhouette. Motion rules (event- vs location-oriented waits):
 | `cline-drive-*-512.png` | 512px rasters, solid and transparent. |
 | `generate-assets.py` | Rebuilds every file above from `source.png`. |
 | `generate-icon.py` | Emits the inline React icon component. |
+| `source_mask.py` | Shared extraction of the black-on-white half, including square paired sheets. |
+| `sync-html-symbols.py` | Injects generated wheel/head paths into self-contained HTML demos; `--check` detects drift. |
 | `validate-assets.py` | Checks inversion, alpha, docs copies, and motion layers. |
 
 ## Palette
@@ -53,6 +55,7 @@ Requires `pillow`, `numpy`, `opencv-python`.
 python assets/drive/generate-assets.py assets/drive/source.png assets/drive
 python assets/drive/generate-icon.py assets/drive/source.png \
   apps/cline-hub/src/webview/src/components/icons/drive-mark.tsx
+python assets/drive/sync-html-symbols.py
 
 # The served copy is not generated in place -- copy it, or it goes stale silently.
 cp assets/drive/cline-drive-dark-on-transparent.svg \
@@ -73,6 +76,8 @@ because the first pass rendered visibly lumpy at logo sizes:
    arc-length and fitted with a closed Catmull-Rom spline emitted as cubic
    Beziers.
 
-The icon generator resamples far more coarsely on purpose: ~7.8KB of path
+The approved silhouette includes the angular head shoulders and notched
+horizontal spokes shown in `source.png`; smoothing must not round those details
+away. The icon generator resamples far more coarsely on purpose: ~7.8KB of path
 instead of ~25KB, since the extra control points are invisible below 32px and
 the component ships in the JS bundle.

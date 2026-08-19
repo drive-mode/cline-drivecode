@@ -1,6 +1,8 @@
 # Drive mark — official logo + motion strategy
 
-**Status.** Accepted and implemented from `assets/drive/source.png`.
+**Status.** Accepted and implemented from the exact inverse-pair master at
+`assets/drive/source.png` (SHA-256
+`d7f89cad545dfbb87cb0e119c56d5fbd3baa1bb23f5b0de2ca919f7a36f0bcb3`).
 **Locked by.** [DEC-drive-mark-official.md](../../plans/cline-drivemode/decisions/DEC-drive-mark-official.md)
 **Ship today.** [`DriveMarkIcon`](../../../../apps/cline-hub/src/webview/src/components/icons/drive-mark.tsx)
 (static nav) · [`DriveMarkMotion`](../../../../apps/cline-hub/src/webview/src/components/icons/drive-mark-motion.tsx)
@@ -26,8 +28,10 @@ so it reads at 16–24px next to lucide icons.
 ### Geometry that matters for motion
 
 The official pair is a **bold solid silhouette**: thick D-leaning rim (clear
-up/down from the flat bottom), two horizontal spokes into the head, Cline head
-with antenna nub and two vertical pill eyes as **negative space**.
+up/down from the flat bottom), notched horizontal spokes, Cline head with
+angular shoulders, antenna nub, and two vertical pill eyes as **negative
+space**. Rounding the shoulders or flattening the spoke notches is a geometry
+regression, not an acceptable simplification.
 
 That geometry gates animation choices:
 
@@ -153,8 +157,8 @@ eye lids.
 
 ## Asset handoff checklist
 
-- [x] Drop official light+dark (or single black-on-transparent master) as
-      `assets/drive/source.png`
+- [x] Archive the exact official light/dark master as `assets/drive/source.png`
+      and lock its SHA-256 in `validate-assets.py`
 - [x] Regenerate SVGs / ICOs / 512s; copy dark-on-transparent →
       `apps/cline-hub/src/webview/public/cline-drive-logo.svg`
 - [x] Rebuild `DriveMarkIcon` path + layered `DriveMarkMotion` groups
