@@ -29,9 +29,7 @@ export function buildVoiceAckNarration(input: VoiceAckInput): VoiceAckResult {
 
 	return {
 		usedTemplate: true,
-		text: gist
-			? `Got it: ${gist}.`
-			: `Got it.`,
+		text: gist ? `Got it: ${gist}.` : `Got it.`,
 	};
 }
 

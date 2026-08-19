@@ -2,8 +2,8 @@
  * Tier-0 handoff assembler tests (DRV-RETURN-LOOP).
  */
 
-import { describe, expect, it } from "vitest";
 import type { BankDriveEvent, BankSnapshot, DriveEvent } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	assembleHandoffPacket,
 	assertNoForbiddenHandoffKeys,

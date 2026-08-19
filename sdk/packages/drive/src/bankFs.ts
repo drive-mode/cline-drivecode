@@ -9,9 +9,7 @@ export interface BankFs {
 }
 
 /** In-memory BankFs for tests and browser projections. */
-export function createMemoryBankFs(
-	seed: Record<string, string> = {},
-): BankFs {
+export function createMemoryBankFs(seed: Record<string, string> = {}): BankFs {
 	const files = new Map<string, string>(Object.entries(normalizeSeed(seed)));
 
 	return {
@@ -65,9 +63,7 @@ function norm(path: string): string {
 	return path.replace(/\\/g, "/").replace(/\/+$/, "");
 }
 
-function normalizeSeed(
-	seed: Record<string, string>,
-): Record<string, string> {
+function normalizeSeed(seed: Record<string, string>): Record<string, string> {
 	const out: Record<string, string> = {};
 	for (const [key, value] of Object.entries(seed)) {
 		out[norm(key)] = value;

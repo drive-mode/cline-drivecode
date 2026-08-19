@@ -27,12 +27,10 @@ describe("decodeJwtPayload", () => {
 		});
 	});
 
-	it.each([
-		undefined,
-		"",
-		"invalid",
-		"header..sig",
-	])("returns null for an invalid token (%s)", (token) => {
-		expect(decodeJwtPayload(token)).toBeNull();
-	});
+	it.each([undefined, "", "invalid", "header..sig"])(
+		"returns null for an invalid token (%s)",
+		(token) => {
+			expect(decodeJwtPayload(token)).toBeNull();
+		},
+	);
 });

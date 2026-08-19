@@ -37,7 +37,9 @@ function readStorage(): DriveFeedCollapsedStorage {
 }
 
 /** Narrow viewports start folded so Spotlight owns the first paint (collapsible IA). */
-export function prefersCollapsedFeedByDefault(viewportWidthPx: number): boolean {
+export function prefersCollapsedFeedByDefault(
+	viewportWidthPx: number,
+): boolean {
 	return viewportWidthPx <= NARROW_CALL_MAX_WIDTH_PX;
 }
 

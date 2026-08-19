@@ -14,9 +14,7 @@ describe("SHOW_TEMPLATE_KIT", () => {
 		expect(getShowTemplate("arch.overview")?.artifactKind).toBe(
 			"diagram.architecture",
 		);
-		expect(getShowTemplate("walk.code")?.artifactKind).toBe(
-			"walkthrough.code",
-		);
+		expect(getShowTemplate("walk.code")?.artifactKind).toBe("walkthrough.code");
 	});
 
 	it("builds a ready show item linked to a Do id", () => {

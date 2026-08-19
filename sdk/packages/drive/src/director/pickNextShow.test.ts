@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { ShowBacklogItem } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	normalizeEnqueuedShowStatus,
 	pickNextShowToPresent,
@@ -64,10 +64,7 @@ describe("pickNextShowToPresent", () => {
 
 	it("honors preferShowId when still ranked", () => {
 		const picked = pickNextShowToPresent({
-			items: [
-				item({ id: "a", priority: 10 }),
-				item({ id: "b", priority: 20 }),
-			],
+			items: [item({ id: "a", priority: 10 }), item({ id: "b", priority: 20 })],
 			spotlightParticipantId: null,
 			preferShowId: "a",
 		});

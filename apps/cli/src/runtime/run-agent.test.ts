@@ -471,50 +471,50 @@ describe("runAgent", () => {
 
 		const startedAt = new Date("2026-03-22T00:00:00.000Z");
 		const endedAt = new Date("2026-03-22T00:00:01.000Z");
-		sessionManagerMocks.start.mockImplementation(async (input: {
-			config?: { sessionId?: string };
-		}) => {
-			const plannedSessionId = input.config?.sessionId;
-			expect(plannedSessionId).toEqual(expect.any(String));
-			sessionEventsMocks.listener?.({
-				type: "usage",
-				totalCost: 2,
-			});
-			expect(sessionManagerMocks.abort).toHaveBeenCalledWith(
-				plannedSessionId,
-				expect.any(Error),
-			);
-			return {
-				sessionId: plannedSessionId,
-				manifestPath: "/tmp/manifest.json",
-				messagesPath: "/tmp/messages.json",
-				manifest: {
-					session_id: plannedSessionId,
-				},
-				result: {
-					text: "aborted",
-					usage: {
-						inputTokens: 0,
-						outputTokens: 0,
-						cacheReadTokens: 0,
-						cacheWriteTokens: 0,
-						totalCost: 2,
+		sessionManagerMocks.start.mockImplementation(
+			async (input: { config?: { sessionId?: string } }) => {
+				const plannedSessionId = input.config?.sessionId;
+				expect(plannedSessionId).toEqual(expect.any(String));
+				sessionEventsMocks.listener?.({
+					type: "usage",
+					totalCost: 2,
+				});
+				expect(sessionManagerMocks.abort).toHaveBeenCalledWith(
+					plannedSessionId,
+					expect.any(Error),
+				);
+				return {
+					sessionId: plannedSessionId,
+					manifestPath: "/tmp/manifest.json",
+					messagesPath: "/tmp/messages.json",
+					manifest: {
+						session_id: plannedSessionId,
 					},
-					messages: [],
-					toolCalls: [],
-					iterations: 1,
-					finishReason: "aborted",
-					model: {
-						id: "gemini",
-						provider: "openrouter",
-						info: {},
+					result: {
+						text: "aborted",
+						usage: {
+							inputTokens: 0,
+							outputTokens: 0,
+							cacheReadTokens: 0,
+							cacheWriteTokens: 0,
+							totalCost: 2,
+						},
+						messages: [],
+						toolCalls: [],
+						iterations: 1,
+						finishReason: "aborted",
+						model: {
+							id: "gemini",
+							provider: "openrouter",
+							info: {},
+						},
+						startedAt,
+						endedAt,
+						durationMs: 1000,
 					},
-					startedAt,
-					endedAt,
-					durationMs: 1000,
-				},
-			};
-		});
+				};
+			},
+		);
 
 		try {
 			const { runAgent } = await import("./run-agent");

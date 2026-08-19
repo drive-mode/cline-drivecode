@@ -3,10 +3,7 @@
  * Need text + ranked agents; Seat calls parent callback (hub call_seat).
  */
 
-import {
-	type RankedRecruit,
-	type RecruitCandidate,
-} from "@cline/drive";
+import type { RankedRecruit, RecruitCandidate } from "@cline/drive";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

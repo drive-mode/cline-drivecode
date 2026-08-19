@@ -6,6 +6,7 @@ import * as path from "node:path"
 import { fileURLToPath } from "node:url"
 import { downloadAndUnzipVSCode, SilentReporter } from "@vscode/test-electron"
 import { execa } from "execa"
+import runtimeConfig from "../../../../test-runtime.config.json" with { type: "json" }
 
 const TIMEOUT_MINUTE = 5
 const INSTALL_TIMEOUT_MS = TIMEOUT_MINUTE * 60 * 1000
@@ -14,10 +15,9 @@ const CODEBASE_ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.ur
 const VSCODE_CACHE_DIR = path.join(CODEBASE_ROOT_DIR, ".vscode-test")
 
 async function installVSCode() {
-	const VSCODE_APP_TYPE = "stable"
 	console.log("Downloading VS Code...")
 	for (let attempt = 0; attempt < 2; attempt += 1) {
-		const executablePath = await downloadAndUnzipVSCode(VSCODE_APP_TYPE, undefined, new SilentReporter())
+		const executablePath = await downloadAndUnzipVSCode(runtimeConfig.e2eChannel, undefined, new SilentReporter())
 		if (existsSync(executablePath)) {
 			console.log(`VS Code ready at ${executablePath}`)
 			return executablePath

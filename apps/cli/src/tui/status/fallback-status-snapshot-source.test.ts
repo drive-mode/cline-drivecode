@@ -1,11 +1,12 @@
 import type { StatusUpdate, TeamRuntimeState } from "@cline/shared";
 import { describe, expect, it, vi } from "vitest";
 import { createFallbackStatusSnapshotSource } from "./fallback-status-snapshot-source";
-import type { StatusSnapshot, StatusSnapshotSource } from "./status-snapshot-source";
+import type {
+	StatusSnapshot,
+	StatusSnapshotSource,
+} from "./status-snapshot-source";
 
-function snapshot(
-	overrides: Partial<StatusSnapshot> = {},
-): StatusSnapshot {
+function snapshot(overrides: Partial<StatusSnapshot> = {}): StatusSnapshot {
 	return {
 		updates: [],
 		summary: null,
@@ -14,9 +15,7 @@ function snapshot(
 	};
 }
 
-function source(
-	load: StatusSnapshotSource["load"],
-): StatusSnapshotSource {
+function source(load: StatusSnapshotSource["load"]): StatusSnapshotSource {
 	return { load };
 }
 

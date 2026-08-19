@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	buildRecruitNeedFromFreeText,
 	collectRecruitCandidates,
-	rankRecruitFromFreeText,
 	RECRUIT_FIXTURE_CANDIDATES,
+	rankRecruitFromFreeText,
 } from "./recruitAddNeed";
 
 describe("recruitAddNeed", () => {

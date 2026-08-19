@@ -20,7 +20,6 @@ import {
 	serializeDriveTask,
 } from "./bankSerialize.js";
 import { deriveBankSnapshot } from "./bankSnapshot.js";
-import { assertCompletionReceipt } from "./driveplan/completionReceipt.js";
 import {
 	createDrivePlanActivatedEvent,
 	createDrivePlanArchivedEvent,
@@ -31,6 +30,7 @@ import {
 	createDriveTaskFailedEvent,
 	createDriveTaskOpenedEvent,
 } from "./driveEvents.js";
+import { assertCompletionReceipt } from "./driveplan/completionReceipt.js";
 
 export interface BankStore {
 	createTask(input: {

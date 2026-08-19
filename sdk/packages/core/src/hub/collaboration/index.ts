@@ -13,23 +13,11 @@ export {
 	restoreShowBacklogFromArtifacts,
 } from "./artifactEventLog";
 export {
-	appendBankLogEvent,
 	type AppendBankLogOptions,
+	appendBankLogEvent,
 	readBankLogSince,
 	resetBankLogRetentionCacheForTests,
 } from "./bankEventLog";
-export {
-	createFsSessionRollupSource,
-	formatSessionRollupsDump,
-	listRecentCallSessionIds,
-	loadAllBankEvents,
-	loadAllRoomEvents,
-	readSessionRollups,
-	rollupFromLoadedEvents,
-	type ReadSessionRollupsOptions,
-	type SessionRollup,
-	type SessionRollupSource,
-} from "./sessionRollupReader";
 export {
 	clearDrivePauseAfterTool,
 	clearDrivePauseAfterToolForSessions,
@@ -48,11 +36,7 @@ export {
 	type RoomLogRecord,
 	rebindJsonlRoomEventLog,
 } from "./eventLog";
-export {
-	type RoomFoldCheckpoint,
-	readRoomFoldCheckpoint,
-	writeRoomFoldCheckpoint,
-} from "./roomCheckpoint";
+export { type JoinCallInput, type JoinCallResult, joinCall } from "./join-call";
 export {
 	countNonEmptyLines,
 	DEBUG_ARTIFACT_EVENT_LOG_MAX_RECORDS,
@@ -65,7 +49,6 @@ export {
 	type LogRetentionOptions,
 	trimJsonlFileToMaxRecords,
 } from "./logRetention";
-export { type JoinCallInput, type JoinCallResult, joinCall } from "./join-call";
 export { createNodeBankFs } from "./nodeBankFs";
 export {
 	DriveRoomStore,
@@ -73,6 +56,23 @@ export {
 	type RoomCommitResult,
 	resetDriveRoomStoreForTests,
 } from "./room";
+export {
+	type RoomFoldCheckpoint,
+	readRoomFoldCheckpoint,
+	writeRoomFoldCheckpoint,
+} from "./roomCheckpoint";
+export {
+	createFsSessionRollupSource,
+	formatSessionRollupsDump,
+	listRecentCallSessionIds,
+	loadAllBankEvents,
+	loadAllRoomEvents,
+	type ReadSessionRollupsOptions,
+	readSessionRollups,
+	rollupFromLoadedEvents,
+	type SessionRollup,
+	type SessionRollupSource,
+} from "./sessionRollupReader";
 export {
 	type WorkRecordPayload,
 	type WorkToolInput,

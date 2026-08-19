@@ -66,8 +66,8 @@ export function StatusSessionsPanel({
 		return (
 			<div className="rounded-lg border bg-card">
 				<PageEmptyState>
-					No Drive sessions in local room + bank logs yet. Complete tasks in
-					a call to see accomplishment chips here.
+					No Drive sessions in local room + bank logs yet. Complete tasks in a
+					call to see accomplishment chips here.
 				</PageEmptyState>
 			</div>
 		);
@@ -76,9 +76,9 @@ export function StatusSessionsPanel({
 	return (
 		<div className="space-y-4" data-slot="status-sessions-panel">
 			<p className="text-xs text-muted-foreground">
-				Drive session accomplishment (local SessionRollups) — Analytics, not
-				the agent Board or Changelog. Chips include S2 tasks done, S3
-				clean-drain, E1 continue, E2 intent refresh, P1 churn, P2 sticky fail.
+				Drive session accomplishment (local SessionRollups) — Analytics, not the
+				agent Board or Changelog. Chips include S2 tasks done, S3 clean-drain,
+				E1 continue, E2 intent refresh, P1 churn, P2 sticky fail.
 			</p>
 
 			{onExportShippedDigest ? (
@@ -112,9 +112,7 @@ export function StatusSessionsPanel({
 									aria-pressed={active}
 									className={cn(
 										"flex w-full flex-wrap items-center gap-2 border-b px-4 py-3 text-left last:border-b-0",
-										active
-											? "bg-accent"
-											: "hover:bg-muted/40",
+										active ? "bg-accent" : "hover:bg-muted/40",
 									)}
 									data-status-session-row={row.callSessionId}
 									onClick={() => onSelect(row)}
@@ -125,9 +123,7 @@ export function StatusSessionsPanel({
 											{row.callSessionId}
 										</div>
 										<div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-											<span>
-												room={row.roomId ?? "—"}
-											</span>
+											<span>room={row.roomId ?? "—"}</span>
 											<span>·</span>
 											<span>{formatDuration(row.durationMs)}</span>
 											{row.failureStickyCount > 0 ? (

@@ -113,36 +113,36 @@ describe("SqliteCronStore", () => {
 		).toBe("yolo");
 	});
 
-	it.each([
-		undefined,
-		"unknown",
-	])("falls back to yolo when updating a hub schedule with stored mode %s", (storedMode) => {
-		const scheduleId = `sched-${storedMode ?? "missing"}`;
-		store.upsertSpec({
-			externalId: scheduleId,
-			sourcePath: `hub/schedules/${scheduleId}.cron.md`,
-			triggerKind: "schedule",
-			sourceHash: "legacy-hash",
-			parseStatus: "valid",
-			spec: {
+	it.each([undefined, "unknown"])(
+		"falls back to yolo when updating a hub schedule with stored mode %s",
+		(storedMode) => {
+			const scheduleId = `sched-${storedMode ?? "missing"}`;
+			store.upsertSpec({
+				externalId: scheduleId,
+				sourcePath: `hub/schedules/${scheduleId}.cron.md`,
 				triggerKind: "schedule",
-				id: scheduleId,
-				title: "Legacy routine",
-				prompt: "Do the work",
-				workspaceRoot: "/ws",
-				schedule: "0 * * * *",
-				enabled: true,
-				mode: storedMode as CronScheduleSpec["mode"],
-				source: "hub-schedule",
-			},
-		});
+				sourceHash: "legacy-hash",
+				parseStatus: "valid",
+				spec: {
+					triggerKind: "schedule",
+					id: scheduleId,
+					title: "Legacy routine",
+					prompt: "Do the work",
+					workspaceRoot: "/ws",
+					schedule: "0 * * * *",
+					enabled: true,
+					mode: storedMode as CronScheduleSpec["mode"],
+					source: "hub-schedule",
+				},
+			});
 
-		const updated = store.updateHubSchedule(scheduleId, {
-			scheduleId,
-			name: "Updated routine",
-		});
-		expect(updated?.mode).toBe("yolo");
-	});
+			const updated = store.updateHubSchedule(scheduleId, {
+				scheduleId,
+				name: "Updated routine",
+			});
+			expect(updated?.mode).toBe("yolo");
+		},
+	);
 
 	it("does not bump revision on cosmetic-only re-upsert with same hash", () => {
 		store.upsertSpec({
@@ -203,9 +203,7 @@ describe("SqliteCronStore", () => {
 });
 
 describe("SqliteCronStore: schema migrations", () => {
-	it(
-		"recreates the one-off run uniqueness index when its predicate changes",
-		() => {
+	it("recreates the one-off run uniqueness index when its predicate changes", () => {
 		const tmp = tempDbPath();
 		const initialStore = new SqliteCronStore({ dbPath: tmp.path });
 		initialStore.close();
@@ -243,9 +241,7 @@ describe("SqliteCronStore: schema migrations", () => {
 			migratedDb.close?.();
 			rmSync(tmp.dir, { recursive: true, force: true });
 		}
-	},
-		20_000,
-	);
+	}, 20_000);
 });
 
 describe("SqliteCronStore: runs", () => {

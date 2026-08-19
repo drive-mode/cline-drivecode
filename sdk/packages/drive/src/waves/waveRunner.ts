@@ -1,22 +1,22 @@
 import { AdaptiveConcurrency } from "./adaptiveConcurrency";
 import { DriveWaveCheckpointManager } from "./checkpoint";
-import { DriveWaveExecutor } from "./waveExecutor";
 import { alwaysContinueReview } from "./reviewGates";
-import { DriveWorkMailbox } from "./workMailbox";
-import { DriveWorkScratch } from "./workScratch";
 import { TokenQueue } from "./tokenQueue";
 import {
 	createDriveWaveResult,
 	createWorkItem,
-	newId,
-	nowIso,
 	type DriveReviewGate,
 	type DriveWaveLogEntry,
 	type DriveWaveResult,
 	type DriveWaveRunnerOptions,
-	type DriveWorkItem,
 	type DriveWorkInput,
+	type DriveWorkItem,
+	newId,
+	nowIso,
 } from "./types";
+import { DriveWaveExecutor } from "./waveExecutor";
+import { DriveWorkMailbox } from "./workMailbox";
+import { DriveWorkScratch } from "./workScratch";
 
 function hasPendingWork(tasks: readonly DriveWorkItem[]): boolean {
 	const byId = new Map(tasks.map((task) => [task.id, task]));
@@ -24,7 +24,9 @@ function hasPendingWork(tasks: readonly DriveWorkItem[]): boolean {
 		if (task.status !== "pending") {
 			return false;
 		}
-		return task.dependsOn.every((depId) => byId.get(depId)?.status === "succeeded");
+		return task.dependsOn.every(
+			(depId) => byId.get(depId)?.status === "succeeded",
+		);
 	});
 }
 
@@ -172,10 +174,7 @@ export class DriveWaveRunner {
 		}
 	}
 
-	#finish(
-		status: DriveWaveResult["status"],
-		message: string,
-	): DriveWaveResult {
+	#finish(status: DriveWaveResult["status"], message: string): DriveWaveResult {
 		const errors = this.#tasks
 			.filter((task) => task.status === "failed" && task.error)
 			.map((task) => `${task.id}: ${task.error}`);

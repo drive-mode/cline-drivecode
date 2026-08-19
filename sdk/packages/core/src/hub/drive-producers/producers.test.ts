@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { producePlanCardShowArtifact } from "./producePlanCard";
-import { produceCodeWalkthroughShowArtifact } from "./produceCodeWalkthrough";
 import { produceBrowserSnapshotShowArtifact } from "./produceBrowserSnapshot";
 import { produceChangeAnimationShowArtifact } from "./produceChangeAnimation";
+import { produceCodeWalkthroughShowArtifact } from "./produceCodeWalkthrough";
+import { producePlanCardShowArtifact } from "./producePlanCard";
 
 describe("drive producers", () => {
 	it("producePlanCard fills an SVG data URI", () => {

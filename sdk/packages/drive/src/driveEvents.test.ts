@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
 import {
-	createDriveTaskBoundEvent,
 	createDrivePlanStepEvent,
+	createDriveTaskBoundEvent,
 	resetDriveEventSeqForTests,
 } from "@cline/drive";
+import { describe, expect, it } from "vitest";
 
 describe("drive bank events", () => {
 	it("emits task-bound plan step events", () => {

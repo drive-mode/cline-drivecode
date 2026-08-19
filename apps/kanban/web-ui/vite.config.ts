@@ -51,7 +51,9 @@ function selectiveBuildMinifyPlugin(): Plugin {
 			);
 			return {
 				code: minified.code,
-				map: minified.map ?? null,
+				// Rollup's SourceMapInput rejects Vite's nullable sourcesContent
+				// shape directly; serialized maps are an equivalent accepted form.
+				map: minified.map ? JSON.stringify(minified.map) : null,
 			};
 		},
 	};

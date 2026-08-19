@@ -128,7 +128,11 @@ export async function handleDrivePlanCommand(
 			}
 			const statusParse = DriveRunWorkItemStatusSchema.safeParse(statusRaw);
 			if (!statusParse.success) {
-				return errorReply(envelope, "invalid_payload", "invalid work item status");
+				return errorReply(
+					envelope,
+					"invalid_payload",
+					"invalid work item status",
+				);
 			}
 			const run = await getDriveRun(workspaceRoot, runId);
 			if (!run) {
@@ -181,7 +185,10 @@ export async function handleDrivePlanCommand(
 /** Parse optional boundRun + receipt from bank complete payload. */
 export function readCompletionGuardPayload(
 	payload: Record<string, unknown> | undefined,
-): { boundRun?: ReturnType<typeof parseDriveRun>; receipt?: ReturnType<typeof parseReceipt> } {
+): {
+	boundRun?: ReturnType<typeof parseDriveRun>;
+	receipt?: ReturnType<typeof parseReceipt>;
+} {
 	const out: {
 		boundRun?: ReturnType<typeof parseDriveRun>;
 		receipt?: ReturnType<typeof parseReceipt>;

@@ -25,7 +25,14 @@ import {
 	shouldShowGatesActiveStrip,
 } from "@cline/shared";
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
 import { DriveMarkMotion } from "@/components/icons/drive-mark-motion";
 import { Button } from "@/components/ui/button";
@@ -45,7 +52,6 @@ import type {
 	WebviewReasonLevel,
 	WebviewSessionSummary,
 } from "../../webview-protocol";
-import { writeLeaveKeepRunningNote } from "./drive/driveAppCallChrome";
 import {
 	CHAT_HOST_MESSAGE_TYPES,
 	type ChatHostMessage,
@@ -53,6 +59,7 @@ import {
 } from "./chatHostMessages";
 import {
 	appendAssistantDelta,
+	appendAssistantMedia,
 	appendReasoningDelta,
 	appendToolEvent,
 	buildUserMessageLabel,
@@ -90,6 +97,8 @@ import {
 	ChatForkAuditPanel,
 	isChatForkSession,
 } from "./drive/ChatForkAuditPanel";
+import { type CallSpendSnapshot, foldUsageIntoSpend } from "./drive/callSpend";
+import { DriveAddressChip } from "./drive/DriveAddressChip";
 import { DriveHeaderControls } from "./drive/DriveCallChrome";
 import {
 	DriveCallStripDock,
@@ -97,17 +106,13 @@ import {
 	DriveRoster,
 	DriveVoiceBar,
 } from "./drive/DriveRoomChrome";
+import { writeLeaveKeepRunningNote } from "./drive/driveAppCallChrome";
 import { buildRaiseHandFrame } from "./drive/driveCallOps";
 import type { DriveLaunchRequest } from "./drive/driveLaunch";
 import { GateFeedCard, type GateFeedResponse } from "./drive/GateFeedCard";
 import { resolveIncomingApprovalBypass } from "./drive/gateApproval";
 import { RecruitStallPicker } from "./drive/RecruitStallPicker";
 import { RouteSuggestChip } from "./drive/RouteSuggestChip";
-import { DriveAddressChip } from "./drive/DriveAddressChip";
-import {
-	type CallSpendSnapshot,
-	foldUsageIntoSpend,
-} from "./drive/callSpend";
 import {
 	collectRecruitCandidates,
 	RECRUIT_FIXTURE_CANDIDATES,
@@ -511,11 +516,14 @@ export default function Chat({
 	const feedRoomKey = drive.roomId ?? DRIVE_DEFAULT_ROOM_ID;
 	const narrowCall = useSyncExternalStore(
 		(onChange) => {
-			const mq = window.matchMedia(`(max-width: ${NARROW_CALL_MAX_WIDTH_PX}px)`);
+			const mq = window.matchMedia(
+				`(max-width: ${NARROW_CALL_MAX_WIDTH_PX}px)`,
+			);
 			mq.addEventListener("change", onChange);
 			return () => mq.removeEventListener("change", onChange);
 		},
-		() => window.matchMedia(`(max-width: ${NARROW_CALL_MAX_WIDTH_PX}px)`).matches,
+		() =>
+			window.matchMedia(`(max-width: ${NARROW_CALL_MAX_WIDTH_PX}px)`).matches,
 		() => false,
 	);
 	const [feedCollapsed, setFeedCollapsed] = useState(false);
@@ -1149,6 +1157,10 @@ export default function Chat({
 					setStatus(message.text);
 					return;
 				case "error":
+					if (message.recoverable) {
+						setStatus(`Recoverable error (run continues): ${message.text}`);
+						return;
+					}
 					setStatus(`Error: ${message.text}`);
 					setSending(false);
 					setHydratingSessionId(undefined);
@@ -1336,6 +1348,11 @@ export default function Chat({
 							message.redacted,
 							activeAssistantIdRef,
 						),
+					);
+					return;
+				case "assistant_media":
+					setMessages((current) =>
+						appendAssistantMedia(current, message.media, activeAssistantIdRef),
 					);
 					return;
 				case "tool_event":
@@ -1948,7 +1965,11 @@ export default function Chat({
 			// Scoped to this tool, not to response.actionClass — the class is a
 			// catch-all bucket that would carry run_commands along with it.
 			setGateSession((current) =>
-				allowGateToolForSession(current, response.actionClass, approval.toolName),
+				allowGateToolForSession(
+					current,
+					response.actionClass,
+					approval.toolName,
+				),
 			);
 		}
 		const approved =
@@ -2010,10 +2031,7 @@ export default function Chat({
 						) : null}
 						{isHydrating ? (
 							<span className="ml-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-								<DriveMarkMotion
-									className="size-3.5"
-									motion="loading"
-								/>
+								<DriveMarkMotion className="size-3.5" motion="loading" />
 								Loading history
 							</span>
 						) : null}
@@ -2382,9 +2400,7 @@ export default function Chat({
 						modelShortlist={modelShortlist}
 						onSelectModel={selectPowerModel}
 						onTogglePlan={
-							stageLayout
-								? () => setPlanSheetOpen((open) => !open)
-								: undefined
+							stageLayout ? () => setPlanSheetOpen((open) => !open) : undefined
 						}
 						planOpen={planSheetOpen}
 						session={driveSession}

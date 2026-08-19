@@ -70,10 +70,7 @@ export async function handleDriveSessionRollupsWebviewCommand(
 		ctx.send(peer, {
 			type: "drive_session_rollups",
 			rollups: reply.payload?.rollups ?? [],
-			dump:
-				typeof reply.payload?.dump === "string"
-					? reply.payload.dump
-					: "",
+			dump: typeof reply.payload?.dump === "string" ? reply.payload.dump : "",
 			requestId,
 		});
 	} catch (error) {

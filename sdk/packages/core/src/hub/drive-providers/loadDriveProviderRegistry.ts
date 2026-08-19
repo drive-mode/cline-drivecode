@@ -1,12 +1,12 @@
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	BUILTIN_PROVIDER_MANIFESTS,
 	DRIVE_PROVIDER_MANIFEST_FILE_NAME,
-	parseDriveProviderManifest,
-	resolveDriveProvidersDir,
 	type DriveProviderManifest,
 	type DriveProviderOrigin,
+	parseDriveProviderManifest,
+	resolveDriveProvidersDir,
 } from "@cline/shared";
 
 export interface LoadDriveProviderRegistryInput {
@@ -27,18 +27,12 @@ export function loadDriveProviderRegistry(
 	}
 
 	if (input.userConfigParent) {
-		for (const manifest of readProviderDir(
-			input.userConfigParent,
-			"user",
-		)) {
+		for (const manifest of readProviderDir(input.userConfigParent, "user")) {
 			byId.set(manifest.id, manifest);
 		}
 	}
 	if (input.workspaceRoot) {
-		for (const manifest of readProviderDir(
-			input.workspaceRoot,
-			"workspace",
-		)) {
+		for (const manifest of readProviderDir(input.workspaceRoot, "workspace")) {
 			byId.set(manifest.id, manifest);
 		}
 	}

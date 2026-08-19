@@ -58,9 +58,7 @@ export function buildPlanReentryRow(input: {
 		return null;
 	}
 	const title =
-		input.planTitle?.trim() ||
-		input.snapshot.nowTitle?.trim() ||
-		planId;
+		input.planTitle?.trim() || input.snapshot.nowTitle?.trim() || planId;
 	return {
 		planId,
 		planTitle: title,

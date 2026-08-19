@@ -54,4 +54,3 @@ export const DemoStageSharerSchema = z
 	})
 	.strict();
 export type DemoStageSharer = z.infer<typeof DemoStageSharerSchema>;
-

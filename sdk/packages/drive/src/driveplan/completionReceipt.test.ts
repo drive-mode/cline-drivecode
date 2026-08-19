@@ -60,9 +60,7 @@ describe("assertCompletionReceipt", () => {
 			});
 		} catch (error) {
 			expect(error).toBeInstanceOf(CompletionReceiptError);
-			expect((error as CompletionReceiptError).code).toBe(
-				"receipt_required",
-			);
+			expect((error as CompletionReceiptError).code).toBe("receipt_required");
 		}
 	});
 

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { buildPlanReentryRow } from "@cline/drive";
 import type { BankSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 
 const open: BankSnapshot = {
 	activePlanId: "p1",

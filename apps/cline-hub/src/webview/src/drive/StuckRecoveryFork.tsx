@@ -5,10 +5,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-	RECOVERY_OPTIONS,
-	type RecoveryOptionKind,
-} from "./stuckRecovery";
+import { RECOVERY_OPTIONS, type RecoveryOptionKind } from "./stuckRecovery";
 
 export type StuckRecoveryForkProps = {
 	taskId: string;

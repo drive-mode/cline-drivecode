@@ -1,6 +1,6 @@
 import type { TeamTask } from "@cline/shared";
-import { describe, expect, it } from "vitest";
 import { buildDependencyMap } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 
 const task = (
 	id: string,

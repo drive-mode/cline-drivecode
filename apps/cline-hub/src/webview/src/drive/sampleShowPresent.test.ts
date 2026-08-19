@@ -1,11 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	SAMPLE_ARCHITECTURE_MERMAID,
-	SAMPLE_ARCHITECTURE_SHOW_ID,
 	buildSampleArchitectureShowItem,
 	buildSampleCaptureShowItem,
 	buildSampleChangeAnimationShowItem,
 	presentSampleArchitectureShow,
+	SAMPLE_ARCHITECTURE_MERMAID,
+	SAMPLE_ARCHITECTURE_SHOW_ID,
 } from "./sampleShowPresent";
 
 vi.mock("../vscode", () => ({
@@ -51,10 +51,9 @@ describe("sampleShowPresent", () => {
 
 	it("enqueues and ticks via drive commands", async () => {
 		const { postToHost } = await import("../vscode");
-		const {
-			enqueueSampleArchitectureShow,
-			tickShowDirector,
-		} = await import("./sampleShowPresent");
+		const { enqueueSampleArchitectureShow, tickShowDirector } = await import(
+			"./sampleShowPresent"
+		);
 		enqueueSampleArchitectureShow("room-b");
 		expect(postToHost).toHaveBeenCalledWith(
 			expect.objectContaining({

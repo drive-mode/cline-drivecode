@@ -92,11 +92,12 @@ export function buildShippedDigest(
 ): ShippedDigest {
 	const now = input.now ?? (() => new Date());
 	const sessions: ShippedDigestSession[] = input.rollups.map((rollup) => {
-		const completedTasks: ShippedDigestTaskRef[] =
-			rollup.completedTaskIds.map((taskId) => {
+		const completedTasks: ShippedDigestTaskRef[] = rollup.completedTaskIds.map(
+			(taskId) => {
 				const title = resolveTitle(taskId, input.taskTitles);
 				return title ? { taskId, title } : { taskId };
-			});
+			},
+		);
 		return {
 			callSessionId: rollup.callSessionId,
 			roomId: rollup.roomId,
@@ -139,10 +140,7 @@ export function findForbiddenShippedDigestKey(
 	}
 	if (Array.isArray(value)) {
 		for (let i = 0; i < value.length; i++) {
-			const hit = findForbiddenShippedDigestKey(value[i], [
-				...path,
-				String(i),
-			]);
+			const hit = findForbiddenShippedDigestKey(value[i], [...path, String(i)]);
 			if (hit) {
 				return hit;
 			}
@@ -152,9 +150,7 @@ export function findForbiddenShippedDigestKey(
 	if (typeof value !== "object") {
 		return null;
 	}
-	for (const [key, child] of Object.entries(
-		value as Record<string, unknown>,
-	)) {
+	for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
 		const lower = key.toLowerCase();
 		for (const forbidden of SHIPPED_DIGEST_FORBIDDEN_KEYS) {
 			if (lower === forbidden || lower.includes(forbidden)) {
@@ -172,9 +168,7 @@ export function findForbiddenShippedDigestKey(
 export function assertShippedDigestPrivate(digest: ShippedDigest): void {
 	const hit = findForbiddenShippedDigestKey(digest);
 	if (hit) {
-		throw new Error(
-			`Shipped digest must not include forbidden key at ${hit}`,
-		);
+		throw new Error(`Shipped digest must not include forbidden key at ${hit}`);
 	}
 }
 

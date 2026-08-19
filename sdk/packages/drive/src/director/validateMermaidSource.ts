@@ -7,9 +7,7 @@
 const DIAGRAM_TYPE_RE =
 	/^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|gantt|pie|gitGraph|mindmap|timeline|quadrantChart|xychart-beta|C4Context|journey)\b/i;
 
-export type MermaidParseResult =
-	| { ok: true }
-	| { ok: false; reason: string };
+export type MermaidParseResult = { ok: true } | { ok: false; reason: string };
 
 export class MermaidParseError extends Error {
 	readonly code = "mermaid_parse_failed" as const;
@@ -38,9 +36,7 @@ export function validateMermaidSource(source: string): MermaidParseResult {
 		.map((line) => line.trim())
 		.filter(
 			(line) =>
-				line.length > 0 &&
-				!line.startsWith("%%") &&
-				!line.startsWith("---"),
+				line.length > 0 && !line.startsWith("%%") && !line.startsWith("---"),
 		);
 	const first = lines[0] ?? "";
 	if (!DIAGRAM_TYPE_RE.test(first)) {

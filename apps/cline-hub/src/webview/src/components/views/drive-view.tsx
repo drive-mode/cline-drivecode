@@ -7,6 +7,7 @@
  * that names them together.
  */
 
+import { readDrivecodeDemoHubBootstrap } from "@cline/drivecode-demo";
 import type { StatusState, StatusSummary } from "@cline/shared";
 import {
 	ActivityIcon,
@@ -27,6 +28,11 @@ import {
 	writeCredentialOnboardingDismissed,
 } from "../../drive/credentialOnboarding";
 import {
+	DriveBrowseLiteIndex,
+	DriveBrowseLitePage,
+} from "../../drive/DriveBrowseLite";
+import { DriveLiveStack } from "../../drive/DriveLiveStack";
+import {
 	consumeLeaveKeepRunningNote,
 	PREVIEW_CHIP_LABEL,
 	shouldShowPreviewChip,
@@ -43,20 +49,14 @@ import {
 	isDriveTransportErrorMessage,
 } from "../../drive/driveRoomPreview";
 import { DRIVE_DEFAULT_ROOM_ID } from "../../drive/types";
-import { readDrivecodeDemoHubBootstrap } from "@cline/drivecode-demo";
+import type { DriveBrowseSurface } from "../../lib/drive-shell";
 import {
 	type HostMessage,
 	subscribeToHostMessages,
 } from "../../lib/host-message-gateway";
+import type { DriveRoomsSource } from "../../rooms/drive-rooms-source";
 import { postToHost } from "../../vscode";
 import { DriveMarkIcon } from "../icons/drive-mark";
-import {
-	DriveBrowseLiteIndex,
-	DriveBrowseLitePage,
-} from "../../drive/DriveBrowseLite";
-import { DriveLiveStack } from "../../drive/DriveLiveStack";
-import type { DriveBrowseSurface } from "../../lib/drive-shell";
-import type { DriveRoomsSource } from "../../rooms/drive-rooms-source";
 import {
 	DRIVE_VIEW_MESSAGE_TYPES,
 	isDriveViewHostMessage,
@@ -198,7 +198,9 @@ function RoomPreviewCard({
 				"mb-6 rounded-lg border bg-card p-5",
 				preview?.state === "seated" && "border-primary/40",
 			)}
-			data-slot={composition === "app" ? "drive-app-home" : "drive-room-preview"}
+			data-slot={
+				composition === "app" ? "drive-app-home" : "drive-room-preview"
+			}
 		>
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div className="flex min-w-0 items-start gap-3">

@@ -101,9 +101,7 @@ describe("RoomEventLog + DriveRoomStore", () => {
 			store.mute({ roomId: "r1", participantId: "h1", muted: true });
 
 			const retained = log.readSinceSync("r1", 0);
-			expect(retained.every((r) => r.event.type !== "control.join")).toBe(
-				true,
-			);
+			expect(retained.every((r) => r.event.type !== "control.join")).toBe(true);
 			expect(store.get("r1")?.participants).toHaveLength(1);
 
 			const restored = new DriveRoomStore();

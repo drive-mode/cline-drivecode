@@ -408,8 +408,7 @@ export class MemoryRoomEventLog implements RoomEventLog {
 	private readonly maxRecords: number;
 
 	constructor(options: RoomEventLogOptions = {}) {
-		this.maxRecords =
-			options.maxRecords ?? DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS;
+		this.maxRecords = options.maxRecords ?? DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS;
 	}
 
 	latestSeq(roomId: string): number {

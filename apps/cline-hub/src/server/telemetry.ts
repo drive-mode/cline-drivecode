@@ -1,8 +1,8 @@
 import * as os from "node:os";
 import {
 	type BasicLogger,
-	captureExtensionActivated,
 	CORE_BUILD_VERSION,
+	captureExtensionActivated,
 	createClineTelemetryServiceConfig,
 	createConfiguredTelemetryHandle,
 	type ITelemetryService,
@@ -61,11 +61,7 @@ function createHubBasicLogger(): BasicLogger {
 		log: (message, metadata) => {
 			const severity = metadata?.severity;
 			const level =
-				severity === "warn"
-					? "warn"
-					: severity === "error"
-						? "error"
-						: "info";
+				severity === "warn" ? "warn" : severity === "error" ? "error" : "info";
 			const { severity: _s, ...rest } = metadata ?? {};
 			write(level, message, Object.keys(rest).length > 0 ? rest : undefined);
 		},
@@ -108,8 +104,9 @@ export function createHubTelemetry(): HubTelemetry {
 	});
 	const telemetry = handle.telemetry;
 	try {
-		const auth = new ProviderSettingsManager().getProviderSettings("cline")
-			?.auth;
+		const auth = new ProviderSettingsManager().getProviderSettings(
+			"cline",
+		)?.auth;
 		if (auth?.accountId) {
 			identifyAccount(telemetry, {
 				id: auth.accountId,

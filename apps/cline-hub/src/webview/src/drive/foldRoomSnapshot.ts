@@ -57,8 +57,7 @@ export function foldIncomingDriveEvent(input: {
 	const folded = reduceRoom(base, event);
 
 	if (hub && hub.roomId === event.roomId) {
-		const hubAhead =
-			hub.appliedEventIds.length > folded.appliedEventIds.length;
+		const hubAhead = hub.appliedEventIds.length > folded.appliedEventIds.length;
 		const hubHasEvent = hub.appliedEventIds.includes(event.id);
 		const foldedHasEvent = folded.appliedEventIds.includes(event.id);
 		if (hubAhead || (hubHasEvent && !foldedHasEvent)) {

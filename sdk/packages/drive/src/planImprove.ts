@@ -16,12 +16,12 @@ import type {
 	PlanningProposalEvidence,
 	PlanningProposalTarget,
 } from "@cline/shared";
+import type { BankFs } from "./bankFs.js";
 import {
-	classifyStall,
 	type ClassifyStallInput,
+	classifyStall,
 	type StallReasonCode,
 } from "./stallClassifier.js";
-import type { BankFs } from "./bankFs.js";
 
 export const PLAN_IMPROVE_ROOT = ".drive/plan-improve";
 export const PLAN_IMPROVE_ACCEPTED_DIR = `${PLAN_IMPROVE_ROOT}/accepted`;
@@ -236,9 +236,7 @@ export function diagnoseAndPropose(
 		...new Set([
 			...(input.evidence?.taskIds ?? []),
 			...input.openFailures.map((entry) => entry.taskId),
-			...(classification.primaryTaskId
-				? [classification.primaryTaskId]
-				: []),
+			...(classification.primaryTaskId ? [classification.primaryTaskId] : []),
 		]),
 	].filter(Boolean);
 

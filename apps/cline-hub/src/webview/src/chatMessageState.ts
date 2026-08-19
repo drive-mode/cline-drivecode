@@ -1,5 +1,6 @@
 "use client";
 
+import type { GeneratedMedia } from "@cline/shared";
 import { nanoid } from "nanoid";
 import type { MutableRefObject } from "react";
 import type {
@@ -230,6 +231,29 @@ export function appendReasoningDelta(
 	});
 	activeAssistantIdRef.current = assistantMessage.id;
 	return [...current, assistantMessage];
+}
+
+export function appendAssistantMedia(
+	current: ChatMessage[],
+	media: GeneratedMedia,
+	activeAssistantIdRef: MutableRefObject<string | undefined>,
+): ChatMessage[] {
+	if (
+		current.some((message) =>
+			message.blocks?.some(
+				(block) => block.type === "media" && block.media.id === media.id,
+			),
+		)
+	) {
+		return current;
+	}
+	activeAssistantIdRef.current = undefined;
+	return [
+		...current,
+		createMessage("assistant", "", {
+			blocks: [{ id: `media:${media.id}`, type: "media", media }],
+		}),
+	];
 }
 
 export function extractToolName(text: string): string {

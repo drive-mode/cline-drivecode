@@ -92,9 +92,7 @@ describe("handleDrivePlanCommand", () => {
 			}),
 		);
 		expect(eligible.ok).toBe(true);
-		expect(
-			(eligible.payload?.workItems as unknown[]).length,
-		).toBe(2);
+		expect((eligible.payload?.workItems as unknown[]).length).toBe(2);
 
 		const claim = await handleDrivePlanCommand(
 			ctx,

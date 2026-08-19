@@ -111,11 +111,7 @@ export type DriveagentSecretRefEntry = z.infer<
 	typeof DriveagentSecretRefEntrySchema
 >;
 
-const EnvPlainValueSchema = z.union([
-	z.string(),
-	z.number(),
-	z.boolean(),
-]);
+const EnvPlainValueSchema = z.union([z.string(), z.number(), z.boolean()]);
 
 export const DriveagentEnvYamlSchema = z
 	.object({

@@ -1,4 +1,4 @@
-import type { DriveFacetValues, DeploymentProfile } from "@cline/shared";
+import type { DeploymentProfile, DriveFacetValues } from "@cline/shared";
 import { useState } from "react";
 import {
 	MicSelector,
@@ -11,7 +11,6 @@ import {
 	MicSelectorValue,
 } from "@/components/ai-elements/mic-selector";
 import { Button } from "@/components/ui/button";
-import { listDriveSettingsProviders } from "./driveSettingsModel";
 import {
 	DRIVE_EARCON_FACET_ID,
 	DRIVE_EARCON_GAIN_RATIO,
@@ -24,6 +23,7 @@ import {
 	outputVolumeFromPercent,
 	outputVolumePercent,
 } from "./driveHardwarePrefs";
+import { listDriveSettingsProviders } from "./driveSettingsModel";
 import type { DriveVoiceUi } from "./driveVoiceUi";
 import { resolveLlmEgressForUi } from "./driveVoiceUi";
 import { SpeakerDeviceSelect } from "./SpeakerDeviceSelect";
@@ -204,9 +204,7 @@ export function DriveSettingsPanel({
 					onValueChange={(deviceId) =>
 						onHardwareChange({
 							micDeviceId:
-								!deviceId || deviceId === "__default__"
-									? undefined
-									: deviceId,
+								!deviceId || deviceId === "__default__" ? undefined : deviceId,
 						})
 					}
 					value={voice.hardware.micDeviceId ?? "__default__"}
@@ -245,9 +243,7 @@ export function DriveSettingsPanel({
 			<div className="space-y-1">
 				<span className="text-xs text-muted-foreground">Speaker</span>
 				<SpeakerDeviceSelect
-					onChange={(speakerDeviceId) =>
-						onHardwareChange({ speakerDeviceId })
-					}
+					onChange={(speakerDeviceId) => onHardwareChange({ speakerDeviceId })}
 					value={voice.hardware.speakerDeviceId}
 				/>
 				<p className="text-[11px] text-muted-foreground">
@@ -268,17 +264,15 @@ export function DriveSettingsPanel({
 					min={0}
 					onChange={(event) =>
 						onHardwareChange({
-							outputVolume: outputVolumeFromPercent(
-								Number(event.target.value),
-							),
+							outputVolume: outputVolumeFromPercent(Number(event.target.value)),
 						})
 					}
 					type="range"
 					value={volumePercent}
 				/>
 				<p className="text-[11px] text-muted-foreground">
-					The same value the call strip slider edits — one volume, two places
-					to reach it.
+					The same value the call strip slider edits — one volume, two places to
+					reach it.
 				</p>
 			</label>
 
@@ -288,8 +282,7 @@ export function DriveSettingsPanel({
 				and volume stay on this machine.
 			</p>
 			<p className="font-mono text-[11px] text-muted-foreground">
-				{summarizeFacets(voice.facets)} ·{" "}
-				{summarizeHardware(voice.hardware)}
+				{summarizeFacets(voice.facets)} · {summarizeHardware(voice.hardware)}
 			</p>
 
 			{onDumpSessionRollups ? (
@@ -298,8 +291,8 @@ export function DriveSettingsPanel({
 						Session rollups (local)
 					</div>
 					<p className="text-[11px] text-muted-foreground">
-						Last N call-session metrics from room + bank JSONL on this
-						machine. No cloud telemetry.
+						Last N call-session metrics from room + bank JSONL on this machine.
+						No cloud telemetry.
 					</p>
 					<Button
 						data-testid="drive-dump-session-rollups"
@@ -310,9 +303,7 @@ export function DriveSettingsPanel({
 								.then((text) => setRollupDump(text))
 								.catch((error) =>
 									setRollupDump(
-										error instanceof Error
-											? error.message
-											: String(error),
+										error instanceof Error ? error.message : String(error),
 									),
 								)
 								.finally(() => setRollupBusy(false));
@@ -343,9 +334,7 @@ export function DriveSettingsPanel({
 										.then((note) => setDigestNote(note))
 										.catch((error) =>
 											setDigestNote(
-												error instanceof Error
-													? error.message
-													: String(error),
+												error instanceof Error ? error.message : String(error),
 											),
 										)
 										.finally(() => setDigestBusy(false));
@@ -354,9 +343,7 @@ export function DriveSettingsPanel({
 								type="button"
 								variant="outline"
 							>
-								{digestBusy
-									? "Exporting…"
-									: "Export shipped digest"}
+								{digestBusy ? "Exporting…" : "Export shipped digest"}
 							</Button>
 							{digestNote ? (
 								<p

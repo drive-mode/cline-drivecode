@@ -5,12 +5,12 @@ import {
 } from "@cline/shared";
 import type { AuthSettings } from "../../services/llms/provider-settings";
 import { ProviderSettingsManager } from "../../services/storage/provider-settings-manager";
+import { identifyAccount } from "../../services/telemetry/core-events";
+import { createConfiguredTelemetryHandle } from "../../services/telemetry/OpenTelemetryProvider";
 import {
 	PRODUCT_HUB_DAEMON_CLINE_TYPE,
 	PRODUCT_HUB_DAEMON_PLATFORM,
 } from "../../session/product-host-policy";
-import { identifyAccount } from "../../services/telemetry/core-events";
-import { createConfiguredTelemetryHandle } from "../../services/telemetry/OpenTelemetryProvider";
 import { CORE_BUILD_VERSION } from "../../version";
 
 const IDENTITY_REFRESH_INTERVAL_MS = 5 * 60 * 1000;

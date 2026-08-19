@@ -34,7 +34,12 @@ export async function transcribeAudioBlob(input: {
 		case "local-worker":
 			return await transcribeViaOpenAiCompatible(blob, config, fetchImpl, true);
 		case "cloud-api":
-			return await transcribeViaOpenAiCompatible(blob, config, fetchImpl, false);
+			return await transcribeViaOpenAiCompatible(
+				blob,
+				config,
+				fetchImpl,
+				false,
+			);
 		default: {
 			const _exhaustive: never = backend;
 			return _exhaustive;

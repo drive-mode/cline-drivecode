@@ -312,7 +312,9 @@ export async function runAgent(
 			prompt: userInput,
 			userImages,
 			userFiles,
-		} = await buildUserInputMessage(prompt, userInstructionService);
+		} = await buildUserInputMessage(prompt, userInstructionService, {
+			mode: config.mode,
+		});
 		const started = await sessionManager.start({
 			source: SessionSource.CLI,
 			config: {
@@ -348,9 +350,7 @@ export async function runAgent(
 			sessionManager
 				.abort(
 					activeSessionId,
-					new Error(
-						lastAbortReason ?? "Run-agent runtime abort requested",
-					),
+					new Error(lastAbortReason ?? "Run-agent runtime abort requested"),
 				)
 				.catch(() => {});
 		}

@@ -3,7 +3,7 @@ import type {
 	DoBacklogItem,
 	DriveRoomLiveState,
 } from "@cline/shared";
-import { type ActiveForkClaim } from "./chatForkPolicy.js";
+import type { ActiveForkClaim } from "./chatForkPolicy.js";
 import { rankDoBacklog } from "./rankBacklogs.js";
 
 export const DEFAULT_MAX_CONCURRENT_CHAT_FORKS = 2;

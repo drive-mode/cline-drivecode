@@ -1,9 +1,6 @@
 import type { ShowBacklogItem } from "@cline/shared";
 import { postToHost } from "../vscode";
-import {
-	DRIVE_DEFAULT_ROOM_ID,
-	DRIVE_PARTICIPANT_PARTNER,
-} from "./types";
+import { DRIVE_DEFAULT_ROOM_ID, DRIVE_PARTICIPANT_PARTNER } from "./types";
 
 /** Deterministic sample diagram for Slice 1 present-trigger smoke (no LLM).
  * Convention-stable names from `.claude/diagram-conventions.md`. */
@@ -25,8 +22,7 @@ export function buildSampleArchitectureShowItem(input?: {
 }): ShowBacklogItem {
 	return {
 		id: input?.id ?? SAMPLE_ARCHITECTURE_SHOW_ID,
-		ownerParticipantId:
-			input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
+		ownerParticipantId: input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
 		title: "Architecture overview",
 		intent: "Explain system layout before coding",
 		artifactKind: "diagram.architecture",
@@ -57,8 +53,7 @@ export function buildSampleChangeAnimationShowItem(input?: {
 }): ShowBacklogItem {
 	return {
 		id: input?.id ?? SAMPLE_ANIMATION_SHOW_ID,
-		ownerParticipantId:
-			input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
+		ownerParticipantId: input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
 		title: "Feed repaint · before and after",
 		intent: "Explain a change with motion",
 		artifactKind: "walkthrough.animation",
@@ -101,8 +96,7 @@ export function buildSampleCaptureShowItem(input?: {
 }): ShowBacklogItem {
 	return {
 		id: input?.id ?? SAMPLE_CAPTURE_SHOW_ID,
-		ownerParticipantId:
-			input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
+		ownerParticipantId: input?.ownerParticipantId ?? DRIVE_PARTICIPANT_PARTNER,
 		title: "Hub webview · smooth playback",
 		intent: "Show running UI proof",
 		artifactKind: "capture.screenshot",

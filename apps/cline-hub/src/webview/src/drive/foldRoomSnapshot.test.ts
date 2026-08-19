@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { createEmptyRoomSnapshot, reduceRoom } from "@cline/drive";
 import type { DriveEvent, RoomSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { foldIncomingDriveEvent } from "./foldRoomSnapshot";
 
 const at = "2026-07-25T18:00:00.000Z";

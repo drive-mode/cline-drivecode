@@ -1,11 +1,7 @@
 import { z } from "zod";
-import {
-	AddressSetSchema,
-	parseAddressSet,
-	type AddressSet,
-} from "./address";
+import { type AddressSet, AddressSetSchema, parseAddressSet } from "./address";
 
-export { AddressSetSchema, parseAddressSet, type AddressSet };
+export { type AddressSet, AddressSetSchema, parseAddressSet };
 
 export const RouterModeSchema = z.enum(["manual", "suggest", "auto"]);
 export type RouterMode = z.infer<typeof RouterModeSchema>;

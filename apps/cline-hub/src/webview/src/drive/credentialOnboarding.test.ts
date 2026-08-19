@@ -31,9 +31,9 @@ describe("isLlmProviderConfigured", () => {
 	it("is true when any provider has a key, oauth token, or is enabled", () => {
 		expect(isLlmProviderConfigured([])).toBe(false);
 		expect(isLlmProviderConfigured([{ apiKeyPresent: true }])).toBe(true);
-		expect(
-			isLlmProviderConfigured([{ oauthAccessTokenPresent: true }]),
-		).toBe(true);
+		expect(isLlmProviderConfigured([{ oauthAccessTokenPresent: true }])).toBe(
+			true,
+		);
 		expect(isLlmProviderConfigured([{ enabled: true }])).toBe(true);
 		expect(
 			isLlmProviderConfigured([

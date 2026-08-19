@@ -12,6 +12,7 @@ import { HubScheduleService } from "../../cron/service/schedule-service";
 import { resolveResourcePolicy } from "../../resources/policy";
 import { LocalRuntimeHost } from "../../runtime/host/local-runtime-host";
 import type {
+	CommandExecutionRuntimeService,
 	PendingPromptsRuntimeService,
 	RuntimeHost,
 } from "../../runtime/host/runtime-host";
@@ -65,6 +66,7 @@ import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollu
 import { handleDriveWaveCommand } from "./handlers/drive-wave-handlers";
 import {
 	handleRunAbort,
+	handleRunProceedWhileRunning,
 	handleSessionHook,
 	handleSessionInput,
 } from "./handlers/run-handlers";
@@ -101,6 +103,7 @@ const SETTINGS_TYPES = new Set<CoreSettingsType>([
 	"skills",
 	"workflows",
 	"rules",
+	"plugins",
 	"tools",
 	"mcp",
 ]);
@@ -163,7 +166,7 @@ function parseSettingsToggleInput(payload: unknown): CoreSettingsToggleInput {
 		!SETTINGS_TYPES.has(type as CoreSettingsType)
 	) {
 		throw new Error(
-			"settings.toggle payload 'type' must be one of: skills, workflows, rules, tools, mcp.",
+			"settings.toggle payload 'type' must be one of: skills, workflows, rules, plugins, tools, mcp.",
 		);
 	}
 	return {
@@ -193,12 +196,13 @@ export class HubServerTransport implements NativeHubTransport {
 		string,
 		string
 	>();
+	private readonly activeRpcTurnCountBySession = new Map<string, number>();
 	private readonly schedules: HubScheduleService;
 	private readonly scheduleCommands: HubScheduleCommandService;
 	private readonly settings: CoreSettingsService;
 	private readonly cronService?: CronService;
 	private readonly sessionHost: RuntimeHost &
-		Partial<PendingPromptsRuntimeService>;
+		Partial<PendingPromptsRuntimeService & CommandExecutionRuntimeService>;
 	private readonly hubId = createSessionId("hub_");
 	private readonly ctx: HubTransportContext;
 	private readonly detachStatusBroadcast: () => void;
@@ -224,6 +228,7 @@ export class HubServerTransport implements NativeHubTransport {
 			suppressNextTerminalEventBySession:
 				this.suppressNextTerminalEventBySession,
 			pendingDriveToolInputs: new Map(),
+			activeRpcTurnCountBySession: this.activeRpcTurnCountBySession,
 			telemetry: options.telemetry,
 			sessionHost: this.sessionHost,
 			publish: (event) => this.publish(event),
@@ -428,6 +433,8 @@ export class HubServerTransport implements NativeHubTransport {
 				return await handleSessionInput(this.ctx, envelope);
 			case "run.abort":
 				return await handleRunAbort(this.ctx, envelope);
+			case "run.proceed_while_running":
+				return await handleRunProceedWhileRunning(this.ctx, envelope);
 			case "capability.request":
 				return await handleCapabilityRequest(this.ctx, envelope);
 			case "approval.respond":
@@ -449,6 +456,9 @@ export class HubServerTransport implements NativeHubTransport {
 			case "connector.channels":
 			case "connector.configure":
 			case "connector.delete_config":
+			case "connector.start":
+			case "connector.stop":
+			case "connector.supervised":
 				return await handleConnectorCommand(this.ctx, envelope);
 
 			case "drive.room.get":

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { DriveFacetDiskSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { DRIVE_FACET_CATALOG, listFacetDefs } from "./catalog";
 import { createFacetStore } from "./store";
 
@@ -12,12 +12,8 @@ describe("DRIVE_FACET_CATALOG", () => {
 			"privacy.retention",
 			"room.live.subMode",
 		]);
-		expect(DRIVE_FACET_CATALOG["drive.defaults.subMode"].lane).toBe(
-			"durable",
-		);
-		expect(DRIVE_FACET_CATALOG["room.live.subMode"].conflict).toBe(
-			"live_wins",
-		);
+		expect(DRIVE_FACET_CATALOG["drive.defaults.subMode"].lane).toBe("durable");
+		expect(DRIVE_FACET_CATALOG["room.live.subMode"].conflict).toBe("live_wins");
 		expect(DRIVE_FACET_CATALOG["privacy.debugRetention"]).toMatchObject({
 			lane: "live",
 			scope: "session",
@@ -107,6 +103,8 @@ describe("createFacetStore", () => {
 		expect(store.get("agent.appearance", "agent.reviewer").displayName).toBe(
 			"Reviewer",
 		);
-		expect(store.get("agent.appearance", "missing").displayName).toBeUndefined();
+		expect(
+			store.get("agent.appearance", "missing").displayName,
+		).toBeUndefined();
 	});
 });

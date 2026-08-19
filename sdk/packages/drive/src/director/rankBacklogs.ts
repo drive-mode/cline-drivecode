@@ -132,8 +132,7 @@ export function buildDirectorStateFromBags(input: {
 		showBacklog,
 		activeScript: script,
 		activeBeatId: firstBeat?.beatId ?? null,
-		activeShowId:
-			firstBeat?.showItemId ?? ranked[0]?.item.id ?? null,
+		activeShowId: firstBeat?.showItemId ?? ranked[0]?.item.id ?? null,
 		stickyShowIds: firstBeat
 			? [firstBeat.showItemId, ...(script?.stickyShowIds ?? [])]
 			: ranked[0]

@@ -11,9 +11,7 @@ import {
  * Hub-projected participants, or a synthetic human + pair_partner when the
  * snapshot has not arrived yet (demo / pre-join chrome).
  */
-export function resolveRosterParticipants(
-	drive: DriveUiState,
-): Participant[] {
+export function resolveRosterParticipants(drive: DriveUiState): Participant[] {
 	const seated =
 		drive.participants.length > 0
 			? drive.participants
@@ -82,9 +80,7 @@ export function resolveNarratorParticipantId(drive: DriveUiState): string {
  * Otherwise fall back to the legacy guess: pack / spawn seat sources may
  * carry a driveagent slug, and the builtin partner maps to the fixture slug.
  */
-export function resolveAgentHomeSlug(
-	participant: Participant,
-): string | null {
+export function resolveAgentHomeSlug(participant: Participant): string | null {
 	if (participant.kind !== "agent") {
 		return null;
 	}
@@ -171,9 +167,7 @@ export function applyTranscriptFocus(
 	};
 }
 
-export function participantStatusLabel(
-	status: Participant["status"],
-): string {
+export function participantStatusLabel(status: Participant["status"]): string {
 	switch (status) {
 		case "idle":
 			return "idle";

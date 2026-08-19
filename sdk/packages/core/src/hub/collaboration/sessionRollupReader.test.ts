@@ -273,8 +273,6 @@ describe("sessionRollupReader", () => {
 	it("returns empty for unknown callSessionId", () => {
 		const dir = mkdtempSync(join(tmpdir(), "drive-rollup-miss-"));
 		dirs.push(dir);
-		expect(readSessionRollups(dir, { callSessionId: "missing" })).toEqual(
-			[],
-		);
+		expect(readSessionRollups(dir, { callSessionId: "missing" })).toEqual([]);
 	});
 });

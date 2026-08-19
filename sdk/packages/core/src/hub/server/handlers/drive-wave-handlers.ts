@@ -2,10 +2,7 @@
  * Hub command: drive.wave.run — first live DriveWaveRunner binding.
  */
 
-import {
-	DriveWaveRunner,
-	failFastReview,
-} from "@cline/drive";
+import { DriveWaveRunner, failFastReview } from "@cline/drive";
 import type { HubCommandEnvelope, HubReplyEnvelope } from "@cline/shared";
 import { getDriveRoomStore } from "../../collaboration";
 import { errorReply, type HubTransportContext, okReply } from "./context";
@@ -36,7 +33,11 @@ export async function handleDriveWaveCommand(
 		case "drive.wave.run":
 			return await handleWaveRun(ctx, envelope);
 		default:
-			return errorReply(envelope, "not_implemented", "Unknown drive wave command");
+			return errorReply(
+				envelope,
+				"not_implemented",
+				"Unknown drive wave command",
+			);
 	}
 }
 
@@ -76,7 +77,10 @@ async function handleWaveRun(
 	let workInputs = doBacklogToWaveInputs(room.director.doBacklog);
 	if (fromPayload && fromPayload.length > 0) {
 		workInputs = fromPayload
-			.filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === "object")
+			.filter(
+				(entry): entry is Record<string, unknown> =>
+					!!entry && typeof entry === "object",
+			)
 			.map((entry) => ({
 				id: typeof entry.id === "string" ? entry.id : undefined,
 				kind: typeof entry.kind === "string" ? entry.kind : "do_item",
@@ -87,7 +91,8 @@ async function handleWaveRun(
 				dependsOn: Array.isArray(entry.dependsOn)
 					? entry.dependsOn.filter((d): d is string => typeof d === "string")
 					: undefined,
-				priority: typeof entry.priority === "number" ? entry.priority : undefined,
+				priority:
+					typeof entry.priority === "number" ? entry.priority : undefined,
 			}));
 	}
 
@@ -118,7 +123,10 @@ async function handleWaveRun(
 	const runner = new DriveWaveRunner({
 		host,
 		gates: [failFastReview()],
-		concurrency: { initial: initialConcurrency, max: Math.max(initialConcurrency, 4) },
+		concurrency: {
+			initial: initialConcurrency,
+			max: Math.max(initialConcurrency, 4),
+		},
 	});
 
 	const result = await runner.run(workInputs);

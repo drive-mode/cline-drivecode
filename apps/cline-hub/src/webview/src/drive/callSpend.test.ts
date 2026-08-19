@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	foldUsageIntoSpend,
-	formatCallSpend,
-	hasCallSpend,
-} from "./callSpend";
+import { foldUsageIntoSpend, formatCallSpend, hasCallSpend } from "./callSpend";
 
 describe("foldUsageIntoSpend", () => {
 	it("stays null when usage is empty", () => {

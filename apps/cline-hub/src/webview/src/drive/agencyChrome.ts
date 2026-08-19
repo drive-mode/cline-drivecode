@@ -70,9 +70,7 @@ export function interruptRedirectNowAnnounce(input: {
 	nextNowTaskId?: string | null;
 }): string | null {
 	const next =
-		input.nextNowTitle?.trim() ||
-		input.nextNowTaskId?.trim() ||
-		null;
+		input.nextNowTitle?.trim() || input.nextNowTaskId?.trim() || null;
 	if (!next) {
 		return null;
 	}
@@ -87,7 +85,9 @@ export function interruptRedirectNowAnnounce(input: {
 }
 
 /** Visible call-strip badge when privacy.debugRetention is on. */
-export function debugRetentionStripCopy(debugRetention: boolean): string | null {
+export function debugRetentionStripCopy(
+	debugRetention: boolean,
+): string | null {
 	return debugRetention ? "Debug retention on" : null;
 }
 

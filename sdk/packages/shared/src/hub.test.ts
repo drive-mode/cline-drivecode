@@ -41,14 +41,12 @@ describe("readHubScheduleMode", () => {
 		expect(readHubScheduleMode({})).toBeUndefined();
 	});
 
-	it.each([
-		undefined,
-		null,
-		"",
-		"invalid",
-	])("rejects a present invalid mode: %s", (mode) => {
-		expect(() => readHubScheduleMode({ mode }, "yolo")).toThrow(
-			"mode must be one of: act, plan, yolo",
-		);
-	});
+	it.each([undefined, null, "", "invalid"])(
+		"rejects a present invalid mode: %s",
+		(mode) => {
+			expect(() => readHubScheduleMode({ mode }, "yolo")).toThrow(
+				"mode must be one of: act, plan, yolo",
+			);
+		},
+	);
 });

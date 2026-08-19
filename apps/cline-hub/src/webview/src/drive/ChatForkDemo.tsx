@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
 import type { ChatForkRecord } from "@cline/shared";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChatForkAuditPanel } from "./ChatForkAuditPanel";
 import { StickyStagePane } from "./StickyStagePane";
@@ -106,7 +106,8 @@ const BEATS: ChatForkDemoBeat[] = [
 			},
 		],
 		showTitle: "Architecture diagram (sticky)",
-		showCaption: "Promote injected one summary into main; worker B messages dropped.",
+		showCaption:
+			"Promote injected one summary into main; worker B messages dropped.",
 		promoteSummary: "Auth flake fixed with waitFor network idle.",
 	},
 ];
@@ -133,7 +134,9 @@ export function ChatForkDemo() {
 				<p className="text-xs uppercase tracking-wide text-muted-foreground">
 					ChatFork demo · /drive?demoChatFork=1
 				</p>
-				<h1 className="text-xl font-semibold">Invisible workers, reactive share</h1>
+				<h1 className="text-xl font-semibold">
+					Invisible workers, reactive share
+				</h1>
 				<p className="text-sm text-muted-foreground">
 					Claim path-disjoint workers, fill the Show backlog, promote summaries
 					back — without parallel chat tabs.
@@ -176,7 +179,12 @@ export function ChatForkDemo() {
 			<ChatForkAuditPanel
 				auditMessages={
 					focused
-						? [{ role: "assistant", content: "Worker transcript retained for audit." }]
+						? [
+								{
+									role: "assistant",
+									content: "Worker transcript retained for audit.",
+								},
+							]
 						: []
 				}
 				focusedAuditHandle={focused}

@@ -2,7 +2,7 @@
  * Persist DriveRun + WorkLease beside the task bank (`.drive/bank/`).
  */
 
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { DriveRun, WorkLease } from "@cline/shared";
 import { parseDriveRun, parseWorkLease } from "@cline/shared";
@@ -41,14 +41,19 @@ export async function getDriveRun(
 	runId: string,
 ): Promise<DriveRun | null> {
 	try {
-		const raw = await readFile(join(runsDir(workspaceRoot), `${runId}.json`), "utf8");
+		const raw = await readFile(
+			join(runsDir(workspaceRoot), `${runId}.json`),
+			"utf8",
+		);
 		return parseDriveRun(JSON.parse(raw));
 	} catch {
 		return null;
 	}
 }
 
-export async function listDriveRuns(workspaceRoot: string): Promise<DriveRun[]> {
+export async function listDriveRuns(
+	workspaceRoot: string,
+): Promise<DriveRun[]> {
 	try {
 		const dir = runsDir(workspaceRoot);
 		const names = await readdir(dir);

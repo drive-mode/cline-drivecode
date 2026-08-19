@@ -49,6 +49,10 @@ export {
 	createReportStatusExecutor,
 	type ReportStatusExecutorOptions,
 } from "./report-status";
+export {
+	RunCommandExecutionController,
+	type RunningCommandRegistration,
+} from "./run-command-execution-controller";
 export { createSearchExecutor, type SearchExecutorOptions } from "./search";
 export {
 	createWebFetchExecutor,

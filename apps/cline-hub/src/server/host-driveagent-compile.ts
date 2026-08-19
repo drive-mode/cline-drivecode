@@ -24,7 +24,10 @@ export function hostCompileEnqueueRelativePath(proposalId: string): string {
 	return `.drive/plan-improve/host-compile/${proposalId}.json`;
 }
 
-function assertUnderPlanImprove(workspaceRoot: string, relativePath: string): string {
+function assertUnderPlanImprove(
+	workspaceRoot: string,
+	relativePath: string,
+): string {
 	const root = resolve(workspaceRoot);
 	const abs = resolve(root, relativePath);
 	const allowed = resolve(root, ".drive/plan-improve");

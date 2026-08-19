@@ -44,7 +44,7 @@ export const DRIVE_FACET_CATALOG = {
 		defaultValue: DEFAULT_AGENT_APPEARANCE,
 	} satisfies FacetDefMeta<AgentAppearance>,
 
-/**
+	/**
 	 * Live room sub-mode. Seeded from drive.defaults.subMode at room create;
 	 * disk reload must never overwrite (live_wins).
 	 */
@@ -113,9 +113,11 @@ export function listFacetDefs(filter?: {
 	phase?: number;
 	lane?: DriveFacetCatalog[DriveFacetKey]["lane"];
 }): Array<DriveFacetCatalog[DriveFacetKey]> {
-	return (Object.values(DRIVE_FACET_CATALOG) as Array<
-		DriveFacetCatalog[DriveFacetKey]
-	>).filter((def) => {
+	return (
+		Object.values(DRIVE_FACET_CATALOG) as Array<
+			DriveFacetCatalog[DriveFacetKey]
+		>
+	).filter((def) => {
 		if (filter?.phase !== undefined && def.phase > filter.phase) {
 			return false;
 		}

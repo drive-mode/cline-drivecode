@@ -15,7 +15,7 @@ import {
 	type ToolApprovalRequest,
 	type ToolApprovalResult,
 } from "@cline/core";
-import type { AgentEvent } from "@cline/shared";
+import { type AgentEvent, isGeneratedMedia } from "@cline/shared";
 import {
 	discardAllTrackedAttachments,
 	flushConsumedAttachments,
@@ -58,9 +58,7 @@ function usageBudgetHandlerForSession(
 			maxCostUsd,
 			abort: (reason) => {
 				usageBudgetHandlers.delete(sessionId);
-				void ctx.sessionManager
-					?.abort(sessionId, reason)
-					.catch(() => {});
+				void ctx.sessionManager?.abort(sessionId, reason).catch(() => {});
 			},
 		});
 		if (handler) {
@@ -78,11 +76,15 @@ function nowMs(): number {
 	return Date.now();
 }
 
-function sendEvent(ctx: SidecarContext, name: string, payload: unknown): void {
-	const encoded = JSON.stringify({
+export function encodeSidecarEvent(name: string, payload: unknown): string {
+	return JSON.stringify({
 		type: "event",
 		event: { name, payload },
 	});
+}
+
+function sendEvent(ctx: SidecarContext, name: string, payload: unknown): void {
+	const encoded = encodeSidecarEvent(name, payload);
 	for (const client of ctx.wsClients) {
 		try {
 			client.send(encoded);
@@ -141,7 +143,7 @@ function emitChunk(
 	});
 }
 
-export { sendEvent, emitChunk, nowMs };
+export { emitChunk, nowMs, sendEvent };
 
 // ---------------------------------------------------------------------------
 // Exported broadcast helpers (used by server.ts / commands)
@@ -265,6 +267,10 @@ function handleAgentEvent(
 			if (event.contentType === "text" || event.contentType === "reasoning") {
 				break;
 			}
+			if (event.contentType === "media" && event.media) {
+				emitChunk(ctx, sessionId, "chat_media", JSON.stringify(event.media));
+				break;
+			}
 			if (event.contentType === "tool") {
 				emitChunk(
 					ctx,
@@ -358,6 +364,35 @@ function handleAgentEvent(
 // CoreSessionEvent routing
 // ---------------------------------------------------------------------------
 
+// The runtime's queue drain emits a pending_prompts snapshot (head removed)
+// and a pending_prompt_submitted event for the same prompt back-to-back, and
+// both are translated here into chat_queued_prompt_start — dedupe by prompt
+// id or the UI renders the user message twice.
+function emitQueuedPromptStart(
+	ctx: SidecarContext,
+	sessionId: string,
+	session: LiveSession | undefined,
+	input: {
+		promptId: string;
+		prompt: string;
+		attachmentCount: number;
+		userImages?: string[];
+	},
+): void {
+	if (session) {
+		if (session.lastQueuedPromptStartId === input.promptId) {
+			return;
+		}
+		session.lastQueuedPromptStartId = input.promptId;
+	}
+	emitChunk(
+		ctx,
+		sessionId,
+		"chat_queued_prompt_start",
+		serializeQueuedPromptStart(input),
+	);
+}
+
 function handleCoreSessionEvent(
 	ctx: SidecarContext,
 	event: CoreSessionEvent,
@@ -401,17 +436,12 @@ function handleCoreSessionEvent(
 					previous[0] &&
 					previous[0].id !== mapped[0]?.id
 				) {
-					emitChunk(
-						ctx,
-						sessionId,
-						"chat_queued_prompt_start",
-						serializeQueuedPromptStart({
-							promptId: previous[0].id,
-							prompt: previous[0].prompt,
-							attachmentCount: previous[0].attachmentCount ?? 0,
-							userImages: previous[0].userImages,
-						}),
-					);
+					emitQueuedPromptStart(ctx, sessionId, session, {
+						promptId: previous[0].id,
+						prompt: previous[0].prompt,
+						attachmentCount: previous[0].attachmentCount ?? 0,
+						userImages: previous[0].userImages,
+					});
 				}
 			}
 			sendPromptsInQueueSnapshot(ctx, sessionId);
@@ -420,18 +450,26 @@ function handleCoreSessionEvent(
 		case "pending_prompt_submitted": {
 			const { sessionId, id, prompt, attachmentCount, userImages } =
 				event.payload;
-			markQueuedAttachmentsSubmitted(ctx.liveSessions.get(sessionId), id);
-			emitChunk(
-				ctx,
-				sessionId,
-				"chat_queued_prompt_start",
-				serializeQueuedPromptStart({
-					promptId: id,
-					prompt,
-					attachmentCount: attachmentCount ?? 0,
-					userImages,
-				}),
-			);
+			const session = ctx.liveSessions.get(sessionId);
+			markQueuedAttachmentsSubmitted(session, id);
+			emitQueuedPromptStart(ctx, sessionId, session, {
+				promptId: id,
+				prompt,
+				attachmentCount: attachmentCount ?? 0,
+				userImages,
+			});
+			// The prompt left the queue; without a fresh snapshot the webview
+			// keeps a stale busy queue and the composer never returns to idle
+			// after the turn completes.
+			if (session) {
+				const remaining = session.promptsInQueue.filter(
+					(item) => item.id !== id,
+				);
+				if (remaining.length !== session.promptsInQueue.length) {
+					session.promptsInQueue = remaining;
+					sendPromptsInQueueSnapshot(ctx, sessionId);
+				}
+			}
 			break;
 		}
 		case "ended": {
@@ -502,6 +540,7 @@ export function createSidecarContext(
 		logger: observability.logger,
 		telemetry: observability.telemetry,
 		unsubscribeSessionEvents: null,
+		hubBuildMismatch: null,
 	};
 }
 
@@ -575,6 +614,12 @@ export function requestSidecarAskQuestion(
 	options: string[],
 	context: AgentToolContext,
 ): Promise<string> {
+	const sessionId = context.sessionId?.trim();
+	if (!sessionId) {
+		return Promise.reject(
+			new Error("ask_question requires an active session ID"),
+		);
+	}
 	const choices = options
 		.map((option) => option.trim())
 		.filter((option) => option.length > 0)
@@ -600,6 +645,7 @@ export function requestSidecarAskQuestion(
 		const pending: PendingAskQuestion = {
 			item: {
 				requestId,
+				sessionId,
 				createdAt: new Date().toISOString(),
 				question,
 				options: choices,
@@ -698,6 +744,13 @@ export function handleHubLiveEvent(
 			}
 			return;
 		}
+		case "assistant.media": {
+			const media = event.payload?.media;
+			if (isGeneratedMedia(media)) {
+				emitChunk(ctx, sessionId, "chat_media", JSON.stringify(media));
+			}
+			return;
+		}
 		case "reasoning.delta": {
 			const text =
 				typeof event.payload?.text === "string" ? event.payload.text : "";
@@ -728,6 +781,25 @@ export function handleHubLiveEvent(
 							? event.payload.toolName
 							: "tool",
 					input: event.payload?.input,
+				}),
+			);
+			return;
+		}
+		case "tool.updated": {
+			emitChunk(
+				ctx,
+				sessionId,
+				"chat_tool_call_update",
+				JSON.stringify({
+					toolCallId:
+						typeof event.payload?.toolCallId === "string"
+							? event.payload.toolCallId
+							: undefined,
+					toolName:
+						typeof event.payload?.toolName === "string"
+							? event.payload.toolName
+							: "tool",
+					update: event.payload?.update,
 				}),
 			);
 			return;

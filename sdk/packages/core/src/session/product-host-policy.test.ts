@@ -31,9 +31,9 @@ describe("product-host-policy", () => {
 
 	it("reads CLINE_MAX_SESSION_COST as a positive USD budget", () => {
 		expect(PRODUCT_MAX_SESSION_COST_ENV).toBe("CLINE_MAX_SESSION_COST");
-		expect(readProductMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "12.5" })).toBe(
-			12.5,
-		);
+		expect(
+			readProductMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "12.5" }),
+		).toBe(12.5);
 		expect(readProductMaxSessionCostUsd({ CLINE_MAX_SESSION_COST: "0" })).toBe(
 			undefined,
 		);

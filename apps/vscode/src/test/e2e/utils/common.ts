@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import { expect, type Page } from "@playwright/test"
 
 export const openTab = async (_page: Page, tabName: string) => {
 	await _page
@@ -14,14 +14,18 @@ export const addSelectedCodeToClineWebview = async (_page: Page) => {
 	// Open Code Actions via keyboard for cross-platform reliability
 	await _page.keyboard.press("ControlOrMeta+.")
 
-	// Target the explicit action instead of pressing Enter on the first item.
-	// The first item can vary by platform or diagnostics.
-	const addToCline = _page.getByText(/Add to Cline/i)
+	// Identify the explicit action because ordering varies by platform and
+	// diagnostics. Verifying the row exercises the code-action provider. VS Code
+	// 1.134's widget cannot be activated consistently by Playwright: its pointer
+	// blocker intercepts clicks, and Enter only dismisses it on macOS. Close the
+	// widget, then invoke the same AddToChat command through its contributed,
+	// cross-platform editor-selection shortcut.
+	const addToCline = _page.getByRole("option", { name: /Add to Cline/i })
 	await addToCline.waitFor({ state: "visible" })
-	// For whatever reason, we need to move the mouse to make the context menu item clickable
-	await _page.mouse.move(10, 10)
-	await _page.mouse.move(20, 10)
-	await addToCline.click()
+	await expect(addToCline).toHaveClass(/focused/)
+	await _page.keyboard.press("Escape")
+	await addToCline.waitFor({ state: "hidden" })
+	await _page.keyboard.press("ControlOrMeta+'")
 }
 
 export const toggleNotifications = async (_page: Page) => {

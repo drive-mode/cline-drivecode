@@ -30,14 +30,14 @@ export {
 	AgentTeam,
 	AgentTeamsRuntime,
 	type AgentTeamsRuntimeOptions,
-	TeamRunAdmissionError,
-	type TeamRunAdmissionLimit,
 	createAgentTeam,
 	createWorkerReviewerTeam,
 	type SpawnTeammateOptions,
 	type TaskResult,
 	type TeamEvent,
 	type TeamMemberConfig,
+	TeamRunAdmissionError,
+	type TeamRunAdmissionLimit,
 } from "./multi-agent";
 
 // =============================================================================

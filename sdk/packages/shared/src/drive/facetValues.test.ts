@@ -214,15 +214,11 @@ describe("Driveagent home schemas", () => {
 			version: 1,
 			agentSlug: "pair-partner",
 			compiledAt: "2026-07-25T00:00:00.000Z",
-			nodes: [
-				{ id: "agent-self", kind: "concept", label: "Pair partner" },
-			],
+			nodes: [{ id: "agent-self", kind: "concept", label: "Pair partner" }],
 			edges: [],
 		});
 		expect(
-			parseDriveagentDerivedGraph(
-				JSON.parse(JSON.stringify(graph)) as unknown,
-			),
+			parseDriveagentDerivedGraph(JSON.parse(JSON.stringify(graph)) as unknown),
 		).toEqual(graph);
 	});
 });

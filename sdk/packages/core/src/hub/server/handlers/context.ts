@@ -10,6 +10,7 @@ import type {
 } from "@cline/shared";
 import { createSessionId } from "@cline/shared";
 import type {
+	CommandExecutionRuntimeService,
 	PendingPromptsRuntimeService,
 	RuntimeHost,
 	SessionConnectionRuntimeService,
@@ -56,10 +57,21 @@ export interface HubTransportContext {
 	 * Used by the in-process Drive stage projector (ADR-0029 slice 3).
 	 */
 	readonly pendingDriveToolInputs: Map<string, unknown>;
+	/**
+	 * Count of RPC-driven turns (`run.start` / session input commands)
+	 * currently awaiting `sessionHost.runTurn` per session. While > 0 the
+	 * awaiting handler publishes the authoritative terminal run event, so the
+	 * session-event projector must not publish its own `run.failed` for
+	 * agent-level error events emitted during that turn. Turns drained from
+	 * the pending-prompt queue run with no awaiting RPC handler (count 0), so
+	 * the projector is their only failure reporter.
+	 */
+	readonly activeRpcTurnCountBySession: Map<string, number>;
 	readonly telemetry?: ITelemetryService;
 	readonly sessionHost: RuntimeHost &
 		Partial<
-			PendingPromptsRuntimeService &
+			CommandExecutionRuntimeService &
+				PendingPromptsRuntimeService &
 				SessionUsageRuntimeService &
 				SessionConnectionRuntimeService
 		>;

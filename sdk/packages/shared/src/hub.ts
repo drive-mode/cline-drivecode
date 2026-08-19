@@ -20,7 +20,10 @@ export type HubCapabilityName =
 	| "schedule.create"
 	| "schedule.list"
 	| "settings.get"
-	| "settings.set";
+	| "settings.set"
+	| "connector.start"
+	| "connector.stop"
+	| "connector.supervised";
 
 export const HUB_CAPABILITIES: readonly HubCapabilityName[] = [
 	"client.register",
@@ -34,6 +37,9 @@ export const HUB_CAPABILITIES: readonly HubCapabilityName[] = [
 	"schedule.list",
 	"settings.get",
 	"settings.set",
+	"connector.start",
+	"connector.stop",
+	"connector.supervised",
 ];
 
 export interface HubProtocolMetadata {
@@ -426,6 +432,7 @@ export type HubCommandName =
 	| "run.start"
 	| "session.send_input"
 	| "run.abort"
+	| "run.proceed_while_running"
 	| "approval.request"
 	| "approval.respond"
 	| "capability.request"
@@ -455,6 +462,9 @@ export type HubCommandName =
 	| "connector.channels"
 	| "connector.configure"
 	| "connector.delete_config"
+	| "connector.start"
+	| "connector.stop"
+	| "connector.supervised"
 	| "drive.room.get"
 	| "drive.presenter.grant"
 	| "drive.presenter.transfer"
@@ -598,6 +608,7 @@ export type HubEventName =
 	| "iteration.started"
 	| "iteration.finished"
 	| "assistant.delta"
+	| "assistant.media"
 	| "assistant.finished"
 	| "session.notice"
 	| "reasoning.delta"

@@ -16,9 +16,7 @@ export type TopologyReject =
 	| { ok: true }
 	| { ok: false; code: TopologyRejectCode; message: string };
 
-export function assertTopologyLegal(
-	topology: RuntimeTopology,
-): TopologyReject {
+export function assertTopologyLegal(topology: RuntimeTopology): TopologyReject {
 	if (topology.profile === "local") {
 		if (topology.llm.kind !== "local") {
 			return {

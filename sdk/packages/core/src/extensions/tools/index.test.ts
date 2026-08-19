@@ -69,18 +69,17 @@ describe("createBuiltinTools shell configuration", () => {
 			expectedShell: "cmd.exe",
 			expectedDescription: "Commands run through cmd.exe",
 		},
-	])("uses the $name for both description and execution", async ({
-		options,
-		expectedShell,
-		expectedDescription,
-	}) => {
-		const tool = await executeRunCommands(options);
+	])(
+		"uses the $name for both description and execution",
+		async ({ options, expectedShell, expectedDescription }) => {
+			const tool = await executeRunCommands(options);
 
-		expect(tool.description).toContain(expectedDescription);
-		expect(spawn).toHaveBeenCalledWith(
-			expectedShell,
-			expect.any(Array),
-			expect.any(Object),
-		);
-	});
+			expect(tool.description).toContain(expectedDescription);
+			expect(spawn).toHaveBeenCalledWith(
+				expectedShell,
+				expect.any(Array),
+				expect.any(Object),
+			);
+		},
+	);
 });

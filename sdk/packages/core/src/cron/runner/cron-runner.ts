@@ -9,8 +9,8 @@ import { nowIso } from "@cline/shared/db";
 import type { ResolveCronSpecsDirOptions } from "@cline/shared/storage";
 import { DefaultToolNames } from "../../extensions/tools/constants";
 import { mergeRulesForSystemPrompt } from "../../runtime/safety/rules";
-import { PRODUCT_DEFAULT_MAX_ITERATIONS } from "../../session/product-session-defaults";
 import { buildWorkspaceMetadata } from "../../services/workspace/workspace-manifest";
+import { PRODUCT_DEFAULT_MAX_ITERATIONS } from "../../session/product-session-defaults";
 import { writeCronRunReport } from "../reports/cron-report-writer";
 import type { HubScheduleRuntimeHandlers } from "../service/schedule-service";
 import type {
@@ -301,9 +301,11 @@ export class CronRunner {
 			executionDeadlineMs = startMs + spec.timeoutSeconds * 1000;
 		}
 
+		let phase = "preparing the session request";
 		try {
 			releaseLeaseHeartbeat = this.startClaimLeaseHeartbeat(claim);
 			const startRequest = await this.buildStartRequest(spec);
+			phase = "starting the agent session";
 			const startResp =
 				await this.options.runtimeHandlers.startSession(startRequest);
 			sessionId = startResp.sessionId.trim();
@@ -314,6 +316,7 @@ export class CronRunner {
 			});
 			this.store.attachSessionIdToRun(run.runId, sessionId);
 
+			phase = "running the agent turn";
 			const turnRequest: ChatRunTurnRequest = {
 				config: startRequest,
 				prompt: this.buildPrompt(spec, triggerEvent),
@@ -365,12 +368,20 @@ export class CronRunner {
 			}
 			const message = err instanceof Error ? err.message : String(err);
 			const endMs = Date.now();
+			const errorContext = isTimeout
+				? `The run exceeded its ${spec.timeoutSeconds}s timeout while ${phase} and was aborted:`
+				: `The run failed while ${phase}:`;
 			const reportPath = writeCronRunReport({
 				specs: this.options.specs,
 				workspaceRoot: this.options.workspaceRoot,
 				run: { ...run, sessionId, status: "failed" },
 				spec,
-				data: { error: message, durationMs: endMs - startMs, triggerEvent },
+				data: {
+					error: message,
+					errorContext,
+					durationMs: endMs - startMs,
+					triggerEvent,
+				},
 			});
 			this.store.completeRun(run.runId, {
 				status: "failed",

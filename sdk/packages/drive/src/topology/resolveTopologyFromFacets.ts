@@ -74,9 +74,7 @@ export function resolveTopologyFromFacets(input: {
 	facets: DriveFacetValues;
 	llm: ResolvedLlmEgress;
 	registry?: readonly DriveProviderManifest[];
-}):
-	| { ok: true; topology: RuntimeTopology }
-	| { ok: false; message: string } {
+}): { ok: true; topology: RuntimeTopology } | { ok: false; message: string } {
 	const registry = input.registry ?? BUILTIN_PROVIDER_MANIFESTS;
 	const sttManifest = registry.find(
 		(manifest) =>

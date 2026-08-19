@@ -23,8 +23,8 @@ import { agentProfilePath } from "./agentProfileRoute";
 
 export {
 	buildDirectoryEntries,
-	loadDirectorySources,
 	type DirectoryEntry,
+	loadDirectorySources,
 } from "./agentDirectoryLoad";
 
 function AgentCard({ entry }: { entry: DirectoryEntry }) {

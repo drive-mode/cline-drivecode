@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { AgentProfile, RosterPack } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { capPreset, expandRosterPack } from "./expand.js";
 
 const ink = { kind: "token" as const, token: "foreground" as const };

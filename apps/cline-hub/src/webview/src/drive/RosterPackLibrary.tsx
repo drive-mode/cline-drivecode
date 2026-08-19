@@ -7,10 +7,7 @@ import type { RosterPack } from "@cline/shared";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-	FIXTURE_ROSTER_PACKS,
-	planRosterPackAdd,
-} from "./rosterPackAdd";
+import { FIXTURE_ROSTER_PACKS, planRosterPackAdd } from "./rosterPackAdd";
 
 export type RosterPackLibraryProps = {
 	packs?: readonly RosterPack[];

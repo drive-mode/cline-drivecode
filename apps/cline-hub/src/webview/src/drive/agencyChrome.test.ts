@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { BankSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	debugRetentionStripCopy,
 	hasNowLastFailure,
@@ -100,9 +100,7 @@ describe("planEditConsequenceBanner", () => {
 			nextTaskId: "t3",
 			nextTitle: "Ship docs",
 		};
-		expect(planEditConsequenceBanner(base, next)).toBe(
-			"Next is now Ship docs",
-		);
+		expect(planEditConsequenceBanner(base, next)).toBe("Next is now Ship docs");
 	});
 });
 
@@ -126,7 +124,7 @@ describe("interruptRedirectNowAnnounce / debugRetentionStripCopy", () => {
 				previousNowTitle: "Fix parser",
 				nextNowTitle: "Narrow repro",
 			}),
-		).toBe('Redirect: Now was “Fix parser”; now “Narrow repro”.');
+		).toBe("Redirect: Now was “Fix parser”; now “Narrow repro”.");
 		expect(
 			interruptRedirectNowAnnounce({
 				previousNowTitle: "Same",
@@ -148,8 +146,8 @@ describe("steerAppliedBanner / hasNowLastFailure", () => {
 
 	it("detects now lastFailure", () => {
 		expect(hasNowLastFailure(base)).toBe(false);
-		expect(
-			hasNowLastFailure({ ...base, nowLastFailure: "tests red" }),
-		).toBe(true);
+		expect(hasNowLastFailure({ ...base, nowLastFailure: "tests red" })).toBe(
+			true,
+		);
 	});
 });

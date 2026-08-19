@@ -125,7 +125,9 @@ export function evaluateUsageBudget(
  * Extract usage from runtime `usage-updated` or legacy host `usage` events.
  * Returns undefined for unrelated events.
  */
-export function usageFromSessionEvent(event: unknown): UsageForBudget | undefined {
+export function usageFromSessionEvent(
+	event: unknown,
+): UsageForBudget | undefined {
 	if (!event || typeof event !== "object") {
 		return undefined;
 	}

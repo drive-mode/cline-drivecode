@@ -1,7 +1,8 @@
 import { defineConfig } from "@vscode/test-cli"
 import path from "path"
+import runtimeConfig from "./test-runtime.config.json" with { type: "json" }
 
-const vscodeTestVersion = process.env.VSCODE_TEST_VERSION ?? "stable"
+const vscodeTestVersion = process.env.VSCODE_TEST_VERSION ?? runtimeConfig.unitTestVersion
 
 export default defineConfig({
 	files: [

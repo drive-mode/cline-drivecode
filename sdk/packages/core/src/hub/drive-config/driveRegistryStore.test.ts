@@ -19,18 +19,14 @@ describe("driveRegistryStore", () => {
 						id: "cyber",
 						slug: "cybersecurity",
 						displayName: "Cybersecurity",
-						members: [
-							{ profileId: "reviewer", role: "specialist" },
-						],
+						members: [{ profileId: "reviewer", role: "specialist" }],
 						addressable: true,
 					},
 				},
 			});
 			const loaded = readDriveRegistryFile(root);
 			expect(loaded?.packs.cyber?.displayName).toBe("Cybersecurity");
-			expect(resolvePackFromRegistry(root, "cybersecurity")?.id).toBe(
-				"cyber",
-			);
+			expect(resolvePackFromRegistry(root, "cybersecurity")?.id).toBe("cyber");
 			expect(resolvePackFromRegistry(root, "missing")).toBeNull();
 		} finally {
 			rmSync(root, { recursive: true, force: true });

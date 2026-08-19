@@ -128,9 +128,7 @@ function findForbiddenSdlcKey(
 	if (typeof value !== "object") {
 		return null;
 	}
-	for (const [key, child] of Object.entries(
-		value as Record<string, unknown>,
-	)) {
+	for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
 		const lower = key.toLowerCase();
 		for (const forbidden of SDLC_BANKABLE_FORBIDDEN_KEYS) {
 			if (lower === forbidden || lower.includes(forbidden)) {
@@ -178,8 +176,7 @@ export function buildSdlcFreezeAcceptPlan(
 		const tasks = [first, ...followOns];
 		const planTitle =
 			proposal.planTitle?.trim() || `Phase entry: ${first.title}`;
-		const planId =
-			proposal.planId?.trim() || slugId("p-phase", planTitle, 0);
+		const planId = proposal.planId?.trim() || slugId("p-phase", planTitle, 0);
 		return {
 			kind: "sdlc_freeze_accept",
 			planId,
@@ -190,7 +187,9 @@ export function buildSdlcFreezeAcceptPlan(
 	}
 
 	const _exhaustive: never = proposal;
-	throw new Error(`Unknown SDLC freeze proposal: ${JSON.stringify(_exhaustive)}`);
+	throw new Error(
+		`Unknown SDLC freeze proposal: ${JSON.stringify(_exhaustive)}`,
+	);
 }
 
 /**

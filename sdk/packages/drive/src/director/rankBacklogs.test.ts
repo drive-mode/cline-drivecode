@@ -1,15 +1,15 @@
-import { describe, expect, it } from "vitest";
 import type { AgentMediaBag, SeatedAgentCard } from "@cline/shared";
-import {
-	advanceScriptBeat,
-	buildDirectorStateFromBags,
-	rankShowBacklog,
-} from "./rankBacklogs.js";
+import { describe, expect, it } from "vitest";
 import {
 	assertDeliveryAllowed,
 	assertRouteLegal,
 	planRoute,
 } from "../router/planRoute.js";
+import {
+	advanceScriptBeat,
+	buildDirectorStateFromBags,
+	rankShowBacklog,
+} from "./rankBacklogs.js";
 
 const testAgent: SeatedAgentCard = {
 	participantId: "test-1",

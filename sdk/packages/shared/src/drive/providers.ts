@@ -15,7 +15,12 @@ export const DriveProviderOriginSchema = z.enum([
 ]);
 export type DriveProviderOrigin = z.infer<typeof DriveProviderOriginSchema>;
 
-const SECRET_CONFIG_KEYS = ["apiKey", "token", "accessToken", "secret"] as const;
+const SECRET_CONFIG_KEYS = [
+	"apiKey",
+	"token",
+	"accessToken",
+	"secret",
+] as const;
 
 export const DriveProviderManifestSchema = z
 	.object({
@@ -49,9 +54,7 @@ export const DriveProviderManifestSchema = z
 			});
 		}
 		for (const key of SECRET_CONFIG_KEYS) {
-			if (
-				Object.prototype.hasOwnProperty.call(manifest.defaultConfig, key)
-			) {
+			if (Object.hasOwn(manifest.defaultConfig, key)) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					message: `secret field '${key}' is forbidden in Drive provider config`,
@@ -73,7 +76,7 @@ export function assertNoSecretProviderConfigKeys(
 	config: Record<string, unknown>,
 ): void {
 	for (const key of SECRET_CONFIG_KEYS) {
-		if (Object.prototype.hasOwnProperty.call(config, key)) {
+		if (Object.hasOwn(config, key)) {
 			throw new Error(
 				`secret field '${key}' is forbidden in Drive provider config`,
 			);

@@ -1,4 +1,8 @@
-import type { StatusSummary, StatusUpdate, TeamRuntimeState } from "@cline/shared";
+import type {
+	StatusSummary,
+	StatusUpdate,
+	TeamRuntimeState,
+} from "@cline/shared";
 
 export type StatusSnapshot = {
 	updates: StatusUpdate[];

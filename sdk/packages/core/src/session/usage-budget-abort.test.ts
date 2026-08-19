@@ -21,7 +21,10 @@ describe("estimateUsageCost", () => {
 
 	it("estimates from tokens × pricing when totalCost is absent", () => {
 		expect(
-			estimateUsageCost({ inputTokens: 1_000_000, outputTokens: 100_000 }, pricing),
+			estimateUsageCost(
+				{ inputTokens: 1_000_000, outputTokens: 100_000 },
+				pricing,
+			),
 		).toBe(3 + 1.5);
 	});
 
@@ -43,26 +46,21 @@ describe("estimateUsageCost", () => {
 
 describe("evaluateUsageBudget / shouldAbortForUsageBudget", () => {
 	it("does not abort when cost is at or under the budget", () => {
-		expect(
-			evaluateUsageBudget(
-				{ totalCost: 1 },
-				{ maxCostUsd: 1 },
-			),
-		).toEqual({ abort: false, cost: 1 });
+		expect(evaluateUsageBudget({ totalCost: 1 }, { maxCostUsd: 1 })).toEqual({
+			abort: false,
+			cost: 1,
+		});
 		expect(shouldAbortForUsageBudget({ totalCost: 0.99 }, 1)).toBe(false);
 	});
 
 	it("aborts when cost exceeds the budget", () => {
-		expect(
-			evaluateUsageBudget(
-				{ totalCost: 1.01 },
-				{ maxCostUsd: 1 },
-			),
-		).toEqual({
-			abort: true,
-			cost: 1.01,
-			reason: "Cost limit exceeded ($1.00)",
-		});
+		expect(evaluateUsageBudget({ totalCost: 1.01 }, { maxCostUsd: 1 })).toEqual(
+			{
+				abort: true,
+				cost: 1.01,
+				reason: "Cost limit exceeded ($1.00)",
+			},
+		);
 		expect(shouldAbortForUsageBudget({ totalCost: 2 }, 1)).toBe(true);
 	});
 
@@ -80,9 +78,9 @@ describe("evaluateUsageBudget / shouldAbortForUsageBudget", () => {
 	});
 
 	it("ignores non-positive budgets", () => {
-		expect(
-			evaluateUsageBudget({ totalCost: 10 }, { maxCostUsd: 0 }),
-		).toEqual({ abort: false });
+		expect(evaluateUsageBudget({ totalCost: 10 }, { maxCostUsd: 0 })).toEqual({
+			abort: false,
+		});
 		expect(
 			evaluateUsageBudget({ totalCost: 10 }, { maxCostUsd: Number.NaN }),
 		).toEqual({ abort: false });
@@ -90,10 +88,7 @@ describe("evaluateUsageBudget / shouldAbortForUsageBudget", () => {
 
 	it("does not abort when cost cannot be resolved", () => {
 		expect(
-			evaluateUsageBudget(
-				{ inputTokens: 1_000_000 },
-				{ maxCostUsd: 0.01 },
-			),
+			evaluateUsageBudget({ inputTokens: 1_000_000 }, { maxCostUsd: 0.01 }),
 		).toEqual({ abort: false });
 	});
 

@@ -54,8 +54,8 @@ describe("assertNoSecretProviderConfigKeys", () => {
 	});
 
 	it("rejects token", () => {
-		expect(() =>
-			assertNoSecretProviderConfigKeys({ token: "x" }),
-		).toThrow(/token/);
+		expect(() => assertNoSecretProviderConfigKeys({ token: "x" })).toThrow(
+			/token/,
+		);
 	});
 });

@@ -42,7 +42,6 @@ export function listProviders(
 ): readonly DriveProviderManifest[] {
 	return registry.filter(
 		(manifest) =>
-			manifest.slot === slot &&
-			assertProviderCompatible(manifest, topology).ok,
+			manifest.slot === slot && assertProviderCompatible(manifest, topology).ok,
 	);
 }

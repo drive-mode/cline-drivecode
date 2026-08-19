@@ -8,6 +8,7 @@ import type {
 	ProviderListItem,
 	ProviderModel,
 	SaveProviderSettingsActionRequest,
+	VoiceInputSelection,
 } from "@cline/shared";
 import { createOAuthClientCallbacks } from "../../auth/client";
 import {
@@ -65,6 +66,25 @@ export interface DeleteLocalProviderRequest {
 	providerId: string;
 }
 
+export interface TranscribeLocalAudioRequest {
+	providerId: string;
+	modelId: string;
+	audio: Uint8Array;
+	mediaType?: string;
+	abortSignal?: AbortSignal;
+}
+
+export interface TranscribeConfiguredVoiceInputRequest {
+	audio: Uint8Array;
+	mediaType?: string;
+	abortSignal?: AbortSignal;
+}
+
+export interface CreateConfiguredStreamingTranscriptionSessionRequest {
+	expiresAfterSeconds?: number;
+	abortSignal?: AbortSignal;
+}
+
 // --- Small pure helpers ---
 
 function resolveVisibleApiKey(settings: {
@@ -120,6 +140,12 @@ function stableColor(id: string): string {
 	let hash = 0;
 	for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
 	return palette[hash % palette.length];
+}
+
+export function isDedicatedTranscriptionModel(
+	model: Pick<ProviderModel, "operation">,
+): boolean {
+	return model.operation === "transcription";
 }
 
 function toSortedProviderModels(
@@ -364,6 +390,10 @@ function removeProviderFromSettingsState(
 		delete state.lastUsedProvider;
 		mutated = true;
 	}
+	if (state.modes.voiceInput?.providerId === providerId) {
+		delete state.modes.voiceInput;
+		mutated = true;
+	}
 	if (mutated) manager.write(state);
 	LlmsModels.unregisterProvider(providerId);
 }
@@ -497,6 +527,10 @@ export async function updateLocalProvider(
 	let existingEntry = modelsState.providers[providerId];
 	if (!existingEntry) {
 		const existingSettings = manager.getProviderSettings(providerId);
+		const registeredCollection = LlmsModels.MODEL_COLLECTIONS_BY_PROVIDER_ID[
+			providerId
+		] as LlmsModels.ModelCollection | undefined;
+		const registeredProvider = registeredCollection?.provider;
 		if (!existingSettings) {
 			throw new Error(`provider "${providerId}" does not exist`);
 		}
@@ -513,13 +547,21 @@ export async function updateLocalProvider(
 		// Ephemeral seed for the existing update path; final state is computed and written below.
 		existingEntry = {
 			provider: {
-				name: request.name?.trim() || titleCaseFromId(providerId),
+				name:
+					request.name?.trim() ||
+					registeredProvider?.name ||
+					titleCaseFromId(providerId),
 				baseUrl:
-					request.baseUrl?.trim() ?? existingSettings.baseUrl?.trim() ?? "",
-				defaultModelId: seedModelId,
-				protocol: existingSettings.protocol,
-				client: existingSettings.client,
-				capabilities: existingSettings.capabilities,
+					request.baseUrl?.trim() ??
+					existingSettings.baseUrl?.trim() ??
+					registeredProvider?.baseUrl?.trim() ??
+					"",
+				defaultModelId: seedModelId ?? registeredProvider?.defaultModelId,
+				protocol: existingSettings.protocol ?? registeredProvider?.protocol,
+				client: existingSettings.client ?? registeredProvider?.client,
+				capabilities:
+					existingSettings.capabilities ?? registeredProvider?.capabilities,
+				modelsSourceUrl: registeredProvider?.modelsSourceUrl,
 			},
 			models: seedModelId
 				? buildProviderModels([seedModelId], existingSettings.capabilities)
@@ -694,7 +736,11 @@ export function markLocalProviderEnabled(
 export async function listLocalProviders(
 	manager: ProviderSettingsManager,
 	options: ListLocalProvidersOptions = {},
-): Promise<{ providers: ProviderListItem[]; settingsPath: string }> {
+): Promise<{
+	providers: ProviderListItem[];
+	settingsPath: string;
+	voiceInput?: VoiceInputSelection;
+}> {
 	const state = manager.read();
 	const ids = LlmsModels.getProviderIds();
 
@@ -765,7 +811,22 @@ export async function listLocalProviders(
 		);
 	}
 
-	return { providers, settingsPath: manager.getFilePath() };
+	const configuredVoiceInput = manager.getVoiceInputSettings();
+	const voiceProvider = configuredVoiceInput
+		? providers.find(
+				(provider) =>
+					provider.id === configuredVoiceInput.providerId && provider.enabled,
+			)
+		: undefined;
+	const voiceModel = voiceProvider?.modelList?.find(
+		(model) =>
+			model.id === configuredVoiceInput?.modelId &&
+			isDedicatedTranscriptionModel(model),
+	);
+	const voiceInput =
+		configuredVoiceInput && voiceModel ? configuredVoiceInput : undefined;
+
+	return { providers, settingsPath: manager.getFilePath(), voiceInput };
 }
 
 export async function getLocalProviderModels(
@@ -776,6 +837,130 @@ export async function getLocalProviderModels(
 	const modelMap = await resolveProviderModelMap(id, config);
 	const models = toSortedProviderModels(modelMap);
 	return { providerId: id, models };
+}
+
+export async function transcribeLocalAudio(
+	manager: ProviderSettingsManager,
+	request: TranscribeLocalAudioRequest,
+): Promise<LlmsModels.AudioTranscriptionResult> {
+	const providerId = request.providerId.trim();
+	const modelId = request.modelId.trim();
+	const config = manager.getProviderConfig(providerId, {
+		includeKnownModels: false,
+	});
+	if (!config) {
+		throw new Error(
+			`Transcription provider "${providerId}" is not configured in providers.json`,
+		);
+	}
+
+	const { models } = await getLocalProviderModels(providerId, config);
+	const model = models.find((candidate) => candidate.id === modelId);
+	if (!model || !isDedicatedTranscriptionModel(model)) {
+		throw new Error(
+			`Model "${modelId}" is not a dedicated audio-to-text transcription model`,
+		);
+	}
+	if (model.operationModes?.includes("streaming")) {
+		throw new Error(
+			`Model "${modelId}" requires streaming transcription and cannot transcribe a completed recording`,
+		);
+	}
+
+	return LlmsModels.transcribeAudio({
+		providerConfig: config,
+		modelId,
+		audio: request.audio,
+		mediaType: request.mediaType,
+		abortSignal: request.abortSignal,
+	});
+}
+
+export async function saveVoiceInputSettings(
+	manager: ProviderSettingsManager,
+	selection: VoiceInputSelection | undefined,
+): Promise<{ settingsPath: string; voiceInput?: VoiceInputSelection }> {
+	if (!selection) {
+		manager.setVoiceInputSettings(undefined);
+		return { settingsPath: manager.getFilePath() };
+	}
+
+	const providerId = selection.providerId.trim();
+	const modelId = selection.modelId.trim();
+	if (!providerId || !modelId) {
+		throw new Error("Voice input provider and model are required");
+	}
+	const state = manager.read();
+	if (!state.providers[providerId]) {
+		throw new Error(
+			`Voice input provider "${providerId}" must be enabled and configured`,
+		);
+	}
+	const config = manager.getProviderConfig(providerId, {
+		includeKnownModels: false,
+	});
+	const { models } = await getLocalProviderModels(providerId, config);
+	const model = models.find((candidate) => candidate.id === modelId);
+	if (!model || !isDedicatedTranscriptionModel(model)) {
+		throw new Error(
+			`Model "${modelId}" is not a dedicated audio-to-text transcription model`,
+		);
+	}
+
+	const voiceInput = { providerId, modelId };
+	manager.setVoiceInputSettings(voiceInput);
+	return { settingsPath: manager.getFilePath(), voiceInput };
+}
+
+export async function transcribeConfiguredVoiceInput(
+	manager: ProviderSettingsManager,
+	request: TranscribeConfiguredVoiceInputRequest,
+): Promise<LlmsModels.AudioTranscriptionResult> {
+	const selection = manager.getVoiceInputSettings();
+	if (!selection) {
+		throw new Error("Configure a voice input provider and model in Settings");
+	}
+	return transcribeLocalAudio(manager, {
+		...selection,
+		audio: request.audio,
+		mediaType: request.mediaType,
+		abortSignal: request.abortSignal,
+	});
+}
+
+export async function createConfiguredStreamingTranscriptionSession(
+	manager: ProviderSettingsManager,
+	request: CreateConfiguredStreamingTranscriptionSessionRequest = {},
+): Promise<LlmsModels.StreamingAudioTranscriptionSession> {
+	const selection = manager.getVoiceInputSettings();
+	if (!selection) {
+		throw new Error("Configure a voice input provider and model in Settings");
+	}
+	const config = manager.getProviderConfig(selection.providerId, {
+		includeKnownModels: false,
+	});
+	if (!config) {
+		throw new Error(
+			`Transcription provider "${selection.providerId}" is not configured in providers.json`,
+		);
+	}
+	const { models } = await getLocalProviderModels(selection.providerId, config);
+	const model = models.find((candidate) => candidate.id === selection.modelId);
+	if (
+		!model ||
+		!isDedicatedTranscriptionModel(model) ||
+		!model.operationModes?.includes("streaming")
+	) {
+		throw new Error(
+			`Model "${selection.modelId}" does not support streaming transcription`,
+		);
+	}
+	return LlmsModels.createStreamingAudioTranscriptionSession({
+		providerConfig: config,
+		modelId: selection.modelId,
+		expiresAfterSeconds: request.expiresAfterSeconds,
+		abortSignal: request.abortSignal,
+	});
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -821,6 +1006,9 @@ export function saveLocalProviderSettings(
 		const state = manager.read();
 		delete state.providers[providerId];
 		if (state.lastUsedProvider === providerId) delete state.lastUsedProvider;
+		if (state.modes.voiceInput?.providerId === providerId) {
+			delete state.modes.voiceInput;
+		}
 		manager.write(state);
 		return { providerId, enabled: false, settingsPath: manager.getFilePath() };
 	}

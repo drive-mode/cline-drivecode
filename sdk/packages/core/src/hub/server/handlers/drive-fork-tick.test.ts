@@ -2,12 +2,12 @@ import type { HubCommandEnvelope, HubEventEnvelope } from "@cline/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDriveRoomStore } from "../../collaboration";
 import type { HubTransportContext } from "./context";
+import { __resetDriveForkRoomsForTests } from "./drive-fork-handlers";
+import { handleDriveForkTickCommand } from "./drive-fork-tick";
 import {
 	__resetDriveRoomsForTests,
 	handleDriveCommand,
 } from "./drive-handlers";
-import { __resetDriveForkRoomsForTests } from "./drive-fork-handlers";
-import { handleDriveForkTickCommand } from "./drive-fork-tick";
 
 function envelope(
 	command: HubCommandEnvelope["command"],
@@ -30,20 +30,24 @@ function createCtx() {
 		pendingApprovals: new Map(),
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
+		pendingDriveToolInputs: new Map(),
+		activeRpcTurnCountBySession: new Map(),
 		sessionHost: {
-			startSession: vi.fn(async (input: { config?: { sessionId?: string } }) => {
-				const sessionId = input.config?.sessionId ?? "worker-generated";
-				messagesBySession.set(sessionId, [
-					{ role: "user", content: "seed" },
-					{ role: "assistant", content: "worked" },
-				]);
-				return {
-					sessionId,
-					manifest: {},
-					manifestPath: "",
-					messagesPath: "",
-				};
-			}),
+			startSession: vi.fn(
+				async (input: { config?: { sessionId?: string } }) => {
+					const sessionId = input.config?.sessionId ?? "worker-generated";
+					messagesBySession.set(sessionId, [
+						{ role: "user", content: "seed" },
+						{ role: "assistant", content: "worked" },
+					]);
+					return {
+						sessionId,
+						manifest: {},
+						manifestPath: "",
+						messagesPath: "",
+					};
+				},
+			),
 			abort: vi.fn(async () => undefined),
 			runTurn: vi.fn(async () => undefined),
 			deleteSession: vi.fn(async () => true),

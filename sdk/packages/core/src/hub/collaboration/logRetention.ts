@@ -6,12 +6,7 @@
  * records on append; seq / meta.nextSeq stay monotonic.
  */
 
-import {
-	existsSync,
-	readFileSync,
-	renameSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
 /** Default max records retained per room `events.jsonl`. */
 export const DEFAULT_ROOM_EVENT_LOG_MAX_RECORDS = 2_048;

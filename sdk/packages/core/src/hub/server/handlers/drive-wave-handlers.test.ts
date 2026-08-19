@@ -1,10 +1,10 @@
 import type { HubCommandEnvelope, HubEventEnvelope } from "@cline/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getDriveRoomStore } from "../../collaboration";
 import type { HubTransportContext } from "./context";
 import { __resetDriveForkRoomsForTests } from "./drive-fork-handlers";
 import { handleDriveWaveCommand } from "./drive-wave-handlers";
 import { doBacklogToWaveInputs } from "./drive-wave-map";
-import { getDriveRoomStore } from "../../collaboration";
 
 function envelope(
 	command: HubCommandEnvelope["command"],
@@ -20,13 +20,18 @@ function envelope(
 
 function createCtx() {
 	const published: HubEventEnvelope[] = [];
-	const metadataBySession = new Map<string, Record<string, unknown> | undefined>();
+	const metadataBySession = new Map<
+		string,
+		Record<string, unknown> | undefined
+	>();
 	const ctx = {
 		clients: new Map(),
 		sessionState: new Map(),
 		pendingApprovals: new Map(),
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
+		pendingDriveToolInputs: new Map(),
+		activeRpcTurnCountBySession: new Map(),
 		sessionHost: {
 			startSession: vi.fn(
 				async (input: {
@@ -163,7 +168,9 @@ describe("handleDriveWaveCommand", () => {
 		expect(result.tasks).toHaveLength(2);
 		expect(result.tasks.every((t) => t.status === "succeeded")).toBe(true);
 		expect(published.some((e) => e.event === "drive.wave.started")).toBe(true);
-		expect(published.some((e) => e.event === "drive.wave.completed")).toBe(true);
+		expect(published.some((e) => e.event === "drive.wave.completed")).toBe(
+			true,
+		);
 
 		const startOrder = (
 			ctx.sessionHost.startSession as ReturnType<typeof vi.fn>

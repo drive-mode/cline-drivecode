@@ -53,9 +53,7 @@ describe("buildShippedDigest", () => {
 			{ taskId: "t-parse", title: "Fix parser" },
 			{ taskId: "t-tests", title: "Rerun tests" },
 		]);
-		expect(digest.sessions[1]?.completedTasks).toEqual([
-			{ taskId: "t-next" },
-		]);
+		expect(digest.sessions[1]?.completedTasks).toEqual([{ taskId: "t-next" }]);
 	});
 
 	it("formats a readable Markdown digest", () => {
@@ -103,9 +101,9 @@ describe("shippedDigest privacy", () => {
 				fullTranscript: "nope",
 			}),
 		).toBe(false);
-		expect(
-			assertShippedDigestPrivate as (d: unknown) => void,
-		).toBeTypeOf("function");
+		expect(assertShippedDigestPrivate as (d: unknown) => void).toBeTypeOf(
+			"function",
+		);
 		expect(() =>
 			assertShippedDigestPrivate({
 				kind: "shipped_digest",

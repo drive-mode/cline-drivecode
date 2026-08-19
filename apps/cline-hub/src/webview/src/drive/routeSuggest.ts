@@ -1,10 +1,10 @@
+import { assertRouteLegal, planRoute } from "@cline/drive";
 import type {
 	AddressSet,
 	Participant,
 	RoutePlan,
 	SeatedAgentCard,
 } from "@cline/shared";
-import { assertRouteLegal, planRoute } from "@cline/drive";
 import { DRIVE_PARTICIPANT_PARTNER } from "./types";
 
 export type RouterUiMode = "manual" | "suggest" | "auto";

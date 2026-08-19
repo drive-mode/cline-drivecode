@@ -243,6 +243,7 @@ export type {
 } from "./extensions";
 export {
 	discoverPluginModulePaths,
+	getPluginDisplayName,
 	loadAgentPluginFromPath,
 	loadAgentPluginsFromPaths,
 	loadAgentPluginsFromPathsWithDiagnostics,
@@ -259,6 +260,7 @@ export type {
 	CreateUserInstructionConfigServiceOptions,
 	CreateWorkflowsConfigDefinitionOptions,
 	ParseMarkdownFrontmatterResult,
+	ResolveRuntimeSlashCommandOptions,
 	RuleConfig,
 	SkillConfig,
 	UnifiedConfigDefinition,
@@ -301,8 +303,10 @@ export {
 	createDisabledMcpToolPolicies,
 	createDisabledMcpToolPolicy,
 	createMcpTools,
+	DEFAULT_MCP_CONNECT_TIMEOUT_MS,
 	type DefaultMcpServerClientFactoryOptions,
 	getMcpServerOAuthState,
+	getMcpServerOAuthStatus,
 	hasMcpSettingsFile,
 	InMemoryMcpManager,
 	type LoadMcpSettingsOptions,
@@ -311,8 +315,10 @@ export {
 	type McpConnectionStatus,
 	type McpManager,
 	type McpManagerOptions,
+	McpOAuthClientChangedError,
 	type McpServerClient,
 	type McpServerClientFactory,
+	type McpServerOAuthClientConfig,
 	type McpServerOAuthState,
 	type McpServerOAuthStatus,
 	type McpServerRegistration,
@@ -332,12 +338,18 @@ export {
 	type McpToolDescriptor,
 	type McpToolNameTransform,
 	type McpToolProvider,
+	type ProbeMcpServerConnectionOptions,
+	type ProbeMcpServerConnectionResult,
+	parseMcpServerRegistration,
+	probeMcpServerConnection,
 	type RegisterMcpServersFromSettingsOptions,
 	registerMcpServersFromSettingsFile,
 	resolveDefaultMcpSettingsPath,
+	resolveMcpServerRegistration,
 	resolveMcpServerRegistrations,
 	type SetMcpServerDisabledOptions,
 	setMcpServerDisabled,
+	type UpdateMcpServerOAuthStateOptions,
 	updateMcpServerOAuthState,
 	updateMcpServerOAuthStateAsync,
 	updateMcpSettingsFile,
@@ -348,8 +360,6 @@ export {
 	AgentTeam,
 	AgentTeamsRuntime,
 	type AgentTeamsRuntimeOptions,
-	TeamRunAdmissionError,
-	type TeamRunAdmissionLimit,
 	type BootstrapAgentTeamsOptions,
 	type BootstrapAgentTeamsResult,
 	bootstrapAgentTeams,
@@ -382,6 +392,8 @@ export {
 	type TaskResult,
 	type TeamEvent,
 	type TeamMemberConfig,
+	TeamRunAdmissionError,
+	type TeamRunAdmissionLimit,
 	type TeamTeammateRuntimeConfig,
 	toTeamProgressLifecycleEvent,
 } from "./extensions/tools/team";
@@ -465,6 +477,7 @@ export {
 } from "./runtime/host/host";
 export { LocalRuntimeHost } from "./runtime/host/local-runtime-host";
 export type {
+	CommandExecutionRuntimeService,
 	PendingPromptMutationResult,
 	PendingPromptsDeleteInput,
 	PendingPromptsListInput,
@@ -486,6 +499,7 @@ export type {
 } from "./runtime/host/runtime-host";
 export {
 	isSessionNotFoundError,
+	isUnusableSessionError,
 	SESSION_NOT_FOUND_ERROR_CODE,
 	SessionNotFoundError,
 	splitCoreSessionConfig,
@@ -505,6 +519,13 @@ export type {
 	RuntimeBuilderInput,
 	SessionRuntime,
 } from "./runtime/orchestration/session-runtime";
+export {
+	getProcessStartToken,
+	getProcessStartTokenAsync,
+	type ProcessStartTokenProbeResult,
+	probeProcessStartToken,
+	probeProcessStartTokenAsync,
+} from "./runtime/process-start-token";
 export {
 	formatRulesForSystemPrompt,
 	isRuleEnabled,
@@ -530,6 +551,21 @@ export {
 	reconnectPersistedConnectors,
 	removePersistedConnectorConnection,
 } from "./services/connectors/connector-autostart";
+export { buildConnectorChildEnv } from "./services/connectors/connector-child-env";
+export { cleanupConnectorInstanceViaCli } from "./services/connectors/connector-cleanup";
+export {
+	ADOPTED_POLL_INTERVAL_MS,
+	ConnectorSupervisor,
+	type ConnectorSupervisorDeps,
+	getActiveConnectorSupervisor,
+	RESTART_BASE_DELAY_MS,
+	RESTART_COUNTER_RESET_MS,
+	RESTART_GIVE_UP_AFTER,
+	RESTART_MAX_DELAY_MS,
+	STOP_SIGKILL_TIMEOUT_MS,
+	STOP_SIGTERM_TIMEOUT_MS,
+	setActiveConnectorSupervisor,
+} from "./services/connectors/connector-supervisor";
 export {
 	FeatureFlagsService,
 	type FeatureFlagsServiceOptions,
@@ -547,6 +583,7 @@ export {
 	filterExtensionToolRegistrations,
 	GlobalSettingsSchema,
 	isAutoUpdateEnabledGlobally,
+	isModelToolEnabledGlobally,
 	isPluginDisabledGlobally,
 	isTelemetryOptedOutGlobally,
 	isToolDisabledGlobally,
@@ -555,16 +592,20 @@ export {
 	readGlobalSettings,
 	readPlanActModeGlobally,
 	readToolAutoApproveGlobally,
+	readTuiThemeGlobally,
 	resolveDisabledPluginPaths,
 	resolveDisabledToolNames,
+	resolveModelToolSettings,
 	setAutoUpdateEnabledGlobally,
 	setCompactionModeGlobally,
 	setCompactionStrategyGlobally,
 	setDisabledPlugin,
 	setDisabledTools,
+	setModelToolEnabledGlobally,
 	setPlanActModeGlobally,
 	setTelemetryOptOutGlobally,
 	setToolAutoApproveGlobally,
+	setTuiThemeGlobally,
 	toggleDisabledTool,
 	writeGlobalSettings,
 } from "./services/global-settings";
@@ -591,11 +632,14 @@ export {
 export type {
 	McpInstallOptions,
 	McpInstallResult,
+	McpUninstallOptions,
+	McpUninstallResult,
 } from "./services/mcp-install";
 export {
 	buildMcpInstallTransport,
 	installMcpServer,
 	parseMcpInstallArgs,
+	uninstallMcpServer,
 } from "./services/mcp-install";
 export type {
 	ParsedPluginSource,
@@ -623,6 +667,7 @@ export {
 } from "./services/plugin-mcp-settings";
 export type {
 	ListPluginToolsResult,
+	PluginContributionSummary,
 	PluginToolSummary,
 } from "./services/plugin-tools";
 export {
@@ -645,10 +690,13 @@ export {
 } from "./services/providers/local-provider-registry";
 export {
 	addLocalProvider,
+	type CreateConfiguredStreamingTranscriptionSessionRequest,
+	createConfiguredStreamingTranscriptionSession,
 	type DeleteLocalProviderRequest,
 	deleteLocalProvider,
 	ensureCustomProvidersLoaded,
 	getLocalProviderModels,
+	isDedicatedTranscriptionModel,
 	listLocalProviders,
 	loginAndSaveLocalProviderOAuthCredentials,
 	loginLocalProvider,
@@ -658,6 +706,11 @@ export {
 	resolveLocalClineAuthToken,
 	saveLocalProviderOAuthCredentials,
 	saveLocalProviderSettings,
+	saveVoiceInputSettings,
+	type TranscribeConfiguredVoiceInputRequest,
+	type TranscribeLocalAudioRequest,
+	transcribeConfiguredVoiceInput,
+	transcribeLocalAudio,
 	type UpdateLocalProviderRequest,
 	updateLocalProvider,
 } from "./services/providers/local-provider-service";
@@ -678,7 +731,10 @@ export {
 	SqliteTeamStore,
 	type SqliteTeamStoreOptions,
 } from "./services/storage/team-store";
-export { resolveCoreDeviceId, resolveCoreDistinctId } from "./services/telemetry";
+export {
+	resolveCoreDeviceId,
+	resolveCoreDistinctId,
+} from "./services/telemetry";
 export type {
 	CaptureAgentUnexpectedReasoningTokensInput,
 	CaptureCompactionExecutedProperties,
@@ -698,6 +754,7 @@ export {
 	captureAgentUnexpectedReasoningTokens,
 	captureAuthFailed,
 	captureAuthLoggedOut,
+	captureAuthRefreshSoftFailure,
 	captureAuthStarted,
 	captureAuthSucceeded,
 	captureCompactionExecuted,
@@ -752,6 +809,7 @@ export type {
 } from "./services/workspace";
 export {
 	enrichPromptWithMentions,
+	ensureChatWorkspace,
 	getFileIndex,
 	prewarmFileIndex,
 } from "./services/workspace";
@@ -781,6 +839,10 @@ export {
 	trimMessagesBeforeUserRun,
 } from "./session/checkpoint-restore";
 export {
+	projectSessionMessagesForDisplay,
+	type SessionDisplayMessage,
+} from "./session/display-messages";
+export {
 	deriveSubsessionStatus,
 	makeSubSessionId,
 	makeTeamTaskSubSessionId,
@@ -788,25 +850,6 @@ export {
 } from "./session/models/session-graph";
 export type { SessionManifest } from "./session/models/session-manifest";
 export type { SessionRow } from "./session/models/session-row";
-export type {
-	CreateRootSessionWithArtifactsInput,
-	RootSessionArtifacts,
-} from "./session/services/session-service";
-export { CoreSessionService } from "./session/services/session-service";
-export type {
-	CoreSessionCheckpointSnapshot,
-	CoreSessionSnapshot,
-} from "./session/session-snapshot";
-export { createCoreSessionSnapshot } from "./session/session-snapshot";
-export {
-	PRODUCT_DEFAULT_MAX_ITERATIONS,
-	resolveProductSessionFeatures,
-} from "./session/product-session-defaults";
-export type {
-	ProductSessionFeatures,
-	ProductSessionHostKind,
-	ResolveProductSessionFeaturesInput,
-} from "./session/product-session-defaults";
 export {
 	isEnvFlagEnabled,
 	PRODUCT_HOST_WORKSPACE_ONLY_PLUGIN_INJECTION,
@@ -828,6 +871,50 @@ export {
 	resolveHubHostAgentHooksEnabled,
 } from "./session/product-host-policy";
 export type {
+	ProductSessionFeatures,
+	ProductSessionHostKind,
+	ResolveProductSessionFeaturesInput,
+} from "./session/product-session-defaults";
+export {
+	PRODUCT_DEFAULT_MAX_ITERATIONS,
+	resolveProductSessionFeatures,
+} from "./session/product-session-defaults";
+export type {
+	CreateRootSessionWithArtifactsInput,
+	RootSessionArtifacts,
+} from "./session/services/session-service";
+export { CoreSessionService } from "./session/services/session-service";
+export type {
+	BuildSessionPluginInjectionInput,
+	ResolveSessionPluginLoadInput,
+	ResolveSessionPluginPathsInput,
+	SessionExtensionWorkspaceInput,
+} from "./session/session-plugin-load";
+export {
+	buildSessionExtensionWorkspace,
+	buildSessionPluginInjection,
+	resolveSessionPluginLoad,
+	resolveSessionPluginPaths,
+} from "./session/session-plugin-load";
+export type {
+	CoreSessionCheckpointSnapshot,
+	CoreSessionSnapshot,
+} from "./session/session-snapshot";
+export { createCoreSessionSnapshot } from "./session/session-snapshot";
+export type {
+	SessionCheckpointRestoreContext,
+	SessionCheckpointRestoreResult,
+	SessionVersioningErrorCode,
+} from "./session/session-versioning-service";
+export {
+	SessionVersioningError,
+	SessionVersioningService,
+} from "./session/session-versioning-service";
+export {
+	FileTeamPersistenceStore,
+	type FileTeamPersistenceStoreOptions,
+} from "./session/stores/team-persistence-store";
+export type {
 	CreateUsageBudgetAbortHandlerOptions,
 	EvaluateUsageBudgetInput,
 	UsageBudgetAbortDecision,
@@ -842,31 +929,6 @@ export {
 	shouldAbortForUsageBudget,
 	usageFromSessionEvent,
 } from "./session/usage-budget-abort";
-export type {
-	BuildSessionPluginInjectionInput,
-	ResolveSessionPluginLoadInput,
-	ResolveSessionPluginPathsInput,
-	SessionExtensionWorkspaceInput,
-} from "./session/session-plugin-load";
-export {
-	buildSessionExtensionWorkspace,
-	buildSessionPluginInjection,
-	resolveSessionPluginLoad,
-	resolveSessionPluginPaths,
-} from "./session/session-plugin-load";
-export type {
-	SessionCheckpointRestoreContext,
-	SessionCheckpointRestoreResult,
-	SessionVersioningErrorCode,
-} from "./session/session-versioning-service";
-export {
-	SessionVersioningError,
-	SessionVersioningService,
-} from "./session/session-versioning-service";
-export {
-	FileTeamPersistenceStore,
-	type FileTeamPersistenceStoreOptions,
-} from "./session/stores/team-persistence-store";
 export {
 	countUserRunMessages,
 	getUserRunSpan,
@@ -875,11 +937,15 @@ export {
 	resolveMessageDisplayRole,
 } from "./session/user-run-messages";
 export type {
+	CorePluginContributions,
+	CorePluginSettingsSnapshot,
+	CorePluginSettingsSource,
 	CoreSettingsItem,
 	CoreSettingsItemKind,
 	CoreSettingsItemSource,
 	CoreSettingsListInput,
 	CoreSettingsMutationResult,
+	CoreSettingsServiceOptions,
 	CoreSettingsSnapshot,
 	CoreSettingsToggleInput,
 	CoreSettingsType,
@@ -947,6 +1013,7 @@ export {
 	getCoreBuiltinToolCatalog,
 	getCoreDefaultEnabledToolIds,
 	getCoreHeadlessToolNames,
+	isSkillsToolAvailable,
 	MAX_COMMAND_OUTPUT_CHARS,
 	PATCH_MARKERS,
 	PatchActionType,
@@ -977,6 +1044,7 @@ export {
 	DEFAULT_MODELS_CATALOG_URL,
 	getLiveModelsCatalog,
 	getProviderConfig,
+	isPrivateModelCatalogProvider,
 	OPENAI_COMPATIBLE_PROVIDERS,
 	resolveProviderConfig,
 } from "./services/llms/provider-defaults";
@@ -1083,11 +1151,13 @@ export type {
 } from "./types/events";
 export type {
 	ProviderTokenSource,
+	StoredProviderModes,
 	StoredProviderSettings,
 	StoredProviderSettingsEntry,
 } from "./types/provider-settings";
 export {
 	emptyStoredProviderSettings,
+	StoredProviderModesSchema,
 	StoredProviderSettingsEntrySchema,
 	StoredProviderSettingsSchema,
 } from "./types/provider-settings";

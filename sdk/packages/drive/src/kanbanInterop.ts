@@ -6,7 +6,12 @@
  * `execute` / `collectReceipt` require a `KanbanInteropHost` — drive stays pure.
  */
 
-import type { DriveRun, DriveRunWorkItem, Receipt, WorkLease } from "@cline/shared";
+import type {
+	DriveRun,
+	DriveRunWorkItem,
+	Receipt,
+	WorkLease,
+} from "@cline/shared";
 
 export const DRIVEPLAN_KANBAN_SYSTEM = "driveplan" as const;
 
@@ -115,7 +120,9 @@ export function getCapabilities(): KanbanInteropCapabilities {
 	};
 }
 
-function columnForStatus(status: DriveRunWorkItem["status"]): ProjectedKanbanCard["columnHint"] {
+function columnForStatus(
+	status: DriveRunWorkItem["status"],
+): ProjectedKanbanCard["columnHint"] {
 	switch (status) {
 		case "PENDING":
 			return "backlog";
@@ -147,7 +154,9 @@ export function applyProjection(run: DriveRun): ApplyProjectionResult {
 			item.objective,
 			"",
 			`Isolation: ${item.isolation}`,
-			item.writeClaims.length ? `Write claims: ${item.writeClaims.join(", ")}` : "Write claims: none",
+			item.writeClaims.length
+				? `Write claims: ${item.writeClaims.join(", ")}`
+				: "Write claims: none",
 			item.evidenceRequirements.length
 				? `Evidence: ${item.evidenceRequirements.join(", ")}`
 				: "Evidence: none",

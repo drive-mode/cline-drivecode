@@ -26,6 +26,7 @@ export const CHAT_HOST_MESSAGE_TYPES = [
 	"session_hydrated",
 	"assistant_delta",
 	"reasoning_delta",
+	"assistant_media",
 	"tool_event",
 	"approval_request",
 	"approval_resolved",
@@ -68,7 +69,12 @@ export function isChatHostMessage(
 		case "fork_error":
 			return typeof message.text === "string";
 		case "error":
-			return typeof message.text === "string" && isOptionalString(message.code);
+			return (
+				typeof message.text === "string" &&
+				isOptionalString(message.code) &&
+				(message.recoverable === undefined ||
+					typeof message.recoverable === "boolean")
+			);
 		case "defaults":
 			return (
 				isRecord(message.defaults) &&
@@ -126,6 +132,14 @@ export function isChatHostMessage(
 				typeof message.text === "string" &&
 				(message.redacted === undefined ||
 					typeof message.redacted === "boolean")
+			);
+		case "assistant_media":
+			return (
+				isRecord(message.media) &&
+				typeof message.media.id === "string" &&
+				typeof message.media.modality === "string" &&
+				typeof message.media.mediaType === "string" &&
+				isRecord(message.media.source)
 			);
 		case "tool_event":
 			return (

@@ -54,8 +54,6 @@ jobs:
 
             - name: Setup Bun workspace
               uses: ./.github/actions/setup-bun-workspace
-              with:
-                  bun-version: "1.3.13"
 
             # Kanban imports @cline/core, @cline/shared and @cline/drive from
             # source now, so nothing below resolves until the SDK is built.

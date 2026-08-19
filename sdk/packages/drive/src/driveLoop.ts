@@ -16,9 +16,7 @@ export interface ResolveDriveLoopInput {
 	override: DrivePostureOverride | null;
 }
 
-export function resolveDriveLoop(
-	input: ResolveDriveLoopInput,
-): DriveLoopState {
+export function resolveDriveLoop(input: ResolveDriveLoopInput): DriveLoopState {
 	if (!input.driveActive) {
 		return { posture: "plan", override: null, boundTaskId: null };
 	}

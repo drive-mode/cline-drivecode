@@ -95,9 +95,9 @@ describe("adaptMermaidSourceForFormat", () => {
 		);
 		expect(adaptMermaidSourceForFormat(src, "tablet")).toContain("TB");
 		expect(adaptMermaidSourceForFormat(src, "desk")).toBe(src);
-		expect(adaptMermaidSourceForFormat("flowchart TB\n  A --> B", "phone")).toBe(
-			"flowchart TB\n  A --> B",
-		);
+		expect(
+			adaptMermaidSourceForFormat("flowchart TB\n  A --> B", "phone"),
+		).toBe("flowchart TB\n  A --> B");
 	});
 });
 

@@ -72,6 +72,7 @@ const dashboardMocks = vi.hoisted(() => ({
 }));
 const connectMocks = vi.hoisted(() => ({
 	formatAdapterList: vi.fn(() => ""),
+	runCleanupConnectorInstance: vi.fn(async () => 0),
 	runConnectAdapter: vi.fn(async () => 0),
 	runRestartConnector: vi.fn(async () => 0),
 	runStopAllConnectors: vi.fn(async () => 0),
@@ -354,6 +355,9 @@ describe("runCli lightweight command dispatch", () => {
 		vi.resetModules();
 	});
 
+	// Root CI runs every SDK, Hub, CLI, and example suite in parallel. Loading the
+	// command graph can exceed Vitest's default timeout on a contended runner even
+	// though this route remains lightweight and avoids the runtime imports below.
 	it("does not load runtime modules for history json listing", async () => {
 		mockState.runAgentImports = 0;
 		mockState.runInteractiveImports = 0;
@@ -375,7 +379,7 @@ describe("runCli lightweight command dispatch", () => {
 		expect(historyListCalls[0]?.[0]).not.toHaveProperty("workspaceRoot");
 		expect(mockState.runAgentImports).toBe(0);
 		expect(mockState.runInteractiveImports).toBe(0);
-	}, 30_000);
+	}, 60_000);
 
 	it("routes connector restart arguments through the restart lifecycle", async () => {
 		process.argv = [
@@ -400,6 +404,68 @@ describe("runCli lightweight command dispatch", () => {
 		);
 		expect(connectMocks.runConnectAdapter).not.toHaveBeenCalled();
 		expect(connectMocks.runStopConnector).not.toHaveBeenCalled();
+	});
+
+	it("routes a supervised cleanup to one connector instance", async () => {
+		connectMocks.runCleanupConnectorInstance.mockClear();
+		connectMocks.runConnectAdapter.mockClear();
+		process.argv = [
+			"bun",
+			"src/index.ts",
+			"connect",
+			"--cleanup-instance",
+			"cline-slack",
+			"slack",
+		];
+
+		const { runCli } = await import("./main");
+
+		await expect(runCli()).resolves.toBeUndefined();
+		expect(process.exitCode).toBe(0);
+		expect(connectMocks.runCleanupConnectorInstance).toHaveBeenCalledWith(
+			"slack",
+			"cline-slack",
+			expect.any(Object),
+		);
+		expect(connectMocks.runConnectAdapter).not.toHaveBeenCalled();
+	});
+
+	it("rejects combining cleanup with another connect mode", async () => {
+		connectMocks.runCleanupConnectorInstance.mockClear();
+		connectMocks.runStopConnector.mockClear();
+		process.argv = [
+			"bun",
+			"src/index.ts",
+			"connect",
+			"--cleanup-instance",
+			"cline-slack",
+			"--stop",
+			"slack",
+		];
+
+		const { runCli } = await import("./main");
+
+		await runCli();
+		expect(process.exitCode).toBe(1);
+		expect(connectMocks.runCleanupConnectorInstance).not.toHaveBeenCalled();
+		expect(connectMocks.runStopConnector).not.toHaveBeenCalled();
+	});
+
+	it("requires a channel for a supervised cleanup", async () => {
+		connectMocks.runCleanupConnectorInstance.mockClear();
+		process.argv = [
+			"bun",
+			"src/index.ts",
+			"connect",
+			"--cleanup-instance",
+			"x",
+		];
+
+		const { runCli } = await import("./main");
+
+		await runCli();
+		expect(process.exitCode).toBe(1);
+		expect(connectMocks.runCleanupConnectorInstance).not.toHaveBeenCalled();
 	});
 
 	it("routes a targeted connector restart to one instance", async () => {

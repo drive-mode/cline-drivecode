@@ -3,12 +3,7 @@
  * Pure so vitest can cover without DOM.
  */
 
-export const APP_STRIP_CONTROLS = [
-	"mic",
-	"hand",
-	"captions",
-	"leave",
-] as const;
+export const APP_STRIP_CONTROLS = ["mic", "hand", "captions", "leave"] as const;
 
 export type AppStripControl = (typeof APP_STRIP_CONTROLS)[number];
 
@@ -16,8 +11,7 @@ export type AppStripControl = (typeof APP_STRIP_CONTROLS)[number];
 export const LEAVE_STRIP_LABEL = "Leave";
 
 /** Lobby / toast line after leave (F07 / light F14). */
-export const LEAVE_KEEP_RUNNING_LINE =
-	"Room keeps running · rejoin anytime";
+export const LEAVE_KEEP_RUNNING_LINE = "Room keeps running · rejoin anytime";
 
 /** sessionStorage key for one-shot leave banner on lobby remount. */
 export const LEAVE_NOTE_STORAGE_KEY = "cline.drive.leaveNote";

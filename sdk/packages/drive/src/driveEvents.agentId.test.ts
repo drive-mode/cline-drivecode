@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createDriveTaskBoundEvent, createDriveTaskCompletedEvent } from "./driveEvents.js";
+import {
+	createDriveTaskBoundEvent,
+	createDriveTaskCompletedEvent,
+} from "./driveEvents.js";
 
 describe("bank event agent attribution", () => {
 	it("includes optional agentId on bound/completed", () => {

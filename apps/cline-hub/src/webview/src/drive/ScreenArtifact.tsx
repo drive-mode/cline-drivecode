@@ -602,9 +602,7 @@ function AnimationArtifact({
 			<div
 				className={cn(
 					"screen-anim grid min-h-0 flex-1 gap-3 p-3",
-					stack
-						? "grid-cols-1 overflow-auto"
-						: "grid-cols-2 overflow-hidden",
+					stack ? "grid-cols-1 overflow-auto" : "grid-cols-2 overflow-hidden",
 				)}
 				key={`${animationReplayKey(before, after)}:${params.format}:${stack}`}
 			>
@@ -720,11 +718,7 @@ export function ScreenArtifact({
 	switch (body.kind) {
 		case "mermaid":
 			content = (
-				<MermaidArtifact
-					params={params}
-					source={body.source}
-					title={title}
-				/>
+				<MermaidArtifact params={params} source={body.source} title={title} />
 			);
 			break;
 		case "plan":

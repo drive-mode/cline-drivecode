@@ -190,7 +190,10 @@ export function DrivePowerSheet({
 				</div>
 
 				{tab === "roster" ? (
-					<ul aria-label="Roster task lines" className="max-h-64 overflow-y-auto">
+					<ul
+						aria-label="Roster task lines"
+						className="max-h-64 overflow-y-auto"
+					>
 						{participants.map((participant) => {
 							const task = rosterParticipantTaskLine(drive, participant);
 							const ink = resolveParticipantNameInk({

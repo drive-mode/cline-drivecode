@@ -2,10 +2,7 @@
  * Open a durable BankStore rooted at `{workspaceRoot}/.drive/bank/`.
  */
 
-import {
-	createBankStore,
-	type BankStore,
-} from "@cline/drive";
+import { type BankStore, createBankStore } from "@cline/drive";
 import type { BankDriveEvent } from "@cline/shared";
 import { createNodeBankFs } from "./nodeBankFs";
 

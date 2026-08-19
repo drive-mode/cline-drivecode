@@ -16,7 +16,10 @@ function tokenize(text: string): string[] {
 		.filter((token) => token.length > 1);
 }
 
-function scoreAgent(utteranceTokens: string[], agent: SeatedAgentCard): {
+function scoreAgent(
+	utteranceTokens: string[],
+	agent: SeatedAgentCard,
+): {
 	score: number;
 	reasons: string[];
 } {
@@ -80,12 +83,12 @@ export function planRoute(input: {
 	// Never silent-widen to everyone when agents are seated: fall back to pair
 	// partner (or best available) and keep lowConfidence so UI can force suggest.
 	const fallbackId =
-		partner?.participantId ?? best?.agent.participantId ?? input.seated[0]!.participantId;
+		partner?.participantId ??
+		best?.agent.participantId ??
+		input.seated[0]!.participantId;
 	const addressSet: AddressSet = {
 		mode: "agents",
-		agentIds: [
-			lowConfidence ? fallbackId : best!.agent.participantId,
-		],
+		agentIds: [lowConfidence ? fallbackId : best!.agent.participantId],
 	};
 
 	void input.allowFractions;
@@ -103,10 +106,7 @@ export function planRoute(input: {
 				addressSet,
 				score: best?.score ?? 0,
 				reasons: lowConfidence
-					? [
-							...(best?.reasons ?? []),
-							"low_confidence_fallback_partner",
-						]
+					? [...(best?.reasons ?? []), "low_confidence_fallback_partner"]
 					: (best?.reasons ?? []),
 			},
 		],

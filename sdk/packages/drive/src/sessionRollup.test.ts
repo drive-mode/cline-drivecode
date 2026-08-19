@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { BankDriveEvent, DriveEvent } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { deriveSessionRollup } from "./sessionRollup.js";
 
 function bank(

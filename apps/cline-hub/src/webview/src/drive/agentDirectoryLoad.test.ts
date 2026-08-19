@@ -9,15 +9,17 @@ vi.mock("./requestDriveAgentProfiles", () => ({
 	requestDriveAgentProfiles: vi.fn(),
 }));
 
-import { requestDriveagentHomeList } from "./requestDriveagentHome";
 import { requestDriveAgentProfiles } from "./requestDriveAgentProfiles";
+import { requestDriveagentHomeList } from "./requestDriveagentHome";
 
 const listHomes = vi.mocked(requestDriveagentHomeList);
 const listProfiles = vi.mocked(requestDriveAgentProfiles);
 
 describe("loadDirectorySources", () => {
 	it("announces when both hub lookups fail instead of an empty directory", async () => {
-		listHomes.mockRejectedValueOnce(new Error("drive_agent_home_list timed out"));
+		listHomes.mockRejectedValueOnce(
+			new Error("drive_agent_home_list timed out"),
+		);
 		listProfiles.mockRejectedValueOnce(new Error("profiles timed out"));
 
 		const result = await loadDirectorySources("/tmp/ws");

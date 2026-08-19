@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
 import {
 	canOfferGateSessionAllow,
 	classifyToolNameForGate,
 	defaultDispositionForGateClass,
 } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 
 /**
  * GateFeedCard is presentational; behavior contracts live in shared gateSession.

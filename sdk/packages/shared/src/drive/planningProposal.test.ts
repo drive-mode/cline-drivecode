@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
 	assertNoForbiddenPlanningProposalKeys,
-	parsePlanningProposal,
 	PLANNING_PROPOSAL_FORBIDDEN_KEYS,
-	planningProposalIsPrivate,
 	type PlanningProposal,
+	parsePlanningProposal,
+	planningProposalIsPrivate,
 } from "./planningProposal.js";
 
 const valid: PlanningProposal = {

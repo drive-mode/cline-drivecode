@@ -8,9 +8,9 @@ describe("pathFromToolInput", () => {
 	});
 
 	it("reads apply-patch headers", () => {
-		expect(
-			pathFromToolInput("*** Update File: apps/hub/foo.ts\n@@"),
-		).toBe("apps/hub/foo.ts");
+		expect(pathFromToolInput("*** Update File: apps/hub/foo.ts\n@@")).toBe(
+			"apps/hub/foo.ts",
+		);
 	});
 });
 

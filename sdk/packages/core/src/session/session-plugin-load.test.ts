@@ -40,9 +40,7 @@ describe("buildSessionExtensionWorkspace", () => {
 	});
 
 	it("falls back workspaceRoot to cwd", () => {
-		expect(
-			buildSessionExtensionWorkspace({ cwd: "/tmp/only" }),
-		).toMatchObject({
+		expect(buildSessionExtensionWorkspace({ cwd: "/tmp/only" })).toMatchObject({
 			rootPath: "/tmp/only",
 			cwd: "/tmp/only",
 			workspaceName: "only",
@@ -91,7 +89,9 @@ describe("resolveSessionPluginPaths", () => {
 			JSON.stringify({
 				name: "demo-plugin",
 				type: "module",
-				cline: { plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }] },
+				cline: {
+					plugins: [{ paths: ["./index.ts"], capabilities: ["hooks"] }],
+				},
 			}),
 			"utf8",
 		);
@@ -182,9 +182,7 @@ describe("buildSessionPluginInjection", () => {
 			ide: "VS Code",
 			workspaceName: "fixture",
 		});
-		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(
-			true,
-		);
+		expect(injected.pluginPaths.some((p) => p.endsWith("index.ts"))).toBe(true);
 		expect(injected.workspace).toMatchObject({
 			rootPath: root,
 			cwd: root,
@@ -196,7 +194,11 @@ describe("buildSessionPluginInjection", () => {
 	it("passes through explicit pluginPaths overrides (BL-4.7)", async () => {
 		const root = await makeTempDir("cline-plugin-override-");
 		const entry = join(root, "explicit-plugin.js");
-		await writeFile(entry, "export default { name: 'explicit', setup() {} }\n", "utf8");
+		await writeFile(
+			entry,
+			"export default { name: 'explicit', setup() {} }\n",
+			"utf8",
+		);
 		const injected = buildSessionPluginInjection({
 			cwd: root,
 			workspaceRoot: root,

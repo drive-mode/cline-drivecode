@@ -21,13 +21,18 @@ function envelope(
 function createCtx() {
 	const published: HubEventEnvelope[] = [];
 	const messagesBySession = new Map<string, unknown[]>();
-	const metadataBySession = new Map<string, Record<string, unknown> | undefined>();
+	const metadataBySession = new Map<
+		string,
+		Record<string, unknown> | undefined
+	>();
 	const ctx = {
 		clients: new Map(),
 		sessionState: new Map(),
 		pendingApprovals: new Map(),
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
+		pendingDriveToolInputs: new Map(),
+		activeRpcTurnCountBySession: new Map(),
 		sessionHost: {
 			startSession: vi.fn(
 				async (input: {
@@ -298,7 +303,10 @@ describe("handleDriveForkCommand", () => {
 		expect(promote.ok).toBe(true);
 		expect(promote.payload?.presentedShowId).toBe("show_doc.plan_do-tick");
 		const room = promote.payload?.room as {
-			director: { activeShowId: string | null; showBacklog: Array<{ status: string }> };
+			director: {
+				activeShowId: string | null;
+				showBacklog: Array<{ status: string }>;
+			};
 		};
 		expect(room.director.activeShowId).toBe("show_doc.plan_do-tick");
 		expect(room.director.showBacklog[0]?.status).toBe("showing");

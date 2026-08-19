@@ -34,12 +34,13 @@ import path from "path"
 import { _electron } from "playwright"
 import { ClineApiServerMock } from "../src/test/e2e/fixtures/server"
 import { E2ETestHelper } from "../src/test/e2e/utils/helpers"
+import runtimeConfig from "../test-runtime.config.json"
 
 async function main() {
 	await ClineApiServerMock.startGlobalServer()
 
 	const userDataDir = mkdtempSync(path.join(os.tmpdir(), "vsce-interactive"))
-	const executablePath = await downloadAndUnzipVSCode("stable", undefined, new SilentReporter())
+	const executablePath = await downloadAndUnzipVSCode(runtimeConfig.e2eChannel, undefined, new SilentReporter())
 
 	// launch VSCode
 	const app = await _electron.launch({

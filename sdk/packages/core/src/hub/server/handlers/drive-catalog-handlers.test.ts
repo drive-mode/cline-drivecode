@@ -3,13 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HubCommandEnvelope } from "@cline/shared";
 import { afterEach, describe, expect, it } from "vitest";
+import { createClineDriveHost } from "../../clineDriveHost";
+import { DriveRoomStore } from "../../collaboration/room";
 import {
 	__resetCatalogFacetStoresForTests,
 	getCatalogDefaultSubMode,
 	loadCatalogFacetStore,
 } from "../../drive-config/driveCatalogFacetStore";
-import { createClineDriveHost } from "../../clineDriveHost";
-import { DriveRoomStore } from "../../collaboration/room";
 import type { HubTransportContext } from "./context";
 import { handleDriveCatalogCommand } from "./drive-catalog-handlers";
 

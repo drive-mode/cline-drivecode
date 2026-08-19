@@ -60,5 +60,8 @@ export function formatCallSpend(spend: CallSpendSnapshot): string {
 }
 
 export function hasCallSpend(spend: CallSpendSnapshot | null): boolean {
-	return Boolean(spend && (spend.totalCost > 0 || spend.inputTokens + spend.outputTokens > 0));
+	return Boolean(
+		spend &&
+			(spend.totalCost > 0 || spend.inputTokens + spend.outputTokens > 0),
+	);
 }

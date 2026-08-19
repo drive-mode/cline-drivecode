@@ -33,9 +33,7 @@ describe("resolveProductSessionFeatures", () => {
 			enableSpawnAgent: false,
 			enableAgentTeams: false,
 		});
-		expect(
-			resolveProductSessionFeatures({ yolo: true, host: "cli" }),
-		).toEqual({
+		expect(resolveProductSessionFeatures({ yolo: true, host: "cli" })).toEqual({
 			enableSpawnAgent: false,
 			enableAgentTeams: false,
 		});
@@ -107,4 +105,3 @@ describe("resolveProductSessionFeatures", () => {
 		).toBe(3);
 	});
 });
-

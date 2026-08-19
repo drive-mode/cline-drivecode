@@ -100,8 +100,7 @@ export function listEligibleWork(
 	const nowMs = input.nowMs ?? Date.now();
 	const leased = leasedWorkItemIds(input.activeLeases, nowMs);
 	return input.run.spec.workItems.filter(
-		(item) =>
-			ELIGIBLE_WORK_STATUSES.has(item.status) && !leased.has(item.id),
+		(item) => ELIGIBLE_WORK_STATUSES.has(item.status) && !leased.has(item.id),
 	);
 }
 

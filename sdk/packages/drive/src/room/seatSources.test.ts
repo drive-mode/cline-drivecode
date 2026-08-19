@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { Participant } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import {
 	applySeatSourceDelta,
 	planDismissParticipant,
@@ -37,17 +37,16 @@ describe("applySeatSourceDelta", () => {
 	});
 
 	it("leaves when the last source is removed or cleared", () => {
-		const removeLast = applySeatSourceDelta(
-			[{ kind: "manual" }],
-			{ type: "remove", source: { kind: "manual" } },
-		);
+		const removeLast = applySeatSourceDelta([{ kind: "manual" }], {
+			type: "remove",
+			source: { kind: "manual" },
+		});
 		expect(removeLast.shouldLeave).toBe(true);
 		expect(removeLast.next).toEqual([]);
 
-		const cleared = applySeatSourceDelta(
-			[{ kind: "pack", packId: "p1" }],
-			{ type: "clear" },
-		);
+		const cleared = applySeatSourceDelta([{ kind: "pack", packId: "p1" }], {
+			type: "clear",
+		});
 		expect(cleared.shouldLeave).toBe(true);
 	});
 });
@@ -66,9 +65,7 @@ describe("seatSourcesEqual", () => {
 				{ kind: "pack", packId: "b" },
 			),
 		).toBe(false);
-		expect(seatSourcesEqual({ kind: "manual" }, { kind: "manual" })).toBe(
-			true,
-		);
+		expect(seatSourcesEqual({ kind: "manual" }, { kind: "manual" })).toBe(true);
 	});
 });
 

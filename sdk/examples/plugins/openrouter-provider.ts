@@ -140,5 +140,5 @@ const plugin: AgentPlugin = {
 	},
 };
 
-export { plugin, buildCollection };
+export { buildCollection, plugin };
 export default plugin;

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import type { BankSnapshot } from "@cline/shared";
 import { buildCleanDrainInvite } from "@cline/drive";
+import type { BankSnapshot } from "@cline/shared";
+import { describe, expect, it } from "vitest";
 import { hasNowLastFailure } from "../drive/agencyChrome";
 import { isCleanDrainSuccessor, shouldShowNowNext } from "./nowNextLogic";
 
@@ -46,8 +46,8 @@ describe("shouldShowNowNext", () => {
 describe("NowNext recovery treatment", () => {
 	it("detects recovery when nowLastFailure is set", () => {
 		expect(hasNowLastFailure(planned)).toBe(false);
-		expect(
-			hasNowLastFailure({ ...planned, nowLastFailure: "tests red" }),
-		).toBe(true);
+		expect(hasNowLastFailure({ ...planned, nowLastFailure: "tests red" })).toBe(
+			true,
+		);
 	});
 });

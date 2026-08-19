@@ -7,6 +7,10 @@ import {
 import { HubContext } from "./state";
 
 describe("mapHistoryToWebviewMessages", () => {
+	it("preserves tolerant handling of malformed history entries", () => {
+		expect(() => mapHistoryToWebviewMessages([null, 42])).not.toThrow();
+	});
+
 	it("hydrates assistant tool uses with following user tool results", () => {
 		const messages = mapHistoryToWebviewMessages([
 			{
@@ -232,6 +236,81 @@ describe("mapHistoryToWebviewMessages", () => {
 				state: "output-available",
 			},
 		});
+	});
+
+	it("hydrates provider model activities through ordinary tool events", () => {
+		const messages = mapHistoryToWebviewMessages([
+			{
+				id: "assistant-search",
+				role: "assistant",
+				content: "Bun 1.3.14 is current.",
+				metadata: {
+					modelToolActivities: [
+						{
+							toolCallId: "search-1",
+							toolName: "web_search",
+							execution: "provider",
+							input: { query: "latest Bun release" },
+							output: { answer: "1.3.14" },
+						},
+					],
+				},
+			},
+		]);
+
+		expect(messages).toHaveLength(2);
+		expect(messages[0]).toMatchObject({
+			role: "assistant",
+			toolEvents: [
+				{
+					toolCallId: "search-1",
+					name: "web_search",
+					state: "output-available",
+					input: { query: "latest Bun release" },
+					output: '{"answer":"1.3.14"}',
+				},
+			],
+		});
+		expect(messages[1]).toMatchObject({
+			id: "assistant-search",
+			role: "assistant",
+			text: "Bun 1.3.14 is current.",
+		});
+	});
+
+	it("keeps id-less history row ids stable as a provider result completes", () => {
+		const source = {
+			role: "assistant",
+			content: "Bun 1.3.14 is current.",
+			metadata: {
+				modelToolActivities: [
+					{
+						toolCallId: "search-1",
+						toolName: "web_search",
+						execution: "provider",
+						input: { query: "latest Bun release" },
+					},
+				],
+			},
+		};
+
+		const pending = mapHistoryToWebviewMessages([source]);
+		const completed = mapHistoryToWebviewMessages([
+			{
+				...source,
+				metadata: {
+					modelToolActivities: [
+						{
+							...source.metadata.modelToolActivities[0],
+							output: "1.3.14",
+						},
+					],
+				},
+			},
+		]);
+
+		expect(pending.at(-1)?.id).toBe("history-0");
+		expect(completed.at(-1)?.id).toBe("history-0");
 	});
 });
 

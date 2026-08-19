@@ -1,4 +1,4 @@
-@import "../components/markdown.css" layer(components);
+@import "@cline/ui/components/markdown.css" layer(components);
 
 :root {
 	color-scheme: light;
@@ -14,6 +14,7 @@
 	}
 
 	html {
+		font-size: 15px;
 		@apply font-sans;
 	}
 
@@ -45,35 +46,35 @@
 }
 
 :where(
-		button:not(:disabled),
-		a[href],
-		area[href],
-		label[for],
-		select:not(:disabled),
-		summary,
-		input[type="button"]:not(:disabled),
-		input[type="checkbox"]:not(:disabled),
-		input[type="color"]:not(:disabled),
-		input[type="file"]:not(:disabled),
-		input[type="radio"]:not(:disabled),
-		input[type="range"]:not(:disabled),
-		input[type="reset"]:not(:disabled),
-		input[type="submit"]:not(:disabled),
-		input[role="combobox"][readonly]:not(:disabled),
-		[role="button"]:not([aria-disabled="true"]),
-		[role="checkbox"]:not([aria-disabled="true"]),
-		[role="menuitem"]:not([aria-disabled="true"]),
-		[role="menuitemcheckbox"]:not([aria-disabled="true"]),
-		[role="menuitemradio"]:not([aria-disabled="true"]),
-		[role="link"]:not([aria-disabled="true"]),
-		[role="option"]:not([aria-disabled="true"]),
-		[role="radio"]:not([aria-disabled="true"]),
-		[role="slider"]:not([aria-disabled="true"]),
-		[role="switch"]:not([aria-disabled="true"]),
-		[role="tab"]:not([aria-disabled="true"]),
-		[role="treeitem"]:not([aria-disabled="true"]),
-		[data-interactive]:not([aria-disabled="true"]):not([data-disabled])
-	) {
+	button:not(:disabled),
+	a[href],
+	area[href],
+	label[for],
+	select:not(:disabled),
+	summary,
+	input[type="button"]:not(:disabled),
+	input[type="checkbox"]:not(:disabled),
+	input[type="color"]:not(:disabled),
+	input[type="file"]:not(:disabled),
+	input[type="radio"]:not(:disabled),
+	input[type="range"]:not(:disabled),
+	input[type="reset"]:not(:disabled),
+	input[type="submit"]:not(:disabled),
+	input[role="combobox"][readonly]:not(:disabled),
+	[role="button"]:not([aria-disabled="true"]),
+	[role="checkbox"]:not([aria-disabled="true"]),
+	[role="menuitem"]:not([aria-disabled="true"]),
+	[role="menuitemcheckbox"]:not([aria-disabled="true"]),
+	[role="menuitemradio"]:not([aria-disabled="true"]),
+	[role="link"]:not([aria-disabled="true"]),
+	[role="option"]:not([aria-disabled="true"]),
+	[role="radio"]:not([aria-disabled="true"]),
+	[role="slider"]:not([aria-disabled="true"]),
+	[role="switch"]:not([aria-disabled="true"]),
+	[role="tab"]:not([aria-disabled="true"]),
+	[role="treeitem"]:not([aria-disabled="true"]),
+	[data-interactive]:not([aria-disabled="true"]):not([data-disabled])
+) {
 	cursor: pointer;
 }
 

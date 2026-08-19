@@ -5,6 +5,7 @@
  *
  */
 
+import type { GeneratedMedia } from "./llms/media";
 import type { ModelInfo } from "./llms/model-info";
 import type {
 	ToolApprovalRequest,
@@ -46,12 +47,19 @@ export interface AgentFilePart {
 	content: string;
 }
 
+export interface AgentMediaPart {
+	type: "media";
+	media: GeneratedMedia;
+}
+
 export interface AgentToolCallPart {
 	type: "tool-call";
 	toolCallId: string;
 	toolName: string;
 	input: unknown;
 	metadata?: unknown;
+	/** Absent for ordinary AgentRuntime-executed tools. */
+	execution?: ModelToolExecution;
 }
 
 export interface AgentToolResultPart {
@@ -60,6 +68,20 @@ export interface AgentToolResultPart {
 	toolName: string;
 	output: unknown;
 	isError?: boolean;
+	/** Absent for ordinary AgentRuntime-executed tools. */
+	execution?: ModelToolExecution;
+}
+
+export type ModelToolExecution = "client" | "provider";
+
+/** Observational record for a model tool executed outside AgentRuntime. */
+export interface AgentModelToolActivity {
+	toolCallId: string;
+	toolName: string;
+	execution: ModelToolExecution;
+	input?: unknown;
+	output?: unknown;
+	isError?: boolean;
 }
 
 export type AgentMessagePart =
@@ -67,6 +89,7 @@ export type AgentMessagePart =
 	| AgentReasoningPart
 	| AgentImagePart
 	| AgentFilePart
+	| AgentMediaPart
 	| AgentToolCallPart
 	| AgentToolResultPart;
 
@@ -211,6 +234,8 @@ export interface AgentModelRequest {
 	systemPrompt?: string;
 	messages: readonly AgentMessage[];
 	tools: readonly AgentToolDefinition[];
+	/** Provider-executed tools enabled for this model request. */
+	modelTools?: readonly import("./llms/model-tools").ModelTool[];
 	signal?: AbortSignal;
 	options?: Record<string, unknown>;
 }
@@ -263,6 +288,7 @@ export type ProviderErrorClass = "context_window_exceeded" | "unknown";
 
 export type AgentModelEvent =
 	| { type: "text-delta"; text: string }
+	| { type: "media"; media: GeneratedMedia }
 	| {
 			type: "reasoning-delta";
 			text: string;
@@ -277,6 +303,17 @@ export type AgentModelEvent =
 			inputText?: string;
 			input?: unknown;
 			metadata?: unknown;
+			/** Set when execution is owned by AI SDK or the model provider. */
+			execution?: ModelToolExecution;
+	  }
+	| {
+			type: "tool-result";
+			toolCallId: string;
+			toolName: import("./llms/model-tools").ModelToolName;
+			input?: unknown;
+			output: unknown;
+			isError?: boolean;
+			execution: ModelToolExecution;
 	  }
 	| {
 			type: "usage";
@@ -287,6 +324,15 @@ export type AgentModelEvent =
 			reason: AgentModelFinishReason;
 			error?: string;
 			errorClass?: ProviderErrorClass;
+			/**
+			 * The model layer already recorded `sdk.error` telemetry for this
+			 * failure at its own error boundary. `error` is a flattened string,
+			 * so this bit carries reporting ownership across the boundary: the
+			 * agent loop skips re-reporting when it is set, and still reports
+			 * failures from model implementations that do not record their own
+			 * telemetry.
+			 */
+			errorReported?: boolean;
 	  };
 
 export interface AgentModel {
@@ -461,6 +507,8 @@ export interface AgentRuntimeConfig {
 	messageModelInfo?: AgentMessage["modelInfo"];
 	model: AgentModel;
 	modelOptions?: Record<string, unknown>;
+	/** Provider-executed tools, separate from locally executed AgentTools. */
+	modelTools?: readonly import("./llms/model-tools").ModelTool[];
 	// biome-ignore lint/suspicious/noExplicitAny: tool input/output types vary per tool
 	tools?: readonly AgentTool<any, any>[];
 	hooks?: Partial<AgentRuntimeHooks>;
@@ -502,7 +550,7 @@ export interface AgentRuntimeConfig {
 }
 
 // =============================================================================
-// Runtime event union (13 variants)
+// Runtime event union
 // =============================================================================
 
 export type AgentRuntimeEvent =
@@ -535,6 +583,12 @@ export type AgentRuntimeEvent =
 			accumulatedText: string;
 			redacted?: boolean;
 			metadata?: unknown;
+	  }
+	| {
+			type: "assistant-media";
+			snapshot: AgentRuntimeStateSnapshot;
+			iteration: number;
+			media: GeneratedMedia;
 	  }
 	| {
 			type: "assistant-message";

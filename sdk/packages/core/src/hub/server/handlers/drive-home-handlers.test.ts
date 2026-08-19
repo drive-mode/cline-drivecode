@@ -39,6 +39,8 @@ function ctx(): HubTransportContext {
 		pendingApprovals: new Map(),
 		pendingCapabilityRequests: new Map(),
 		suppressNextTerminalEventBySession: new Map(),
+		pendingDriveToolInputs: new Map(),
+		activeRpcTurnCountBySession: new Map(),
 		sessionHost: {} as HubTransportContext["sessionHost"],
 		publish: () => {},
 		buildEvent: (

@@ -38,12 +38,7 @@ export function CredentialOnboardingBanner({
 					>
 						Try demo
 					</Button>
-					<Button
-						onClick={onDismiss}
-						size="sm"
-						type="button"
-						variant="ghost"
-					>
+					<Button onClick={onDismiss} size="sm" type="button" variant="ghost">
 						Dismiss
 					</Button>
 				</div>

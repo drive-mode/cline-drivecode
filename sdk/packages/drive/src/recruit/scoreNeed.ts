@@ -69,11 +69,7 @@ export function buildRecruitNeed(input: {
 	const fromTitle = tokenize(title);
 	const fromFailure = tokenize(input.failureNote ?? "");
 	const capabilities = [
-		...new Set([
-			...(input.capabilities ?? []),
-			...fromTitle,
-			...fromFailure,
-		]),
+		...new Set([...(input.capabilities ?? []), ...fromTitle, ...fromFailure]),
 	];
 	return {
 		taskId: input.taskId,
@@ -139,11 +135,7 @@ export function rankRecruitCandidates(
 				displayName: candidate.displayName,
 				score,
 				reasons:
-					reasons.length > 0
-						? reasons
-						: score === 0
-							? ["slug_order"]
-							: reasons,
+					reasons.length > 0 ? reasons : score === 0 ? ["slug_order"] : reasons,
 			};
 			if (candidate.suggestedPackIds?.length) {
 				entry.suggestedPackIds = [...candidate.suggestedPackIds];

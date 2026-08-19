@@ -39,9 +39,7 @@ async function waitForFile(
 			}
 		}
 		if (Date.now() - started >= timeoutMs) {
-			throw new Error(
-				`Timed out waiting for non-empty file: ${filePath}`,
-			);
+			throw new Error(`Timed out waiting for non-empty file: ${filePath}`);
 		}
 		await new Promise((resolve) => setTimeout(resolve, 25));
 	}

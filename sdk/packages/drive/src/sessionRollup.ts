@@ -68,8 +68,7 @@ export function deriveSessionRollup(
 				(event.type === "control.leave" || event.type === "control.end") &&
 				typeof event.durationMs === "number",
 		);
-	const roomId =
-		join?.roomId ?? close?.roomId ?? bankEvents[0]?.roomId ?? null;
+	const roomId = join?.roomId ?? close?.roomId ?? bankEvents[0]?.roomId ?? null;
 
 	let durationMs: number | null = null;
 	if (
@@ -118,8 +117,8 @@ export function deriveSessionRollup(
 
 	const firstCompletionAt = completedTaskIds.length
 		? Date.parse(
-				bankEvents.find((event) => event.type === "drive_task_completed")
-					?.at ?? "",
+				bankEvents.find((event) => event.type === "drive_task_completed")?.at ??
+					"",
 			)
 		: NaN;
 

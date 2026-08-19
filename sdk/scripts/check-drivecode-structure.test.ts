@@ -62,7 +62,9 @@ async function seedValidNest(nest: string): Promise<void> {
 	await touch(join(nest, "plans", "drivecode-sdk", "decisions.tsv"), "id\n");
 	await touch(join(nest, "design", "README.md"));
 	await touch(join(nest, "meta", "glossary.md"));
-	await touch(join(nest, "plans", "cline-drivemode", "initiatives", "README.md"));
+	await touch(
+		join(nest, "plans", "cline-drivemode", "initiatives", "README.md"),
+	);
 	await touch(
 		join(nest, "plans", "cline-drivemode", "features", "DRV-KERNEL.md"),
 	);
@@ -187,8 +189,7 @@ describe("checkDrivecodeStructure", () => {
 		expect(
 			issues.some(
 				(i) =>
-					i.path ===
-						"fixture/plans/cline-drivemode/initiatives/orphan-track" &&
+					i.path === "fixture/plans/cline-drivemode/initiatives/orphan-track" &&
 					i.message.includes("README.md"),
 			),
 		).toBe(true);
@@ -200,9 +201,7 @@ describe("checkDrivecodeStructure", () => {
 		await touch(
 			join(nest, "plans", "cline-drivemode", "features", "kernel.md"),
 		);
-		await touch(
-			join(nest, "plans", "cline-drivemode", "adr", "ADR-1-bad.md"),
-		);
+		await touch(join(nest, "plans", "cline-drivemode", "adr", "ADR-1-bad.md"));
 
 		const issues = await checkDrivecodeStructure({
 			nestPath: nest,
@@ -225,9 +224,7 @@ describe("checkDrivecodeStructure", () => {
 			reportPrefix: "fixture",
 		});
 		expect(issues.some((i) => i.path === "fixture/scratch")).toBe(true);
-		expect(issues.some((i) => i.path === "fixture/architecture.md")).toBe(
-			true,
-		);
+		expect(issues.some((i) => i.path === "fixture/architecture.md")).toBe(true);
 	});
 
 	test("rejects harness loose numbered docs at track root", async () => {

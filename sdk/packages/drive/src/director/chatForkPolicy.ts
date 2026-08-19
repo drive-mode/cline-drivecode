@@ -192,8 +192,7 @@ export function buildSeedPacket(input: BuildSeedPacketInput): SeedPacket {
 		assigneeParticipantId: input.assigneeParticipantId,
 		allowedPathPrefixes,
 		linkedShowTemplateIds: [
-			...((input.linkedShowTemplateIds &&
-			input.linkedShowTemplateIds.length > 0
+			...((input.linkedShowTemplateIds && input.linkedShowTemplateIds.length > 0
 				? input.linkedShowTemplateIds
 				: input.doItem.linkedShowTemplateIds) ?? []),
 		],
@@ -247,9 +246,7 @@ export function applyPromotePacket(input: {
 	});
 
 	const ownerParticipantId =
-		input.ownerParticipantId ??
-		doItem?.assigneeParticipantId ??
-		"system";
+		input.ownerParticipantId ?? doItem?.assigneeParticipantId ?? "system";
 
 	const templateIds = [
 		...(input.promote.linkedShowTemplateIds ?? []),
@@ -262,7 +259,9 @@ export function applyPromotePacket(input: {
 	const existingIds = new Set(showBacklog.map((item) => item.id));
 
 	for (const showItemId of input.promote.showItemIds) {
-		const existingIndex = showBacklog.findIndex((item) => item.id === showItemId);
+		const existingIndex = showBacklog.findIndex(
+			(item) => item.id === showItemId,
+		);
 		if (existingIndex >= 0) {
 			showBacklog[existingIndex] = markShowReady(showBacklog[existingIndex]!);
 			continue;
