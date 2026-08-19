@@ -1,5 +1,8 @@
 """Small reproducible check for the generated official Drive mark pack."""
 
+import hashlib
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +12,13 @@ ROOT = Path(__file__).parent
 DOCS = ROOT.parent.parent / "docs/drivecode/assets/logos"
 BLACK = np.array([0, 0, 0], dtype=np.uint8)
 WHITE = np.array([255, 255, 255], dtype=np.uint8)
+APPROVED_SOURCE_SHA256 = (
+    "d7f89cad545dfbb87cb0e119c56d5fbd3baa1bb23f5b0de2ca919f7a36f0bcb3"
+)
+
+
+source_digest = hashlib.sha256((ROOT / "source.png").read_bytes()).hexdigest()
+assert source_digest == APPROVED_SOURCE_SHA256, source_digest
 
 
 def rgb(name: str) -> np.ndarray:
@@ -38,4 +48,8 @@ assert layers.count('class="dm-wheel"') == 1
 assert layers.count('class="dm-head"') == 1
 assert layers.count("<path") == 2
 
-print("Drive mark assets OK: inverse pair, alpha, docs copies, motion layers")
+subprocess.run(
+    [sys.executable, ROOT / "sync-html-symbols.py", "--check"], check=True
+)
+
+print("Drive mark assets OK: approved source, inverse pair, alpha, docs copies, motion layers")

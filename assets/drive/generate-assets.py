@@ -17,6 +17,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from source_mask import foreground_mask
+
 src = Path(sys.argv[1])
 out = Path(sys.argv[2])
 out.mkdir(parents=True, exist_ok=True)
@@ -26,10 +28,7 @@ DARK = "#000000"
 LIGHT = "#FFFFFF"
 VIEW = 1024  # clean power-of-two viewBox
 
-img = Image.open(src).convert("L")
-arr = np.array(img)
-
-mask = (arr > 128).astype(np.uint8) * 255
+mask = foreground_mask(src)
 
 ys, xs = np.where(mask > 0)
 x0, x1 = xs.min(), xs.max()
@@ -152,7 +151,9 @@ def raster(size, fg, bg=None):
     return Image.fromarray(rgb, "RGB")
 
 
-for size in (256, 512, 1024):
+# The repository ships the 512px raster tier. Favicons are rendered separately
+# below; native install icons are generated in the standalone iOS repository.
+for size in (512,):
     raster(size, DARK, LIGHT).save(out / f"cline-drive-light-{size}.png", optimize=True)
     raster(size, LIGHT, DARK).save(out / f"cline-drive-dark-{size}.png", optimize=True)
     raster(size, DARK, None).save(out / f"cline-drive-dark-transparent-{size}.png", optimize=True)
