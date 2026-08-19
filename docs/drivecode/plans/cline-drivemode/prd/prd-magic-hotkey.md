@@ -134,12 +134,14 @@ the whitelist or change a tier; those stay in host code (ADR-0036 decisions 5–
 ## Non-goals
 
 - Desktop-wide sensing, synthetic keystrokes, screen or pixel capture.
+  ([ADR-0037](../adr/ADR-0037-invocation-scoped-sensing.md), Proposed, narrows
+  the first to invocation-scoped reads; keystrokes and capture stay non-goals.)
 - Observing operator-initiated editor, git, or terminal activity (ADR-0036
   decision 2). v0 sees agent-initiated work only.
 - Multi-step autonomy. One DO is one verb.
 - A `DriveTask` ranker, or any second writer of the plan cursor.
 - A second approval plane parallel to `ToolPolicy`.
-- Passive observation of the operator's unprompted actions (ADR-0036 decision 10).
+- Passive observation of the operator's unprompted actions (ADR-0036 decision 12).
 - Shipping or training a model. v0's planner is Claude.
 - Voice or chat control of the triad.
 
@@ -247,6 +249,13 @@ read-only instrument panel, and drop the actuator.
 ## Decision record
 
 Architecture decision: [ADR-0036](../adr/ADR-0036-next-action-triad.md).
+
+[ADR-0037](../adr/ADR-0037-invocation-scoped-sensing.md) (Proposed) amends
+ADR-0036 decisions 1 and 12 to permit a system-wide hotkey whose desktop
+context is read only inside an invocation window. It changes this PRD's
+signal-source section and M4 if accepted, and nothing else: the verb
+whitelist, the tier table, and the kill criterion are unaffected, and REDO
+remains a stack operation rather than a fourth predicted verb.
 
 This PRD answers [16-task-as-unit-models](../research/16-task-as-unit-models.md)
 open question 3 in the product's terms: a learned proposer graduates on measured
