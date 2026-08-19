@@ -86,6 +86,16 @@ The first local PR #23 full-suite pass exposed one five-second timeout in `sdk/p
 
 The first hosted E2E pass also exposed a VS Code `1.134` automation change in the code-action widget. PR #23 targets the action's accessible `option` row instead of its inner label text and fixes the workflow artifact path so failed recordings are retained. Keep E2E exercising the current stable VS Code rather than hiding compatibility failures behind an old-version pin.
 
+## Configuration sources
+
+Keep mutable toolchain and test selectors in the smallest versioned source that owns them:
+
+- Root [`package.json`](../../../../../package.json) is the single Bun-version source for local development, the shared workspace setup action, and direct CI setup steps. Workflows use `bun-version-file`; do not copy a numeric Bun version into workflow YAML.
+- [`apps/vscode/test-runtime.config.json`](../../../../../apps/vscode/test-runtime.config.json) owns VS Code unit-test, E2E, interactive-test, and debug-harness runtime selectors. Environment variables remain explicit one-run overrides, not a second committed default.
+- Package compatibility declarations such as `engines.vscode` and `@types/vscode` stay in the extension package manifest. They describe the supported API floor and are not interchangeable with a test download channel.
+
+Do not move signed Director policy, Presenter authorization, resource grants, secrets, endpoints, or permission decisions into these convenience files. Those remain typed host/security policy (or deployment secret configuration), with validation and auditability at the boundary that enforces them.
+
 ## Landing and continuation rules
 
 1. PR #23 must be merged with **Create a merge commit**. Squash or rebase would discard the upstream ancestry this work repairs.

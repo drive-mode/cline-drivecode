@@ -5,7 +5,17 @@ import * as path from "node:path"
 import { type ElectronApplication, expect, type Frame, type Page, test } from "@playwright/test"
 import { downloadAndUnzipVSCode, SilentReporter } from "@vscode/test-electron"
 import { _electron } from "playwright"
+import runtimeConfig from "../../../../test-runtime.config.json"
 import { ClineApiServerMock } from "../fixtures/server"
+
+type VSCodeChannel = "stable" | "insiders"
+
+function getE2EChannel(): VSCodeChannel {
+	if (runtimeConfig.e2eChannel === "stable" || runtimeConfig.e2eChannel === "insiders") {
+		return runtimeConfig.e2eChannel
+	}
+	throw new Error(`Invalid e2eChannel in test-runtime.config.json: ${runtimeConfig.e2eChannel}`)
+}
 
 interface E2ETestDirectories {
 	workspaceDir: string
@@ -16,7 +26,7 @@ interface E2ETestDirectories {
 
 export interface E2ETestConfigs {
 	workspaceType: "single" | "multi"
-	channel: "stable" | "insiders"
+	channel: VSCodeChannel
 }
 
 export class E2ETestHelper {
@@ -32,7 +42,7 @@ export class E2ETestHelper {
 	 * download metadata claims COMPLETE but the darwin binary is missing
 	 * (VS Code >=1.110 ships Contents/MacOS/Code; older trees used Electron).
 	 */
-	public static async resolveVSCodeExecutable(channel: "stable" | "insiders"): Promise<string> {
+	public static async resolveVSCodeExecutable(channel: VSCodeChannel): Promise<string> {
 		const cachePath = path.join(E2ETestHelper.CODEBASE_ROOT_DIR, ".vscode-test")
 		for (let attempt = 0; attempt < 2; attempt += 1) {
 			const executablePath = await downloadAndUnzipVSCode(channel, undefined, new SilentReporter())
@@ -416,7 +426,7 @@ export const e2e = test
 	})
 	.extend<E2ETestConfigs>({
 		workspaceType: "single",
-		channel: "stable",
+		channel: getE2EChannel(),
 	})
 	.extend<{ openVSCode: (workspacePath: string) => Promise<ElectronApplication> }>({
 		openVSCode: async ({ userDataDir, channel }, use, testInfo) => {

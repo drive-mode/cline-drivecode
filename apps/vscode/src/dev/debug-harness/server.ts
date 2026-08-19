@@ -26,7 +26,8 @@
  *   --no-browser-capture  Let openExternal() open real browser windows (for interactive OAuth)
  *
  * Env:
- *   VSCODE_TEST_VERSION  Debugee VSCode version to download (default: 1.103.0; the
+ *   VSCODE_TEST_VERSION  Debugee VSCode version to download (default comes from
+ *                        test-runtime.config.json; the
  *                        bundled Playwright cannot drive the Electron in the latest
  *                        "stable"). Set to "stable" or a pinned x.y.z to override.
  *
@@ -44,6 +45,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { downloadAndUnzipVSCode, SilentReporter } from "@vscode/test-electron"
 import { _electron, type CDPSession, type ElectronApplication, type Frame, type Page } from "playwright"
+import runtimeConfig from "../../../test-runtime.config.json" with { type: "json" }
 
 const __script_dir = typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url))
 
@@ -365,7 +367,7 @@ class DebugHarness {
 		// than playwright supports, making _electron.launch() hang). Override with
 		// VSCODE_TEST_VERSION (e.g. "stable" or a pinned x.y.z).
 		log("Ensuring VSCode binary is available...")
-		const vscodeVersion = process.env.VSCODE_TEST_VERSION || "1.103.0"
+		const vscodeVersion = process.env.VSCODE_TEST_VERSION || runtimeConfig.debugHarnessVersion
 		const executablePath = await downloadAndUnzipVSCode(vscodeVersion, undefined, new SilentReporter())
 		log(`VSCode binary: ${executablePath}`)
 
