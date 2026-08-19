@@ -12,13 +12,13 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from source_mask import foreground_mask
+
 src = Path(sys.argv[1])
 dst = Path(sys.argv[2])
 VIEW = 24  # lucide-compatible viewBox so it drops into existing icon slots
 
-img = Image.open(src).convert("L")
-arr = np.array(img)
-mask = (arr > 128).astype(np.uint8) * 255
+mask = foreground_mask(src)
 ys, xs = np.where(mask > 0)
 crop = mask[ys.min() : ys.max() + 1, xs.min() : xs.max() + 1]
 

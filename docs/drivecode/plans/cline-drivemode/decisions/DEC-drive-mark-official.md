@@ -29,7 +29,9 @@ spinners — some tied to network events, some to page chrome.
 3. **`loading` geometry:** rim/spokes may spin; head stays upright. Do not
    full-spin a single-path combined mark (flat bottom reads as tumbling).
 4. **Product code** keeps `currentColor` icons; static and motion paths are
-   generated from the official `assets/drive/source.png`.
+   generated from the exact hash-locked `assets/drive/source.png`. The angular
+   head shoulders and notched spokes are identifying geometry and must survive
+   generation at every tier.
 
 ## Consequences
 
