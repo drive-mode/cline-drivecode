@@ -16,17 +16,25 @@ import {
 	type PromptRewriteDecision,
 	type RoomOp,
 } from "@cline/drive";
-import type { AgentTitleGrant, DriveEvent, RoomSnapshot } from "@cline/shared";
+import type {
+	AgentTitleGrant,
+	AgentTitleScope,
+	DriveEvent,
+	RoomSnapshot,
+} from "@cline/shared";
 import { parseDriveFacetValues } from "@cline/shared";
+import {
+	builtInAgentTitleDefinitions,
+	mintClineAgentTitleGrant,
+	mintClinePresenterGrant,
+	validateAgentTitleAuthorization,
+} from "./agentTitlePolicy";
 import {
 	type DriveRoomStore,
 	getDriveRoomStore,
 	rebindJsonlRoomEventLog,
 } from "./collaboration";
-import {
-	builtInDirectorPolicyDescriptor,
-	mintClinePresenterGrant,
-} from "./directorPolicy";
+import { builtInDirectorPolicyDescriptor } from "./directorPolicy";
 import { getCatalogDefaultSubMode } from "./drive-config/driveCatalogFacetStore";
 import {
 	loadOrSeedDriveFacets,
@@ -260,6 +268,20 @@ export function createClineDriveHost(
 		async getDirectorPolicyDescriptor(): Promise<DirectorPolicyDescriptor> {
 			return builtInDirectorPolicyDescriptor();
 		},
+		async listAgentTitleDefinitions() {
+			return builtInAgentTitleDefinitions();
+		},
+		async authorizeTitleCommand(roomId, request) {
+			const snapshot = store.get(roomId);
+			if (!snapshot) {
+				return {
+					ok: false,
+					code: "grant_not_found",
+					message: "Room or grant was not found.",
+				};
+			}
+			return validateAgentTitleAuthorization({ snapshot, request });
+		},
 		async commitDirectorOp(op: DirectorOp): Promise<DirectorOpResult> {
 			const demoCapture = capabilities.demoCapture;
 			store.create(op.roomId);
@@ -472,10 +494,18 @@ export function createClineDriveHost(
 					return result.snapshot;
 				}
 				case "grantTitle": {
-					const grant = mintClinePresenterGrant({
-						roomId: op.roomId,
+					const scope: AgentTitleScope =
+						op.grant.title === "presenter"
+							? { kind: "stage", ref: op.roomId }
+							: op.grant.scope;
+					const grant = mintClineAgentTitleGrant({
+						title: op.grant.title,
 						agentId: op.grant.agentId,
+						scope,
+						taskId: op.grant.taskId,
 						durationMs: requestedGrantDurationMs(op.grant),
+						generation: op.grant.generation,
+						grantedBy: CLINE_COORDINATOR_ID,
 					});
 					const result = store.grantTitle({
 						roomId: op.roomId,
@@ -497,14 +527,24 @@ export function createClineDriveHost(
 					return result.snapshot;
 				}
 				case "transferTitle": {
-					const toGrant = mintClinePresenterGrant({
-						roomId: op.roomId,
+					const from = store.getOrThrow(op.roomId).titleGrantsById[
+						op.fromGrantId
+					];
+					if (!from) {
+						throw new Error(`title_grant_not_found:${op.fromGrantId}`);
+					}
+					const toGrant = mintClineAgentTitleGrant({
+						title: op.title,
 						agentId: op.toGrant.agentId,
+						scope: from.scope,
+						taskId: op.toGrant.taskId ?? from.taskId,
 						durationMs: requestedGrantDurationMs(op.toGrant),
+						generation: (from.generation ?? 1) + 1,
+						grantedBy: CLINE_COORDINATOR_ID,
 					});
 					const result = store.transferTitle({
 						roomId: op.roomId,
-						title: "presenter",
+						title: op.title,
 						fromGrantId: op.fromGrantId,
 						toGrant,
 						transferredAt: toGrant.grantedAt,

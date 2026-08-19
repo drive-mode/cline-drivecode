@@ -9,8 +9,11 @@
 
 import {
 	activePresenterGrant,
+	activeTitleGrantByExclusivityKey,
 	createEmptyRoomSnapshot,
+	isTitleGrantActive,
 	reduceRoom,
+	titleGrantExclusivityKey,
 } from "@cline/drive";
 import type {
 	AddressSet,
@@ -52,6 +55,28 @@ function nowIso(): string {
 
 function newEventId(prefix: string): string {
 	return `${prefix}_${crypto.randomUUID()}`;
+}
+
+function assertBuilderReviewerIndependence(input: {
+	snapshot: RoomSnapshot;
+	grant: AgentTitleGrant;
+	at: string;
+}): void {
+	if (input.grant.title !== "reviewer" && input.grant.title !== "builder") {
+		return;
+	}
+	const conflictingTitle =
+		input.grant.title === "reviewer" ? "builder" : "reviewer";
+	const conflict = Object.values(input.snapshot.titleGrantsById).find(
+		(grant) =>
+			grant.agentId === input.grant.agentId &&
+			grant.title === conflictingTitle &&
+			grant.scope.ref === input.grant.scope.ref &&
+			isTitleGrantActive(grant, input.at),
+	);
+	if (conflict) {
+		throw new Error(`reviewer_builder_conflict:${conflict.id}`);
+	}
 }
 
 export class DriveRoomStore {
@@ -544,13 +569,31 @@ export class DriveRoomStore {
 	}): RoomCommitResult {
 		this.create(input.roomId, input.grant.grantedAt);
 		const snapshot = this.getOrThrow(input.roomId);
-		if (input.grant.scope.ref !== input.roomId) {
+		if (
+			input.grant.title === "presenter" &&
+			(input.grant.scope.kind !== "stage" ||
+				input.grant.scope.ref !== input.roomId)
+		) {
 			throw new Error(`title_scope_mismatch:${input.grant.scope.ref}`);
 		}
-		const active = activePresenterGrant(snapshot, input.grant.grantedAt);
-		if (active && active.id !== input.grant.id) {
-			throw new Error(`presenter_conflict:${active.id}`);
+		const active = activeTitleGrantByExclusivityKey(
+			snapshot,
+			titleGrantExclusivityKey(input.grant),
+			input.grant.grantedAt,
+			input.grant.id,
+		);
+		if (active) {
+			const code =
+				input.grant.title === "presenter"
+					? "presenter_conflict"
+					: "title_conflict";
+			throw new Error(`${code}:${active.id}`);
 		}
+		assertBuilderReviewerIndependence({
+			snapshot,
+			grant: input.grant,
+			at: input.grant.grantedAt,
+		});
 		return this.commit({
 			schemaVersion: 1,
 			id: newEventId("title_grant"),
@@ -597,13 +640,43 @@ export class DriveRoomStore {
 		actorId?: string;
 	}): RoomCommitResult {
 		const snapshot = this.getOrThrow(input.roomId);
-		const active = activePresenterGrant(snapshot, input.transferredAt);
-		if (!active || active.id !== input.fromGrantId) {
-			throw new Error(`presenter_transfer_source_invalid:${input.fromGrantId}`);
+		const active = snapshot.titleGrantsById[input.fromGrantId];
+		if (
+			!active ||
+			active.title !== input.title ||
+			!isTitleGrantActive(active, input.transferredAt)
+		) {
+			throw new Error(`title_transfer_source_invalid:${input.fromGrantId}`);
 		}
-		if (input.toGrant.scope.ref !== input.roomId) {
+		if (
+			input.toGrant.title !== input.title ||
+			input.toGrant.scope.kind !== active.scope.kind ||
+			input.toGrant.scope.ref !== active.scope.ref ||
+			((input.title === "presenter" ||
+				input.title === "builder" ||
+				input.title === "scribe") &&
+				titleGrantExclusivityKey(input.toGrant) !==
+					titleGrantExclusivityKey(active))
+		) {
 			throw new Error(`title_scope_mismatch:${input.toGrant.scope.ref}`);
 		}
+		if ((input.toGrant.generation ?? 1) <= (active.generation ?? 1)) {
+			throw new Error(`title_generation_stale:${input.toGrant.id}`);
+		}
+		const conflict = activeTitleGrantByExclusivityKey(
+			snapshot,
+			titleGrantExclusivityKey(input.toGrant),
+			input.transferredAt,
+			active.id,
+		);
+		if (conflict) {
+			throw new Error(`title_conflict:${conflict.id}`);
+		}
+		assertBuilderReviewerIndependence({
+			snapshot,
+			grant: input.toGrant,
+			at: input.transferredAt,
+		});
 		return this.commit({
 			schemaVersion: 1,
 			id: newEventId("title_transfer"),

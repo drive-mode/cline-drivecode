@@ -12,6 +12,107 @@ import {
 const at = "2026-07-25T12:00:00.000Z";
 
 describe("reduceRoom", () => {
+	it("stores non-Presenter titles without changing stage authority", () => {
+		const room = reduceRoom(
+			createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at }),
+			{
+				schemaVersion: 1,
+				id: "grant_researcher",
+				roomId: "room_1",
+				at,
+				type: "control.title_granted",
+				track: "control",
+				grant: {
+					id: "researcher_a1",
+					agentId: "a1",
+					title: "researcher",
+					definitionRef: "researcher@1",
+					scope: { kind: "repository", ref: "target_1" },
+					skillBundleRefs: ["research-evidence"],
+					resourceGrantRefs: [],
+					delegatedAgentIds: [],
+					permissions: ["source.read"],
+					grantedAt: at,
+					expiresAt: "2026-07-25T13:00:00.000Z",
+				},
+			},
+		);
+
+		expect(room.titleGrantsById.researcher_a1?.title).toBe("researcher");
+		expect(room.stage.presenterGrantId).toBeNull();
+		expect(room.stage.sharer).toBeNull();
+	});
+
+	it("rejects stale transfers and same-agent Builder/Reviewer grants during replay", () => {
+		const builder = {
+			id: "builder_a1",
+			agentId: "a1",
+			title: "builder" as const,
+			definitionRef: "builder@1",
+			scope: { kind: "target" as const, ref: "target_1" },
+			skillBundleRefs: ["builder-target"],
+			resourceGrantRefs: [],
+			delegatedAgentIds: [],
+			permissions: ["target.modify" as const],
+			grantedAt: at,
+			expiresAt: "2026-07-25T13:00:00.000Z",
+			generation: 2,
+			exclusivityKey: "target/target_1",
+		};
+		let room = reduceRoom(
+			createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at }),
+			{
+				schemaVersion: 1,
+				id: "grant_builder",
+				roomId: "room_1",
+				at,
+				type: "control.title_granted",
+				track: "control",
+				grant: builder,
+			},
+		);
+
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "grant_self_reviewer",
+			roomId: "room_1",
+			at: "2026-07-25T12:01:00.000Z",
+			type: "control.title_granted",
+			track: "control",
+			grant: {
+				...builder,
+				id: "reviewer_a1",
+				title: "reviewer",
+				definitionRef: "reviewer@1",
+				skillBundleRefs: ["review-findings"],
+				permissions: ["review.findings"],
+				exclusivityKey: "target/target_1/reviewer/a1",
+			},
+		});
+		expect(room.titleGrantsById.reviewer_a1).toBeUndefined();
+
+		const staleTransfer = {
+			...builder,
+			id: "builder_a2_stale",
+			agentId: "a2",
+			grantedAt: "2026-07-25T12:02:00.000Z",
+		};
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "transfer_builder_stale",
+			roomId: "room_1",
+			at: staleTransfer.grantedAt,
+			type: "control.title_transferred",
+			track: "control",
+			title: "builder",
+			fromGrantId: builder.id,
+			toGrant: staleTransfer,
+			transferredAt: staleTransfer.grantedAt,
+		});
+		expect(room.titleGrantsById[builder.id]?.revokedAt).toBeUndefined();
+		expect(room.titleGrantsById[staleTransfer.id]).toBeUndefined();
+	});
+
 	it("requires one temporary Presenter and replays transfer, revoke, and expiry", () => {
 		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
 		const firstGrant = {

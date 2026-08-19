@@ -346,24 +346,35 @@ in the spotlight right now*. The hub wire protocol still says `stage`:
 renaming the wire is a breaking change across `@cline/shared`, the hub handlers,
 and every client. Surfaces render "Spotlight"; the protocol says `stage`.
 
-### Presenter is authority; Director is host policy
+### Agent Titles are temporary authority; Director is host policy
 
-**Presenter** is a temporary, scoped Agent Title. Only one active agent grant
-may authorize the stage at a time; grant, transfer, expiry, and revoke are
-typed events. Leaving or ending clears the agent stage. Presenter is neither a
-fourth role vocabulary nor a renamed Spotlight surface.
+Drive ships six deliberately broad Agent Titles: **Presenter**, **Researcher**,
+**Builder**, **Reviewer**, **Verifier**, and **Scribe**. Each is a signed,
+versioned host definition with a temporary grant, scoped permissions,
+concurrency rule, expiry, and evidence obligations. Specialties such as iOS,
+AWS, security, or accessibility remain skill/focus tags rather than title
+sprawl.
+
+The host title-authorization gate accepts one grant, never an array, so it
+cannot silently union permissions from several titles. Command paths that adopt
+title authority must use this gate before privileged work. Presenter is
+exclusive per stage, Builder per writable target, and Scribe per room/task
+namespace. Reviewer remains independent of an agent's Builder output. Leaving,
+ending, expiry, transfer, or revoke stops the grant synchronously. Persona,
+sanitized runtime badge, Agent Title, and current activity remain separate
+identity layers.
 
 **Director** is Cline's built-in orchestration policy. It stays signed,
 versioned, and host-side. Clients receive only a non-exportable descriptor and
 allowlisted overlays; prompts, routing, scoring, tool/model maps, endpoints,
 and signing secrets do not cross the host boundary. The complete contract lives
-in [SDK architecture](../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy);
+in [SDK architecture](../../sdk/ARCHITECTURE.md#drive-agent-title-authority-and-director-policy);
 do not duplicate its schema in product docs.
 
-The implementation merged to `main` on 2026-08-18
-([PR #17](https://github.com/drive-mode/cline-drivecode/pull/17); the Hub/CLI
-integration failures on missing `presenterGrantId` fixtures/projections were
-fixed in `9647c40` before merge).
+Presenter coordination merged in
+[PR #17](https://github.com/drive-mode/cline-drivecode/pull/17). The six-title
+registry extends that contract without changing Spotlight's typed-stage or
+no-pixel boundary.
 
 ## Where the code lives
 

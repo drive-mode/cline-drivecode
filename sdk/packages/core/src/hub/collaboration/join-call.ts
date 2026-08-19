@@ -73,6 +73,7 @@ export function joinCall(
 			const toGrant = mintClinePresenterGrant({
 				roomId: input.roomId,
 				agentId: agent.id,
+				generation: (active.generation ?? 1) + 1,
 				at: now,
 			});
 			store.transferTitle({

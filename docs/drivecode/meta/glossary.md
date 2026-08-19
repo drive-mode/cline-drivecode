@@ -12,6 +12,11 @@ Short definitions for terms that show up in PRs #1 and #2. Pair with [PR-1-2-dri
 | **Spotlight** | Shared presentation surface | User-facing surface that projects typed stage state; never pixel capture |
 | **Stage** | Wire view of shared work | Last-event-wins protocol projection of edits/tests/decisions shown on Spotlight |
 | **Presenter** | Temporary presenter badge | Exclusive, scoped, expiring Agent Title that authorizes one agent to own the typed stage |
+| **Researcher** | Evidence gatherer badge | Concurrent read/search/cite authority over scoped sources; never mutation authority |
+| **Builder** | Scoped maker badge | Exclusive mutation authority for one opaque writable target, with changed-target and validation obligations |
+| **Reviewer** | Independent critic badge | Concurrent findings authority that cannot review the same agent's Builder output |
+| **Verifier** | Test runner badge | Concurrent bounded test/build/simulation authority with command, environment, result, and limitation evidence |
+| **Scribe** | Canonical note keeper | Exclusive summary/decision/approved-memory authority per room, task, or namespace |
 | **Director** | Host conductor | Signed, versioned, non-exportable Cline orchestration policy; clients see only an allowlisted descriptor/overlay |
 | **Agent Title** | Borrowed capability badge | Temporary auditable authority grant; not a team/router/call role or permanent persona |
 | **Address set** | Who you are talking to | Recipients for the next send: everyone, selected agents, or a pack |
