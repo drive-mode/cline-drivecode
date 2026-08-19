@@ -84,7 +84,7 @@ bun --cwd apps/examples/desktop-app test
 
 The first local PR #23 full-suite pass exposed one five-second timeout in `sdk/packages/llms/src/providers/gateway.test.ts`. Its isolated rerun passed in 4.3 seconds, and the hosted SDK matrix then passed. If it repeats, isolate that test under the same Node/matrix job and fix its deterministic completion—do not mask a runtime deadlock by widening production timeouts.
 
-The first hosted E2E pass also exposed a VS Code `1.134` focus-order change: focusing the chat webview could clear `activeTextEditor` before an editor action read its range. PR #23 captures the editor or notebook before moving focus. Preserve that ordering until upstream contains an equivalent fix, and keep E2E exercising the current stable VS Code rather than hiding compatibility failures behind an old-version pin.
+The first hosted E2E pass also exposed a VS Code `1.134` automation change in the code-action widget. PR #23 targets the action's accessible `option` row instead of its inner label text and fixes the workflow artifact path so failed recordings are retained. Keep E2E exercising the current stable VS Code rather than hiding compatibility failures behind an old-version pin.
 
 ## Landing and continuation rules
 
