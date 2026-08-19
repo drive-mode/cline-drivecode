@@ -10,6 +10,7 @@ orders those claims and defines their acceptance evidence.
 **Related:** [reference architecture](../../../../reference/architecture.md),
 [mobile consumer](../mobile-consumer/), [multi-device](../multi-device/),
 [iOS native client](../ios-native-client/), [room hot path](../drive-hotpath/),
+[Drive Cloud beta](../drive-cloud-beta/),
 [ADR-0037 sensing](../../adr/ADR-0037-invocation-scoped-sensing.md)
 
 ## Happy path and golden path
