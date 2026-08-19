@@ -111,6 +111,25 @@ function inlineMedia(html, cfg, id) {
 	return { html: out, count: files.length };
 }
 
+/** Inline configured local browser scripts so standalone canvases stay offline. */
+function inlineScripts(html, cfg, id) {
+	const scripts = cfg.scripts || [];
+	let bytes = 0;
+	let count = 0;
+	let out = html;
+	for (const script of scripts) {
+		const p = resolve(here, script);
+		if (!existsSync(p)) fail(`${id}: script referenced but missing on disk: ${p}`);
+		const tag = `<script src="${script}"></script>`;
+		if (!out.includes(tag)) fail(`${id}: configured script tag not found: ${tag}`);
+		const source = readFileSync(p, "utf8").replace(/<\/script/gi, "<\\/script");
+		bytes += Buffer.byteLength(source);
+		count++;
+		out = out.replace(tag, () => `<script>\n${source}\n</script>`);
+	}
+	return { html: out, bytes, count };
+}
+
 /** Let the page's own CSP admit the data: URIs we just inlined. */
 function relaxCsp(html) {
 	return html.replace(/(<meta http-equiv="Content-Security-Policy" content=")([^"]*)(")/i, (_, a, csp, c) => {
@@ -148,6 +167,8 @@ for (const id of ids) {
 	html = fonts.html;
 	const media = inlineMedia(html, cfg, id);
 	html = media.html;
+	const scripts = inlineScripts(html, cfg, id);
+	html = scripts.html;
 
 	const standalone = relaxCsp(html);
 	const fragment = toFragment(standalone);
@@ -157,7 +178,8 @@ for (const id of ids) {
 
 	console.log(
 		`${id}: standalone ${mb(standalone.length)} · fragment ${mb(fragment.length)} · ` +
-			`${fonts.count} fonts (${mb(fonts.bytes)})${media.count ? ` · ${media.count} media` : ""}`,
+			`${fonts.count} fonts (${mb(fonts.bytes)})${media.count ? ` · ${media.count} media` : ""}` +
+			`${scripts.count ? ` · ${scripts.count} scripts (${mb(scripts.bytes)})` : ""}`,
 	);
 }
 console.log(`built ${built} canvas${built === 1 ? "" : "es"} to ${outDir}`);

@@ -26,6 +26,7 @@ Each canvas produces two files:
 | `defaults.outDir` | top level | Default output directory name under the OS temp dir. |
 | `canvases.<id>.file` | per canvas | The HTML file, relative to this directory. |
 | `canvases.<id>.title` | per canvas | Human label; documentation only. |
+| `canvases.<id>.scripts` | per canvas | Local browser scripts to inline into standalone and artifact outputs. Each path is relative to this directory and must match an exact `<script src="…"></script>` tag in the source canvas. |
 | `canvases.<id>.media` | per canvas | Present only when the canvas loads media at runtime. |
 | `media.dir` / `media.ext` / `media.mime` | media | Directory to inline, extension filter, MIME for the data URI. |
 | `media.legacyAudioPatch` | media | Escape hatch for canvases predating the media contract — see below. |
@@ -92,6 +93,8 @@ its `legacyAudioPatch` block.
   system-font fallback.
 - A canvas configured for media with neither the contract nor a working legacy
   patch is a hard failure.
+- A configured local script that is missing or whose exact source tag is absent
+  is a hard failure; bundled outputs inline it and make no runtime script request.
 - The page's own CSP is rewritten to admit the `data:` URIs that were inlined
   (`font-src` / `media-src` / `img-src` only, and only if already present).
 
