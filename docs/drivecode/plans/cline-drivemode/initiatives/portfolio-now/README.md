@@ -49,7 +49,6 @@ flowchart LR
   IOS -->|launches| Call
   Call -->|hosts| Present
   Resume -->|replays in| IOS
-  Present -->|is verified by| Conformance
   Resume -->|is verified by| Conformance
   Conformance -->|unblocks| Release
 ```
@@ -79,12 +78,17 @@ fresh install without source edits, local-only fake state, manual database
 seeding, or knowledge of a developer port. The same evidence bundle must show
 the normal journey, permission denial, host loss, retry, and resume.
 
-## Next · add live collaboration and release truth
+## Next · add live collaboration
 
 | Task | Claim | Owner | Systems | Depends on | Acceptance evidence |
 |---|---|---|---|---|---|
 | **GP6 Remote call binding** | `claim:drv-remote-call-binding` | Cline host + clients | P, D, H, S, N | GP4, GP5 | Default preset and configurator join the real room; roster, leave/end, reconnect, and call history are host-authoritative. |
-| **GP7 Native Presenter projection** | `claim:drv-presenter-native` | Cline + drive-ios | P, D, H, S, Pr, N | GP6 | Exclusive, expiring grants transfer/revoke through the coordinator; Spotlight projects typed `stage` events; no pixel capture; the signed Director descriptor is fetched rather than fabricated locally. |
+| **GP7 Native Presenter projection** | `claim:drv-presenter-native` | Cline + drive-ios | P, D, H, S, Pr, N | GP6 | Exclusive, expiring grants transfer/revoke through the coordinator; Spotlight projects typed `stage` events; Presenter-specific conformance passes; no pixel capture; the signed Director descriptor is fetched rather than fabricated locally. |
+
+## Release · prove production truth
+
+| Task | Claim | Owner | Systems | Depends on | Acceptance evidence |
+|---|---|---|---|---|---|
 | **GP9 Release services** | `claim:drv-release-services` | Account, data, and iOS release owners | P, D, H, S, Pr, N | GP8 | Real auth/deletion, Billing/Usage/Analytics projections, consent, privacy manifest, reviewer tenant, accessibility evidence, and the App Store release gates agree with production behavior. |
 
 ## Later · valuable, not a golden-path dependency

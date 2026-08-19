@@ -132,7 +132,11 @@ the in-tree app is a legacy fixture. One row stays here by design.
 
 ### C6 · Status dependency map
 
-[status-dependency-graph](../initiatives/status-dependency-graph/) — UX locked, do not re-litigate. Locked viewport, Plans rail, artifact-edge, and a11y slices remain over the shipped semantic card-grid baseline.
+[status-dependency-graph](../initiatives/status-dependency-graph/) — spatial
+viewport, Fit/density, Plans rail, task detail, artifact annotations, keyboard
+path, neutral GP0–GP9 model, and scoped host read ship. The only implementation
+row is the lifecycle-neutral `/tasks` adapter; demo data remains explicit and
+historical.
 
 ---
 

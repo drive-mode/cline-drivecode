@@ -1,6 +1,9 @@
 # Status Hub Dependency map · UX experience
 
-Product experience for [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md). Grounded in the shipped lens (`status-view.tsx` + `dependency-map.tsx` + `buildDependencyMap`), which today is a **two-column card list** with a text detail aside — not a spatial graph.
+Product experience for [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md). The spatial
+graph, Fit/density ladder, detail, keyboard path, and Plans rail now ship in
+`dependency-map.tsx`; this document remains the interaction contract for the
+live claims projection.
 
 ## Jobs to be done
 
@@ -10,32 +13,29 @@ Product experience for [DRV-DEP-MAP](../../features/DRV-DEP-MAP.md). Grounded in
 4. **Inspect one task** — open details without losing graph context.
 5. **Cite and query by ID** — refer to a task or plan with a short progressive code (`T014`, `P003`) that sorts in creation order.
 
-## Current → target
+## Delivered surface → live-source target
 
 ```mermaid
 flowchart LR
-  subgraph today [Today]
-    Cards[Card grid by layer]
-    Aside[Text Blocked by / Unblocks]
-    Cards --> Aside
-  end
-  subgraph target [Target]
+  subgraph today [Delivered surface]
     Viewport[Pan zoom graph]
-    Edges[Labeled dependency edges]
-    PlansRail[Plans rail right]
-    Detail[Task detail panel]
-    Viewport --- Edges
-    Viewport --- PlansRail
-    Viewport --- Detail
+    Rail[Plans rail and detail]
+    Viewport --> Rail
   end
-  today -.->|"DepMap projection kept"| target
+  subgraph target [Live source]
+    Claims[Canonical GP claims]
+    Host[Read only host projection]
+    Claims --> Host
+  end
+  target -.->|"feeds without owning status"| today
 ```
 
 Caption:
 
-- Pure `buildDependencyMap()` stays the topology source; UI grows viewport + annotations.
+- Pure `buildDependencyMap()` remains the Team-runtime topology source.
 - Team runtime remains the writer; Status Hub still only transports and presents.
-- Plans and edge artifacts are **optional annotations** on the projection — missing data never invents membership or labels.
+- Canonical architecture claims arrive through their own neutral, read-only
+  project-map model; they are never fabricated as TeamTask or DriveTask state.
 
 ## Composition (first viewport)
 

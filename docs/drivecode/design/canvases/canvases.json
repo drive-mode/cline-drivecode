@@ -53,6 +53,13 @@
     "request-latency-ladder": {
       "file": "request-latency-ladder.html",
       "title": "Drive · request latency ladder"
+    },
+    "drive-system-architecture": {
+      "file": "drive-system-architecture.html",
+      "title": "Drive · system architecture",
+      "scripts": [
+        "../../../../node_modules/.bun/node_modules/mermaid/dist/mermaid.min.js"
+      ]
     }
   }
 }

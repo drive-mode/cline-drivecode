@@ -2,7 +2,11 @@
 
 Back to [README](../README.md). Initiative: [status-dependency-graph](../initiatives/status-dependency-graph/). Wireframe: [status-dependency-graph.html](../../../design/wireframes/status-dependency-graph.html).
 
-Status Hub already ships a **Dependency map** lens that projects team tasks into layers (`buildDependencyMap`). Today that lens is a **semantic card grid**, not a spatial graph. This feature upgrades the lens into an interactive map: pan / zoom / scroll, clickable task nodes, labeled edges for artifacts passed between tasks, and a **Plans rail** on the right that colors tasks by plan membership.
+Status Hub ships the spatial **Dependency map** lens: pan / zoom / deterministic
+Fit, clickable and keyboard-navigable task nodes, optional artifact labels, task
+detail, and a **Plans rail**. The open slice is no longer visualization. It is a
+read-only canonical project-map source for GP0–GP9, distinct from Team runtime
+and the historical `?demoPlans=1` fixture.
 
 ## Problem / user value
 
@@ -42,20 +46,19 @@ The map should answer three questions in one composition: **order**, **payload**
 - Demo fixture / plans source in `@cline/drivecode-demo` when demo needs explicit plan groups and edge artifacts
 - Docs screenshots under `docs/drivecode/assets/hub/`
 
-## Agent tasks
+## Delivery state and remaining task
 
-- [ ] Lock UX composition and interaction model in the initiative UX doc + HTML wireframe.
-  - Owner package: repo docs / design wireframes
-  - Verify: `bun run check:drivecode-docs`; Mermaid parse via `bun sdk/scripts/validate-mermaid.ts`
-  - Done when: UX.md and wireframe are linked from this DRV and the initiatives index.
-- [ ] Extend the pure dependency projection with optional `planIds` and edge artifact labels without mutating team runtime.
-  - Owner package: `@cline/shared`
-  - Verify: `bun -F @cline/shared test`
-  - Done when: unit tests cover layered layout + plan/edge annotations; `bun run build:sdk` succeeds.
-- [ ] Replace the hub Dependency map card grid with the graph viewport + plans rail + task detail, keeping a11y contracts.
-  - Owner package: `@cline/cline-hub`
-  - Verify: `bun -F @cline/cline-hub test` and typecheck
-  - Done when: selection, pan/zoom smoke, plan highlight, and empty/integrity states are covered.
+- [x] Lock the UX and wireframe.
+- [x] Extend the pure projection with declared plans, display IDs, and artifact labels.
+- [x] Ship the graph viewport, Fit/density ladder, Plans rail, detail, and keyboard path.
+- [x] Add validated GP0–GP9 claim metadata, a neutral `ProjectMap`, and scoped
+  `drive_project_map_get` read operation. The host refuses missing/invalid
+  registries and symlink escapes and returns no raw host path.
+- [ ] Adapt the neutral project map into `/tasks` without fabricating TeamTask or
+  DriveTask lifecycle or reading the demo fixture.
+  - Owner packages: `@cline/shared`, `@cline/core`, `@cline/cline-hub`
+  - Verify: hub tests cover GP0–GP9 with no historical `NOW-*` ids; missing map
+    falls back to the Team runtime view and raw claim status remains inspectable.
 - [ ] Refresh hub demo screenshots and DEMO runbook paths for the graph lens.
   - Owner package: repo docs
   - Verify: assets under `docs/drivecode/assets/hub/`; DEMO.md cites live URL query
@@ -66,4 +69,6 @@ The map should answer three questions in one composition: **order**, **payload**
 - Canvas-only graphs that strand keyboard users. Mitigation. Nodes remain focusable controls; viewport is an enhancement, not the only path.
 - Inventing artifact labels from titles. Mitigation. Edges stay unlabeled unless the projection has an explicit artifact/result field.
 - Confusing Status Dependency map with Drive Show / agent portfolio graphs. Mitigation. Keep `DepMap` naming; no Show backlog coupling ([diagram conventions](../../../../../.claude/diagram-conventions.md)).
-- Plan color overload on multi-plan tasks. Mitigation. Primary plan accent + rail multi-select; stripe/dual-accent only if membership is common (open question in UX.md).
+- Treating a claim status like executable task lifecycle. Mitigation. The claims
+  projection is delivery truth only; DriveTask state remains independent and
+  host-written.

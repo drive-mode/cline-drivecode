@@ -121,6 +121,21 @@ claims:
     status: active_partial
     title: Leave/End handoff + return
     note: Landed on main #80; dedicated evidence path TBD.
+    displayId: GP5
+    lane: now
+    dependsOn:
+      - drv-managed-chat
+      - drv-ios-managed-chat
+    owner: Hub persistence
+    systems:
+      - data
+      - software
+      - processes
+      - networks
+    acceptance: >-
+      Restart host and client, reconnect from a cursor without duplicates or
+      gaps, restore the conversation and approvals, and label expired transient
+      state.
     acs: []
     consumers: []
 
@@ -181,6 +196,17 @@ claims:
       Lifecycle and Agent Title contracts are merged across Cline, the
       collaboration harness, and the MCP writer. A connected mobile vertical
       slice and automated cross-repository conformance remain open.
+    displayId: GP0
+    lane: now
+    dependsOn: []
+    owner: Protocol maintainers
+    systems:
+      - data
+      - software
+      - processes
+    acceptance: >-
+      Lifecycle and Agent Title fixtures pass in Cline, collaboration-harness,
+      and drivemode-mcp with consistent cleanup and idempotent end behavior.
     acs: []
     consumers:
       - sdk/packages/shared/src/drive/room.ts
@@ -189,12 +215,39 @@ claims:
   - id: drv-host-trust
     status: planned
     title: Authenticated host discovery, pairing, and workspace authority
+    displayId: GP1
+    lane: now
+    dependsOn:
+      - drv-golden-path-contract
+    owner: Cline host and security
+    systems:
+      - people
+      - data
+      - software
+      - processes
+      - networks
+    acceptance: >-
+      A fresh client pairs with an authenticated host, persists its credential
+      securely, reconnects after restart, and cannot mutate another workspace.
     acs: []
     consumers: []
 
   - id: drv-target-resolution
     status: planned
     title: Host-resolved opaque repository and folder target registry
+    displayId: GP2
+    lane: now
+    dependsOn:
+      - drv-golden-path-contract
+      - drv-host-trust
+    owner: Cline host
+    systems:
+      - data
+      - software
+      - networks
+    acceptance: >-
+      The host resolves opaque repository or folder references, reports access
+      posture, rejects stale grants, and does not expose unnecessary raw paths.
     acs: []
     consumers: []
 
@@ -204,12 +257,39 @@ claims:
     note: >-
       Cline has session and chat runtime primitives, but no complete remote,
       target-aware consumer contract yet.
+    displayId: GP3
+    lane: now
+    dependsOn:
+      - drv-target-resolution
+    owner: Cline runtime
+    systems:
+      - people
+      - data
+      - software
+      - processes
+      - networks
+    acceptance: >-
+      Create, list, send, cancel, and resume use a real conversation catalog;
+      ordered typed events carry output, approvals, failures, and terminal state.
     acs: []
     consumers: []
 
   - id: drv-ios-managed-chat
     status: planned
     title: Standalone iOS target-aware managed chat binding
+    displayId: GP4
+    lane: now
+    dependsOn:
+      - drv-managed-chat
+    owner: drive-ios
+    systems:
+      - people
+      - hardware
+      - software
+      - networks
+    acceptance: >-
+      Work opens on the selected target, sends through the managed runtime,
+      renders live work events, and reports offline and failure states honestly.
     acs: []
     consumers: []
 
@@ -219,12 +299,47 @@ claims:
     note: >-
       Per-repository fixtures exist; one authenticated cross-repository iOS
       scenario and evidence bundle remain open.
+    displayId: GP8
+    lane: now
+    dependsOn:
+      - drv-host-trust
+      - drv-target-resolution
+      - drv-managed-chat
+      - drv-ios-managed-chat
+      - drv-return-loop
+    owner: Release engineering
+    systems:
+      - people
+      - data
+      - hardware
+      - software
+      - processes
+      - networks
+    acceptance: >-
+      One deterministic drive-dev scenario verifies schemas, event folds,
+      refusal, reconnect, target loss, chat completion, and cleanup across all
+      four repositories.
     acs: []
     consumers: []
 
   - id: drv-remote-call-binding
     status: planned
     title: Host-authoritative remote call presets and room binding
+    displayId: GP6
+    lane: next
+    dependsOn:
+      - drv-ios-managed-chat
+      - drv-return-loop
+    owner: Cline host and clients
+    systems:
+      - people
+      - data
+      - hardware
+      - software
+      - networks
+    acceptance: >-
+      The default preset and configurator join a real room whose roster,
+      leave/end, reconnect, and history behavior remains host-authoritative.
     acs: []
     consumers: []
 
@@ -234,6 +349,22 @@ claims:
     note: >-
       Cline coordinator authority is merged. The standalone iOS client still
       needs live grant coordination and Director descriptor retrieval.
+    displayId: GP7
+    lane: next
+    dependsOn:
+      - drv-remote-call-binding
+    owner: Cline and drive-ios
+    systems:
+      - people
+      - data
+      - hardware
+      - software
+      - processes
+      - networks
+    acceptance: >-
+      Exclusive expiring grants transfer and revoke through the coordinator;
+      typed stage events project without pixel capture and Director data is
+      fetched from its signed descriptor.
     acs: []
     consumers:
       - sdk/packages/core/src/hub/clineDriveHost.ts
@@ -242,5 +373,31 @@ claims:
   - id: drv-release-services
     status: planned
     title: Production account, consent, analytics, and App Store services
+    displayId: GP9
+    lane: release
+    dependsOn:
+      - drv-cross-repo-conformance
+    owner: Account, data, and iOS release owners
+    systems:
+      - people
+      - data
+      - hardware
+      - software
+      - processes
+      - networks
+    acceptance: >-
+      Production auth and deletion, consent, Billing, Usage, Analytics,
+      accessibility, privacy manifests, reviewer access, and release gates agree.
     acs: []
     consumers: []
+
+  - id: drv-architecture-to-task
+    status: scaffold
+    title: Architecture-to-task proposal and deduplication workflow
+    note: >-
+      The project skill can inventory current state, preserve unknowns, and
+      propose deduplicated claims and tasks. Host-mediated task-bank
+      materialization is intentionally unbuilt.
+    acs: []
+    consumers:
+      - .agents/skills/architecture-to-task/SKILL.md
