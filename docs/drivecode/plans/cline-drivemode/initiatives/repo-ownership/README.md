@@ -1,192 +1,174 @@
 # repo-ownership · one concept, one owner
 
 **Status:** active (plan) — no code has been moved
-**Purpose:** map every repository in the `drive-mode` organization, name a single
-owner for each shared concept, and sequence the deduplication. Delivery status
-remains authoritative in
+**Purpose:** for the Cline Drive Mode line specifically, name a single owner for
+each shared concept and sequence the deduplication. Delivery status remains
+authoritative in
 [`claims-registry.yaml`](../../delivery/claims-registry.yaml); this initiative
 describes repository topology and ownership, not claim status.
 
 **Related:** [portfolio-now](../portfolio-now/),
 [drive-cloud-beta](../drive-cloud-beta/),
+[multi-device](../multi-device/),
 [DEC-package-location](../../decisions/DEC-package-location.md),
-[ADR-0018](../../adr/ADR-0018-agent-runtime-contract.md)
+[ADR-0013](../../adr/ADR-0013-state-partition.md)
 
 > **Placement note.** This document describes repository strategy. It lives in
-> `docs/drivecode/` and moves with that tree if and when the documentation set
-> changes visibility.
+> `docs/drivecode/` and moves with that tree if its visibility changes.
 
-## Problem
+## Scope
 
-Seven repositories implement overlapping concepts with no declared owner. The
-same domain — a session where several agents work with a human on a shared
-surface — has been modelled three separate times, and the room kernel has been
-copied a fourth. Nothing is wrong with any single implementation; the cost is
-that every behavioural change needs making in two to four places, by hand, and
-they have already drifted.
+**In scope — the Cline Drive Mode line:**
 
-This is not a hypothetical. Merged
-[collaboration-harness#4](https://github.com/drive-mode/collaboration-harness/pull/4)
-exists purely to reconcile one copy of the room fold back to another.
-
-## Repository map
-
-Measured 2026-08-19. Line counts exclude tests.
-
-| Repository | Visibility | Licence | What it is | Size |
-|---|---|---|---|---|
-| `cline-drivecode` | public (fork of `cline/cline`) | Apache-2.0 | Drive on the Cline host + the vocabulary, port, fold, and conformance kit | kernel 13,103 · vocabulary 4,028 · hub Drive 7,825 |
-| `collaboration-harness` | private | Apache-2.0 | A standalone copy of the room kernel and protocol | 15 source files |
-| `cursor-drive` | **public** | **Proprietary — All Rights Reserved** | Drive on the Cursor host | 11,990 |
-| `claude-drive` | **private** | **MIT** | Drive on the Claude Code host | 14,070 |
-| `drivemode-mcp` | private | Apache-2.0 | MCP writer façade + curated packs | writer + 5 pack packages |
-| `drive-ios` | private | — | Native SwiftUI client | 41 Swift files |
-| `site` | private | — | Marketing static site | built output only |
-
-Two of these pairings are inverted: `cursor-drive` carries a proprietary licence
-on a public repository, and `claude-drive` carries MIT on a private one. Neither
-is what the tier intends.
-
-## Duplication found
-
-### 1 · The room kernel exists twice
-
-`collaboration-harness` re-implements seven `@cline/drive` modules. Every copy is
-behind the original, and the exported surfaces have diverged.
-
-| Module | collaboration-harness | cline-drivecode |
+| Repository | Visibility | Role |
 |---|---|---|
-| `reduceRoom` | 471 | 528 |
-| `hostPort` | 106 | 220 |
-| `memoryHost` | 280 | 365 |
-| `driveMode` | 49 | 73 |
-| `resolveAddress` | 79 | 86 |
-| `interruptPolicy` | 89 | 130 |
-| `narrationPolicy` | 104 | 93 |
+| `cline-drivecode` | public | Cline host + the vocabulary, port, fold, conformance kit |
+| `collaboration-harness` | private | standalone copy of the room kernel and protocol |
+| `drivemode-mcp` | private | MCP writer + curated packs |
+| `drive-ios` | private | native SwiftUI client |
+| `site` | private | marketing surface |
 
-`cline-drivecode` additionally exports `titleGrantExclusivityKey`,
-`activeTitleGrantByExclusivityKey`, and `activePresenterGrant`, which the
-harness copy does not have.
+**Parked — other hosts, deliberately not addressed here:** `cursor-drive` and
+`claude-drive` implement Drive on the Cursor and Claude Code hosts. They carry
+their own duplication (six shared modules, two more MCP servers) and a rival
+role vocabulary (`OperatorRole`) that competes with Agent Titles. Parking them
+**defers** that collision rather than resolving it — if Agent Titles is
+published as a standard while they sit out, reconciling them later means either
+migrating both hosts or accepting a permanent split. Record that as a known
+debt, not a closed question.
 
-### 2 · The host layer exists three times
+## The problem, stated precisely
 
-`cursor-drive` and `claude-drive` are copy-paste forks that have drifted. These
-modules carry the same types and classes in both:
+This is not "two copies of the kernel exist." The copies are wired in a
+direction that makes the drifted one authoritative downstream.
 
-| Module | cursor-drive | claude-drive |
+```text
+cline-drivecode · @cline/drive          canonical kernel
+        ⇅  copied by hand, no dependency
+collaboration-harness                    behind: 471-line fold vs 528
+        ↓  file dependency on a sibling checkout
+drivemode-mcp                            own store, own fold — a second writer
+        ↓  HTTP /rpc  events_since
+drive-ios · WriterClient.swift           re-declares the title vocabulary in Swift
+```
+
+Four consequences follow, in descending severity.
+
+### 1 · The drifted copy is the one that ships
+
+`drivemode-mcp` imports `reduceRoom` from `@drive-mode/collaboration-harness`,
+not from `@cline/drive`, and `drive-ios` polls `drivemode-mcp`. The whole iOS
+path therefore runs on the older fold. Concretely, the harness copy is missing
+exports that the canonical kernel has:
+
+| Export | `@cline/drive` | `collaboration-harness` |
 |---|---|---|
-| `mcpServer` | 1,756 | 1,518 |
-| `operatorRegistry` | 490 | 536 |
-| `sessionMemory` | 258 | 327 |
-| `stateSyncCoordinator` | 258 | 311 |
-| `persistentMemory` | 211 | 224 |
-| `governance/entropy` | 422 | 266 |
+| `titleGrantExclusivityKey` | present | **absent** |
+| `activeTitleGrantByExclusivityKey` | present | **absent** |
+| `activePresenterGrant` | present | present |
 
-`OperatorStatus`, `OperatorRole`, `RoleTemplate`, `ROLE_TEMPLATES`,
-`EscalationEvent`, and `OperatorVisibility` are declared identically in both
-`operatorRegistry` files; `MemoryEntry`, `SessionMemoryState`, `SessionMemory`,
-`MemorySearchResult`, `PersistentMemory`, and `StateSyncCoordinator` likewise.
+The Presenter exclusivity work is live in the canonical kernel and absent from
+the copy every downstream consumer actually uses.
 
-### 3 · Three MCP servers with incompatible vocabularies
+### 2 · The dependency is a path link, so drift is silent
 
-| Repository | Lines | Tool prefix |
-|---|---|---|
-| `cursor-drive` | 1,756 | `agent_*`, `agent_screen_*` |
-| `claude-drive` | 1,518 | `agent_screen_*`, `drive_get_*` |
-| `drivemode-mcp` | 553 | `room_*`, `agent`/`agents` |
+`drivemode-mcp` installs `collaboration-harness` as a **file dependency on a
+sibling checkout** — its README instructs cloning the two as siblings. There is
+no version to pin and no resolution step that could ever fail, so a divergence
+between the two kernels produces no signal at install, build, or test time.
 
-`agent_screen_activity` and `agent_screen_decision` are defined in two of them.
+### 3 · Two repositories each claim to be the single source of truth
 
-### 4 · Two competing role vocabularies
+- `cline-drivecode` HANDOFF: *"The Cline hub is the single writer for Drive room state."*
+- `drivemode-mcp` AGENTS.md: *"Keep the writer the single room truth."*
 
-The most consequential duplication is conceptual rather than textual.
+Both are reasonable in isolation. Together they are unreconciled, and
+`drivemode-mcp` does hold its own `WriterRoomState` and apply `reduceRoom`
+itself, so the second writer is real rather than nominal. Either the MCP writer
+is a legitimate standalone profile — in which case
+[ADR-0013](../../adr/ADR-0013-state-partition.md) should say so and name which
+one is authoritative when both are live — or it should project the hub rather
+than fold independently.
 
-| Concept | `cline-drivecode` | `cursor-drive` / `claude-drive` |
-|---|---|---|
-| an agent in the session | participant / seat | operator |
-| its role | Agent Title — presenter, researcher, builder, reviewer, verifier, scribe | `OperatorRole` — implementer, reviewer, tester, researcher, planner |
-| shared surface | stage / Spotlight | Agent Screen |
-| durable memory | task bank, session rollup | `sessionMemory`, `persistentMemory` |
-| state convergence | `reduceRoom` fold | `stateSyncCoordinator` |
+### 4 · The title vocabulary exists three times, one of them hand-written
 
-Agent Titles cannot be offered as an interoperability vocabulary while two
-repositories in the same organization ship a different, incompatible role model.
-Unifying these is a prerequisite for publishing the title standard, not a
-follow-up to it.
+`AgentTitle`, `AgentTitleScope`, `AgentTitlePermission`, `AgentTitleGrant`, and
+`DirectorPolicyDescriptor` are declared in `@cline/shared/drive/titles.ts` (Zod),
+again in the harness protocol, and again by hand in
+`drive-ios/Sources/AgentTitles.swift`. Cross-language duplication is
+unavoidable — Swift cannot import TypeScript — but a hand-written client copy
+drifts silently, and this is precisely the schema intended for publication as a
+standard. It should be **generated** from the canonical schema.
+
+### 5 · A legacy fixture duplicates the client
+
+`apps/drive-ios` in this repository is a legacy fixture; the real client is the
+`drive-ios` repository. The handoff already says so.
 
 ## Ownership rule
 
 > **One concept, one owner. Every other repository consumes it — no repository
 > re-implements a concept another one owns.**
 
-A concept is owned where it is *defined*, not where it is *used*. Host
-repositories are adapters: they translate their host's primitives into the owned
-vocabulary and back. They do not get their own copy of the vocabulary.
+A concept is owned where it is *defined*, not where it is *used*. Dependency
+direction is one way: **standard → host → writer → clients.** No consumer may
+become a second definition site.
 
 ## Ownership assignment
 
 | Concept | Owner | Consumers |
 |---|---|---|
-| Room, event, address, and title schemas | `cline-drivecode` | every host, MCP, iOS |
-| `DriveHostPort` + `HostCapabilities` | `cline-drivecode` | every host |
-| Room fold (`reduceRoom`) and projections | `cline-drivecode` | every host, iOS |
-| Conformance kit | `cline-drivecode` | every host |
-| Agent Title vocabulary — **unified with `OperatorRole`** | `cline-drivecode` | every host |
-| Session and persistent memory model | **one owner, to be chosen** — currently duplicated | `cursor-drive`, `claude-drive` |
-| State convergence | `cline-drivecode` (`reduceRoom`) — retire `stateSyncCoordinator` | `cursor-drive`, `claude-drive` |
-| Governance / entropy reporting | **one owner, to be chosen** — currently duplicated | `cursor-drive`, `claude-drive` |
-| MCP tool surface | `drivemode-mcp` — hosts stop shipping their own servers | `cursor-drive`, `claude-drive`, Cline host |
-| Curated packs and show content | `drivemode-mcp` | — |
-| Cline host implementation | private product repo | — |
-| Cursor host adapter | `cursor-drive` | — |
-| Claude Code host adapter | `claude-drive` | — |
+| Room, event, address, title schemas | `cline-drivecode` | harness, MCP, iOS |
+| `DriveHostPort` + conformance kit | `cline-drivecode` | any host |
+| Room fold and projections | `cline-drivecode` | MCP writer, iOS projection |
+| Agent Title vocabulary | `cline-drivecode` | MCP, iOS (generated bindings) |
+| Cline host implementation | `cline-drivecode` (product tier) | — |
+| MCP tool surface + curated packs | `drivemode-mcp` | agent hosts |
+| Room-state authority | **undecided** — see D2 | — |
 | Native client | `drive-ios` | — |
 | Marketing surface | `site` | — |
-
-Dependency direction is strictly one way: **standard → host adapters → clients.**
-No host adapter may be a dependency of the standard, and no two host adapters
-may depend on each other.
+| Standalone kernel distribution | **undecided** — see D1 | — |
 
 ## Sequence
 
-Ordered so each step removes duplication permanently rather than moving it.
+Ordered so each step removes duplication permanently rather than relocating it.
 
-1. **Unify the role vocabulary.** Reconcile `OperatorRole` and Agent Titles into
-   one model in `cline-drivecode`. Everything else in this plan is cheaper once
-   the vocabulary is settled, and the title standard is blocked until it is.
-2. **Resolve `collaboration-harness`.** Reconcile the drifted fold once, then
-   either fold it back into `cline-drivecode` and retire it, or make it the
-   generated standalone distribution of the standard. A hand-maintained second
-   copy stops either way.
-3. **Collapse the MCP surface.** One server, one tool vocabulary, consumed by all
-   three hosts.
-4. **Extract the shared host modules.** `sessionMemory`, `persistentMemory`,
-   `governance/entropy` — one owner each, consumed by both host adapters.
-5. **Retire `stateSyncCoordinator`** in favour of the owned fold.
-6. **Fix the licence and visibility pairings** so each repository's terms match
-   its tier.
-7. **Remove `apps/drive-ios`** from `cline-drivecode` — it is a legacy fixture
-   duplicating the `drive-ios` repository.
+1. **Reconcile the fold once, in the direction of the canonical kernel.** Port
+   the missing title-grant exports into whatever copy survives, so downstream
+   consumers stop running behind. This is the only step with a live correctness
+   consequence.
+2. **Resolve `collaboration-harness` (D1).** Either fold it back into
+   `cline-drivecode` and retire it, or make it the generated distribution of the
+   canonical kernel. Either way the hand-maintained copy stops.
+3. **Replace the sibling path dependency with a versioned one**, so a future
+   divergence fails loudly at install rather than silently at runtime.
+4. **Decide room-state authority (D2)** and record it in
+   [ADR-0013](../../adr/ADR-0013-state-partition.md), including which side wins
+   when both a hub and an MCP writer are live.
+5. **Generate the Swift title bindings** from the canonical schema instead of
+   maintaining them by hand.
+6. **Delete `apps/drive-ios`** from this repository.
+7. **Fix licence and visibility pairings** so each repository's terms match its
+   tier.
 
 ## Open decisions
 
-- **D1 — Which role model wins?** Agent Titles are richer (obligations, risk
-  tiers, concurrency rules); `OperatorRole` is simpler and already shipping in
-  two hosts. The unified model is likely Titles with an `OperatorRole`
-  compatibility mapping, but this is a product call.
-- **D2 — Where do the shared host modules live?** They are not standard material
-  (they are implementation), yet two private hosts need them. Either a shared
-  private package or one host owning them and the other depending on it.
-- **D3 — Does `collaboration-harness` become the published standard package or
-  get retired?** Its zero-dependency shape argues for the former; single-source
-  discipline argues for the latter.
-- **D4 — Do all three host adapters stay?** Three hosts is three maintenance
-  surfaces. Worth an explicit yes rather than an accident.
+- **D1 — does `collaboration-harness` become the generated standalone
+  distribution, or get retired?** Its zero-dependency shape (only `zod`) makes it
+  a better artifact for third parties than `@cline/drive`, which is entangled
+  with `@cline/shared`. Single-source discipline argues for retiring it. Both are
+  defensible; a hand-maintained second copy is not.
+- **D2 — who owns room-state authority when a hub and an MCP writer are both
+  live?** Today both repositories claim it in prose and the MCP writer holds real
+  state. This needs an ADR answer, not a convention.
+- **D3 — when do the parked hosts rejoin?** Every release that ships Agent Titles
+  without them widens the gap that reconciling `OperatorRole` will eventually
+  have to close.
 
 ## Non-goals
 
 - This plan does not move code. It names owners and the order of work.
 - It does not create a second status board. The claims registry stays
   authoritative for delivery state.
-- It does not decide licensing terms; it only records where current terms
-  contradict the intended tier.
+- It does not address `cursor-drive` or `claude-drive` beyond recording the
+  deferred collision above.
