@@ -12,7 +12,7 @@ description: "Visual + actionable plan to close public @cline/sdk leverage gaps 
 
 **Companion detail:** task acceptance criteria below (and [Usage analysis](/sdk/architecture/usage-analysis)).
 
-**Monorepo SDK version policy:** Product hosts and examples resolve `@cline/*` via `workspace:*` (always the packages under `sdk/packages/`). This tree is synchronized to upstream SDK **0.0.75** at Cline commit `61b95a62e`; the Drive-only `@cline/drive` package remains versioned in lockstep with `@cline/{sdk,core,agents,llms,shared}`. Do not pin numeric `@cline/*` versions inside this monorepo. Keep package `version` fields in lockstep via `sdk/scripts/version.ts` when cutting releases.
+**Monorepo SDK version policy:** Product hosts and examples resolve `@cline/*` via `workspace:*` (always the packages under `sdk/packages/`). This tree is synchronized to upstream SDK **0.0.75** at Cline commit `67e5115b8`; the Drive-only `@cline/drive` package remains versioned in lockstep with `@cline/{sdk,core,agents,llms,shared}`. Do not pin numeric `@cline/*` versions inside this monorepo. Keep package `version` fields in lockstep via `sdk/scripts/version.ts` when cutting releases.
 
 Turns usage analysis into a sequenced build against the **advertised public SDK**. Phases are ordered by dependency — **no calendar estimates**. Each **agent task** is one focused PR.
 
