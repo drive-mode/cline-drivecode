@@ -21,6 +21,7 @@ import {
 	mergeSessionConfig,
 	prewarmWorkspaceMetadata,
 	resolveDesktopSessionCompaction,
+	resolveDesktopSessionMode,
 	rewriteDesktopTeamPrompt,
 	shouldUpdateSessionConnection,
 	WORKSPACE_METADATA_PREWARM_TTL_MS,
@@ -199,6 +200,20 @@ describe("buildCoreSessionConfig plugin injection (SDK-4.2)", () => {
 			Array.isArray(config.pluginPaths) &&
 				config.pluginPaths.some((p: string) => p.endsWith("index.ts")),
 		).toBe(true);
+	});
+});
+
+describe("resolveDesktopSessionMode", () => {
+	it("does not turn auto-approved Act sessions into Yolo sessions", () => {
+		expect(
+			resolveDesktopSessionMode({ mode: "act", autoApproveTools: true }),
+		).toBe("act");
+		expect(resolveDesktopSessionMode({ autoApproveTools: true })).toBe("act");
+	});
+
+	it("preserves explicit Plan and Yolo modes", () => {
+		expect(resolveDesktopSessionMode({ mode: "plan" })).toBe("plan");
+		expect(resolveDesktopSessionMode({ mode: "yolo" })).toBe("yolo");
 	});
 });
 
@@ -1583,6 +1598,15 @@ name: desktop-send-skill
 ---
 Follow the desktop send skill instructions.`,
 		);
+		const workflowsDir = join(workspace, ".cline", "workflows");
+		mkdirSync(workflowsDir, { recursive: true });
+		writeFileSync(
+			join(workflowsDir, "desktop-send-workflow.md"),
+			`---
+name: desktop-send-workflow
+---
+Follow the desktop send workflow instructions.`,
+		);
 		return workspace;
 	}
 
@@ -1626,7 +1650,7 @@ Follow the desktop send skill instructions.`,
 		return { ctx, send, session, sessionId, updatePendingPrompt };
 	}
 
-	it("expands a leading skill command into its instructions", async () => {
+	it("sends a skill command through as typed for the skills tool", async () => {
 		const workspace = createWorkspaceWithSkill();
 		const { ctx, send, session, sessionId } = createContext(workspace);
 
@@ -1636,16 +1660,59 @@ Follow the desktop send skill instructions.`,
 			prompt: "/desktop-send-skill write the docs",
 		});
 
+		// Skills are not expanded into the user message: the runtime's skills
+		// tool loads the instructions, and the persisted transcript keeps the
+		// typed command.
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				prompt: "/desktop-send-skill write the docs",
+			}),
+		);
+		expect(session.prompt).toBe("/desktop-send-skill write the docs");
+	});
+
+	it("expands a skill command in yolo mode, where the skills tool is unavailable", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, send, session, sessionId } = createContext(workspace);
+		(session.config as Record<string, unknown>).mode = "yolo";
+
+		await handleChatSessionCommand(ctx, {
+			action: "send",
+			sessionId,
+			prompt: "/desktop-send-skill write the docs",
+		});
+
+		// The yolo preset has no skills tool, so textual expansion is the only
+		// way the instructions reach the model.
 		expect(send).toHaveBeenCalledWith(
 			expect.objectContaining({
 				prompt: "Follow the desktop send skill instructions. write the docs",
 			}),
 		);
-		// The session's display prompt keeps the raw token.
-		expect(session.prompt).toBe("/desktop-send-skill write the docs");
 	});
 
-	it("expands a skill command when a queued prompt is edited", async () => {
+	it("expands a leading workflow command into its instructions", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, send, session, sessionId } = createContext(workspace);
+
+		await handleChatSessionCommand(ctx, {
+			action: "send",
+			sessionId,
+			prompt: "/desktop-send-workflow ship it",
+		});
+
+		// Workflows are not served by the skills tool, so they keep textual
+		// expansion.
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				prompt: "Follow the desktop send workflow instructions. ship it",
+			}),
+		);
+		// The session's display prompt keeps the raw token.
+		expect(session.prompt).toBe("/desktop-send-workflow ship it");
+	});
+
+	it("keeps a skill command as typed when a queued prompt is edited", async () => {
 		const workspace = createWorkspaceWithSkill();
 		const { ctx, sessionId, updatePendingPrompt } = createContext(workspace);
 
@@ -1659,7 +1726,25 @@ Follow the desktop send skill instructions.`,
 		expect(updatePendingPrompt).toHaveBeenCalledWith({
 			sessionId,
 			promptId: "queued-1",
-			prompt: "Follow the desktop send skill instructions. later please",
+			prompt: "/desktop-send-skill later please",
+		});
+	});
+
+	it("expands a workflow command when a queued prompt is edited", async () => {
+		const workspace = createWorkspaceWithSkill();
+		const { ctx, sessionId, updatePendingPrompt } = createContext(workspace);
+
+		await handleChatSessionCommand(ctx, {
+			action: "update_pending_prompt",
+			sessionId,
+			promptId: "queued-2",
+			prompt: "/desktop-send-workflow later please",
+		});
+
+		expect(updatePendingPrompt).toHaveBeenCalledWith({
+			sessionId,
+			promptId: "queued-2",
+			prompt: "Follow the desktop send workflow instructions. later please",
 		});
 	});
 
