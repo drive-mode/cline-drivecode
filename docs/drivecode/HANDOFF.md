@@ -4,12 +4,14 @@
 
 Drivecode should make Cline feel like a pair-programming call with recruitable agents, shared work, and clear room context. The product north star is a Drive tab with Discord-style information architecture, Slack-like chrome, pair-call interactions, and the cline.bot visual brand.
 
-**Current delivery update (2026-08-18):** Presenter authority, temporary Agent
-Titles, and the signed/non-exportable Director descriptor are implemented on
-[PR #17](https://github.com/drive-mode/cline-drivecode/pull/17), but the PR is
-still open and its Hub/CLI integration jobs are red because several stage
-fixtures/projections do not yet supply `presenterGrantId`. The focused title
-tests passing does not make this stack merge-ready. The canonical contract is
+**Current delivery update (2026-08-19):** Presenter authority, temporary Agent
+Titles, and the signed/non-exportable Director descriptor are **merged on
+`main`** — [PR #17](https://github.com/drive-mode/cline-drivecode/pull/17)
+landed 2026-08-18 after its Hub/CLI `presenterGrantId` fixture/projection
+failures were fixed in `9647c40`. The standalone collaboration-harness fold is
+being reconciled to this coordinator's leave/room-end title cleanup in
+[collaboration-harness #4](https://github.com/drive-mode/collaboration-harness/pull/4).
+The canonical contract is
 [the SDK architecture](../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy).
 All consumer documentation must keep **Spotlight** as the surface, `stage` as
 the wire projection, **Presenter** as a temporary exclusive title, and
@@ -18,10 +20,10 @@ the wire projection, **Presenter** as a temporary exclusive title, and
 The native App Store candidate is the standalone
 [`drive-ios`](https://github.com/drive-mode/drive-ios) repository. The in-tree
 [`apps/drive-ios`](../../apps/drive-ios/) project is a legacy fixture, not the
-native delivery source of truth. The standalone app's seven-PR preview stack is
-open and unreleased; its canonical release gate is
-[`docs/APP-STORE-REVIEW.md`](https://github.com/drive-mode/drive-ios/blob/main/docs/APP-STORE-REVIEW.md)
-once that documentation branch lands.
+native delivery source of truth. The standalone app's eight-PR preview stack
+merged to its `main` on 2026-08-18; it remains an unreleased preview, and its
+canonical release gate is
+[`docs/APP-STORE-REVIEW.md`](https://github.com/drive-mode/drive-ios/blob/main/docs/APP-STORE-REVIEW.md).
 
 ## Requirements
 

@@ -356,11 +356,10 @@ and signing secrets do not cross the host boundary. The complete contract lives
 in [SDK architecture](../../sdk/ARCHITECTURE.md#drive-presenter-authority-and-director-policy);
 do not duplicate its schema in product docs.
 
-The implementation is on open
-[PR #17](https://github.com/drive-mode/cline-drivecode/pull/17). As of
-2026-08-18 its Hub/CLI integration jobs are red on missing
-`presenterGrantId` fixture/projection updates, so it must not be described as
-shipped on `main` yet.
+The implementation merged to `main` on 2026-08-18
+([PR #17](https://github.com/drive-mode/cline-drivecode/pull/17); the Hub/CLI
+integration failures on missing `presenterGrantId` fixtures/projections were
+fixed in `9647c40` before merge).
 
 ## Where the code lives
 
@@ -378,7 +377,7 @@ shipped on `main` yet.
 | Status Hub view (Board / Changelog / Dependency map) | `apps/cline-hub/src/webview/src/components/views/status-view.tsx`, `dependency-map.tsx` |
 | Analytics (session rollups + shipped digest) | `apps/cline-hub/src/webview/src/components/views/analytics-view.tsx` |
 | Drive shell (lobby / call / history) | `apps/cline-hub/src/webview/src/App.tsx`, `lib/drive-shell.ts`, `drive-view.tsx`, `Chat.tsx` |
-| Presenter grants + Director descriptor | `sdk/packages/shared/src/drive/room.ts`, `sdk/packages/core/src/hub/clineDriveHost.ts`, `sdk/packages/core/src/hub/directorPolicy.ts` (open PR #17) |
+| Presenter grants + Director descriptor | `sdk/packages/shared/src/drive/room.ts`, `sdk/packages/core/src/hub/clineDriveHost.ts`, `sdk/packages/core/src/hub/directorPolicy.ts` |
 | TUI Status Hub port + hub adapter | `apps/cli/src/tui/status/` |
 | TUI Status Hub (`/status`) | `apps/cli/src/tui/views/status-view.tsx` |
 | Drive tab home | `apps/cline-hub/src/webview/src/components/views/drive-view.tsx` |
