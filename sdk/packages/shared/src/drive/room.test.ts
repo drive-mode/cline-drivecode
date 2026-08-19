@@ -1,9 +1,88 @@
 import { describe, expect, it } from "vitest";
 import {
 	AgentParticipantSchema,
+	AgentTitleAuthorizationRequestSchema,
+	AgentTitleGrantSchema,
+	AgentTitleSchema,
 	PermissionPresetSchema,
 	parseParticipant,
 } from "./index";
+
+describe("Agent Title schemas", () => {
+	it("keeps the core registry small and capability-oriented", () => {
+		expect(AgentTitleSchema.options).toEqual([
+			"presenter",
+			"researcher",
+			"builder",
+			"reviewer",
+			"verifier",
+			"scribe",
+		]);
+	});
+
+	it("accepts rich grants while preserving legacy Presenter logs", () => {
+		const legacy = AgentTitleGrantSchema.parse({
+			id: "legacy-presenter",
+			agentId: "maya",
+			title: "presenter",
+			scope: { kind: "stage", ref: "room-1" },
+			skillBundleRefs: ["presenter-stage"],
+			resourceGrantRefs: ["typed-stage"],
+			delegatedAgentIds: [],
+			permissions: ["stage.present"],
+			grantedAt: "2026-08-18T12:00:00.000Z",
+			expiresAt: "2026-08-18T13:00:00.000Z",
+		});
+		expect(legacy.definitionRef).toBeUndefined();
+
+		const rich = AgentTitleGrantSchema.parse({
+			...legacy,
+			id: "builder-1",
+			title: "builder",
+			definitionRef: "builder@1",
+			scope: { kind: "target", ref: "opaque-target-1" },
+			skillBundleRefs: ["builder-target"],
+			resourceGrantRefs: [],
+			permissions: ["target.modify"],
+			issuedAt: "2026-08-18T12:00:00.000Z",
+			notBefore: "2026-08-18T12:00:00.000Z",
+			generation: 1,
+			exclusivityKey: "target/opaque-target-1",
+			grantedBy: "cline:coordinator",
+			policyRef: "drive.agent-titles@1",
+		});
+		expect(rich).toMatchObject({
+			definitionRef: "builder@1",
+			generation: 1,
+			permissions: ["target.modify"],
+		});
+	});
+
+	it("requires one grant id and generation per authorization decision", () => {
+		const request = {
+			grantId: "builder-1",
+			agentId: "maya",
+			permission: "target.modify",
+			scope: { kind: "target", ref: "opaque-target-1" },
+			generation: 1,
+		};
+		expect(
+			AgentTitleAuthorizationRequestSchema.safeParse(request).success,
+		).toBe(true);
+		expect(
+			AgentTitleAuthorizationRequestSchema.safeParse({
+				...request,
+				grantIds: ["builder-1", "presenter-1"],
+			}).success,
+		).toBe(false);
+		expect(
+			AgentTitleAuthorizationRequestSchema.safeParse({
+				...request,
+				generation: undefined,
+			}).success,
+		).toBe(false);
+	});
+});
 
 /** A join event written before `ref` / `capPreset` existed. */
 const legacyAgent = {

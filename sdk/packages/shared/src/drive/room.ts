@@ -154,18 +154,44 @@ export const StageCardSchema = z
 	.strict();
 export type StageCard = z.infer<typeof StageCardSchema>;
 
-export const AgentTitleSchema = z.enum(["presenter"]);
+export const AgentTitleSchema = z.enum([
+	"presenter",
+	"researcher",
+	"builder",
+	"reviewer",
+	"verifier",
+	"scribe",
+]);
 export type AgentTitle = z.infer<typeof AgentTitleSchema>;
 
 export const AgentTitleScopeSchema = z
 	.object({
-		kind: z.enum(["room", "session", "stage"]),
+		kind: z.enum([
+			"room",
+			"session",
+			"stage",
+			"task",
+			"target",
+			"repository",
+			"namespace",
+		]),
 		ref: z.string().min(1),
 	})
 	.strict();
 export type AgentTitleScope = z.infer<typeof AgentTitleScopeSchema>;
 
-export const AgentTitlePermissionSchema = z.enum(["stage.present"]);
+export const AgentTitlePermissionSchema = z.enum([
+	"stage.present",
+	"source.read",
+	"source.search",
+	"source.cite",
+	"target.modify",
+	"review.findings",
+	"verification.run",
+	"record.summary",
+	"record.decision",
+	"record.memory",
+]);
 export type AgentTitlePermission = z.infer<typeof AgentTitlePermissionSchema>;
 
 /**
@@ -177,20 +203,42 @@ export const AgentTitleGrantSchema = z
 		id: z.string().min(1),
 		agentId: z.string().min(1),
 		title: AgentTitleSchema,
+		/** Signed, versioned host recipe, for example presenter@1. */
+		definitionRef: z
+			.string()
+			.regex(/^[a-z][a-z0-9-]*@[1-9][0-9]*$/)
+			.optional(),
+		taskId: z.string().min(1).optional(),
 		scope: AgentTitleScopeSchema,
 		skillBundleRefs: z.array(z.string().min(1)).max(32).default([]),
 		resourceGrantRefs: z.array(z.string().min(1)).max(64).default([]),
 		delegatedAgentIds: z.array(z.string().min(1)).max(32).default([]),
 		permissions: z.array(AgentTitlePermissionSchema).min(1).max(16),
 		grantedAt: z.string().datetime(),
+		/** New grants carry issuedAt; grantedAt remains the compatible wire alias. */
+		issuedAt: z.string().datetime().optional(),
+		notBefore: z.string().datetime().optional(),
 		expiresAt: z.string().datetime(),
 		revokedAt: z.string().datetime().optional(),
+		generation: z.number().int().positive().optional(),
+		exclusivityKey: z.string().min(1).optional(),
+		grantedBy: z.string().min(1).optional(),
+		policyRef: z.string().min(1).optional(),
 	})
 	.strict()
 	.refine(
 		(grant) => Date.parse(grant.expiresAt) > Date.parse(grant.grantedAt),
 		{
 			message: "expiresAt must be after grantedAt",
+			path: ["expiresAt"],
+		},
+	)
+	.refine(
+		(grant) =>
+			grant.notBefore === undefined ||
+			Date.parse(grant.expiresAt) > Date.parse(grant.notBefore),
+		{
+			message: "expiresAt must be after notBefore",
 			path: ["expiresAt"],
 		},
 	)

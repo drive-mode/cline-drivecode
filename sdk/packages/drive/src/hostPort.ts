@@ -4,6 +4,9 @@
 
 import type {
 	AgentTitle,
+	AgentTitleAuthorizationRequest,
+	AgentTitleAuthorizationResult,
+	AgentTitleDefinition,
 	AgentTitleGrant,
 	DirectorScript,
 	DriveEvent,
@@ -170,6 +173,13 @@ export type DriveHostPort = {
 
 	commitRoomOp(op: RoomOp): Promise<RoomSnapshot>;
 	getDirectorPolicyDescriptor?(): Promise<DirectorPolicyDescriptor>;
+	/** Sanitized signed title recipes; never prompt, routing, model, or credential data. */
+	listAgentTitleDefinitions?(): Promise<readonly AgentTitleDefinition[]>;
+	/** Authorize one privileged command with one explicit grant id. */
+	authorizeTitleCommand?(
+		roomId: string,
+		request: AgentTitleAuthorizationRequest,
+	): Promise<AgentTitleAuthorizationResult>;
 	/** Read current room snapshot (required by DriveHarness for pack/spotlight). */
 	getRoom?(roomId: string): Promise<RoomSnapshot | null>;
 	/**

@@ -29,10 +29,35 @@ export function isTitleGrantActive(
 	at: string,
 ): boolean {
 	const timestamp = Date.parse(at);
+	const notBefore = Date.parse(grant.notBefore ?? grant.grantedAt);
 	return (
-		Date.parse(grant.grantedAt) <= timestamp &&
+		notBefore <= timestamp &&
 		timestamp < Date.parse(grant.expiresAt) &&
 		(grant.revokedAt === undefined || timestamp < Date.parse(grant.revokedAt))
+	);
+}
+
+/** Compatibility fallback for grants written before explicit exclusivity keys. */
+export function titleGrantExclusivityKey(grant: AgentTitleGrant): string {
+	if (grant.exclusivityKey) {
+		return grant.exclusivityKey;
+	}
+	return grant.title === "presenter"
+		? `stage/${grant.scope.ref}`
+		: `${grant.scope.kind}/${grant.scope.ref}/${grant.title}/${grant.agentId}`;
+}
+
+export function activeTitleGrantByExclusivityKey(
+	snapshot: RoomSnapshot,
+	exclusivityKey: string,
+	at: string,
+	excludeGrantId?: string,
+): AgentTitleGrant | undefined {
+	return Object.values(snapshot.titleGrantsById).find(
+		(grant) =>
+			grant.id !== excludeGrantId &&
+			titleGrantExclusivityKey(grant) === exclusivityKey &&
+			isTitleGrantActive(grant, at),
 	);
 }
 
@@ -46,6 +71,24 @@ export function activePresenterGrant(
 			grant.title === "presenter" &&
 			(agentId === undefined || grant.agentId === agentId) &&
 			isTitleGrantActive(grant, at),
+	);
+}
+
+function hasBuilderReviewerConflict(
+	snapshot: RoomSnapshot,
+	grant: AgentTitleGrant,
+	at: string,
+): boolean {
+	if (grant.title !== "reviewer" && grant.title !== "builder") {
+		return false;
+	}
+	const conflictingTitle = grant.title === "reviewer" ? "builder" : "reviewer";
+	return Object.values(snapshot.titleGrantsById).some(
+		(candidate) =>
+			candidate.agentId === grant.agentId &&
+			candidate.title === conflictingTitle &&
+			candidate.scope.ref === grant.scope.ref &&
+			isTitleGrantActive(candidate, at),
 	);
 }
 
@@ -202,11 +245,6 @@ export function reduceRoom(
 			};
 		}
 		case "control.leave": {
-			const presenter = activePresenterGrant(
-				base,
-				event.at,
-				event.participantId,
-			);
 			const clearsStage =
 				base.stage.sharer?.participantId === event.participantId;
 			return {
@@ -214,14 +252,15 @@ export function reduceRoom(
 				participants: base.participants.filter(
 					(p) => p.id !== event.participantId,
 				),
-				...(presenter
-					? {
-							titleGrantsById: {
-								...base.titleGrantsById,
-								[presenter.id]: { ...presenter, revokedAt: event.at },
-							},
-						}
-					: {}),
+				titleGrantsById: Object.fromEntries(
+					Object.entries(base.titleGrantsById).map(([id, grant]) => [
+						id,
+						grant.agentId === event.participantId &&
+						isTitleGrantActive(grant, event.at)
+							? { ...grant, revokedAt: event.at }
+							: grant,
+					]),
+				),
 				stage: clearsStage
 					? { ...base.stage, sharer: null, pin: null, presenterGrantId: null }
 					: base.stage,
@@ -292,11 +331,15 @@ export function reduceRoom(
 			};
 		}
 		case "control.title_granted": {
-			const activePresenter = activePresenterGrant(base, event.at);
+			const activeExclusive = activeTitleGrantByExclusivityKey(
+				base,
+				titleGrantExclusivityKey(event.grant),
+				event.at,
+				event.grant.id,
+			);
 			if (
-				event.grant.title === "presenter" &&
-				activePresenter &&
-				activePresenter.id !== event.grant.id
+				activeExclusive ||
+				hasBuilderReviewerConflict(base, event.grant, event.at)
 			) {
 				return base;
 			}
@@ -306,12 +349,11 @@ export function reduceRoom(
 					...base.titleGrantsById,
 					[event.grant.id]: event.grant,
 				},
-				stage: {
-					...base.stage,
-					presenterGrantId: isTitleGrantActive(event.grant, event.at)
-						? event.grant.id
-						: base.stage.presenterGrantId,
-				},
+				stage:
+					event.grant.title === "presenter" &&
+					isTitleGrantActive(event.grant, event.at)
+						? { ...base.stage, presenterGrantId: event.grant.id }
+						: base.stage,
 			};
 		}
 		case "control.title_revoked": {
@@ -333,12 +375,33 @@ export function reduceRoom(
 		}
 		case "control.title_transferred": {
 			const from = base.titleGrantsById[event.fromGrantId];
+			const toGrantAlreadyExists = base.titleGrantsById[event.toGrant.id];
+			const exclusivityConflict = activeTitleGrantByExclusivityKey(
+				base,
+				titleGrantExclusivityKey(event.toGrant),
+				event.transferredAt,
+				event.fromGrantId,
+			);
 			if (
 				!from ||
+				event.toGrant.id === event.fromGrantId ||
+				toGrantAlreadyExists !== undefined ||
 				from.title !== event.title ||
 				event.toGrant.title !== event.title ||
 				from.scope.kind !== event.toGrant.scope.kind ||
 				from.scope.ref !== event.toGrant.scope.ref ||
+				((event.title === "presenter" ||
+					event.title === "builder" ||
+					event.title === "scribe") &&
+					titleGrantExclusivityKey(from) !==
+						titleGrantExclusivityKey(event.toGrant)) ||
+				!(
+					(from.generation === undefined &&
+						event.toGrant.generation === undefined) ||
+					(event.toGrant.generation ?? 0) > (from.generation ?? 1)
+				) ||
+				exclusivityConflict !== undefined ||
+				hasBuilderReviewerConflict(base, event.toGrant, event.transferredAt) ||
 				!isTitleGrantActive(from, event.transferredAt) ||
 				!isTitleGrantActive(event.toGrant, event.transferredAt)
 			) {
@@ -354,15 +417,18 @@ export function reduceRoom(
 					},
 					[event.toGrant.id]: event.toGrant,
 				},
-				stage: {
-					...base.stage,
-					sharer: {
-						kind: "agent",
-						participantId: event.toGrant.agentId,
-					},
-					pin: null,
-					presenterGrantId: event.toGrant.id,
-				},
+				stage:
+					event.title === "presenter"
+						? {
+								...base.stage,
+								sharer: {
+									kind: "agent",
+									participantId: event.toGrant.agentId,
+								},
+								pin: null,
+								presenterGrantId: event.toGrant.id,
+							}
+						: base.stage,
 			};
 		}
 		case "control.mode":

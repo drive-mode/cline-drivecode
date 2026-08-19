@@ -185,17 +185,37 @@ startup-deadlock recovery must not replace them with the workspace-discovered
 hub. This keeps custom local hubs and remote hubs from silently drifting to a
 different process.
 
-#### Drive Presenter authority and Director policy
+#### Drive Agent Title authority and Director policy
 
 The Cline hub is the sole coordinator for temporary Drive Agent Titles. Clients
-request a Presenter by agent id and duration; `createClineDriveHost` replaces
-client-proposed ids, permissions, skill/resource references, and delegation
-with host-allowlisted values before appending `control.title_*` events. The room
-fold permits an agent on the typed stage only while that agent owns the one
-active, unexpired Presenter grant. Transfer is atomic, revoke clears the agent
+may request one of six capability-oriented definitions: Presenter, Researcher,
+Builder, Reviewer, Verifier, or Scribe. `createClineDriveHost` replaces
+client-proposed ids, permissions, bundles, resources, delegation, policy, and
+temporal metadata with the signed host recipe before appending
+`control.title_*` events. Sanitized definitions include obligations as well as
+powers; they never contain prompts, routing, model configuration, credentials,
+endpoints, or full skill contents.
+
+The title-authorization API accepts exactly one explicit `grantId`; it has no
+multi-grant form. Command paths that adopt title authority must pass through
+this gate before performing privileged work. Against its own clock, the host
+validates agent, opaque scope, permission, not-before/expiry/revocation,
+generation, the definition signature, and exclusivity without unioning
+permissions from another grant. Presenter is
+exclusive per stage, Builder per target, and Scribe per room/task namespace.
+Researchers, Reviewers, and Verifiers may be concurrent, but one agent cannot
+review its own Builder target. Disconnect, room end, expiry, transfer, or revoke
+ends authority synchronously; cleanup is not the authority boundary. Existing
+Director/Spotlight compatibility commands retain their audited Presenter
+coordination while they migrate to caller-supplied grant attribution.
+
+The room fold permits an agent on the typed stage only while that agent owns
+the one active Presenter grant. Transfer is atomic, revoke clears the agent
 stage, and competing presentation mutations fail before changing live Director
-state. Human selection/file/terminal sharing remains independent. Pixel sharing
-is not a host capability.
+state. Other titles never acquire stage ownership. Human
+selection/file/terminal sharing remains independent. Pixel sharing is not a
+host capability. Legacy Presenter events remain readable; newly minted grants
+carry definition, generation, exclusivity, issuer, policy, and temporal refs.
 
 The built-in Director policy stays in `@cline/core`. Clients can read only a
 signed, versioned, non-exportable descriptor and the allowlisted overlay keys

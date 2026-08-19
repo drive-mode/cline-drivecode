@@ -104,6 +104,77 @@ describe("createClineDriveHost", () => {
 		expect(host.capabilities.pixelShare).toBe(false);
 	});
 
+	it("exposes the signed six-title registry and mints grants from host recipes", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const store = new DriveRoomStore();
+		const host = createClineDriveHost({ configParent: dir, store });
+		const definitions = await host.listAgentTitleDefinitions?.();
+		expect(definitions?.map((definition) => definition.title)).toEqual([
+			"presenter",
+			"researcher",
+			"builder",
+			"reviewer",
+			"verifier",
+			"scribe",
+		]);
+		expect(
+			definitions?.every(
+				(definition) =>
+					definition.signatureStatus === "verified" &&
+					definition.obligations.length > 0,
+			),
+		).toBe(true);
+
+		await host.commitRoomOp({
+			type: "create",
+			roomId: "builder-room",
+			hostParticipantId: "human",
+		});
+		const issued = new Date();
+		const proposal = {
+			id: "client-builder-id",
+			agentId: "maya",
+			title: "builder" as const,
+			scope: { kind: "target" as const, ref: "opaque-target-1" },
+			skillBundleRefs: ["client-admin"],
+			resourceGrantRefs: ["raw-host-path"],
+			delegatedAgentIds: ["untrusted-child"],
+			permissions: ["stage.present" as const],
+			grantedAt: issued.toISOString(),
+			expiresAt: new Date(issued.getTime() + 60 * 60 * 1_000).toISOString(),
+		};
+		const snapshot = await host.commitRoomOp({
+			type: "grantTitle",
+			roomId: "builder-room",
+			grant: proposal,
+		});
+		const grant = Object.values(snapshot.titleGrantsById)[0];
+		expect(grant).toMatchObject({
+			agentId: "maya",
+			title: "builder",
+			definitionRef: "builder@1",
+			scope: { kind: "target", ref: "opaque-target-1" },
+			skillBundleRefs: ["builder-target"],
+			resourceGrantRefs: [],
+			delegatedAgentIds: [],
+			permissions: ["target.modify"],
+			generation: 1,
+			exclusivityKey: "target/opaque-target-1",
+			policyRef: "drive.agent-titles@1",
+		});
+		expect(grant?.id).not.toBe(proposal.id);
+		expect(
+			await host.authorizeTitleCommand?.("builder-room", {
+				grantId: grant?.id ?? "missing",
+				agentId: "maya",
+				permission: "target.modify",
+				scope: { kind: "target", ref: "opaque-target-1" },
+				generation: 1,
+			}),
+		).toMatchObject({ ok: true, definitionRef: "builder@1" });
+	});
+
 	it("mints, transfers, and revokes sanitized Presenter grants as Cline", async () => {
 		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
 		dirs.push(dir);
@@ -187,6 +258,134 @@ describe("createClineDriveHost", () => {
 		expect(
 			titleEvents.every((event) => event.actorId === "cline:coordinator"),
 		).toBe(true);
+	});
+
+	it("enforces per-title concurrency and independent review", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-drive-host-"));
+		dirs.push(dir);
+		const host = createClineDriveHost({
+			configParent: dir,
+			store: new DriveRoomStore(),
+		});
+		await host.commitRoomOp({
+			type: "create",
+			roomId: "title-rules",
+			hostParticipantId: "human",
+		});
+		const now = new Date();
+		const expiresAt = new Date(now.getTime() + 60 * 60 * 1_000).toISOString();
+		const common = {
+			skillBundleRefs: [] as string[],
+			resourceGrantRefs: [] as string[],
+			delegatedAgentIds: [] as string[],
+			grantedAt: now.toISOString(),
+			expiresAt,
+		};
+
+		for (const [id, agentId] of [
+			["research-1", "maya"],
+			["research-2", "scout"],
+		] as const) {
+			await host.commitRoomOp({
+				type: "grantTitle",
+				roomId: "title-rules",
+				grant: {
+					...common,
+					id,
+					agentId,
+					title: "researcher",
+					scope: { kind: "repository", ref: "repo-1" },
+					permissions: ["source.read"],
+				},
+			});
+		}
+
+		await host.commitRoomOp({
+			type: "grantTitle",
+			roomId: "title-rules",
+			grant: {
+				...common,
+				id: "scribe-1",
+				agentId: "maya",
+				title: "scribe",
+				scope: { kind: "room", ref: "title-rules" },
+				permissions: ["record.summary"],
+			},
+		});
+		await expect(
+			host.commitRoomOp({
+				type: "grantTitle",
+				roomId: "title-rules",
+				grant: {
+					...common,
+					id: "scribe-2",
+					agentId: "scout",
+					title: "scribe",
+					scope: { kind: "room", ref: "title-rules" },
+					permissions: ["record.summary"],
+				},
+			}),
+		).rejects.toThrow(/title_conflict/);
+
+		await host.commitRoomOp({
+			type: "grantTitle",
+			roomId: "title-rules",
+			grant: {
+				...common,
+				id: "builder-1",
+				agentId: "maya",
+				title: "builder",
+				scope: { kind: "target", ref: "target-1" },
+				permissions: ["target.modify"],
+			},
+		});
+		await expect(
+			host.commitRoomOp({
+				type: "grantTitle",
+				roomId: "title-rules",
+				grant: {
+					...common,
+					id: "reviewer-1",
+					agentId: "maya",
+					title: "reviewer",
+					scope: { kind: "target", ref: "target-1" },
+					permissions: ["review.findings"],
+				},
+			}),
+		).rejects.toThrow(/reviewer_builder_conflict/);
+
+		const withReviewer = await host.commitRoomOp({
+			type: "grantTitle",
+			roomId: "title-rules",
+			grant: {
+				...common,
+				id: "reviewer-scout",
+				agentId: "scout",
+				title: "reviewer",
+				scope: { kind: "target", ref: "target-1" },
+				permissions: ["review.findings"],
+			},
+		});
+		const reviewer = Object.values(withReviewer.titleGrantsById).find(
+			(grant) => grant.title === "reviewer",
+		);
+		await expect(
+			host.commitRoomOp({
+				type: "transferTitle",
+				roomId: "title-rules",
+				title: "reviewer",
+				fromGrantId: reviewer?.id ?? "missing",
+				toGrant: {
+					...common,
+					id: "reviewer-maya-transfer",
+					agentId: "maya",
+					title: "reviewer",
+					scope: { kind: "target", ref: "target-1" },
+					permissions: ["review.findings"],
+				},
+				transferredAt: new Date().toISOString(),
+			}),
+		).rejects.toThrow(/reviewer_builder_conflict/);
 	});
 
 	it("rejects a competing agent before mutating the live presentation", async () => {
