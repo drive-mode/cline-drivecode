@@ -67,14 +67,17 @@ export async function getContextForCommand(
 			commandContext: CommandContext
 	  }
 > {
+	// Capture the source context before focusing the chat webview. VS Code 1.134
+	// can clear activeTextEditor as focus moves into the webview, which otherwise
+	// makes editor actions such as "Add to Cline" lose their selected range.
+	const editor = vscode.window.activeTextEditor
+	const activeNotebook = editor ? undefined : vscode.window.activeNotebookEditor
 	const activeWebview = await showWebview(options?.preserveEditorFocus ?? false)
 	// Use the controller from the active instance
 	const controller = activeWebview.controller
 
-	const editor = vscode.window.activeTextEditor
 	if (!editor) {
 		// Fallback for notebooks with no cells (no text editor active)
-		const activeNotebook = vscode.window.activeNotebookEditor
 		if (!activeNotebook) {
 			return
 		}
