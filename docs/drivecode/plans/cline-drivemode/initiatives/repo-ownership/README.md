@@ -79,6 +79,27 @@ canonical kernel was not a superset of it:
 | `allowNarrationByRate` | **Ported** to `@cline/drive/narrationPolicy.ts` and exported from the barrel. |
 | `LoggedEventSchema` / `LoggedEvent` | **Not ported — superseded.** `DriveLogEnvelope` ([ADR-0013](../../adr/ADR-0013-state-partition.md) phase 6) is the later model: a `family` union over room/bank/artifact carrying `roomId`, where `LoggedEvent` is room-only. Porting it would reintroduce a retired concept. `drivemode-mcp` migrates to the envelope instead; note `seq` moves from non-negative to positive, and `roomId` becomes required. |
 
+Those three were the divergence in the *exported kernel API*. Attempting the
+repoint on 2026-08-20 surfaced a second, larger one in the **protocol** — nine
+event types and two snapshot/event fields that `drivemode-mcp` uses and the
+canonical kernel does not define. Measured by pointing `drivemode-mcp` at the
+generated distribution and reading the compiler: 26 errors, all in
+`roomService.ts`, in three groups.
+
+| Harness-only protocol element | Uses | Reading |
+|---|---|---|
+| `work.generic` | 10 | The escape hatch every pack publishes through. The kernel has no generic work event. |
+| `control.session_created` / `_scheduled` / `_started` / `_ended` | 4 | Call-session lifecycle. The kernel already carries `callSessionId` on events and a `callSession` protocol module, so this is a half-built concept here, not a foreign one. |
+| `control.invite` | 1 | Room membership. |
+| `control.interrupt_ack` | 1 | Completes the raise-hand handshake the kernel implements only one side of. |
+| `work.plan`, `work.test` | 2 | The kernel spells these `work.plan_step` and `work.test_result` — the same concepts under different names, which is a naming reconciliation rather than a gap. |
+| `profilesByParticipantId` on `RoomSnapshot` | 5 | Carries the `runtimeBadge` whose *type* was already ported above. The field that holds it was not, so the ported type is currently unreachable from a snapshot. |
+| `packId` on work/address/room | 3 | Pack attribution. The packs (`coding`, `tasks`, `artifacts`, `direction`, `demo-ops`) are a `drivemode-mcp` product concept, so this is the one element that most likely should *not* move into the kernel. |
+
+`store.ts` — the `LoggedEvent` → `DriveLogEnvelope` migration — typechecks
+clean against the distribution. The blockers are entirely in `roomService.ts`
+and entirely protocol-level.
+
 ### 2 · The dependency is a path link, so drift is silent
 
 `drivemode-mcp` installs `collaboration-harness` as a **file dependency on a
@@ -164,17 +185,33 @@ Ordered so each step removes duplication permanently rather than relocating it.
 
 - **D1 — resolved 2026-08-19: retire `collaboration-harness` and fold it back
   into `cline-drivecode`.** `@cline/drive` is the single kernel. The
-  harness-only symbols have been reconciled (see finding 1), so the canonical
-  kernel is now a superset of what the harness offered.
-- **D1a — how does `drivemode-mcp` consume the kernel once the harness is
-  gone?** This is the open consequence of D1. `@cline/drive` is not published to
-  npm and depends on `@cline/shared`, whereas the harness was a standalone
-  `zod`-only package consumed through a sibling path. Options: publish a
-  generated bundle from `cline-drivecode` under a scope the organization owns;
-  absorb `drivemode-mcp` into the monorepo; or depend on `cline-drivecode`
-  directly by git ref. Retiring the *repository* is compatible with publishing a
-  *generated artifact* from the canonical source — what stops either way is the
-  hand-maintained copy.
+  harness-only *exported symbols* have been reconciled (see finding 1). The
+  canonical kernel is **not** yet a superset at the protocol level: nine event
+  types and two fields remain harness-only, inventoried in finding 1.
+- **D1a — resolved 2026-08-20: a generated bundle, published under a scope the
+  organization owns.** `@drive-mode/drive-kernel` is emitted by
+  `sdk/scripts/build-drive-kernel-bundle.ts` as the transitive closure of the
+  kernel entries — 32 protocol modules, 3 kernel modules, 22 exports, `zod` as
+  its only runtime dependency — and published by `drive-kernel-publish.yml` to
+  GitHub Packages. `check:drive-kernel` regenerates, compiles, imports the
+  compiled output under Node and fails on drift, so the copy cannot fall behind
+  the way the harness did. Retiring the *repository* stays compatible with
+  publishing a *generated artifact* from the canonical source.
+
+  Two consequences worth recording. The `zod` major mismatch turned out not to
+  matter: `drivemode-mcp` pins `zod` 3 for `@modelcontextprotocol/sdk` while the
+  kernel needs `zod` 4, and both install side by side because only plain data
+  crosses the boundary — the two kernel schemas `drivemode-mcp` imports are
+  `.parse()`d internally and never handed to the MCP server. What does block the
+  repoint is the protocol divergence inventoried in finding 1.
+- **D1b — do the nine harness-only protocol elements belong in the standard?**
+  Opened 2026-08-20 by the attempted repoint. This is the ownership question of
+  this plan applied to concrete symbols: the session lifecycle, `control.invite`
+  and `control.interrupt_ack` complete concepts the kernel already half-carries
+  and read as standard; `work.plan`/`work.test` need reconciling against the
+  kernel's `work.plan_step`/`work.test_result`; `packId` is pack attribution and
+  reads as product. Until this is answered, `drivemode-mcp` cannot compile
+  against the kernel and the harness cannot be archived.
 - **D2 — who owns room-state authority when a hub and an MCP writer are both
   live?** Today both repositories claim it in prose and the MCP writer holds real
   state. This needs an ADR answer, not a convention.
