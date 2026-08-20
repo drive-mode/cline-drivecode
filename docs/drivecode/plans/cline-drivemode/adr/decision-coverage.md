@@ -777,6 +777,7 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | Operator next-action layer (+ first training-label corpus grant) | [ADR-0036](ADR-0036-next-action-triad.md) | Paper |
 | Desktop signal source + sensing consent surface | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) (amends ADR-0036 1/12) | Paper |
 | Standard-vs-product protocol boundary + extension mechanism | [ADR-0038](ADR-0038-standard-extension-boundary.md) (answers D1b) | Paper; D2 still gates the repoint |
+| Room-state write authority across hub and MCP writer | [ADR-0039](ADR-0039-room-writer-identity.md) (answers D2; amends ADR-0013 lock 1) | Paper; enforcement path unbuilt, so ADR-0025 decision 1 is not yet satisfied |
 
 ### Still Open (product gaps — not holes in the ADR sense, but undecided product detail)
 

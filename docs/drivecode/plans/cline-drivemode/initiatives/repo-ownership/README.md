@@ -224,8 +224,21 @@ Ordered so each step removes duplication permanently rather than relocating it.
   kernel's `work.plan_step`/`work.test_result`; `packId` is pack attribution and
   reads as product. Until this is answered, `drivemode-mcp` cannot compile
   against the kernel and the harness cannot be archived.
-- **D2 — who owns room-state authority when a hub and an MCP writer are both
-  live?** Today both repositories claim it in prose and the MCP writer holds real
+- **D2 — proposed 2026-08-20:
+  [ADR-0039](../../adr/ADR-0039-room-writer-identity.md) makes the invariant
+  per-room rather than per-topology.** A room has exactly one writer and names
+  it in `writerHarnessId`; hub-attached and standalone are both conformance
+  profiles, so an MCP server can hold rooms without a hub daemon. No
+  cross-writer merge, ever. It amends [ADR-0013](../../adr/ADR-0013-state-partition.md)
+  lock 1 and leaves the three lanes standing. The investigation found the
+  sharper problem: the lock was **unenforceable** — no writer identity on
+  `RoomSnapshot`, no room-to-harness binding on `DriveHostPort`, and only
+  comments and test captions in code, which is an
+  [ADR-0025](../../adr/ADR-0025-enforced-authority.md) decision-1 defect. The
+  ADR is **Proposed** and is not satisfied until the refusal path exists.
+  Original framing follows.
+
+  Today both repositories claim it in prose and the MCP writer holds real
   state. This needs an ADR answer, not a convention.
 - **D3 — when do the parked hosts rejoin?** Every release that ships Agent Titles
   without them widens the gap that reconciling `OperatorRole` will eventually
