@@ -31,6 +31,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-11 — ADR-0036 next-action triad + PRD 11 + research 29 (Proposed); closes the 21-operator-experience gap and answers research 16 open question 3.
 - 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
 - 2026-08-20 — ADR-0038 standard extension boundary (Proposed); answers D1b — ports the call-session lifecycle, `control.invite`, `control.interrupt_ack` and `profilesByParticipantId`; keeps `work.generic` and `packId` out behind a typed vendor-extension envelope.
+- 2026-08-20 — ADR-0039 room writer identity (Proposed); answers D2 and amends ADR-0013 lock 1 — one writer per room, named on the snapshot and enforced by a refusal path, with hub-attached and standalone as first-class profiles.
 
 ---
 
@@ -270,3 +271,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## ADR-0038 · Standard extension boundary
 
 - 2026-08-20 — Proposed (answers D1b by splitting the seven blocking protocol elements rather than deciding them as one list: four are ported because the kernel already half-carries the concept, one is a rename in `drivemode-mcp` because the standard's spelling wins, and two are refused because they are product concepts — with a typed vendor-extension envelope added so refusing them does not leave `drivemode-mcp` unable to publish pack work; an extension may never be load-bearing for interop).
+
+## ADR-0039 · Room writer identity
+
+- 2026-08-20 — Proposed (answers D2 by moving the invariant from per-topology to per-room: a room has exactly one writer and names it in `writerHarnessId`, reusing the existing `DriveHostPort.harnessId`; hub-attached and standalone are both conformance profiles so an MCP server can hold rooms without a hub daemon; no cross-writer merge ever, because rooms carry Agent Title grants and a wrong merge there is a security answer; amends ADR-0013 lock 1 and leaves the three lanes, the ADR-0029 checkpoint amendment, `reduceRoom` purity, privacy-strict and the cursor-drive `:7891` lock standing. Opened because the lock was unenforceable: no writer identity on `RoomSnapshot`, no room-to-harness binding on `DriveHostPort`, and only comments and test captions in code — an ADR-0025 decision-1 defect).
