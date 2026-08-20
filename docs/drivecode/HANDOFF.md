@@ -70,15 +70,22 @@ Prefer `main`. After SDK edits: `bun run build:sdk`. Historical harness session 
 
 ### Upstream Cline and SDK baseline
 
-[PR #23](https://github.com/drive-mode/cline-drivecode/pull/23) is the active
-upstream-integration boundary. As captured 2026-08-19, it carries the official
-Cline SDK `0.0.75` line and fetched `cline/cline` source head
-[`98d3e52a0`](https://github.com/cline/cline/commit/98d3e52a028c8b8426852baa4154e4aabf284dab).
-Those are separate parity checks: upstream source can advance without an SDK
-version bump. Land this PR with a **merge commit only**, after its full hosted
-matrix is green, so the repaired upstream ancestry is preserved. The exact
-sync procedure, ownership boundary, validation commands, and continuation
-checklist live in
+[PR #23](https://github.com/drive-mode/cline-drivecode/pull/23) **landed on
+`main`** 2026-08-19 as merge commit
+[`dd0e7a06e`](https://github.com/drive-mode/cline-drivecode/commit/dd0e7a06e2b641aa3df0f408498b0db6d8cb20d6),
+with its full hosted matrix green, so the repaired upstream ancestry is
+preserved. The integrated baseline is the official Cline SDK `0.0.75` line and
+`cline/cline` source head
+[`98d3e52a0`](https://github.com/cline/cline/commit/98d3e52a028c8b8426852baa4154e4aabf284dab),
+which is now an ancestor of `main`.
+
+Those remain separate parity checks: upstream source can advance without an SDK
+version bump, and neither check makes the fork permanently current. Re-fetched
+2026-08-19 after landing, `cline/cline` `main` is **one commit ahead** at
+[`dfa34ecea`](https://github.com/cline/cline/commit/dfa34ecea85b6b2689be37b3480b17678eeed915),
+with the published SDK line unchanged at `0.0.75`. That commit is the next sync
+input, not a regression. The exact sync procedure, ownership boundary,
+validation commands, and continuation checklist live in
 [10-upstream-sdk-sync-handoff.md](plans/drivecode-sdk/delivery/10-upstream-sdk-sync-handoff.md).
 
 ### Execution backlog
