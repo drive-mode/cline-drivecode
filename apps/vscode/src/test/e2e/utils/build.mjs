@@ -5,6 +5,7 @@ import { existsSync, rmSync } from "node:fs"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
 import { downloadAndUnzipVSCode, SilentReporter } from "@vscode/test-electron"
+import { execa } from "execa"
 import runtimeConfig from "../../../../test-runtime.config.json" with { type: "json" }
 
 const TIMEOUT_MINUTE = 5
@@ -28,13 +29,27 @@ async function installVSCode() {
 }
 
 /**
- * VS Code only. Playwright's Chromium was installed here on every run — 13s even
- * on a cache hit — but nothing launches it: the suite drives the VS Code Electron
- * binary through `_electron.launch()`, and the only reference to Chromium in the
- * whole e2e tree was the line that installed it.
+ * Playwright's managed ffmpeg, NOT a browser.
+ *
+ * Nothing launches Chromium — the suite drives the VS Code Electron binary
+ * through `_electron.launch()` — but `playwright install chromium` was also the
+ * only thing fetching ffmpeg, which Playwright shells out to when encoding the
+ * `recordVideo` stream the harness passes into that launch. Dropping the whole
+ * install took ffmpeg with it and every test timed out waiting for a window.
+ *
+ * So install exactly what is used. `bun install` will not fetch it either:
+ * playwright is not in `trustedDependencies`, so its postinstall never runs.
  */
+async function installFfmpeg() {
+	console.log("Installing Playwright ffmpeg...")
+	await execa("npm", ["exec", "playwright", "install", "ffmpeg"], {
+		stdio: "inherit",
+	})
+	console.log("Playwright ffmpeg installation completed successfully")
+}
+
 async function installDependencies() {
-	return installVSCode()
+	return Promise.all([installVSCode(), installFfmpeg()])
 }
 
 async function main() {

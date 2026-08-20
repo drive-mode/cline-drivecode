@@ -246,6 +246,21 @@ jobs:
                     echo "Cached VS Code executable OK: $ELECTRON"
                   fi
 
+            # Caches Playwright's managed binaries. Only ffmpeg is fetched now — the
+            # suite drives the VS Code Electron binary, not a browser — but ffmpeg is
+            # required: Playwright shells out to it to encode the `recordVideo` stream
+            # the harness passes into `_electron.launch()`.
+            - name: Cache Playwright ffmpeg
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/ms-playwright
+                      ~/Library/Caches/ms-playwright
+                      ~/AppData/Local/ms-playwright
+                  key: playwright-ffmpeg-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: |
+                      playwright-ffmpeg-${{ runner.os }}-
+
             - name: Install workspace dependencies
               working-directory: ${{ github.workspace }}
               run: bun install --frozen-lockfile
