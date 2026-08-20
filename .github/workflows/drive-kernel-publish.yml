@@ -1,0 +1,130 @@
+# Publish @drive-mode/drive-kernel — the generated distribution of the Drive
+# room kernel and protocol schemas — to GitHub Packages.
+#
+# The package is GENERATED (sdk/scripts/build-drive-kernel-bundle.ts) and its
+# output is gitignored, so it is built here rather than committed. Publishing
+# runs `check:drive-kernel` first, which regenerates from the canonical
+# @cline/drive and @cline/shared, compiles the distribution, and asserts the
+# declared surface still resolves — a rename upstream fails the publish rather
+# than shipping a stale copy, which is how the retired collaboration-harness
+# drifted.
+#
+# Unlike sdk-publish.yml this targets GitHub Packages, not npmjs.org: the
+# @drive-mode scope is private to the org, so no npm trusted publishing / OIDC
+# is involved and the built-in GITHUB_TOKEN carries `packages: write`.
+name: drive-kernel-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack and verify without publishing"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: drive-kernel-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish @drive-mode/drive-kernel
+    # The upstream fork must never publish under our scope.
+    if: github.repository == 'drive-mode/cline-drivecode'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@drive-mode"
+
+      - name: Install dependencies
+        run: bun install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The guard resolves the declared surface against the canonical packages'
+      # built dist, so the SDK must be built before it can run.
+      - name: Build SDK
+        run: bun run build:sdk
+
+      # Regenerates, compiles, imports the compiled dist under Node, and fails
+      # on drift, a missing entrypoint, or an undeclared dependency.
+      - name: Generate and verify the distribution
+        run: bun run check:drive-kernel
+
+      - name: Read package identity
+        id: pkg
+        run: |
+          cd sdk/dist-bundle/drive-kernel
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Prepared ${NAME}@${VERSION}"
+
+      # The version is inherited from @cline/drive, so regenerating after a
+      # kernel change without a version bump would collide. Detect it here and
+      # say so, rather than failing inside `npm publish` with a bare 409.
+      - name: Check the version is unpublished
+        id: exists
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NAME: ${{ steps.pkg.outputs.name }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::${NAME}@${VERSION} is already published. Bump @cline/drive's version to publish a changed kernel."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pack (dry run)
+        if: inputs.dry_run
+        working-directory: sdk/dist-bundle/drive-kernel
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --dry-run
+
+      - name: Publish
+        if: ${{ !inputs.dry_run && steps.exists.outputs.published == 'false' }}
+        working-directory: sdk/dist-bundle/drive-kernel
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish
+
+      - name: Summary
+        env:
+          NAME: ${{ steps.pkg.outputs.name }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ALREADY: ${{ steps.exists.outputs.published }}
+        run: |
+          {
+            echo "### ${NAME}@${VERSION}"
+            echo ""
+            echo "- source commit: \`${GITHUB_SHA}\`"
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "- result: **dry run** — packed and verified, nothing published"
+            elif [ "$ALREADY" = "true" ]; then
+              echo "- result: **skipped** — this version is already on the registry"
+            else
+              echo "- result: **published** to GitHub Packages"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"

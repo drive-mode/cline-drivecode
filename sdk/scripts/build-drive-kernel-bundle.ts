@@ -347,6 +347,15 @@ function main(): void {
 				description:
 					"Generated distribution of the Drive room kernel and protocol schemas.",
 				license: "Apache-2.0",
+				// Links the registry entry back to the generator on GitHub
+				// Packages, so a published copy carries its provenance rather
+				// than standing alone the way the retired harness did.
+				repository: {
+					type: "git",
+					url: "git+https://github.com/drive-mode/cline-drivecode.git",
+					directory: "sdk/dist-bundle/drive-kernel",
+				},
+				publishConfig: { registry: "https://npm.pkg.github.com" },
 				type: "module",
 				types: "./dist/index.d.ts",
 				main: "./dist/index.js",
