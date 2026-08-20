@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { clineSourceAliases } from "../../sdk/vitest-cline-aliases.js";
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -36,6 +37,9 @@ export default defineConfig({
 				find: /^@cline\/drive\/(.+)$/,
 				replacement: resolve(rootDir, "../../sdk/packages/drive/src/$1"),
 			},
+			// Generated last so the hand-written entries above still win.
+			// Covers @cline/* subpaths this list missed, e.g. @cline/llms.
+			...clineSourceAliases(),
 		],
 	},
 	test: {

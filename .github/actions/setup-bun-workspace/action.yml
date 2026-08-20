@@ -1,5 +1,10 @@
 # Shared Bun workspace bootstrap for CI jobs.
-# Caches ~/.bun/install/cache (critical on Windows where cold install is 3–5+ min).
+#
+# The install cache is restored on Windows ONLY. Measured on the e2e job, which
+# reports restore and install as separate steps: restoring costs 43s (ubuntu)
+# and 52s (macOS) to avoid an install that costs 8s and 14s respectively — so
+# on those runners the cache is 3-5x more expensive than the work it replaces.
+# Windows keeps it, where cold install really is 3-5+ min.
 name: Setup Bun workspace
 description: Install Bun, restore install cache, and bun install at the repo root
 
@@ -13,7 +18,10 @@ inputs:
         required: false
         default: "."
     cache:
-        description: Restore/save ~/.bun/install/cache (skip on Linux-only jobs where cold install is already fast)
+        description: >-
+            Opt in to restoring ~/.bun/install/cache. Honoured on Windows only;
+            on Linux and macOS the restore costs more than a cold install, so it
+            is skipped regardless of this value.
         required: false
         default: "true"
 
@@ -26,7 +34,9 @@ runs:
               bun-version-file: package.json
 
         - name: Cache Bun install cache
-          if: ${{ inputs.cache == 'true' }}
+          # Windows-only: see the header note. Left as a condition rather than a
+          # per-caller override so a new job cannot silently reintroduce the cost.
+          if: ${{ inputs.cache == 'true' && runner.os == 'Windows' }}
           uses: actions/cache@v4
           with:
               path: ~/.bun/install/cache

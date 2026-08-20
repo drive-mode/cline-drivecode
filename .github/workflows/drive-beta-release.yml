@@ -55,8 +55,6 @@ jobs:
 
             - name: Setup Bun workspace
               uses: ./.github/actions/setup-bun-workspace
-              with:
-                  cache: "false"
 
             # Same order as the install docs: install, build, then preflight —
             # which is also the only order that passes, since preflight FAILs
