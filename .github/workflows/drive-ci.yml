@@ -110,6 +110,9 @@ jobs:
                           # produces it moves, not only when the kernel does.
                           - 'sdk/scripts/build-drive-kernel-bundle.ts'
                           - 'sdk/scripts/check-drive-kernel-bundle.ts'
+                          # The distribution's own version lives here; the guard
+                          # asserts the generator reads it.
+                          - 'sdk/drive-kernel.version.json'
                           - 'package.json'
                           - 'bun.lock'
                           - '.github/workflows/drive-ci.yml'
