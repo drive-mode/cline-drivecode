@@ -35,8 +35,17 @@ try {
 	// The generator enforces the closure's own invariants (undeclared imports,
 	// unresolvable specifiers, a failing compile). Surface what it said rather
 	// than a stack trace pointing at this line.
-	const stderr = (error as { stderr?: Buffer }).stderr?.toString().trim();
-	fail(`generator failed —\n${stderr || String(error)}`);
+	//
+	// BOTH streams, deliberately: the generator compiles with `tsc`, which
+	// writes its diagnostics to STDOUT. Printing only stderr reduced a real
+	// compile failure — the thing this guard exists to catch — to a spawn stack
+	// carrying no diagnostics at all.
+	const spawned = error as { stdout?: Buffer; stderr?: Buffer };
+	const streams = [spawned.stdout, spawned.stderr]
+		.map((buffer) => buffer?.toString().trim())
+		.filter((text): text is string => Boolean(text))
+		.join("\n");
+	fail(`generator failed —\n${streams || String(error)}`);
 }
 
 const indexPath = join(bundleRoot, "src/index.ts");

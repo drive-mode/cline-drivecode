@@ -295,11 +295,20 @@ function buildBundle(): void {
 	symlinkSync(findModule("zod"), join(modules, "zod"), "dir");
 	symlinkSync(findModule("@types/node"), join(modules, "@types/node"), "dir");
 
-	execFileSync(
-		join(repoRoot, "node_modules/.bin/tsc"),
-		["-p", "tsconfig.json"],
-		{ cwd: outRoot, stdio: "inherit" },
-	);
+	try {
+		execFileSync(
+			join(repoRoot, "node_modules/.bin/tsc"),
+			["-p", "tsconfig.json"],
+			{ cwd: outRoot, stdio: "inherit" },
+		);
+	} catch {
+		// `inherit` means tsc has already written its diagnostics to this
+		// process's stdout. Rethrowing the raw spawn error would bury them under
+		// a stack whose captured streams are both null.
+		throw new Error(
+			"tsc failed to compile the generated distribution — diagnostics above",
+		);
+	}
 }
 
 function sourceCommit(): string {
