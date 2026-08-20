@@ -185,11 +185,19 @@ jobs:
             - name: Package extension
               run: bun run test:e2e:build
 
-            - name: Upload vsix
+            # The vsix alone is not enough. The harness launches VS Code with BOTH
+            # --install-extension=dist/e2e.vsix AND --extensionDevelopmentPath=apps/vscode,
+            # and the dev path is what actually loads: VS Code reads package.json `main`
+            # (./dist/extension.js) plus webview-ui/build, which vsce package's prepublish
+            # produces alongside the vsix. Shipping only the vsix leaves the runner with
+            # no extension to activate.
+            - name: Upload built extension
               uses: actions/upload-artifact@v4
               with:
-                  name: e2e-vsix
-                  path: apps/vscode/dist/e2e.vsix
+                  name: e2e-extension
+                  path: |
+                      apps/vscode/dist
+                      apps/vscode/webview-ui/build
                   retention-days: 1
                   if-no-files-found: error
 
@@ -310,11 +318,22 @@ jobs:
               run: command -v xvfb-run
 
             # Run optimized E2E tests (eliminates redundant builds)
-            - name: Download vsix
+            - name: Download built extension
               uses: actions/download-artifact@v4
               with:
-                  name: e2e-vsix
-                  path: apps/vscode/dist
+                  name: e2e-extension
+                  path: apps/vscode
+
+            - name: Assert the extension entrypoint arrived
+              run: |
+                  for f in dist/extension.js dist/e2e.vsix webview-ui/build/index.html; do
+                    if [ ! -e "$f" ]; then
+                      echo "ERROR: $f missing from the e2e-extension artifact"
+                      echo "(VS Code loads it via --extensionDevelopmentPath; activation would fail)"
+                      exit 1
+                    fi
+                  done
+                  echo "extension entrypoint, vsix and webview build all present"
 
             - name: Run E2E tests - Linux
               if: matrix.runner == 'ubuntu'
