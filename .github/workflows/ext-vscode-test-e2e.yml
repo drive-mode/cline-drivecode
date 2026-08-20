@@ -164,7 +164,10 @@ jobs:
         needs: [detect-changes, matrix_prep]
         if: needs.detect-changes.outputs.e2e == 'true'
         strategy:
-            fail-fast: true
+            # A macOS flake must not cancel the ubuntu leg: that destroys the
+            # signal used to tell a real break from a flake, and would cancel the
+            # whole fan-out once this matrix carries shards.
+            fail-fast: false
             matrix:
                 include: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
         runs-on: ${{ matrix.runner }}-latest
@@ -243,21 +246,21 @@ jobs:
                     echo "Cached VS Code executable OK: $ELECTRON"
                   fi
 
-            # Cache Playwright browsers
-            - name: Cache Playwright browsers
+            # Caches Playwright's managed binaries. Only ffmpeg is fetched now — the
+            # suite drives the VS Code Electron binary, not a browser — but ffmpeg is
+            # required: Playwright shells out to it to encode the `recordVideo` stream
+            # the harness passes into `_electron.launch()`.
+            - name: Cache Playwright ffmpeg
               uses: actions/cache@v4
-              id: playwright-cache
               with:
                   path: |
                       ~/.cache/ms-playwright
                       ~/Library/Caches/ms-playwright
                       ~/AppData/Local/ms-playwright
-                  key: playwright-browsers-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  key: playwright-ffmpeg-${{ runner.os }}-${{ hashFiles('bun.lock') }}
                   restore-keys: |
-                      playwright-browsers-${{ runner.os }}-
+                      playwright-ffmpeg-${{ runner.os }}-
 
-            # Single root install resolves the entire bun workspace at once (replaces
-            # the per-package `npm ci` steps for apps/vscode + webview-ui).
             - name: Install workspace dependencies
               working-directory: ${{ github.workspace }}
               run: bun install --frozen-lockfile
@@ -269,6 +272,7 @@ jobs:
             - name: Build SDK packages
               working-directory: ${{ github.workspace }}
               run: bun run build:sdk
+
 
             - name: Assert better-sqlite3 native binary present
               # Force bash: the Windows runner defaults to pwsh, which can't parse this

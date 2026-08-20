@@ -28,20 +28,28 @@ async function installVSCode() {
 	throw new Error("VS Code executable not found after re-download")
 }
 
-async function installChromium() {
-	console.log("Installing Playwright Chromium...")
-	try {
-		await execa("npm", ["exec", "playwright", "install", "chromium"], {
-			stdio: "inherit",
-		})
-		console.log("Playwright Chromium installation completed successfully")
-	} catch (error) {
-		throw new Error(`Failed to install Playwright Chromium: ${error}`)
-	}
+/**
+ * Playwright's managed ffmpeg, NOT a browser.
+ *
+ * Nothing launches Chromium — the suite drives the VS Code Electron binary
+ * through `_electron.launch()` — but `playwright install chromium` was also the
+ * only thing fetching ffmpeg, which Playwright shells out to when encoding the
+ * `recordVideo` stream the harness passes into that launch. Dropping the whole
+ * install took ffmpeg with it and every test timed out waiting for a window.
+ *
+ * So install exactly what is used. `bun install` will not fetch it either:
+ * playwright is not in `trustedDependencies`, so its postinstall never runs.
+ */
+async function installFfmpeg() {
+	console.log("Installing Playwright ffmpeg...")
+	await execa("npm", ["exec", "playwright", "install", "ffmpeg"], {
+		stdio: "inherit",
+	})
+	console.log("Playwright ffmpeg installation completed successfully")
 }
 
 async function installDependencies() {
-	return Promise.all([installVSCode(), installChromium()])
+	return Promise.all([installVSCode(), installFfmpeg()])
 }
 
 async function main() {
