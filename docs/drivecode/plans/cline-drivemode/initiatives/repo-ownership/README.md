@@ -31,11 +31,11 @@ describes repository topology and ownership, not claim status.
 **Parked — other hosts, deliberately not addressed here:** `cursor-drive` and
 `claude-drive` implement Drive on the Cursor and Claude Code hosts. They carry
 their own duplication (six shared modules, two more MCP servers) and a rival
-role vocabulary (`OperatorRole`) that competes with Agent Titles. Parking them
-**defers** that collision rather than resolving it — if Agent Titles is
-published as a standard while they sit out, reconciling them later means either
-migrating both hosts or accepting a permanent split. Record that as a known
-debt, not a closed question.
+role vocabulary (`OperatorRole`). Parking them **defers** that collision rather
+than resolving it, so record it as a known debt, not a closed question.
+[ADR-0040](../../adr/ADR-0040-parked-host-rejoin.md) measures the collision and
+moves it: it is `OperatorRole` against the kernel's `DriveAgentRole`, not against
+Agent Titles, which ADR-0027 decision 6 puts on a different axis entirely.
 
 ## The problem, stated precisely
 
@@ -155,6 +155,8 @@ become a second definition site.
 | Cline host implementation | `cline-drivecode` (product tier) | — |
 | MCP tool surface + curated packs | `drivemode-mcp` | agent hosts |
 | Room-state authority | **undecided** — see D2 | — |
+| Role vocabulary across hosts | `cline-drivecode` (`DriveAgentRole`) — see D3 | parked hosts, unconsumed |
+| Permission ceiling vocabulary | `cline-drivecode` (`PermissionPreset`) — already converged, unnamed in the published surface | all three hosts |
 | Native client | `drive-ios` | — |
 | Marketing surface | `site` | — |
 | Standalone kernel distribution | **undecided** — see D1 | — |
@@ -240,9 +242,28 @@ Ordered so each step removes duplication permanently rather than relocating it.
 
   Today both repositories claim it in prose and the MCP writer holds real
   state. This needs an ADR answer, not a convention.
-- **D3 — when do the parked hosts rejoin?** Every release that ships Agent Titles
-  without them widens the gap that reconciling `OperatorRole` will eventually
-  have to close.
+- **D3 — proposed 2026-08-20:
+  [ADR-0040](../../adr/ADR-0040-parked-host-rejoin.md) corrects the premise
+  before answering it.** Reading all three codebases moved the collision: Agent
+  Titles sit on a different axis from role ([ADR-0027](../../adr/ADR-0027-role-tiers.md)
+  decision 6) and neither parked host has any title concept, while
+  `Participant.role` and `Participant.capPreset` are **already published**
+  structurally in `@drive-mode/drive-kernel`. So the live collision is
+  `DriveAgentRole` vs `OperatorRole` — which
+  [ADR-0034](../../adr/ADR-0034-role-vocabulary.md) already owns and which stays
+  blocked on delivery D1 — and releasing Agent Titles does not widen it. Two
+  measurements shape the decision: `PermissionPreset` (`readonly|standard|full`,
+  min-cascade) is identical in all three implementations and needs *naming*, not
+  reconciling; and the only non-test refusal path on that ceiling is
+  `cursor-drive`'s four call sites, because this repository computes `capPreset`,
+  stores it, and never reads it. Rejoining is therefore defined as **consuming
+  the published kernel, not renaming roles**, releases are not gated on D3, and
+  D3 closes on evidence rather than a date. The ADR is **Proposed**. Original
+  framing follows.
+
+  When do the parked hosts rejoin? Every release that ships Agent Titles without
+  them widens the gap that reconciling `OperatorRole` will eventually have to
+  close.
 
 ## Non-goals
 
