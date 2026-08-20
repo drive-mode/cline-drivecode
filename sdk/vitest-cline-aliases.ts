@@ -14,23 +14,46 @@
  * Replacements are deliberately extensionless: Vite resolves `.ts`, `.tsx` and
  * `/index.*`, which a literal path could not do for `@cline/ui`'s `.tsx`
  * components and `@cline/shared`'s `index.browser.ts` alike.
+ *
+ * The source root is PROBED rather than assumed. Most packages compile `src/`
+ * into `dist/`, but `@cline/ui` keeps `components/` at the package root, so
+ * rewriting `./dist/components/index.js` to `src/components/index` would point
+ * at nothing. An alias that resolves to a missing file is worse than no alias,
+ * because it wins over the `exports` map and breaks a package that would
+ * otherwise have loaded from `dist`.
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 type ExportTarget = string | Record<string, unknown> | undefined;
 
 const packagesDir = resolve(import.meta.dirname, "packages");
 
-/** `./dist/hub/daemon/entry.js` -> `src/hub/daemon/entry` (no extension). */
-function distToSource(target: string): string | null {
+/** Source roots to probe, in order. `""` covers `@cline/ui`'s root layout. */
+const SOURCE_ROOTS = ["src", ""] as const;
+/** Suffixes Vite would resolve for an extensionless specifier. */
+const SOURCE_SUFFIXES = [".ts", ".tsx", "/index.ts", "/index.tsx"] as const;
+
+/**
+ * `./dist/hub/daemon/entry.js` -> `<pkg>/src/hub/daemon/entry`, but only when a
+ * real source file backs it. Returns null when nothing matches, leaving the
+ * package's own `exports` map to resolve as it did before.
+ */
+function distToSource(pkgRoot: string, target: string): string | null {
 	if (!target.startsWith("./dist/")) {
 		// Assets such as `./components.css` ship from the package root and
 		// resolve without help. Aliasing them would break them.
 		return null;
 	}
-	return target.replace(/^\.\/dist\//, "src/").replace(/\.js$/, "");
+	const rest = target.replace(/^\.\/dist\//, "").replace(/\.js$/, "");
+	for (const root of SOURCE_ROOTS) {
+		const base = join(pkgRoot, root, rest);
+		if (SOURCE_SUFFIXES.some((suffix) => existsSync(base + suffix))) {
+			return base;
+		}
+	}
+	return null;
 }
 
 function resolveTarget(value: ExportTarget): string | null {
@@ -60,14 +83,15 @@ export function clineSourceAliases(): { find: RegExp; replacement: string }[] {
 		if (!name?.startsWith("@cline/")) continue;
 
 		for (const [subpath, value] of Object.entries(manifest.exports ?? {})) {
-			const source = distToSource(resolveTarget(value) ?? "");
+			const source = distToSource(pkgRoot, resolveTarget(value) ?? "");
 			if (!source) continue;
 			const specifier = subpath === "." ? name : `${name}/${subpath.slice(2)}`;
 			aliases.push({
 				find: new RegExp(
 					`^${specifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
 				),
-				replacement: join(pkgRoot, source),
+				// Already absolute — distToSource resolves against pkgRoot.
+				replacement: source,
 			});
 		}
 	}
