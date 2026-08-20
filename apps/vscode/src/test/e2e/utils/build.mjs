@@ -5,7 +5,6 @@ import { existsSync, rmSync } from "node:fs"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
 import { downloadAndUnzipVSCode, SilentReporter } from "@vscode/test-electron"
-import { execa } from "execa"
 import runtimeConfig from "../../../../test-runtime.config.json" with { type: "json" }
 
 const TIMEOUT_MINUTE = 5
@@ -28,20 +27,14 @@ async function installVSCode() {
 	throw new Error("VS Code executable not found after re-download")
 }
 
-async function installChromium() {
-	console.log("Installing Playwright Chromium...")
-	try {
-		await execa("npm", ["exec", "playwright", "install", "chromium"], {
-			stdio: "inherit",
-		})
-		console.log("Playwright Chromium installation completed successfully")
-	} catch (error) {
-		throw new Error(`Failed to install Playwright Chromium: ${error}`)
-	}
-}
-
+/**
+ * VS Code only. Playwright's Chromium was installed here on every run — 13s even
+ * on a cache hit — but nothing launches it: the suite drives the VS Code Electron
+ * binary through `_electron.launch()`, and the only reference to Chromium in the
+ * whole e2e tree was the line that installed it.
+ */
 async function installDependencies() {
-	return Promise.all([installVSCode(), installChromium()])
+	return installVSCode()
 }
 
 async function main() {
