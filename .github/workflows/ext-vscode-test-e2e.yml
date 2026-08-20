@@ -160,49 +160,8 @@ jobs:
                     echo 'matrix=[{"runner":"ubuntu"},{"runner":"windows"},{"runner":"macos"}]' >> "$GITHUB_OUTPUT"
                   fi
 
-    # Package the extension ONCE. This was inside every matrix leg via
-    # `test:e2e:build`, so each OS re-ran check-types, the webview vite build and
-    # lint from scratch: 128s of the 347s "Run E2E tests" step, duplicating work
-    # the ext-vscode-test and Quality Checks jobs do concurrently elsewhere.
-    package-vsix:
-        needs: detect-changes
-        if: needs.detect-changes.outputs.e2e == 'true'
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
-        defaults:
-            run:
-                working-directory: apps/vscode
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Setup Bun workspace
-              uses: ./.github/actions/setup-bun-workspace
-
-            - name: Build SDK packages
-              run: bun run build:sdk
-              working-directory: .
-
-            - name: Package extension
-              run: bun run test:e2e:build
-
-            # The vsix alone is not enough. The harness launches VS Code with BOTH
-            # --install-extension=dist/e2e.vsix AND --extensionDevelopmentPath=apps/vscode,
-            # and the dev path is what actually loads: VS Code reads package.json `main`
-            # (./dist/extension.js) plus webview-ui/build, which vsce package's prepublish
-            # produces alongside the vsix. Shipping only the vsix leaves the runner with
-            # no extension to activate.
-            - name: Upload built extension
-              uses: actions/upload-artifact@v4
-              with:
-                  name: e2e-extension
-                  path: |
-                      apps/vscode/dist
-                      apps/vscode/webview-ui/build
-                  retention-days: 1
-                  if-no-files-found: error
-
     e2e:
-        needs: [detect-changes, matrix_prep, package-vsix]
+        needs: [detect-changes, matrix_prep]
         if: needs.detect-changes.outputs.e2e == 'true'
         strategy:
             # A macOS flake must not cancel the ubuntu leg: that destroys the
@@ -288,8 +247,10 @@ jobs:
 
             # @cline/* are local workspace symlinks to source packages; build dist/
             # before building/packaging the extension for E2E.
-            # No `build:sdk` here: the extension arrives prebuilt in the vsix and
-            # the e2e specs import no @cline/* package, so the SDK dist is unused.
+            - name: Build SDK packages
+              working-directory: ${{ github.workspace }}
+              run: bun run build:sdk
+
 
             - name: Assert better-sqlite3 native binary present
               # Force bash: the Windows runner defaults to pwsh, which can't parse this
@@ -318,34 +279,13 @@ jobs:
               run: command -v xvfb-run
 
             # Run optimized E2E tests (eliminates redundant builds)
-            - name: Download built extension
-              uses: actions/download-artifact@v4
-              with:
-                  name: e2e-extension
-                  path: apps/vscode
-
-            - name: Assert the extension entrypoint arrived
-              # Force bash for the same reason as the better-sqlite3 check above:
-              # the Windows runner defaults to pwsh, which cannot parse this POSIX
-              # test, and Windows is in the matrix on main, dispatch and ci/e2e-full.
-              shell: bash
-              run: |
-                  for f in dist/extension.js dist/e2e.vsix webview-ui/build/index.html; do
-                    if [ ! -e "$f" ]; then
-                      echo "ERROR: $f missing from the e2e-extension artifact"
-                      echo "(VS Code loads it via --extensionDevelopmentPath; activation would fail)"
-                      exit 1
-                    fi
-                  done
-                  echo "extension entrypoint, vsix and webview build all present"
-
             - name: Run E2E tests - Linux
               if: matrix.runner == 'ubuntu'
-              run: xvfb-run -a bun run test:e2e:run
+              run: xvfb-run -a bun run test:e2e:optimal
 
             - name: Run E2E tests - Non-Linux
               if: matrix.runner != 'ubuntu'
-              run: bun run test:e2e:run
+              run: bun run test:e2e:optimal
 
             - uses: actions/upload-artifact@v4
               if: ${{ failure() }}
