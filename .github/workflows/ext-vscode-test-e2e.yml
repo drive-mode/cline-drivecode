@@ -325,6 +325,10 @@ jobs:
                   path: apps/vscode
 
             - name: Assert the extension entrypoint arrived
+              # Force bash for the same reason as the better-sqlite3 check above:
+              # the Windows runner defaults to pwsh, which cannot parse this POSIX
+              # test, and Windows is in the matrix on main, dispatch and ci/e2e-full.
+              shell: bash
               run: |
                   for f in dist/extension.js dist/e2e.vsix webview-ui/build/index.html; do
                     if [ ! -e "$f" ]; then
