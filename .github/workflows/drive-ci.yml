@@ -105,6 +105,11 @@ jobs:
                           - 'sdk/packages/drive/**'
                           - 'sdk/packages/shared/**'
                           - 'docs/drivecode/plans/cline-drivemode/examples/**'
+                          # The generated distribution is a copy of the kernel,
+                          # so the drift guard must run when the generator that
+                          # produces it moves, not only when the kernel does.
+                          - 'sdk/scripts/build-drive-kernel-bundle.ts'
+                          - 'sdk/scripts/check-drive-kernel-bundle.ts'
                           - 'package.json'
                           - 'bun.lock'
                           - '.github/workflows/drive-ci.yml'
@@ -194,6 +199,14 @@ jobs:
 
             - name: Test drive
               run: bun -F @cline/drive test
+
+            # @drive-mode/drive-kernel is a generated copy of this package.
+            # Regenerate, compile and load it here so a rename or removal in
+            # @cline/drive fails on the PR that makes it, rather than surviving
+            # to main and surfacing only at the next publish — which is exactly
+            # how the retired collaboration-harness fell behind.
+            - name: Verify the generated kernel distribution
+              run: bun run check:drive-kernel
 
     demo:
         needs: detect-changes

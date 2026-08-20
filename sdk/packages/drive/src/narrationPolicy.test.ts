@@ -1,6 +1,6 @@
 import type { DriveEvent } from "@cline/shared";
 import { describe, expect, it } from "vitest";
-import { narrate } from "./narrationPolicy";
+import { allowNarrationByRate, narrate } from "./narrationPolicy";
 
 const base = {
 	schemaVersion: 1 as const,
@@ -60,5 +60,24 @@ describe("narrate", () => {
 			text: "hi",
 		};
 		expect(narrate(message, "every-tool")).toBeNull();
+	});
+});
+
+describe("allowNarrationByRate", () => {
+	it("allows the first narration when none has happened", () => {
+		expect(allowNarrationByRate(null, 0)).toBe(true);
+	});
+
+	it("suppresses a narration inside the window", () => {
+		expect(allowNarrationByRate(1_000, 2_999)).toBe(false);
+	});
+
+	it("allows once the window has elapsed", () => {
+		expect(allowNarrationByRate(1_000, 3_000)).toBe(true);
+	});
+
+	it("honours an explicit window", () => {
+		expect(allowNarrationByRate(1_000, 1_500, 250)).toBe(true);
+		expect(allowNarrationByRate(1_000, 1_100, 250)).toBe(false);
 	});
 });

@@ -91,3 +91,15 @@ export function narrate(
 		relatedWorkEventId: event.track === "work" ? event.id : undefined,
 	};
 }
+
+/** Rate-limit helper: allow narration if the last one was older than windowMs. */
+export function allowNarrationByRate(
+	lastNarrationAtMs: number | null,
+	nowMs: number,
+	windowMs = 2_000,
+): boolean {
+	if (lastNarrationAtMs == null) {
+		return true;
+	}
+	return nowMs - lastNarrationAtMs >= windowMs;
+}
