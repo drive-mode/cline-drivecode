@@ -30,6 +30,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-08 — Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (Proposed).
 - 2026-08-11 — ADR-0036 next-action triad + PRD 11 + research 29 (Proposed); closes the 21-operator-experience gap and answers research 16 open question 3.
 - 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
+- 2026-08-20 — ADR-0038 standard extension boundary (Proposed); answers D1b — ports the call-session lifecycle, `control.invite`, `control.interrupt_ack` and `profilesByParticipantId`; keeps `work.generic` and `packId` out behind a typed vendor-extension envelope.
 
 ---
 
@@ -265,3 +266,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 
 - 2026-08-16 — Proposed (sensing only inside a hotkey-bracketed window over a closed fact list; sensor is a host not a daemon; forbidden-key guard goes union-wide; consent is a per-session arm + visible indicator + non-empty denylist + audit view; REDO is a stack operation, not a fourth predicted verb; accept gated on the privacy machinery rather than on sensing).
 - 2026-08-17 — Decision 7 re-pointed after ADR-0036 Open 6 was answered: the gate is `prepareToolExecution` in `@cline/agents`, the resolution is the canonical `resolveToolPolicy` in `@cline/shared` (private duplicate deleted by the next-action-triad initiative). Open 8 added to record constraint C2 as inherited and undecided here.
+
+## ADR-0038 · Standard extension boundary
+
+- 2026-08-20 — Proposed (answers D1b by splitting the seven blocking protocol elements rather than deciding them as one list: four are ported because the kernel already half-carries the concept, one is a rename in `drivemode-mcp` because the standard's spelling wins, and two are refused because they are product concepts — with a typed vendor-extension envelope added so refusing them does not leave `drivemode-mcp` unable to publish pack work; an extension may never be load-bearing for interop).

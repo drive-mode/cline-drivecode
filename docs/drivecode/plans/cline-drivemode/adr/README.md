@@ -55,6 +55,7 @@ See ADR-0000 § Change control.
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | [DRV-LEAVE-END](../features/DRV-LEAVE-END.md) |
 | [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | [DRV-GATES](../features/DRV-GATES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md) |
 | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) | Desktop sensing is invocation-scoped, or it does not happen | **Proposed** (amends ADR-0036) | [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-EVENTS](../features/DRV-EVENTS.md) |
+| [ADR-0038](ADR-0038-standard-extension-boundary.md) | The standard defines how to extend, not the extensions | **Proposed** (answers D1b) | [DRV-EVENTS](../features/DRV-EVENTS.md) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 

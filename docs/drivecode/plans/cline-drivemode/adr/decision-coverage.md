@@ -776,6 +776,7 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) | Paper |
 | Operator next-action layer (+ first training-label corpus grant) | [ADR-0036](ADR-0036-next-action-triad.md) | Paper |
 | Desktop signal source + sensing consent surface | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) (amends ADR-0036 1/12) | Paper |
+| Standard-vs-product protocol boundary + extension mechanism | [ADR-0038](ADR-0038-standard-extension-boundary.md) (answers D1b) | Paper; D2 still gates the repoint |
 
 ### Still Open (product gaps — not holes in the ADR sense, but undecided product detail)
 

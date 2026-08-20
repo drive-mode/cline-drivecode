@@ -204,7 +204,19 @@ Ordered so each step removes duplication permanently rather than relocating it.
   crosses the boundary — the two kernel schemas `drivemode-mcp` imports are
   `.parse()`d internally and never handed to the MCP server. What does block the
   repoint is the protocol divergence inventoried in finding 1.
-- **D1b — do the nine harness-only protocol elements belong in the standard?**
+- **D1b — proposed 2026-08-20:
+  [ADR-0038](../../adr/ADR-0038-standard-extension-boundary.md) splits the list
+  rather than answering it as one.** Ported: the call-session lifecycle,
+  `control.invite`, `control.interrupt_ack`, and `profilesByParticipantId` —
+  each completes a concept the kernel already half-carries, the last of them a
+  port left unfinished when the `runtimeBadge` type landed without the field
+  that holds it. Renamed in `drivemode-mcp`, not the kernel: `work.plan` and
+  `work.test` become `work.plan_step` and `work.test_result`. Refused:
+  `work.generic` and `packId`, behind a new typed vendor-extension envelope so
+  the refusal does not leave `drivemode-mcp` unable to publish pack work. The
+  ADR is **Proposed**, and D2 still gates the repoint regardless.
+  Original framing follows.
+
   Opened 2026-08-20 by the attempted repoint. This is the ownership question of
   this plan applied to concrete symbols: the session lifecycle, `control.invite`
   and `control.interrupt_ack` complete concepts the kernel already half-carries
