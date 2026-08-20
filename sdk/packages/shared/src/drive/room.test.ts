@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	AgentParticipantSchema,
+	AgentRuntimeBadgeSchema,
 	AgentTitleAuthorizationRequestSchema,
 	AgentTitleGrantSchema,
 	AgentTitleSchema,
@@ -153,6 +154,36 @@ describe("AgentParticipantSchema identity + preset fields", () => {
 	it("still rejects unknown keys on the strict participant union", () => {
 		expect(() =>
 			parseParticipant({ ...legacyAgent, systemPrompt: "leak" }),
+		).toThrow();
+	});
+});
+
+describe("AgentRuntimeBadgeSchema", () => {
+	it("accepts an allowlisted family and execution location", () => {
+		expect(
+			AgentRuntimeBadgeSchema.parse({
+				family: "cline",
+				executionLocation: "host",
+			}),
+		).toEqual({ family: "cline", executionLocation: "host" });
+	});
+
+	it("rejects a family outside the allowlist", () => {
+		expect(() =>
+			AgentRuntimeBadgeSchema.parse({
+				family: "gpt",
+				executionLocation: "host",
+			}),
+		).toThrow();
+	});
+
+	it("stays sanitized — extra runtime detail is rejected", () => {
+		expect(() =>
+			AgentRuntimeBadgeSchema.parse({
+				family: "claude",
+				executionLocation: "managed",
+				modelId: "some-model",
+			}),
 		).toThrow();
 	});
 });

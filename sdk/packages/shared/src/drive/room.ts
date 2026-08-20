@@ -32,6 +32,20 @@ export const DriveAgentRoleSchema = z.enum([
 ]);
 export type DriveAgentRole = z.infer<typeof DriveAgentRoleSchema>;
 
+/**
+ * Sanitized runtime identity (docs/drivecode/README.md — persona, runtime
+ * badge, Agent Title, and activity stay separate). Family is deliberately
+ * allowlisted and coarse: never add model ids, versions, endpoints, keys,
+ * prompts, or tool details.
+ */
+export const AgentRuntimeBadgeSchema = z
+	.object({
+		family: z.enum(["claude", "codex", "cline", "apple", "other"]),
+		executionLocation: z.enum(["host", "device", "managed"]),
+	})
+	.strict();
+export type AgentRuntimeBadge = z.infer<typeof AgentRuntimeBadgeSchema>;
+
 export const ParticipantStatusSchema = z.enum([
 	"idle",
 	"working",
