@@ -146,11 +146,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            # Linux-only jobs: skip Bun install cache (restore was ~20s vs ~15s cold install).
             - name: Setup Bun workspace
               uses: ./.github/actions/setup-bun-workspace
-              with:
-                  cache: "false"
 
             - name: Build SDK packages
               run: bun run build:sdk
@@ -180,11 +177,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            # Linux-only jobs: skip Bun install cache (restore was ~20s vs ~15s cold install).
             - name: Setup Bun workspace
               uses: ./.github/actions/setup-bun-workspace
-              with:
-                  cache: "false"
 
             - name: Build SDK packages
               run: bun run build:sdk
@@ -203,11 +197,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            # Linux-only jobs: skip Bun install cache (restore was ~20s vs ~15s cold install).
             - name: Setup Bun workspace
               uses: ./.github/actions/setup-bun-workspace
-              with:
-                  cache: "false"
 
             - name: Build SDK packages
               run: bun run build:sdk
@@ -226,11 +217,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            # Linux-only jobs: skip Bun install cache (restore was ~20s vs ~15s cold install).
             - name: Setup Bun workspace
               uses: ./.github/actions/setup-bun-workspace
-              with:
-                  cache: "false"
 
             - name: Build SDK packages
               run: bun run build:sdk
