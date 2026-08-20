@@ -17,11 +17,13 @@
 import { execFileSync } from "node:child_process";
 import {
 	cpSync,
+	existsSync,
 	mkdirSync,
 	readdirSync,
 	readFileSync,
 	rmSync,
 	statSync,
+	symlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -138,21 +140,55 @@ function rewriteSharedImports(source: string, outFile: string): string {
 	return source.replaceAll('"@cline/shared"', `"${rel}"`);
 }
 
+/**
+ * Give every relative specifier an explicit `.js` extension.
+ *
+ * The monorepo compiles through a bundler, so its sources import
+ * extensionless (`from "./room"`). Node's ESM resolver does no extension
+ * search, so copying those verbatim yields a `dist` that typechecks and still
+ * throws ERR_MODULE_NOT_FOUND on `import` — the distribution would be loadable
+ * only under Bun, which is the one consumer it is not for. Specifiers are
+ * resolved against the SOURCE tree, which is complete, so a directory import
+ * becomes `/index.js`.
+ */
+function addJsExtensions(source: string, srcFile: string): string {
+	return source.replace(
+		/(from\s+")(\.[^"]*)(")/g,
+		(whole: string, prefix: string, spec: string, suffix: string) => {
+			if (spec.endsWith(".js")) {
+				return whole;
+			}
+			const base = resolve(dirname(srcFile), spec);
+			if (existsSync(`${base}.ts`)) {
+				return `${prefix}${spec}.js${suffix}`;
+			}
+			if (existsSync(join(base, "index.ts"))) {
+				return `${prefix}${spec}/index.js${suffix}`;
+			}
+			throw new Error(
+				`cannot resolve "${spec}" from ${relative(repoRoot, srcFile)} — ` +
+					"the kernel closure is incomplete or the source moved",
+			);
+		},
+	);
+}
+
 function copyTree(
 	from: string,
 	toSubdir: string,
-	rewrite: boolean,
+	rewriteShared: boolean,
 	explicit?: string[],
 ): number {
 	const files = explicit ?? listTsFiles(from);
 	for (const file of files) {
 		const outFile = join(outRoot, "src", toSubdir, relative(from, file));
 		mkdirSync(dirname(outFile), { recursive: true });
-		const source = readFileSync(file, "utf8");
-		writeFileSync(
-			outFile,
-			rewrite ? rewriteSharedImports(source, outFile) : source,
-		);
+		let source = readFileSync(file, "utf8");
+		if (rewriteShared) {
+			// Runs first: it emits `../protocol/index.js`, already extended.
+			source = rewriteSharedImports(source, outFile);
+		}
+		writeFileSync(outFile, addJsExtensions(source, file));
 	}
 	return files.length;
 }
@@ -195,6 +231,77 @@ export {
 `;
 }
 
+/**
+ * Refuse to emit a bundle whose closure reaches a package we do not declare.
+ *
+ * The manifest's dependency list is written by this script, so checking it
+ * against itself proves nothing — the question is what the copied sources
+ * actually import. Runs before `tsc`, whose module-not-found errors would
+ * bury the cause under the rest of the type graph collapsing.
+ */
+function assertDeclaredDepsOnly(): void {
+	const imported = new Set<string>();
+	for (const file of listTsFiles(join(outRoot, "src"))) {
+		for (const match of readFileSync(file, "utf8").matchAll(
+			/from\s+"([^."][^"]*)"/g,
+		)) {
+			imported.add(match[1]);
+		}
+	}
+	const undeclared = [...imported].filter(
+		(spec) => spec !== "zod" && !spec.startsWith("node:"),
+	);
+	if (undeclared.length > 0) {
+		throw new Error(
+			`kernel closure imports undeclared packages: ${undeclared.join(", ")}. ` +
+				"Either drop the module from the closure or declare the dependency — " +
+				"a second runtime dependency makes the distribution harder to adopt.",
+		);
+	}
+}
+
+/** Locate an installed package. Bun hoists unevenly across the workspace. */
+function findModule(spec: string): string {
+	const candidates = [
+		join(repoRoot, "node_modules", spec),
+		join(repoRoot, "sdk/node_modules", spec),
+		join(repoRoot, "sdk/packages/shared/node_modules", spec),
+		join(repoRoot, "sdk/packages/drive/node_modules", spec),
+	];
+	for (const candidate of candidates) {
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+	throw new Error(`cannot locate ${spec} — run \`bun install\` first`);
+}
+
+/**
+ * Compile the distribution.
+ *
+ * `main`, `types` and the `import`/`default` conditions all point at `dist/`,
+ * so shipping without it leaves a manifest promising entrypoints that are not
+ * there: only Bun's `src` condition resolves, and every Node or TypeScript
+ * consumer — the ones this package exists for — gets a missing entrypoint.
+ * Building here means the generator cannot emit that manifest without also
+ * making it true.
+ */
+function buildBundle(): void {
+	// `@types/node` would resolve by walking up to the repo root, but zod sits
+	// under `@cline/shared`, off that path. Link both so the tsconfig we ship
+	// is the same one we compile with, rather than a build-only variant.
+	const modules = join(outRoot, "node_modules");
+	mkdirSync(join(modules, "@types"), { recursive: true });
+	symlinkSync(findModule("zod"), join(modules, "zod"), "dir");
+	symlinkSync(findModule("@types/node"), join(modules, "@types/node"), "dir");
+
+	execFileSync(
+		join(repoRoot, "node_modules/.bin/tsc"),
+		["-p", "tsconfig.json"],
+		{ cwd: outRoot, stdio: "inherit" },
+	);
+}
+
 function sourceCommit(): string {
 	try {
 		return execFileSync("git", ["rev-parse", "HEAD"], {
@@ -215,6 +322,8 @@ function main(): void {
 
 	writeFileSync(join(outRoot, "src/index.ts"), renderIndex());
 	writeFileSync(join(outRoot, "src/kernel/index.ts"), renderKernelIndex());
+
+	assertDeclaredDepsOnly();
 
 	const driveManifest = JSON.parse(
 		readFileSync(join(repoRoot, "sdk/packages/drive/package.json"), "utf8"),
@@ -249,7 +358,9 @@ function main(): void {
 						default: "./dist/index.js",
 					},
 				},
-				files: ["dist", "src"],
+				// `tsconfig.json` ships so `build` is runnable from the tarball.
+				files: ["dist", "src", "tsconfig.json"],
+				scripts: { build: "tsc -p tsconfig.json" },
 				dependencies: { zod },
 				/**
 				 * `protocol/paths.ts` uses the `node:path` builtin, so the
@@ -296,8 +407,14 @@ Source commit: \`${sourceCommit()}\`
 			{
 				compilerOptions: {
 					target: "ES2022",
-					module: "ESNext",
-					moduleResolution: "bundler",
+					/**
+					 * NodeNext, not bundler: it makes tsc reject any relative
+					 * import without an extension, so the emitted `dist` is
+					 * checked to be Node-loadable at build time instead of
+					 * failing at a consumer's first `import`.
+					 */
+					module: "NodeNext",
+					moduleResolution: "NodeNext",
 					strict: true,
 					declaration: true,
 					outDir: "dist",
@@ -313,6 +430,8 @@ Source commit: \`${sourceCommit()}\`
 
 	cpSync(join(repoRoot, "LICENSE"), join(outRoot, "LICENSE"));
 
+	buildBundle();
+
 	console.log(
 		`${PACKAGE_NAME} bundle written to ${relative(repoRoot, outRoot)}`,
 	);
@@ -322,6 +441,7 @@ Source commit: \`${sourceCommit()}\`
 		`  surface:          ${SURFACE.protocol.length + SURFACE.kernel.length} exports`,
 	);
 	console.log(`  runtime deps:     zod ${zod}`);
+	console.log("  compiled:         dist/ (js + d.ts)");
 }
 
 main();

@@ -22,14 +22,22 @@ function fail(message: string): never {
 }
 
 /** Regenerate so the check never passes against a stale artifact. */
-execFileSync(
-	"bun",
-	[join(repoRoot, "sdk/scripts/build-drive-kernel-bundle.ts")],
-	{
-		cwd: repoRoot,
-		stdio: "pipe",
-	},
-);
+try {
+	execFileSync(
+		"bun",
+		[join(repoRoot, "sdk/scripts/build-drive-kernel-bundle.ts")],
+		{
+			cwd: repoRoot,
+			stdio: "pipe",
+		},
+	);
+} catch (error) {
+	// The generator enforces the closure's own invariants (undeclared imports,
+	// unresolvable specifiers, a failing compile). Surface what it said rather
+	// than a stack trace pointing at this line.
+	const stderr = (error as { stderr?: Buffer }).stderr?.toString().trim();
+	fail(`generator failed —\n${stderr || String(error)}`);
+}
 
 const indexPath = join(bundleRoot, "src/index.ts");
 if (!existsSync(indexPath)) {
@@ -88,7 +96,56 @@ if (missing.length > 0) {
 
 const manifest = JSON.parse(
 	readFileSync(join(bundleRoot, "package.json"), "utf8"),
-) as { name: string; dependencies: Record<string, string> };
+) as {
+	name: string;
+	main?: string;
+	types?: string;
+	exports?: Record<string, Record<string, string>>;
+	dependencies: Record<string, string>;
+};
+
+/**
+ * Every entrypoint the manifest advertises must exist. Bun resolves the `src`
+ * condition, so a missing `dist` leaves the package working for the one
+ * consumer it is not aimed at while Node and TypeScript — the consumers it
+ * exists for — get a missing entrypoint.
+ */
+const entryPoints = [
+	manifest.main,
+	manifest.types,
+	...Object.values(manifest.exports?.["."] ?? {}),
+].filter((p): p is string => typeof p === "string");
+
+const absentEntries = [...new Set(entryPoints)].filter(
+	(p) => !existsSync(join(bundleRoot, p)),
+);
+if (absentEntries.length > 0) {
+	fail(
+		`manifest advertises entrypoints the build did not emit: ${absentEntries.join(", ")}. ` +
+			"Run the generator, which compiles `dist` — do not hand-edit the manifest.",
+	);
+}
+
+/**
+ * Load the COMPILED output the way an outside consumer would. Typechecking
+ * proves the sources are sound; only an actual Node `import` proves the
+ * emitted JavaScript resolves, which is where extensionless specifiers from
+ * the bundler-built monorepo would surface.
+ */
+const built = (await import(join(bundleRoot, "dist/index.js"))) as Record<
+	string,
+	unknown
+>;
+const unloadable = declared.filter(
+	(symbol) =>
+		!source.includes(`\ttype ${symbol},`) && built[symbol] === undefined,
+);
+if (unloadable.length > 0) {
+	fail(
+		`compiled dist does not export: ${unloadable.join(", ")}. ` +
+			"The distribution is not loadable as packaged.",
+	);
+}
 
 const deps = Object.keys(manifest.dependencies);
 if (deps.length !== 1 || deps[0] !== "zod") {
@@ -99,11 +156,15 @@ if (deps.length !== 1 || deps[0] !== "zod") {
 	);
 }
 
+// The undeclared-dependency scan runs inside the generator, which this script
+// re-invokes above — it must fail before `tsc`, whose module-not-found errors
+// bury the cause.
+
 if (manifest.name.startsWith("@cline/")) {
 	fail("distribution must not publish under the upstream @cline/* scope");
 }
 
 console.log(
 	`drive-kernel bundle OK — ${declared.length} declared exports, ` +
-		`runtime deps: ${deps.join(", ")}`,
+		`compiled dist loads under Node, runtime deps: ${deps.join(", ")}`,
 );
