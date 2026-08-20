@@ -183,7 +183,14 @@ jobs:
                   bun-version-file: package.json
 
             # Cache Bun's global install cache - keyed on the authoritative root bun.lock.
+            #
+            # Windows only, matching .github/actions/setup-bun-workspace. This job is
+            # where the two costs are visible as separate steps, and the restore loses
+            # badly: 43s (ubuntu) / 52s (macOS) to avoid an install measured at 8s and
+            # 14s. This step predates the composite and bypasses it, so it needs the
+            # same guard rather than inheriting one.
             - name: Cache Bun install cache
+              if: ${{ runner.os == 'Windows' }}
               uses: actions/cache@v4
               id: bun-cache
               with:
