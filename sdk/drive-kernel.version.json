@@ -1,0 +1,4 @@
+{
+	"$comment": "Release version for the generated @drive-mode/drive-kernel distribution. Owned here, NOT inherited from @cline/drive: sdk/scripts/version.ts rewrites every sdk/packages/* version to one value during an SDK release, so the kernel bundle had no version it could move on its own and every kernel change between SDK releases collided with an already-published version. Bump this at RELEASE time, not per PR — batching several kernel changes into one version is the point. drive-kernel-publish.yml fails rather than skipping if this version is already on the registry.",
+	"version": "0.0.75"
+}

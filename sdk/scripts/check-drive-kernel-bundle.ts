@@ -107,11 +107,35 @@ const manifest = JSON.parse(
 	readFileSync(join(bundleRoot, "package.json"), "utf8"),
 ) as {
 	name: string;
+	version: string;
 	main?: string;
 	types?: string;
 	exports?: Record<string, Record<string, string>>;
 	dependencies: Record<string, string>;
 };
+
+/**
+ * The distribution owns its version (`sdk/drive-kernel.version.json`) rather
+ * than inheriting `@cline/drive`'s. That inheritance was a footgun: SDK
+ * releases rewrite every `sdk/packages/*` version at once, so a kernel change
+ * between releases regenerated at a version already on the registry and the
+ * publish workflow skipped it — succeeding while shipping nothing. Assert the
+ * wiring here so re-pointing `version` at any other manifest fails on the PR.
+ */
+const declaredVersion = (
+	JSON.parse(
+		readFileSync(join(repoRoot, "sdk/drive-kernel.version.json"), "utf8"),
+	) as { version?: unknown }
+).version;
+if (typeof declaredVersion !== "string") {
+	fail("sdk/drive-kernel.version.json carries no `version` string");
+}
+if (manifest.version !== declaredVersion) {
+	fail(
+		`emitted version ${manifest.version} does not match sdk/drive-kernel.version.json (${declaredVersion}). ` +
+			"The generator must read that file — do not inherit a version from another package.",
+	);
+}
 
 /**
  * Every entrypoint the manifest advertises must exist. Bun resolves the `src`
@@ -174,6 +198,6 @@ if (manifest.name.startsWith("@cline/")) {
 }
 
 console.log(
-	`drive-kernel bundle OK — ${declared.length} declared exports, ` +
+	`drive-kernel bundle OK — v${manifest.version}, ${declared.length} declared exports, ` +
 		`compiled dist loads under Node, runtime deps: ${deps.join(", ")}`,
 );

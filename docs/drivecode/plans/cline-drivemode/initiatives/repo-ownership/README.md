@@ -198,6 +198,15 @@ Ordered so each step removes duplication permanently rather than relocating it.
   the way the harness did. Retiring the *repository* stays compatible with
   publishing a *generated artifact* from the canonical source.
 
+  The distribution owns its version in `sdk/drive-kernel.version.json`. It first
+  shipped inheriting `@cline/drive`'s, which was wrong: `sdk/scripts/version.ts`
+  rewrites every `sdk/packages/*` version to one value during an SDK release, so
+  the bundle had no version it could move between releases and any kernel change
+  regenerated at an already-published number. The publish workflow skipped and
+  stayed green — a run that reported success while shipping nothing. Bump that
+  file to publish a change; a real publish at a version already on the registry
+  now fails.
+
   Two consequences worth recording. The `zod` major mismatch turned out not to
   matter: `drivemode-mcp` pins `zod` 3 for `@modelcontextprotocol/sdk` while the
   kernel needs `zod` 4, and both install side by side because only plain data

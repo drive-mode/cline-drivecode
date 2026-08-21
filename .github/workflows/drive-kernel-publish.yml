@@ -9,6 +9,11 @@
 # than shipping a stale copy, which is how the retired collaboration-harness
 # drifted.
 #
+# The version comes from `sdk/drive-kernel.version.json`, which the
+# distribution owns. It used to be inherited from @cline/drive, but SDK
+# releases rewrite every sdk/packages/* version at once, so the bundle had no
+# version it could move between releases. Bump that file to publish a change.
+#
 # Unlike sdk-publish.yml this targets GitHub Packages, not npmjs.org: the
 # @drive-mode scope is private to the org, so no npm trusted publishing / OIDC
 # is involved and the built-in GITHUB_TOKEN carries `packages: write`.
@@ -78,22 +83,31 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Prepared ${NAME}@${VERSION}"
 
-      # The version is inherited from @cline/drive, so regenerating after a
-      # kernel change without a version bump would collide. Detect it here and
-      # say so, rather than failing inside `npm publish` with a bare 409.
+      # A real publish of a version already on the registry publishes NOTHING,
+      # so it FAILS here rather than skipping. The skip is the footgun this
+      # replaces: the job stayed green, the summary said "skipped", and a
+      # maintainer reading a green run reasonably concluded the change shipped.
+      # A dry run only warns — packing an already-published version to verify
+      # the tarball is legitimate.
       - name: Check the version is unpublished
         id: exists
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NAME: ${{ steps.pkg.outputs.name }}
           VERSION: ${{ steps.pkg.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
-            echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::${NAME}@${VERSION} is already published. Bump @cline/drive's version to publish a changed kernel."
-          else
+          if ! npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
             echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "published=true" >> "$GITHUB_OUTPUT"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "::warning::${NAME}@${VERSION} is already published — a real run at this version would publish nothing and fail."
+            exit 0
+          fi
+          echo "::error::${NAME}@${VERSION} is already published, so this run would publish nothing. Bump \"version\" in sdk/drive-kernel.version.json and re-dispatch. If the kernel has not changed since that version, there is nothing to publish."
+          exit 1
 
       - name: Pack (dry run)
         if: inputs.dry_run
@@ -102,8 +116,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm publish --dry-run
 
+      # No `published == 'false'` guard: the step above already failed the job
+      # in that case. A second condition here would silently re-introduce the
+      # skip if that step were ever relaxed.
       - name: Publish
-        if: ${{ !inputs.dry_run && steps.exists.outputs.published == 'false' }}
+        if: ${{ !inputs.dry_run }}
         working-directory: sdk/dist-bundle/drive-kernel
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -120,11 +137,11 @@ jobs:
             echo "### ${NAME}@${VERSION}"
             echo ""
             echo "- source commit: \`${GITHUB_SHA}\`"
-            if [ "$DRY_RUN" = "true" ]; then
-              echo "- result: **dry run** — packed and verified, nothing published"
-            elif [ "$ALREADY" = "true" ]; then
-              echo "- result: **skipped** — this version is already on the registry"
-            else
+            if [ "$DRY_RUN" != "true" ]; then
               echo "- result: **published** to GitHub Packages"
+            elif [ "$ALREADY" = "true" ]; then
+              echo "- result: **dry run** — packed and verified, but this version is ALREADY on the registry, so a real run would fail. Bump \`sdk/drive-kernel.version.json\` first."
+            else
+              echo "- result: **dry run** — packed and verified, nothing published"
             fi
           } | tee -a "$GITHUB_STEP_SUMMARY"

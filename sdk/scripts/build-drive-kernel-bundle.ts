@@ -311,6 +311,37 @@ function buildBundle(): void {
 	}
 }
 
+/**
+ * Version for the distribution, read from `sdk/drive-kernel.version.json`.
+ *
+ * NOT inherited from `@cline/drive`, which it used to be. Every
+ * `sdk/packages/*` version is rewritten to a single value by
+ * `sdk/scripts/version.ts` during an SDK release, so the bundle had no version
+ * it could move on its own: any kernel change between SDK releases regenerated
+ * at a version already on the registry, and the publish workflow skipped —
+ * a green run that shipped nothing.
+ *
+ * Bump the file at RELEASE time. Deliberately NOT a per-PR obligation and
+ * deliberately not fingerprint-checked: batching several kernel changes into
+ * one version is the point, and a per-PR gate would conflict on every branch.
+ * `drive-kernel-publish.yml` is what refuses to publish an unbumped version.
+ */
+function readBundleVersion(): string {
+	const file = join(repoRoot, "sdk/drive-kernel.version.json");
+	const { version } = JSON.parse(readFileSync(file, "utf8")) as {
+		version?: unknown;
+	};
+	if (
+		typeof version !== "string" ||
+		!/^\d+\.\d+\.\d+(?:-[\w.]+)?$/.test(version)
+	) {
+		throw new Error(
+			`sdk/drive-kernel.version.json must carry a semver \`version\` string, found: ${JSON.stringify(version)}`,
+		);
+	}
+	return version;
+}
+
 function sourceCommit(): string {
 	try {
 		return execFileSync("git", ["rev-parse", "HEAD"], {
@@ -337,6 +368,7 @@ function main(): void {
 	const driveManifest = JSON.parse(
 		readFileSync(join(repoRoot, "sdk/packages/drive/package.json"), "utf8"),
 	) as { version: string; dependencies?: Record<string, string> };
+	const bundleVersion = readBundleVersion();
 	const sharedManifest = JSON.parse(
 		readFileSync(join(repoRoot, "sdk/packages/shared/package.json"), "utf8"),
 	) as { dependencies?: Record<string, string> };
@@ -352,7 +384,7 @@ function main(): void {
 		`${JSON.stringify(
 			{
 				name: PACKAGE_NAME,
-				version: driveManifest.version,
+				version: bundleVersion,
 				description:
 					"Generated distribution of the Drive room kernel and protocol schemas.",
 				license: "Apache-2.0",
@@ -391,6 +423,11 @@ function main(): void {
 					generated: true,
 					sourceRepo: "drive-mode/cline-drivecode",
 					sourceCommit: sourceCommit(),
+					// The versions are deliberately independent (see
+					// `readBundleVersion`), so record which @cline/drive this
+					// copy came from. It used to be implied by an equal version
+					// number; now it is stated.
+					clineDriveVersion: driveManifest.version,
 				},
 			},
 			null,
