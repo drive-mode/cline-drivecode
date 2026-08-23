@@ -611,4 +611,36 @@ describe("reduceRoom", () => {
 		);
 		expect(testCard?.summary).toBe("3 pass");
 	});
+
+	it("folds work.generic onto an other card and leaves invite/session log-carried", () => {
+		let room = createEmptyRoomSnapshot({ roomId: "room_1", createdAt: at });
+		room = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "g1",
+			roomId: "room_1",
+			at,
+			type: "work.generic",
+			track: "work",
+			packId: "tasks",
+			kind: "work.task.created",
+			title: "Ship kernel",
+		});
+		expect(projectStage(room).cards.at(-1)).toMatchObject({
+			category: "other",
+			title: "Ship kernel",
+		});
+		const afterInvite = reduceRoom(room, {
+			schemaVersion: 1,
+			id: "inv1",
+			roomId: "room_1",
+			at,
+			type: "control.invite",
+			track: "control",
+			inviterId: "user_1",
+			inviteeId: "user_2",
+		});
+		expect(afterInvite.participants).toEqual(room.participants);
+		expect(afterInvite.stage).toEqual(room.stage);
+		expect(afterInvite.appliedEventIds).toContain("inv1");
+	});
 });

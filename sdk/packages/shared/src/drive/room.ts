@@ -168,6 +168,22 @@ export const StageCardSchema = z
 	.strict();
 export type StageCard = z.infer<typeof StageCardSchema>;
 
+/**
+ * Appearance overlay keyed on a seated participant. Distinct from the durable
+ * facet `AgentProfile` (identity spine). Carries the sanitized runtime badge
+ * already in this module so a snapshot can reach it.
+ */
+export const RoomParticipantProfileSchema = z
+	.object({
+		participantId: z.string().min(1),
+		displayName: z.string().min(1).optional(),
+		/** Appearance token only — never prompts/tools/models. */
+		ink: z.string().min(1).optional(),
+		runtimeBadge: AgentRuntimeBadgeSchema.optional(),
+	})
+	.strict();
+export type RoomParticipantProfile = z.infer<typeof RoomParticipantProfileSchema>;
+
 export const AgentTitleSchema = z.enum([
 	"presenter",
 	"researcher",
@@ -291,6 +307,9 @@ export const RoomSnapshotSchema = z
 		addressSet: AddressSetSchema.default(EVERYONE_ADDRESS),
 		muteByParticipantId: z.record(z.string(), z.boolean()).default({}),
 		raisedHandByParticipantId: z.record(z.string(), z.boolean()).default({}),
+		profilesByParticipantId: z
+			.record(z.string(), RoomParticipantProfileSchema)
+			.default({}),
 		/** Ring of applied event ids for idempotent reduce. */
 		appliedEventIds: z.array(z.string().min(1)).default([]),
 	})

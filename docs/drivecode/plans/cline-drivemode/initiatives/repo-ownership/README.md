@@ -1,6 +1,7 @@
 # repo-ownership · one concept, one owner
 
-**Status:** active (plan) — no code has been moved
+**Status:** active — D1/D1a/D1b/D2 decided; MCP bundle cutover and harness
+archive follow this kernel surface
 **Purpose:** for the Cline Drive Mode line specifically, name a single owner for
 each shared concept and sequence the deduplication. Delivery status remains
 authoritative in
@@ -154,10 +155,10 @@ become a second definition site.
 | Agent Title vocabulary | `cline-drivecode` | MCP, iOS (generated bindings) |
 | Cline host implementation | `cline-drivecode` (product tier) | — |
 | MCP tool surface + curated packs | `drivemode-mcp` | agent hosts |
-| Room-state authority | **undecided** — see D2 | — |
+| Room-state authority | Cline Hub ([ADR-0057](../../adr/ADR-0057-room-state-authority.md)); MCP writer is no-Hub profile | iOS preview `/rpc` |
 | Native client | `drive-ios` | — |
 | Marketing surface | `site` | — |
-| Standalone kernel distribution | **undecided** — see D1 | — |
+| Standalone kernel distribution | generated `@drive-mode/drive-kernel` (D1a) | MCP, future Swift bindings |
 
 ## Sequence
 
@@ -185,9 +186,7 @@ Ordered so each step removes duplication permanently rather than relocating it.
 
 - **D1 — resolved 2026-08-19: retire `collaboration-harness` and fold it back
   into `cline-drivecode`.** `@cline/drive` is the single kernel. The
-  harness-only *exported symbols* have been reconciled (see finding 1). The
-  canonical kernel is **not** yet a superset at the protocol level: nine event
-  types and two fields remain harness-only, inventoried in finding 1.
+  harness-only *exported symbols* have been reconciled (see finding 1).
 - **D1a — resolved 2026-08-20: a generated bundle, published under a scope the
   organization owns.** `@drive-mode/drive-kernel` is emitted by
   `sdk/scripts/build-drive-kernel-bundle.ts` as the transitive closure of the
@@ -202,19 +201,15 @@ Ordered so each step removes duplication permanently rather than relocating it.
   matter: `drivemode-mcp` pins `zod` 3 for `@modelcontextprotocol/sdk` while the
   kernel needs `zod` 4, and both install side by side because only plain data
   crosses the boundary — the two kernel schemas `drivemode-mcp` imports are
-  `.parse()`d internally and never handed to the MCP server. What does block the
-  repoint is the protocol divergence inventoried in finding 1.
-- **D1b — do the nine harness-only protocol elements belong in the standard?**
-  Opened 2026-08-20 by the attempted repoint. This is the ownership question of
-  this plan applied to concrete symbols: the session lifecycle, `control.invite`
-  and `control.interrupt_ack` complete concepts the kernel already half-carries
-  and read as standard; `work.plan`/`work.test` need reconciling against the
-  kernel's `work.plan_step`/`work.test_result`; `packId` is pack attribution and
-  reads as product. Until this is answered, `drivemode-mcp` cannot compile
-  against the kernel and the harness cannot be archived.
-- **D2 — who owns room-state authority when a hub and an MCP writer are both
-  live?** Today both repositories claim it in prose and the MCP writer holds real
-  state. This needs an ADR answer, not a convention.
+  `.parse()`d internally and never handed to the MCP server.
+- **D1b — resolved 2026-08-23: protocol superset recorded in
+  [ADR-0056](../../adr/ADR-0056-d1b-kernel-protocol-superset.md).** Invite,
+  interrupt_ack, session lifecycle, `work.generic`, and
+  `profilesByParticipantId` join the standard. MCP maps `work.plan` /
+  `work.test` onto kernel names. `packId` stays on `work.generic` only.
+- **D2 — resolved 2026-08-23:
+  [ADR-0057](../../adr/ADR-0057-room-state-authority.md).** Hub is the
+  Cline-line writer. MCP writer is a no-Hub profile. Hub wins if both are live.
 - **D3 — when do the parked hosts rejoin?** Every release that ships Agent Titles
   without them widens the gap that reconciling `OperatorRole` will eventually
   have to close.

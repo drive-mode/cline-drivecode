@@ -159,6 +159,66 @@ export const ControlTitleTransferredEventSchema = DriveEventBaseSchema.extend({
 	transferredAt: IsoTimestampSchema,
 }).strict();
 
+export const ControlInterruptAckEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.interrupt_ack"),
+	track: z.literal("control"),
+	participantId: z.string().min(1),
+	action: z.enum(["pause-after-tool", "hard-cancel", "queue-steer"]),
+	revise: z.enum(["revise", "restart"]),
+}).strict();
+
+/**
+ * Invitation to a working session. Log-carried; the room fold does not mutate.
+ */
+export const ControlInviteEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.invite"),
+	track: z.literal("control"),
+	inviterId: z.string().min(1),
+	inviteeId: z.string().min(1),
+	sessionId: z.string().min(1).optional(),
+	title: z.string().min(1).optional(),
+	note: z.string().max(280).optional(),
+}).strict();
+
+/**
+ * Call-session registry. Log-carried; clients project NOW / UPCOMING / EARLIER.
+ * `callSessionId` on the event base already correlates room traffic to a join
+ * window — these events name the working session as a first-class record.
+ */
+export const ControlSessionCreatedEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.session_created"),
+	track: z.literal("control"),
+	sessionId: z.string().min(1),
+	organizerId: z.string().min(1),
+	title: z.string().min(1).max(160),
+	project: z.string().min(1).max(160),
+	participantIds: z.array(z.string().min(1)).min(1).max(32),
+	agendaTaskIds: z.array(z.string().min(1)).max(100),
+	note: z.string().max(280).optional(),
+}).strict();
+
+export const ControlSessionScheduledEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.session_scheduled"),
+	track: z.literal("control"),
+	sessionId: z.string().min(1),
+	scheduledFor: IsoTimestampSchema,
+}).strict();
+
+export const ControlSessionStartedEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.session_started"),
+	track: z.literal("control"),
+	sessionId: z.string().min(1),
+	programId: z.string().min(1),
+}).strict();
+
+export const ControlSessionEndedEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("control.session_ended"),
+	track: z.literal("control"),
+	sessionId: z.string().min(1),
+	outcome: z.enum(["completed", "cancelled"]).default("completed"),
+	replayArtifactId: z.string().min(1).optional(),
+}).strict();
+
 // ── conversation ─────────────────────────────────────────────────────────
 
 export const ConversationMessageEventSchema = DriveEventBaseSchema.extend({
@@ -217,6 +277,20 @@ export const WorkDecisionEventSchema = DriveEventBaseSchema.extend({
 	title: z.string().min(1),
 	choice: z.string().min(1),
 	summary: z.string().optional(),
+}).strict();
+
+/**
+ * Pack escape hatch (ADR-0056). Domain payloads stay opaque; `packId` lives
+ * only here so typed work events stay pack-free.
+ */
+export const WorkGenericEventSchema = DriveEventBaseSchema.extend({
+	type: z.literal("work.generic"),
+	track: z.literal("work"),
+	packId: z.string().min(1),
+	kind: z.string().min(1),
+	title: z.string().min(1),
+	summary: z.string().optional(),
+	payload: z.record(z.string(), z.unknown()).optional(),
 }).strict();
 
 // ── presence ─────────────────────────────────────────────────────────────
@@ -304,6 +378,12 @@ export const DriveEventSchema = z.discriminatedUnion("type", [
 	ControlTitleGrantedEventSchema,
 	ControlTitleRevokedEventSchema,
 	ControlTitleTransferredEventSchema,
+	ControlInterruptAckEventSchema,
+	ControlInviteEventSchema,
+	ControlSessionCreatedEventSchema,
+	ControlSessionScheduledEventSchema,
+	ControlSessionStartedEventSchema,
+	ControlSessionEndedEventSchema,
 	ConversationMessageEventSchema,
 	ConversationNarrationEventSchema,
 	WorkEditEventSchema,
@@ -311,6 +391,7 @@ export const DriveEventSchema = z.discriminatedUnion("type", [
 	WorkTestResultEventSchema,
 	WorkPlanStepEventSchema,
 	WorkDecisionEventSchema,
+	WorkGenericEventSchema,
 	PresenceSpeakingEventSchema,
 	PresenceTypingEventSchema,
 	PresenceStatusEventSchema,

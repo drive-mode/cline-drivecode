@@ -29,7 +29,8 @@ Drive state is partitioned into three lanes:
 **Locks:**
 
 - Hub remains the only writer of room state for local MVP (preferred default port; discovery / free-port fallback unless `CLINE_HUB_PORT` is set).
-- `reduceRoom` stays pure in `@cline/drive`. IO lives in `@cline/core` hub.
+- When a Hub daemon and an MCP writer are both live for the same `roomId`, Hub wins ([ADR-0057](ADR-0057-room-state-authority.md)). The MCP writer is a standalone no-Hub profile, not a second Cline-line fold.
+- `reduceRoom` stays pure in `@cline/drive`. IO lives in `@cline/core` hub. MCP consumes the generated `@drive-mode/drive-kernel` bundle and must not import `@cline/*`.
 - Privacy-strict: no raw audio or full transcripts on the log.
 - Do not port cursor-drive MCP `:7891`.
 
