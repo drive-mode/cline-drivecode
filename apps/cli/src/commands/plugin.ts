@@ -4,12 +4,15 @@ import {
 	type PluginInstallResult,
 	type PluginMcpOAuthCandidate,
 	type PluginUninstallOptions,
+	recoverPluginInstallTransactions,
 	uninstallPlugin,
 } from "@cline/core";
 
 export type {
 	PluginInstallOptions,
 	PluginInstallResult,
+	PluginInstallVerificationExpectations,
+	PluginInstallVerificationResult,
 	PluginMcpOAuthCandidate,
 } from "@cline/core";
 export {
@@ -32,10 +35,13 @@ export interface PluginInstallIo {
 	writeErr: (text: string) => void;
 }
 
-type PluginInstallCommandOptions = PluginInstallOptions & {
+type PluginInstallCommandOptions = Omit<PluginInstallOptions, "transaction"> & {
 	json?: boolean;
 	io?: PluginInstallIo;
 	mcpOAuth?: PluginInstallMcpOAuthOptions;
+	transactionReceiptPath?: string;
+	receiptIntentPath?: string;
+	hostVersion?: string;
 };
 
 function serializePluginInstallResult(
@@ -46,6 +52,8 @@ function serializePluginInstallResult(
 		installPath: result.installPath,
 		entryPaths: result.entryPaths,
 		mcpSyncFailures: result.mcpSyncFailures,
+		...(result.verification ? { verification: result.verification } : {}),
+		...(result.transaction ? { transaction: result.transaction } : {}),
 	};
 }
 
@@ -157,7 +165,35 @@ export async function runPluginInstallCommand(
 	options: PluginInstallCommandOptions,
 ): Promise<number> {
 	try {
-		const result = await installPlugin(options);
+		const {
+			transactionReceiptPath,
+			receiptIntentPath,
+			hostVersion,
+			json: _json,
+			io: _io,
+			mcpOAuth: _mcpOAuth,
+			...installOptions
+		} = options;
+		if (
+			(transactionReceiptPath === undefined) !==
+			(receiptIntentPath === undefined)
+		) {
+			throw new Error(
+				"Transactional install requires both --transaction-receipt and --receipt-intent",
+			);
+		}
+		const result = await installPlugin({
+			...installOptions,
+			...(transactionReceiptPath && receiptIntentPath
+				? {
+						transaction: {
+							receiptPath: transactionReceiptPath,
+							receiptIntentPath,
+							hostVersion,
+						},
+					}
+				: {}),
+		});
 		if (options.json) {
 			process.stdout.write(
 				JSON.stringify(serializePluginInstallResult(result)),
@@ -172,6 +208,30 @@ export async function runPluginInstallCommand(
 			);
 		}
 		await runPluginMcpOAuthFollowup(result.mcpOAuthCandidates, options);
+		return 0;
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		options.io?.writeErr(message);
+		return 1;
+	}
+}
+
+export async function runPluginTransactionRecoverCommand(options: {
+	cwd: string;
+	json?: boolean;
+	io?: PluginInstallIo;
+}): Promise<number> {
+	try {
+		const results = recoverPluginInstallTransactions(options.cwd);
+		if (options.json) {
+			process.stdout.write(JSON.stringify({ results }));
+		} else if (results.length === 0) {
+			options.io?.writeln("No plugin install transactions require recovery.");
+		} else {
+			for (const result of results) {
+				options.io?.writeln(`${result.transactionId}: ${result.action}`);
+			}
+		}
 		return 0;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);

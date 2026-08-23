@@ -4,6 +4,8 @@ import {
 	type BasicLogger,
 	createContributionRegistry,
 	resolveAndLoadAgentPlugins,
+	resolvePluginInstallationId,
+	SqliteExtensionStateStore,
 } from "@cline/core";
 import type { AgentTool, Message } from "@cline/shared";
 import {
@@ -34,6 +36,7 @@ function normalizeCommandName(name: string): string {
 
 function createPluginCommandDefinition(
 	command: AgentExtensionCommand,
+	stateStore: SqliteExtensionStateStore,
 ): ChatCommandDefinition | undefined {
 	if (typeof command.handler !== "function") {
 		return undefined;
@@ -45,7 +48,40 @@ function createPluginCommandDefinition(
 	return {
 		names: [normalizedName.toLowerCase()],
 		run: async ({ args }, context) => {
-			const result = await command.handler?.(args.join(" "));
+			const invocation =
+				context.invocation?.task.sessionId && command.extensionId
+					? {
+							...context.invocation,
+							extensionState: stateStore.snapshot({
+								workspaceRoot: context.invocation.workspaceRoot,
+								sessionId: context.invocation.task.sessionId,
+								extensionId: command.extensionId,
+							}),
+						}
+					: context.invocation;
+			const result = await command.handler?.(args.join(" "), invocation);
+			if (
+				result &&
+				typeof result === "object" &&
+				result.stateMutation !== undefined
+			) {
+				try {
+					if (!command.extensionId || !invocation) {
+						throw new TypeError("missing host command authority");
+					}
+					stateStore.applyMutation({
+						extensionId: command.extensionId,
+						invocation,
+						mutation: result.stateMutation,
+						expectedRevision: invocation.extensionState?.revision ?? -1,
+					});
+				} catch {
+					await context.reply(
+						"Extension state update rejected: attributable human session context is required.",
+					);
+					return;
+				}
+			}
 			const { reply, submitPrompt } = normalizeCommandResult(result);
 			if (reply) {
 				await context.reply(reply);
@@ -85,6 +121,8 @@ export async function createWorkspaceChatCommandHost(input: {
 	cwd: string;
 	workspaceRoot?: string;
 	logger?: BasicLogger;
+	/** Test/embedding override. The command host owns and closes the default. */
+	extensionStateStore?: SqliteExtensionStateStore;
 }): Promise<WorkspaceChatCommandHostResult> {
 	const workspaceRoot = input.workspaceRoot?.trim() || input.cwd;
 	let loaded: Awaited<ReturnType<typeof resolveAndLoadAgentPlugins>>;
@@ -113,6 +151,16 @@ export async function createWorkspaceChatCommandHost(input: {
 		Message[]
 	>({
 		extensions: loaded.extensions,
+		resolveExtensionId: (extension) => {
+			const pluginPath = (extension as { __clinePluginPath?: string })
+				.__clinePluginPath;
+			if (!pluginPath) {
+				throw new TypeError(
+					"plugin command is missing host installation identity",
+				);
+			}
+			return resolvePluginInstallationId(pluginPath, extension.name);
+		},
 	});
 	try {
 		await registry.initialize();
@@ -128,9 +176,11 @@ export async function createWorkspaceChatCommandHost(input: {
 	}
 
 	const host = chatCommandHost.clone();
+	const stateStore =
+		input.extensionStateStore ?? new SqliteExtensionStateStore();
 	const pluginSlashCommands: PluginSlashCommand[] = [];
 	for (const command of registry.getRegistrySnapshot().commands) {
-		const definition = createPluginCommandDefinition(command);
+		const definition = createPluginCommandDefinition(command, stateStore);
 		if (definition) {
 			host.register("command", definition);
 			// Use the same normalized+lowercased name so TUI autocomplete matches the handler key.
@@ -143,5 +193,12 @@ export async function createWorkspaceChatCommandHost(input: {
 			});
 		}
 	}
-	return { host, pluginSlashCommands, shutdown: loaded.shutdown };
+	return {
+		host,
+		pluginSlashCommands,
+		shutdown: async () => {
+			await loaded.shutdown?.();
+			if (!input.extensionStateStore) stateStore.close();
+		},
+	};
 }

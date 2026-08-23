@@ -20,7 +20,6 @@ import {
 } from "./commands/update";
 import { CLI_DEFAULT_CHECKPOINT_CONFIG } from "./runtime/defaults";
 import type { TuiStartupTarget } from "./tui/types";
-import { filterChatModels } from "./utils/chat-models";
 import { getCliBuildInfo } from "./utils/common";
 import {
 	buildCliCompactionConfig,
@@ -303,6 +302,39 @@ export async function runCli(): Promise<void> {
 		.option("--npm", "Treat source as an npm package")
 		.option("--git", "Treat source as a git repository")
 		.option("--force", "Replace an existing install for the same source")
+		.option(
+			"--verify",
+			"Sandbox-load and validate the staged plugin before replacement",
+		)
+		.option("--expect-package <name>", "Require the staged package name")
+		.option(
+			"--expect-plugins <names>",
+			"Require exact comma-separated runtime plugin names",
+		)
+		.option(
+			"--expect-capabilities <names>",
+			"Require exact comma-separated capabilities",
+		)
+		.option(
+			"--expect-commands <names>",
+			"Require exact comma-separated command names",
+		)
+		.option(
+			"--expect-tools <names>",
+			"Require exact comma-separated tool names",
+		)
+		.option(
+			"--expect-skills <names>",
+			"Require exact comma-separated bundled skill names",
+		)
+		.option(
+			"--transaction-receipt <path>",
+			"Atomically commit the verified install with this workspace receipt",
+		)
+		.option(
+			"--receipt-intent <path>",
+			"Strict schema-3 source identity used to construct the receipt",
+		)
 		.option("--json", "Output as JSON")
 		.option("--cwd <path>", "Install to <path>/.cline/plugins")
 		.action(async (source: string) => {
@@ -310,6 +342,15 @@ export async function runCli(): Promise<void> {
 				npm?: boolean;
 				git?: boolean;
 				force?: boolean;
+				verify?: boolean;
+				expectPackage?: string;
+				expectPlugins?: string;
+				expectCapabilities?: string;
+				expectCommands?: string;
+				expectTools?: string;
+				expectSkills?: string;
+				transactionReceipt?: string;
+				receiptIntent?: string;
 				json?: boolean;
 				cwd?: string;
 			}>();
@@ -323,11 +364,66 @@ export async function runCli(): Promise<void> {
 				return;
 			}
 			const { runPluginInstallCommand } = await import("./commands/plugin");
+			const parseExpectedValues = (value: string | undefined) =>
+				value === undefined
+					? undefined
+					: value
+							.split(",")
+							.map((entry) => entry.trim())
+							.filter(Boolean);
+			const verificationRequested =
+				opts.verify === true ||
+				[
+					opts.expectPackage,
+					opts.expectPlugins,
+					opts.expectCapabilities,
+					opts.expectCommands,
+					opts.expectTools,
+					opts.expectSkills,
+				].some((value) => value !== undefined);
 			ctx.exitCode = await runPluginInstallCommand({
 				source,
 				sourceType: sourceTypes[0],
 				cwd: opts.cwd,
 				force: opts.force === true,
+				verification: verificationRequested
+					? {
+							packageName: opts.expectPackage,
+							pluginNames: parseExpectedValues(opts.expectPlugins),
+							capabilities: parseExpectedValues(opts.expectCapabilities),
+							commandNames: parseExpectedValues(opts.expectCommands),
+							toolNames: parseExpectedValues(opts.expectTools),
+							skillNames: parseExpectedValues(opts.expectSkills),
+						}
+					: undefined,
+				transactionReceiptPath: opts.transactionReceipt,
+				receiptIntentPath: opts.receiptIntent,
+				hostVersion: getCliBuildInfo().version,
+				json: opts.json === true || program.opts().json === true,
+				io,
+			});
+		});
+	const pluginTransactionCmd = pluginCmd
+		.command("transaction")
+		.description("Inspect and recover journaled plugin installs")
+		.action(() => {
+			pluginTransactionCmd.help();
+		});
+	const pluginTransactionRecoverCmd = pluginTransactionCmd
+		.command("recover")
+		.description("Recover all incomplete plugin install transactions")
+		.requiredOption("--cwd <path>", "Workspace containing transaction state")
+		.option("--json", "Output as JSON")
+		.action(async () => {
+			const opts = pluginTransactionRecoverCmd.opts<{
+				cwd: string;
+				json?: boolean;
+			}>();
+			const { runPluginTransactionRecoverCommand } = await import(
+				"./commands/plugin"
+			);
+			ctx.exitCode = await runPluginTransactionRecoverCommand({
+				cwd: opts.cwd,
 				json: opts.json === true || program.opts().json === true,
 				io,
 			});
@@ -388,10 +484,6 @@ export async function runCli(): Promise<void> {
 			"--restart-instance <id>",
 			"Restart one connector instance (used by daemon recovery)",
 		)
-		.option(
-			"--cleanup-instance <id>",
-			"Reap one dead connector instance, preserving autostart (used by hub supervision)",
-		)
 		.allowUnknownOption()
 		.passThroughOptions()
 		.addHelpText(
@@ -401,34 +493,15 @@ export async function runCli(): Promise<void> {
 		.action(async (adapter: string | undefined) => {
 			const {
 				formatAdapterList,
-				runCleanupConnectorInstance,
 				runConnectAdapter,
 				runRestartConnector,
 				runStopAllConnectors,
 				runStopConnector,
 			} = await import("./commands/connect");
 			const opts = connectCmd.opts();
-			const exclusiveModes = [
-				opts.stop,
-				opts.restart || opts.restartInstance,
-				opts.cleanupInstance,
-			].filter(Boolean).length;
-			if (exclusiveModes > 1) {
-				io.writeErr(
-					"connect accepts only one of --stop, --restart or --cleanup-instance",
-				);
+			if (opts.stop && (opts.restart || opts.restartInstance)) {
+				io.writeErr("connect accepts only one of --stop or --restart");
 				ctx.exitCode = 1;
-			} else if (opts.cleanupInstance) {
-				if (!adapter) {
-					io.writeErr("connect --cleanup-instance requires a channel");
-					ctx.exitCode = 1;
-				} else {
-					ctx.exitCode = await runCleanupConnectorInstance(
-						adapter,
-						opts.cleanupInstance,
-						io,
-					);
-				}
 			} else if (opts.stop) {
 				if (adapter) {
 					ctx.exitCode = await runStopConnector(adapter, io);
@@ -506,24 +579,6 @@ export async function runCli(): Promise<void> {
 				transport: opts.transport,
 				json: opts.json === true || program.opts().json === true,
 				yes: opts.yes === true,
-				io,
-			});
-		});
-	const mcpUninstallCmd = mcpCmd
-		.command("uninstall")
-		.alias("remove")
-		.alias("rm")
-		.description("Uninstall an MCP server by name")
-		.argument("<name>", "MCP server name")
-		.option("--json", "Output as JSON")
-		.action(async (name: string) => {
-			const opts = mcpUninstallCmd.opts<{
-				json?: boolean;
-			}>();
-			const { runMcpUninstallCommand } = await import("./commands/mcp");
-			ctx.exitCode = await runMcpUninstallCommand({
-				name,
-				json: opts.json === true || program.opts().json === true,
 				io,
 			});
 		});
@@ -827,10 +882,7 @@ export async function runCli(): Promise<void> {
 	// Enters the Agent Client Protocol stdio transport and never falls through.
 	if (args.acpMode) {
 		const { runAcpMode } = await import("./acp/index");
-		// Only an explicit `--auto-approve true` (or `--yolo`) enables
-		// auto-approval in ACP mode; We do not respect the default to
-		// avoid accidental auto-approval in ACP mode.
-		await runAcpMode({ autoApproveTools: args.autoApproveOverride === true });
+		await runAcpMode();
 		return;
 	}
 
@@ -1040,9 +1092,7 @@ export async function runCli(): Promise<void> {
 				`${c.dim}[model-catalog] catalog resolution failed (${message})${c.reset}`,
 			);
 		}
-		const knownModelIds = knownModels
-			? Object.keys(filterChatModels(knownModels))
-			: [];
+		const knownModelIds = knownModels ? Object.keys(knownModels) : [];
 		const resolvedReasoning = resolveCliReasoning({
 			thinking: args.thinking,
 			thinkingExplicitlySet: args.thinkingExplicitlySet,

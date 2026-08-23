@@ -3,6 +3,7 @@ import {
 	type ProviderSettingsManager,
 	type SessionManifest,
 	SessionNotFoundError,
+	type SessionPendingPrompt,
 	SessionSource,
 	type ToolApprovalRequest,
 	type ToolApprovalResult,
@@ -159,7 +160,9 @@ function makeManager() {
 		updateSessionModel: vi.fn(),
 		updateSessionConnection: vi.fn(async () => {}),
 		pendingPrompts: {
+			list: vi.fn(async (): Promise<SessionPendingPrompt[]> => []),
 			update: vi.fn(),
+			delete: vi.fn(),
 		},
 		restore: vi.fn(),
 	};
@@ -326,6 +329,76 @@ describe("createInteractiveSessionRuntime", () => {
 			compactionState,
 		);
 		expect(runtime.getActiveSessionId()).toBe(sessionId);
+	});
+
+	it("exposes bounded-adapter read seams without requiring raw transcript reads", async () => {
+		const manager = makeManager();
+		const prompts = [
+			{
+				id: "prompt-1",
+				prompt: "follow up",
+				delivery: "queue" as const,
+				attachmentCount: 0,
+			},
+		];
+		const mutation = {
+			sessionId: "session-1",
+			prompts: [],
+			removed: true,
+		};
+		const usage = {
+			usage: {
+				inputTokens: 1,
+				outputTokens: 2,
+				cacheReadTokens: 3,
+				cacheWriteTokens: 4,
+				totalCost: 0.01,
+			},
+		};
+		const compactionState = createSessionCompactionState({
+			sourceMessages: [],
+			compactedMessages: [],
+			updatedAt: "2026-01-01T00:00:00.000Z",
+		});
+		const checkpoint = {
+			ref: "refs/cline/checkpoint",
+			createdAt: 1,
+			runCount: 2,
+			kind: "stash" as const,
+		};
+		manager.pendingPrompts.list.mockResolvedValue(prompts);
+		manager.pendingPrompts.delete.mockResolvedValue(mutation);
+		manager.getAccumulatedUsage.mockResolvedValue(usage);
+		manager.readSessionCompactionState.mockResolvedValue(compactionState);
+		manager.get.mockResolvedValue({
+			metadata: {
+				checkpoint: { latest: checkpoint, history: [checkpoint] },
+			},
+		});
+		const runtime = await makeRuntime(manager);
+
+		expect(await runtime.listPendingPrompts()).toEqual(prompts);
+		expect(await runtime.removePendingPrompt("prompt-1")).toEqual(mutation);
+		expect(await runtime.getUsageSnapshot()).toEqual(usage);
+		expect(await runtime.getCompactionSnapshot()).toEqual(compactionState);
+		expect(await runtime.listCurrentCheckpoints()).toEqual([checkpoint]);
+		expect(manager.pendingPrompts.delete).toHaveBeenCalledWith({
+			sessionId: "session-1",
+			promptId: "prompt-1",
+		});
+		expect(manager.readMessages).not.toHaveBeenCalled();
+	});
+
+	it("propagates compaction snapshot storage failures", async () => {
+		const manager = makeManager();
+		const storageFailure = new Error("compaction storage unavailable");
+		manager.readSessionCompactionState.mockRejectedValue(storageFailure);
+		const runtime = await makeRuntime(manager);
+
+		await expect(runtime.getCompactionSnapshot()).rejects.toBe(storageFailure);
+		expect(manager.readSessionCompactionState).toHaveBeenCalledWith(
+			"session-1",
+		);
 	});
 
 	it("rejects manual compact while the active session is running", async () => {

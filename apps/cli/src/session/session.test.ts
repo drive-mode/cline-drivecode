@@ -11,7 +11,7 @@ import {
 const createCore = vi.fn();
 const getCliTelemetryService = vi.fn(() => undefined);
 const resolveSessionBackend = vi.fn();
-const listSessionHistoryFromBackend = vi.fn();
+const listCatalogSessionHistoryFromBackend = vi.fn();
 const featureFlagsPoll = vi.fn(async () => {});
 const featureFlagsDispose = vi.fn(async () => {});
 
@@ -24,7 +24,7 @@ vi.mock("@cline/core", async () => {
 			create: createCore,
 		},
 		resolveSessionBackend,
-		listSessionHistoryFromBackend,
+		listCatalogSessionHistoryFromBackend,
 	};
 });
 
@@ -48,7 +48,7 @@ describe("createCliCore", () => {
 		createCore.mockReset();
 		resolveSessionBackend.mockReset();
 		resolveSessionBackend.mockResolvedValue({ kind: "backend" });
-		listSessionHistoryFromBackend.mockReset();
+		listCatalogSessionHistoryFromBackend.mockReset();
 		createCore.mockResolvedValue({
 			runtimeAddress: "127.0.0.1:25463",
 			featureFlags: {
@@ -226,7 +226,7 @@ describe("createCliCore", () => {
 	});
 
 	it("lists sessions through core history with manifest fallback enabled", async () => {
-		listSessionHistoryFromBackend.mockResolvedValueOnce([
+		listCatalogSessionHistoryFromBackend.mockResolvedValueOnce([
 			{
 				sessionId: "sess_1",
 				workspaceRoot: "/tmp/workspace",
@@ -244,13 +244,14 @@ describe("createCliCore", () => {
 		expect(resolveSessionBackend).toHaveBeenCalledWith({
 			telemetry: undefined,
 		});
-		expect(listSessionHistoryFromBackend).toHaveBeenCalledWith(
+		expect(listCatalogSessionHistoryFromBackend).toHaveBeenCalledWith(
 			{ kind: "backend" },
 			{
 				limit: 25,
 				includeManifestFallback: true,
 				hydrate: false,
 				includeSubagents: false,
+				workspaceRoot: "/tmp/workspace",
 			},
 		);
 		expect(createCore).not.toHaveBeenCalled();
@@ -267,7 +268,7 @@ describe("createCliCore", () => {
 	});
 
 	it("filters out empty and unreadable sessions", async () => {
-		listSessionHistoryFromBackend.mockResolvedValueOnce([
+		listCatalogSessionHistoryFromBackend.mockResolvedValueOnce([
 			{ sessionId: "sess_full", workspaceRoot: "/tmp/workspace" },
 		]);
 
@@ -275,13 +276,14 @@ describe("createCliCore", () => {
 			workspaceRoot: "/tmp/workspace",
 		});
 
-		expect(listSessionHistoryFromBackend).toHaveBeenCalledWith(
+		expect(listCatalogSessionHistoryFromBackend).toHaveBeenCalledWith(
 			{ kind: "backend" },
 			{
 				limit: 25,
 				includeManifestFallback: true,
 				hydrate: false,
 				includeSubagents: false,
+				workspaceRoot: "/tmp/workspace",
 			},
 		);
 		expect(rows).toEqual([
