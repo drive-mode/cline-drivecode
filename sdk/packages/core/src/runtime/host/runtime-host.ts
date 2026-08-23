@@ -111,6 +111,7 @@ export interface LocalRuntimeStartOptions {
 export interface StartSessionInput {
 	config: StartSessionConfig;
 	source?: SessionSource;
+	mode?: AgentMode | "automation";
 	prompt?: string;
 	interactive?: boolean;
 	sessionMetadata?: Record<string, unknown>;
@@ -438,6 +439,10 @@ export interface RuntimeHost {
 	 * (e.g. hub clients) fall back to the persisted transcript.
 	 */
 	readLiveSessionMessages?(sessionId: string): Promise<LlmsProviders.Message[]>;
+	proceedWhileRunning?(
+		sessionId: string,
+		toolCallId?: string,
+	): Promise<number>;
 	dispatchHookEvent(payload: HookEventPayload): Promise<void>;
 	subscribe(
 		listener: (event: CoreSessionEvent) => void,

@@ -51,10 +51,8 @@ export type {
 	AgentExtensionAutomationEventType,
 	AgentExtensionCapability,
 	AgentExtensionCommand,
-	AgentExtensionCommandInvocationContext,
 	AgentExtensionCommandResult,
 	AgentExtensionHooks,
-	AgentExtensionInvocationActorKind,
 	AgentExtensionMcpEnv,
 	AgentExtensionMcpEnvValue,
 	AgentExtensionMcpServer,
@@ -67,9 +65,6 @@ export type {
 	AgentExtensionRegistry,
 	AgentExtensionRule,
 	AgentExtensionSessionContext,
-	AgentExtensionStateEntry,
-	AgentExtensionStateMutationRequest,
-	AgentExtensionStateSnapshot,
 	ContributionRegistryExtension,
 	ContributionRegistryOptions,
 	PluginManifest,
@@ -136,12 +131,23 @@ export {
 } from "./llms/ai-sdk-format";
 export * from "./llms/gateway";
 export {
+	type Base64MediaValidationFailure,
+	type Base64MediaValidationResult,
+	type Base64MediaValidationSuccess,
 	createMediaBudgetState,
 	DEFAULT_MAX_IMAGE_BASE64_BYTES,
 	DEFAULT_MAX_IMAGE_DECODED_BYTES,
 	DEFAULT_MAX_IMAGE_ENCODED_BYTES,
 	DEFAULT_MAX_TOTAL_MEDIA_BYTES,
+	type GeneratedMedia,
+	type GeneratedMediaModality,
+	GeneratedMediaModalitySchema,
+	GeneratedMediaSchema,
+	type GeneratedMediaSource,
+	GeneratedMediaSourceSchema,
+	generatedMediaModalityFromMediaType,
 	IMAGE_OMITTED_PLACEHOLDER,
+	IMAGE_UNSUPPORTED_PLACEHOLDER,
 	type ImageMediaLimits,
 	type ImageMediaValidationFailure,
 	type ImageMediaValidationResult,
@@ -152,12 +158,14 @@ export {
 	imageFileMaxDecodedBytesForBase64Limit,
 	isBase64Char,
 	isCanonicalBase64,
+	isGeneratedMedia,
 	type MediaBudgetOptions,
 	type MediaBudgetState,
 	type ResolvedMediaBudget,
 	reserveImageMediaBytes,
 	resolveMediaBudget,
 	SUPPORTED_IMAGE_MEDIA_TYPES,
+	validateAndReserveBase64Media,
 	validateAndReserveImageMedia,
 	validateImageMedia,
 } from "./llms/media";
@@ -165,6 +173,7 @@ export type {
 	ContentBlock,
 	FileContent,
 	ImageContent,
+	MediaContent,
 	Message,
 	MessageRole,
 	MessageWithMetadata,
@@ -178,20 +187,37 @@ export type {
 export {
 	ApiFormat,
 	ApiFormatSchema,
+	type ChatCompatibleModelDescriptor,
+	type ChatModelModalities,
+	isChatCompatibleModel,
 	type ModelCapability,
 	ModelCapabilitySchema,
 	type ModelInfo,
 	ModelInfoSchema,
 	type ModelMetadata,
 	ModelMetadataSchema,
+	type ModelModalities,
+	ModelModalitiesSchema,
+	type ModelModality,
+	ModelModalitySchema,
+	type ModelOperation,
+	type ModelOperationMode,
+	ModelOperationModeSchema,
+	ModelOperationSchema,
 	type ModelPricing,
 	ModelPricingSchema,
 	type ModelStatus,
 	ModelStatusSchema,
+	modelHasCapability,
+	modelProducesImages,
+	modelSupportsToolCalling,
+	supportsChatModalities,
 	type ThinkingConfig,
 	ThinkingConfigSchema,
+	usesImageGenerationOperation,
 } from "./llms/model-info";
 export { mergeModelOptions } from "./llms/model-options";
+export * from "./llms/model-tools";
 export {
 	DEFAULT_REASONING_EFFORT,
 	REASONING_EFFORT_RATIOS,
@@ -260,6 +286,7 @@ export {
 	buildClineSystemPrompt,
 	MODE_TAG_INSTRUCTIONS,
 	PLAN_MODE_INSTRUCTIONS,
+	PLAN_MODE_INSTRUCTIONS_MANUAL_SWITCH,
 } from "./prompt/cline";
 export type {
 	ModeSwitchNotice,
@@ -380,6 +407,7 @@ export type {
 	ProviderSettingsActionRequest,
 	RuntimeLoggerConfig,
 	SaveProviderSettingsActionRequest,
+	VoiceInputSelection,
 } from "./rpc/runtime";
 export {
 	ProviderCapabilitySchema,
@@ -437,6 +465,7 @@ export {
 	captureSdkError,
 	captureTaskLifecycleEvent,
 	normalizeSdkError,
+	resetSdkErrorRateLimiterForTests,
 	SDK_ERROR_TELEMETRY_EVENT,
 	TASK_CANCELLED_EVENT,
 	TASK_FIRST_CHUNK_RECEIVED_EVENT,
@@ -451,12 +480,6 @@ export {
 	getTelemetryBuildTimeConfig,
 	readTelemetryEnv,
 } from "./services/telemetry-config";
-export * from "./session/chat-catalog";
-export * from "./session/chat-catalog-wire";
-export * from "./session/chat-lifecycle-event-wire";
-export * from "./session/chat-lifecycle-wire";
-export * from "./session/chat-projection-wire";
-export * from "./session/chat-runtime-wire";
 export type {
 	HookSessionContext,
 	HookSessionContextLookup,
@@ -488,6 +511,12 @@ export {
 	RUNTIME_CONFIG_EXTENSION_KINDS,
 } from "./session/runtime-config";
 export type { RuntimeEnv } from "./session/runtime-env";
+export * from "./session/chat-catalog";
+export * from "./session/chat-catalog-wire";
+export * from "./session/chat-lifecycle-event-wire";
+export * from "./session/chat-lifecycle-wire";
+export * from "./session/chat-projection-wire";
+export * from "./session/chat-runtime-wire";
 export * from "./session/workspace";
 export * from "./status";
 export {

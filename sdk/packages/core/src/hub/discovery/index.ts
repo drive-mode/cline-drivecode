@@ -2,12 +2,20 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { existsSync, realpathSync } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import type { HubProtocolMetadata } from "@cline/shared";
+import {
+	type HubCompatibilityResult,
+	type HubProtocolMetadata,
+	isHubProtocolCompatible,
+} from "@cline/shared";
 import { resolveClineDataDir, resolveClineDir } from "@cline/shared/storage";
 import corePackage from "../../../package.json";
 
+declare const __CLINE_CORE_RUNTIME_BUILD_ID__: string | undefined;
+declare const __CLINE_CORE_RUNTIME_BUILD_EPOCH_MS__: number | undefined;
+
 const HUB_DISCOVERY_ENV = "CLINE_HUB_DISCOVERY_PATH";
 const HUB_BUILD_ID_ENV = "CLINE_HUB_BUILD_ID";
+const HUB_BUILD_EPOCH_ENV = "CLINE_HUB_BUILD_EPOCH_MS";
 const HUB_STARTUP_LOCK_MAX_AGE_MS = 30_000;
 const HUB_STARTUP_LOCK_WAIT_MS = 15_000;
 const HUB_STARTUP_LOCK_POLL_MS = 100;
@@ -20,6 +28,7 @@ export interface HubServerDiscoveryRecord {
 	capabilities?: readonly string[];
 	coreVersion?: string;
 	buildId?: string;
+	buildEpochMs?: number;
 	/** Pathless HMAC binding for the singleton's sole trusted workspace. */
 	workspaceScopeId?: string;
 	authToken: string;
@@ -38,6 +47,7 @@ export type HubServerProbeRecord = {
 	capabilities?: readonly string[];
 	coreVersion?: string;
 	buildId?: string;
+	buildEpochMs?: number;
 	workspaceScopeId?: string;
 	host: string;
 	port: number;
@@ -125,7 +135,172 @@ async function removeStartupLock(lockDir: string): Promise<void> {
 }
 
 export function resolveHubBuildId(): string {
-	return process.env[HUB_BUILD_ID_ENV]?.trim() || String(corePackage.version);
+	const configured = process.env[HUB_BUILD_ID_ENV]?.trim();
+	if (configured) {
+		return configured;
+	}
+	const embedded =
+		typeof __CLINE_CORE_RUNTIME_BUILD_ID__ === "string"
+			? __CLINE_CORE_RUNTIME_BUILD_ID__.trim()
+			: "";
+	return embedded || `source-${String(corePackage.version)}`;
+}
+
+/**
+ * When this SDK build was produced, embedded at bundle time. Orders builds so
+ * managed-Hub handling can distinguish a newer daemon (attach and prompt the
+ * user to update) from a stale one (retire and replace). Undefined when
+ * running from unbundled sources, where no meaningful ordering exists.
+ */
+export function resolveHubBuildEpochMs(): number | undefined {
+	const configured = Number(process.env[HUB_BUILD_EPOCH_ENV]);
+	if (Number.isFinite(configured) && configured > 0) {
+		return configured;
+	}
+	return typeof __CLINE_CORE_RUNTIME_BUILD_EPOCH_MS__ === "number" &&
+		Number.isFinite(__CLINE_CORE_RUNTIME_BUILD_EPOCH_MS__)
+		? __CLINE_CORE_RUNTIME_BUILD_EPOCH_MS__
+		: undefined;
+}
+
+export type ManagedHubCompatibilityResult =
+	| { compatible: true }
+	| {
+			compatible: false;
+			reason:
+				| Exclude<HubCompatibilityResult, { compatible: true }>["reason"]
+				| "missing_build"
+				| "build_mismatch";
+	  };
+
+/**
+ * Compatibility for a managed local Hub discovered through Cline's owner
+ * record. Unlike explicit endpoints, a managed Hub is code that this client
+ * is responsible for keeping current, so wire compatibility alone is not
+ * enough: reusing a daemon from another build would keep executing stale
+ * runtime, scheduler, connector, and command-handler code after an upgrade.
+ */
+export function getManagedHubCompatibility(
+	record: HubProtocolMetadata & { buildId?: string },
+	expectedBuildId = resolveHubBuildId(),
+): ManagedHubCompatibilityResult {
+	const protocol = isHubProtocolCompatible(record);
+	if (!protocol.compatible) {
+		return protocol;
+	}
+	const buildId = record.buildId?.trim();
+	if (!buildId) {
+		return { compatible: false, reason: "missing_build" };
+	}
+	if (buildId !== expectedBuildId) {
+		return { compatible: false, reason: "build_mismatch" };
+	}
+	return { compatible: true };
+}
+
+export interface HubBuildIdentity {
+	buildId?: string;
+	buildEpochMs?: number;
+	coreVersion?: string;
+}
+
+function finiteEpochMs(value: number | undefined): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) && value > 0
+		? value
+		: undefined;
+}
+
+function parseReleaseComponents(
+	version: string | undefined,
+): number[] | undefined {
+	const release = version?.trim().split(/[-+]/, 1)[0];
+	if (!release) {
+		return undefined;
+	}
+	const components = release.split(".").map((part) => Number(part));
+	if (
+		components.length === 0 ||
+		components.some((part) => !Number.isInteger(part) || part < 0)
+	) {
+		return undefined;
+	}
+	return components;
+}
+
+function compareReleaseComponents(a: number[], b: number[]): number {
+	for (let index = 0; index < Math.max(a.length, b.length); index++) {
+		const left = a[index] ?? 0;
+		const right = b[index] ?? 0;
+		if (left !== right) {
+			return left < right ? -1 : 1;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Total order over Hub builds: negative when `a` is older than `b`, positive
+ * when newer, zero when the two are indistinguishable.
+ */
+export function compareHubBuilds(
+	a: HubBuildIdentity,
+	b: HubBuildIdentity,
+): number {
+	const buildIdA = a.buildId?.trim();
+	const buildIdB = b.buildId?.trim();
+	if (buildIdA && buildIdB && buildIdA === buildIdB) {
+		return 0;
+	}
+
+	const epochA = finiteEpochMs(a.buildEpochMs);
+	const epochB = finiteEpochMs(b.buildEpochMs);
+	if (epochA !== undefined && epochB !== undefined && epochA !== epochB) {
+		return epochA < epochB ? -1 : 1;
+	}
+
+	const releaseA = parseReleaseComponents(a.coreVersion);
+	const releaseB = parseReleaseComponents(b.coreVersion);
+	if (releaseA && releaseB) {
+		const release = compareReleaseComponents(releaseA, releaseB);
+		if (release !== 0) {
+			return release;
+		}
+	}
+
+	if (buildIdA && buildIdB && buildIdA !== buildIdB) {
+		return buildIdA < buildIdB ? -1 : 1;
+	}
+
+	return 0;
+}
+
+export function resolveHubBuildIdentity(): HubBuildIdentity {
+	return {
+		buildId: resolveHubBuildId(),
+		buildEpochMs: resolveHubBuildEpochMs(),
+		coreVersion: String(corePackage.version),
+	};
+}
+
+/**
+ * Whether a client may keep using a managed local Hub instead of retiring it.
+ */
+export function isManagedHubReusable(
+	record: HubProtocolMetadata & HubBuildIdentity,
+	options?: { self?: HubBuildIdentity },
+): boolean {
+	const self = options?.self ?? resolveHubBuildIdentity();
+	const compatibility = getManagedHubCompatibility(record, self.buildId ?? "");
+	if (compatibility.compatible) {
+		return true;
+	}
+	if (
+		compatibility.reason !== "build_mismatch" &&
+		compatibility.reason !== "missing_build"
+	) {
+		return false;
+	}
+	return compareHubBuilds(self, record) <= 0;
 }
 
 export function resolveHubOwnerContext(

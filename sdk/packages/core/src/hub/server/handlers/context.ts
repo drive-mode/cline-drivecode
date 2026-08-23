@@ -57,6 +57,7 @@ export interface HubTransportContext {
 	 * Used by the in-process Drive stage projector (ADR-0029 slice 3).
 	 */
 	readonly pendingDriveToolInputs: Map<string, unknown>;
+	readonly activeRpcTurnCountBySession: Map<string, number>;
 	readonly telemetry?: ITelemetryService;
 	readonly chatCatalog?: HubChatCatalogHost;
 	readonly sessionHost: RuntimeHost &

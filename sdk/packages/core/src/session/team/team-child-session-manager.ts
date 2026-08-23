@@ -181,7 +181,7 @@ export class TeamChildSessionManager {
 			});
 			await this.adapter.upsertSession(row);
 			this.manifestStore.initializeMessagesFile(
-				row,
+				sessionId,
 				artifactPaths.messagesPath,
 				startedAt,
 			);
@@ -297,7 +297,7 @@ export class TeamChildSessionManager {
 			messagesPath,
 		});
 		await this.adapter.upsertSession(row);
-		this.manifestStore.initializeMessagesFile(row, messagesPath, startedAt);
+		this.manifestStore.initializeMessagesFile(sessionId, messagesPath, startedAt);
 		const key = this.teamTaskQueueKey(rootSessionId, agentId);
 		const queue = this.teamTaskSessionsByAgent.get(key) ?? [];
 		queue.push(sessionId);

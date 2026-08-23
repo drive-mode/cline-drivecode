@@ -321,6 +321,7 @@ export class HubServerTransport implements NativeHubTransport {
 			suppressNextTerminalEventBySession:
 				this.suppressNextTerminalEventBySession,
 			pendingDriveToolInputs: new Map(),
+			activeRpcTurnCountBySession: new Map(),
 			telemetry: options.telemetry,
 			chatCatalog: options.chatCatalog,
 			sessionHost: this.sessionHost,

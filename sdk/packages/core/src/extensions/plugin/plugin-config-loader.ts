@@ -33,10 +33,13 @@ export function discoverPluginModulePaths(directoryPath: string): string[] {
 	return discoverPluginModulePathsFromShared(directoryPath);
 }
 
+export { getPluginDisplayName } from "@cline/shared/storage";
+
 export interface ResolveAgentPluginPathsOptions {
 	pluginPaths?: ReadonlyArray<string>;
 	workspacePath?: string;
 	cwd?: string;
+	includeDisabled?: boolean;
 }
 
 function isDirectory(path: string): boolean {

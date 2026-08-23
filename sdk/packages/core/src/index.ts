@@ -535,6 +535,17 @@ export type {
 	SessionRuntime,
 } from "./runtime/orchestration/session-runtime";
 export {
+	getProcessStartToken,
+	getProcessStartTokenAsync,
+	type ProcessStartTokenProbeResult,
+	probeProcessStartToken,
+	probeProcessStartTokenAsync,
+} from "./runtime/process-start-token";
+export type {
+	SessionDisplayMessage,
+} from "./session/display-messages";
+export { projectSessionMessagesForDisplay } from "./session/display-messages";
+export {
 	formatRulesForSystemPrompt,
 	isRuleEnabled,
 	mergeRulesForSystemPrompt,
@@ -559,6 +570,21 @@ export {
 	reconnectPersistedConnectors,
 	removePersistedConnectorConnection,
 } from "./services/connectors/connector-autostart";
+export { buildConnectorChildEnv } from "./services/connectors/connector-child-env";
+export { cleanupConnectorInstanceViaCli } from "./services/connectors/connector-cleanup";
+export {
+	ADOPTED_POLL_INTERVAL_MS,
+	ConnectorSupervisor,
+	type ConnectorSupervisorDeps,
+	getActiveConnectorSupervisor,
+	RESTART_BASE_DELAY_MS,
+	RESTART_COUNTER_RESET_MS,
+	RESTART_GIVE_UP_AFTER,
+	RESTART_MAX_DELAY_MS,
+	STOP_SIGKILL_TIMEOUT_MS,
+	STOP_SIGTERM_TIMEOUT_MS,
+	setActiveConnectorSupervisor,
+} from "./services/connectors/connector-supervisor";
 export {
 	FeatureFlagsService,
 	type FeatureFlagsServiceOptions,
