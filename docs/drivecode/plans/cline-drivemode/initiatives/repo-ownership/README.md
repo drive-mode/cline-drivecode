@@ -1,7 +1,7 @@
 # repo-ownership · one concept, one owner
 
-**Status:** active — D1/D1a/D1b/D2 decided; MCP bundle cutover and harness
-archive follow this kernel surface
+**Status:** active — D1/D1a/D1b/D2 decided; MCP consumes the generated kernel;
+`collaboration-harness` archived; in-tree `apps/drive-ios` deleted
 **Purpose:** for the Cline Drive Mode line specifically, name a single owner for
 each shared concept and sequence the deduplication. Delivery status remains
 authoritative in
@@ -12,7 +12,8 @@ describes repository topology and ownership, not claim status.
 [drive-cloud-beta](../drive-cloud-beta/),
 [multi-device](../multi-device/),
 [DEC-package-location](../../decisions/DEC-package-location.md),
-[ADR-0013](../../adr/ADR-0013-state-partition.md)
+[ADR-0013](../../adr/ADR-0013-state-partition.md),
+[PLANNING.md](PLANNING.md)
 
 > **Placement note.** This document describes repository strategy. It lives in
 > `docs/drivecode/` and moves with that tree if its visibility changes.
@@ -24,7 +25,7 @@ describes repository topology and ownership, not claim status.
 | Repository | Visibility | Role |
 |---|---|---|
 | `cline-drivecode` | public | Cline host + the vocabulary, port, fold, conformance kit |
-| `collaboration-harness` | private | standalone copy of the room kernel and protocol |
+| `collaboration-harness` | private | **archived** — use `@drive-mode/drive-kernel` |
 | `drivemode-mcp` | private | MCP writer + curated packs |
 | `drive-ios` | private | native SwiftUI client |
 | `site` | private | marketing surface |
@@ -133,8 +134,8 @@ standard. It should be **generated** from the canonical schema.
 
 ### 5 · A legacy fixture duplicates the client
 
-`apps/drive-ios` in this repository is a legacy fixture; the real client is the
-`drive-ios` repository. The handoff already says so.
+`apps/drive-ios` in this repository was a legacy fixture and has been **deleted**.
+The real client is the `drive-ios` repository.
 
 ## Ownership rule
 
@@ -178,7 +179,8 @@ Ordered so each step removes duplication permanently rather than relocating it.
    when both a hub and an MCP writer are live.
 5. **Generate the Swift title bindings** from the canonical schema instead of
    maintaining them by hand.
-6. **Delete `apps/drive-ios`** from this repository.
+6. **Delete `apps/drive-ios`** from this repository. **Done** — fixture removed;
+   product remains standalone `drive-ios`.
 7. **Fix licence and visibility pairings** so each repository's terms match its
    tier.
 

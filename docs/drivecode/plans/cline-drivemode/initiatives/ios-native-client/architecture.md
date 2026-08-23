@@ -146,10 +146,8 @@ flowchart TB
   DriveStore -->|ViewState| Presentation["Presentation models"]
 ```
 
-_Provenance: current composition in
-[`DriveApp.swift`](../../../../../../apps/drive-ios/Drive/DriveApp.swift),
-global fixture reads in
-[`DemoModels.swift`](../../../../../../apps/drive-ios/Drive/Models/DemoModels.swift),
+_Provenance: current composition in standalone
+[`drive-ios`](https://github.com/drive-mode/drive-ios),
 and the repository's existing port/conformance pattern in
 [`sdk/packages/drive/src/hostPort.ts`](../../../../../../sdk/packages/drive/src/hostPort.ts)._
 

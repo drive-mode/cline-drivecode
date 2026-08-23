@@ -86,7 +86,7 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0030](ADR-0030-plane-naming.md) | Plane naming for agent-facing code | **Proposed** | none | room/show/status (+ stage/visual); ban Engine ownership nouns; docs-first |
 | [ADR-0031](ADR-0031-visual-layout.md) | Client visual layout; producers viewport-blind | **Proposed** | none | `visual/layout`; ResizeObserver host frame; pairs with H4 |
 | [ADR-0032](ADR-0032-path-h-ops.md) | Path H hosted writer operations | **Proposed** | none | Auth/tenancy/residency/freemium failure; unblocks honest H5 |
-| [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary (DrivePlan owns truth) | **Proposed** | none | Kanban = workbench; bank/gates/receipts = Drive |
+| [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary (DrivePlan owns truth) | **Proposed** | none | DriveKanban = workbench; bank/gates/receipts = Drive. Naming-only cleanup; still Proposed until leadership accepts |
 | [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** | none | Blocked on delivery D1 (`capPreset` on `call_seat`) |
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | none | Wire snapshot/delta + one factual catch-up line |
 | [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | none | DO/SKIP/UNDO over `predict.*` events; tier from revertibility, capped by tool policy; answers research 16 Q3. [PRD 11](../prd/prd-magic-hotkey.md) |

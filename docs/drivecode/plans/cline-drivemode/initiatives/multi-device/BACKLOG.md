@@ -7,7 +7,7 @@ Work queue for parity. Prefer small vertical slices that move a MATRIX cell
 
 | ID | Work | Devices | Status | Notes |
 |---|---|---|---|---|
-| B01 | Legacy in-tree SwiftUI demo shell Open→Home→Call→Approval→Settings | ios | **done** | Historical fixture only: [`apps/drive-ios`](../../../../../../apps/drive-ios/) |
+| B01 | Legacy in-tree SwiftUI demo shell Open→Home→Call→Approval→Settings | ios | **done** | Fixture removed; product is [`drive-ios`](https://github.com/drive-mode/drive-ios) |
 | B12 | Establish full-Xcode build, unit/UI targets, and pinned Simulator CI | ios | **wip** | Standalone app has Xcode/unit/UI/a11y coverage; pinned CI remains. [iOS native delivery X0](../ios-native-client/delivery.md#x0--reproducible-xcode-baseline) |
 | B14 | Decide least-authority Mobile Drive Gateway, pairing, and local TLS | ios, hub | todo | ADR slice [G0](../ios-native-client/delivery.md#g0--decide-the-mobile-drive-gateway) |
 | B13 | Publish typed room directory + TypeScript↔Swift golden wire fixtures | ios, hub | todo | After B14; [iOS native delivery C1](../ios-native-client/delivery.md#c1--canonical-mobile-wire-contract) |

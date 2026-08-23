@@ -422,7 +422,7 @@ Stated plainly so nobody plans around it:
   not need a rewrite later, but no multi-human media plane exists.
 - **Native iOS production connection and App Store release.** The standalone
   [`drive-ios`](https://github.com/drive-mode/drive-ios) repository is the
-  native source of truth and currently contains an open preview stack. The
-  in-tree `apps/drive-ios` project is a legacy fixture, not the release app.
+  native source of truth. The in-tree fixture was deleted; do not recreate
+  `apps/drive-ios`.
 - **CLI Drive call parity.** TUI Drive is a local toggle; it does not call `call_join`
   yet ([DRV-CLI-PARITY](plans/cline-drivemode/features/DRV-CLI-PARITY.md)).

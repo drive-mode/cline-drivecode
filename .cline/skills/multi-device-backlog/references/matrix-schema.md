@@ -12,7 +12,7 @@
 |---|---|
 | `hub` | Cline hub webview |
 | `pwa` | Phone browser / installed PWA |
-| `ios` | `apps/drive-ios` SwiftUI |
+| `ios` | standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) SwiftUI |
 | `tui` | CLI OpenTUI |
 | `android` | Reserved; omit from MATRIX until un-YAGNI |
 
