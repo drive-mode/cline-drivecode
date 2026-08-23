@@ -5,9 +5,11 @@ import { fileURLToPath } from "node:url";
 import type {
 	AgentConfig,
 	AgentExtensionAutomationEventType,
+	AgentExtensionCommandInvocationContext,
 	AgentExtensionCommandResult,
 	AgentExtensionMcpServer,
 	AgentExtensionRule,
+	AgentExtensionStateSnapshot,
 	AgentRuntimeHooks,
 	AgentTool,
 	Message,
@@ -15,12 +17,9 @@ import type {
 	WorkspaceInfo,
 } from "@cline/shared";
 import { SubprocessSandbox } from "../../runtime/tools/subprocess-sandbox";
-import { MAX_NODE_TIMER_DELAY_MS } from "../../runtime/tools/subprocess-sandbox-lifecycle";
+import { resolvePluginInstallationId } from "./plugin-installation-id";
 import type { PluginLoadDiagnostics } from "./plugin-load-report";
 import type { PluginTargeting } from "./plugin-targeting";
-
-export const CLINE_PLUGIN_IDLE_TIMEOUT_MS_ENV = "CLINE_PLUGIN_IDLE_TIMEOUT_MS";
-export const DEFAULT_PLUGIN_SANDBOX_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 export type SandboxedPluginSetupContext = Pick<
 	PluginSetupContext,
@@ -39,12 +38,6 @@ export interface PluginSandboxOptions extends PluginTargeting {
 	importTimeoutMs?: number;
 	hookTimeoutMs?: number;
 	contributionTimeoutMs?: number;
-	/**
-	 * Reclaim the plugin subprocess after this much time with no calls in
-	 * flight. Defaults to 30 minutes and can be overridden with
-	 * `CLINE_PLUGIN_IDLE_TIMEOUT_MS`.
-	 */
-	idleTimeoutMs?: number;
 	onEvent?: (event: { name: string; payload?: unknown }) => void;
 	/**
 	 * The session's working directory. Forwarded to the sandbox subprocess so
@@ -70,6 +63,18 @@ export interface PluginSandboxOptions extends PluginTargeting {
 	 * `ctx.telemetry` means "someone is listening" in both execution modes.
 	 */
 	telemetryAvailable?: boolean;
+	/**
+	 * Host-only resolver invoked immediately before a plugin tool call. The
+	 * returned snapshot replaces any extensionState supplied by the caller.
+	 */
+	resolveExtensionState?: (input: {
+		workspaceRoot: string;
+		sessionId: string;
+		extensionId: string;
+	}) =>
+		| AgentExtensionStateSnapshot
+		| undefined
+		| Promise<AgentExtensionStateSnapshot | undefined>;
 }
 
 type AgentExtension = NonNullable<AgentConfig["extensions"]>[number];
@@ -189,39 +194,6 @@ function resolveBootstrapFromExecutable(): string | undefined {
 }
 
 /**
- * Pick the bootstrap the sandbox subprocess should run.
- *
- * Sibling compiled candidates always match the running host build, so they
- * win. When the host runs from source (the `.ts` bootstrap exists next to
- * this module), the sandbox must run that SAME source bootstrap: the
- * wrapper/executable fallbacks locate compiled bootstraps from a separately
- * installed CLI package (e.g. a published version in the package-manager
- * cache), and mixing that code with a source host silently breaks plugin
- * loading because its module resolution points at the other installation's
- * layout. Those fallbacks exist only for compiled hosts
- * (`bun build --compile`) where import.meta points inside the binary and no
- * sibling file exists on real disk.
- */
-export function selectBootstrapCandidate(options: {
-	siblingCandidates: string[];
-	sourceBootstrapPath: string;
-	installedCandidates: Array<string | undefined>;
-	exists?: (path: string) => boolean;
-}): { file: string } | { sourcePath: string } {
-	const exists = options.exists ?? existsSync;
-	for (const candidate of options.siblingCandidates) {
-		if (exists(candidate)) return { file: candidate };
-	}
-	if (exists(options.sourceBootstrapPath)) {
-		return { sourcePath: options.sourceBootstrapPath };
-	}
-	for (const candidate of options.installedCandidates) {
-		if (candidate && exists(candidate)) return { file: candidate };
-	}
-	return { sourcePath: options.sourceBootstrapPath };
-}
-
-/**
  * Resolve the bootstrap for the sandbox subprocess.
  *
  * In production (bundled), the compiled `.js` file lives next to this module
@@ -236,22 +208,19 @@ function resolveBootstrap(): { file: string } | { script: string } {
 	// In production, the main bundle is at dist/ and the bootstrap is emitted
 	// under dist/extensions/. Keep the older dist/agents/ fallback for
 	// compatibility with previously built layouts.
-	const selected = selectBootstrapCandidate({
-		siblingCandidates: [
-			join(dir, "plugin-sandbox-bootstrap.js"),
-			join(dir, "extensions", "plugin-sandbox-bootstrap.js"),
-			join(dir, "agents", "plugin-sandbox-bootstrap.js"),
-		],
-		sourceBootstrapPath: join(dir, "plugin-sandbox-bootstrap.ts"),
-		installedCandidates: [
-			resolveBootstrapFromWrapper(),
-			resolveBootstrapFromExecutable(),
-		],
-	});
-	if ("file" in selected) {
-		return selected;
+	const candidates = [
+		join(dir, "plugin-sandbox-bootstrap.js"),
+		join(dir, "extensions", "plugin-sandbox-bootstrap.js"),
+		join(dir, "agents", "plugin-sandbox-bootstrap.js"),
+		resolveBootstrapFromWrapper(),
+		resolveBootstrapFromExecutable(),
+	];
+	for (const candidate of candidates.filter(
+		(candidate): candidate is string => typeof candidate === "string",
+	)) {
+		if (existsSync(candidate)) return { file: candidate };
 	}
-	const tsPath = selected.sourcePath;
+	const tsPath = join(dir, "plugin-sandbox-bootstrap.ts");
 	let jitiSpecifier = "jiti";
 	try {
 		jitiSpecifier = requireFromHere.resolve("jiti");
@@ -277,12 +246,7 @@ function withTimeoutFallback(
 	fallback: number,
 	envVarName?: string,
 ): number {
-	if (
-		typeof timeoutMs === "number" &&
-		Number.isInteger(timeoutMs) &&
-		timeoutMs > 0 &&
-		timeoutMs <= MAX_NODE_TIMER_DELAY_MS
-	) {
+	if (typeof timeoutMs === "number" && timeoutMs > 0) {
 		return timeoutMs;
 	}
 	if (envVarName) {
@@ -293,11 +257,7 @@ function withTimeoutFallback(
 			// malformed env value falls back to the default instead of
 			// silently consuming its numeric prefix.
 			const parsed = Number(raw);
-			if (
-				Number.isInteger(parsed) &&
-				parsed > 0 &&
-				parsed <= MAX_NODE_TIMER_DELAY_MS
-			) {
+			if (Number.isInteger(parsed) && parsed > 0) {
 				return parsed;
 			}
 		}
@@ -314,17 +274,11 @@ export async function loadSandboxedPlugins(
 		shutdown: () => Promise<void>;
 	} & PluginLoadDiagnostics
 > {
-	const idleTimeoutMs = withTimeoutFallback(
-		options.idleTimeoutMs,
-		DEFAULT_PLUGIN_SANDBOX_IDLE_TIMEOUT_MS,
-		CLINE_PLUGIN_IDLE_TIMEOUT_MS_ENV,
-	);
 	const sandbox = new SubprocessSandbox({
 		name: "plugin-sandbox",
 		...("file" in BOOTSTRAP
 			? { bootstrapFile: BOOTSTRAP.file }
 			: { bootstrapScript: BOOTSTRAP.script }),
-		idleTimeoutMs,
 		onEvent: options.onEvent,
 	});
 	const importTimeoutMs = withTimeoutFallback(
@@ -380,6 +334,9 @@ export async function loadSandboxedPlugins(
 
 	const extensions: NonNullable<AgentConfig["extensions"]> = descriptors.map(
 		(descriptor) => {
+			const installationId = options.resolveExtensionState
+				? resolvePluginInstallationId(descriptor.pluginPath, descriptor.name)
+				: descriptor.name;
 			const extension: SandboxedAgentExtension = {
 				name: descriptor.name,
 				__clinePluginPath: descriptor.pluginPath,
@@ -391,6 +348,10 @@ export async function loadSandboxedPlugins(
 						descriptor,
 						contributionTimeoutMs,
 						reinitialize,
+						options.resolveExtensionState,
+						options.workspaceInfo?.rootPath,
+						options.session?.sessionId,
+						installationId,
 					);
 					registerCommands(
 						api,
@@ -554,6 +515,10 @@ function registerTools(
 	descriptor: SandboxedPluginDescriptor,
 	timeoutMs: number,
 	reinitialize: () => Promise<void>,
+	resolveExtensionState: PluginSandboxOptions["resolveExtensionState"],
+	workspaceRoot: string | undefined,
+	sessionId: string | undefined,
+	extensionId: string,
 ): void {
 	for (const td of descriptor.contributions?.tools ?? []) {
 		const tool: AgentTool = {
@@ -566,6 +531,27 @@ function registerTools(
 			timeoutMs: td.timeoutMs,
 			retryable: td.retryable,
 			execute: async (input: unknown, context: unknown) => {
+				const contextRecord =
+					typeof context === "object" &&
+					context !== null &&
+					!Array.isArray(context)
+						? { ...(context as Record<string, unknown>) }
+						: {};
+				// Authority is host-owned: never forward a caller-created snapshot.
+				delete contextRecord.extensionState;
+				const extensionState =
+					resolveExtensionState && workspaceRoot?.trim() && sessionId?.trim()
+						? await resolveExtensionState({
+								workspaceRoot,
+								sessionId,
+								extensionId,
+							})
+						: undefined;
+				const authoritativeContext = {
+					...contextRecord,
+					...(sessionId ? { sessionId } : {}),
+					...(extensionState ? { extensionState } : {}),
+				};
 				// The fallback must cover the whole IPC payload: `input` can be
 				// rewritten by beforeTool hooks or programmatic callers, so it is
 				// just as capable of smuggling a non-serializable value as the
@@ -605,7 +591,7 @@ function registerTools(
 				};
 				return await callWithSerializableFallback(
 					invoke,
-					{ input, context },
+					{ input, context: authoritativeContext },
 					(error) => warnNonSerializablePayloadOnce("tool", td.name, error),
 				);
 			},
@@ -625,7 +611,10 @@ function registerCommands(
 		api.registerCommand({
 			name: cd.name,
 			description: cd.description,
-			handler: async (input: string) => {
+			handler: async (
+				input: string,
+				context?: AgentExtensionCommandInvocationContext,
+			) => {
 				try {
 					return await sandbox.call<AgentExtensionCommandResult>(
 						"executeCommand",
@@ -633,6 +622,7 @@ function registerCommands(
 							pluginId: descriptor.pluginId,
 							contributionId: cd.id,
 							input,
+							context,
 						},
 						{ timeoutMs },
 					);
@@ -647,6 +637,7 @@ function registerCommands(
 							pluginId: descriptor.pluginId,
 							contributionId: cd.id,
 							input,
+							context,
 						},
 						{ timeoutMs },
 					);

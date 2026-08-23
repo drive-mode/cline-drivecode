@@ -211,6 +211,11 @@ export interface AgentToolContext {
 	toolCallId?: string;
 	signal?: AbortSignal;
 	metadata?: Record<string, unknown>;
+	/**
+	 * Host-injected state for the registered extension. Plugin wrappers replace
+	 * this field immediately before execution; callers cannot supply authority.
+	 */
+	extensionState?: import("./extensions/contribution-registry").AgentExtensionStateSnapshot;
 	snapshot?: AgentRuntimeStateSnapshot;
 	emitUpdate?: (update: unknown) => void;
 }

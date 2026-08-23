@@ -34,6 +34,7 @@ const validProfile = {
 			congestionGraceMs: 5_000,
 			closeGraceMs: 1_000,
 			maxInboundPayloadBytes: 1024 * 1024,
+			maxActiveSubscriptions: 256,
 		},
 	},
 	streaming: { flushIntervalMs: 32, maxBatchBytes: 64 * 1024 },

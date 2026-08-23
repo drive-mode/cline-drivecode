@@ -9,12 +9,16 @@ import type {
 	StartSessionResult,
 } from "./runtime/host/runtime-host";
 
-const { createRuntimeHostMock } = vi.hoisted(() => ({
-	createRuntimeHostMock: vi.fn(),
-}));
+const { createRuntimeHostMock, getCatalogManagedCompositionMock } = vi.hoisted(
+	() => ({
+		createRuntimeHostMock: vi.fn(),
+		getCatalogManagedCompositionMock: vi.fn(),
+	}),
+);
 
 vi.mock("./runtime/host/host", () => ({
 	createRuntimeHost: createRuntimeHostMock,
+	getCatalogManagedLocalRuntimeComposition: getCatalogManagedCompositionMock,
 }));
 
 import type { AgentResult } from "@cline/shared";
@@ -80,62 +84,8 @@ function git(cwd: string, args: string[]): string {
 describe("ClineCore", () => {
 	beforeEach(() => {
 		createRuntimeHostMock.mockReset();
-	});
-
-	it("keeps raw reads canonical and offers an explicit display projection", async () => {
-		const rawMessages = [
-			{
-				id: "assistant-search",
-				role: "assistant" as const,
-				content: "Found it",
-				metadata: {
-					modelToolActivities: [
-						{
-							toolCallId: "search-1",
-							toolName: "web_search",
-							execution: "provider",
-							input: { query: "latest release" },
-							output: "1.3.14",
-						},
-					],
-				},
-			},
-		];
-		const host = {
-			runtimeAddress: undefined,
-			startSession: vi.fn(),
-			runTurn: vi.fn(),
-			restoreSession: vi.fn(),
-			abort: vi.fn(),
-			stopSession: vi.fn(),
-			dispose: vi.fn(),
-			getSession: vi.fn(),
-			listSessions: vi.fn(),
-			deleteSession: vi.fn(),
-			updateSession: vi.fn(),
-			readSessionMessages: vi.fn(async () => rawMessages),
-			dispatchHookEvent: vi.fn(),
-			subscribe: vi.fn(() => () => {}),
-		};
-		createRuntimeHostMock.mockResolvedValue(host);
-		const core = await ClineCore.create();
-
-		const displayMessages = await core.readDisplayMessages("session-1");
-
-		expect(displayMessages.map(({ message }) => message.role)).toEqual([
-			"assistant",
-			"user",
-			"assistant",
-		]);
-		expect(displayMessages[0]?.message.content).toEqual([
-			expect.objectContaining({
-				type: "tool_use",
-				id: "search-1",
-			}),
-		]);
-		expect(await core.readMessages("session-1")).toBe(rawMessages);
-		expect(rawMessages[0]?.metadata).toHaveProperty("modelToolActivities");
-		await core.dispose();
+		getCatalogManagedCompositionMock.mockReset();
+		getCatalogManagedCompositionMock.mockReturnValue(undefined);
 	});
 
 	it("compares a checkpoint to the current workspace through the public SDK API", async () => {
@@ -269,6 +219,352 @@ describe("ClineCore", () => {
 		expect(host.startSession).toHaveBeenCalledTimes(1);
 		expect(dispose).toHaveBeenCalledTimes(1);
 		expect(listeners).toHaveLength(1);
+	});
+
+	it("exposes only the sanitized managed lifecycle and preserves start bootstraps", async () => {
+		const host = {
+			runtimeAddress: undefined,
+			startSession: vi.fn(),
+			runTurn: vi.fn(),
+			getAccumulatedUsage: vi.fn(),
+			abort: vi.fn(),
+			stopSession: vi.fn(),
+			dispose: vi.fn(),
+			getSession: vi.fn(async () => ({ sessionId: "managed-root" })),
+			listSessions: vi.fn(),
+			deleteSession: vi.fn(),
+			readSessionMessages: vi.fn(),
+			subscribe: vi.fn(() => () => {}),
+			updateSessionModel: vi.fn(),
+		};
+		const managedResult = {
+			startResult: createStartResult("managed-root"),
+			chatId: "managed-chat",
+			leaseRevision: 1,
+			leaseExpiresAt: "2026-08-14T10:01:00.000Z",
+		};
+		const managedRelatedResult = {
+			...managedResult,
+			startResult: createStartResult("managed-related"),
+		};
+		const managedRestoreResult = {
+			...managedResult,
+			startResult: createStartResult("managed-restored"),
+			checkpoint: { ref: "checkpoint-1", createdAt: 1, runCount: 1 },
+			messages: [{ role: "user" as const, content: "restore me" }],
+		};
+		const managedRecoveryResult = {
+			...managedResult,
+			startResult: createStartResult("managed-recovered"),
+			leaseRevision: 3,
+		};
+		const managedBinding = {
+			bindingId: "binding-1",
+			transport: "telegram",
+			instanceId: "bot-1",
+			channelId: "",
+			threadId: "thread-1",
+			participantScope: "",
+			bound: true,
+			chatId: "managed-chat",
+			sessionId: "managed-related",
+			revision: 1,
+			updatedAt: "2026-08-14T10:00:00.000Z",
+		};
+		const managedAuthority = new AbortController();
+		const runtime = {
+			startRoot: vi.fn(async () => managedResult),
+			startRelated: vi.fn(async () => managedRelatedResult),
+			restoreCheckpoint: vi.fn(async () => managedRestoreResult),
+			recoverLostLease: vi.fn(async () => managedRecoveryResult),
+			resume: vi.fn(),
+			runTurn: vi.fn(async () => createAgentResult("managed turn")),
+			getBinding: vi.fn(async () => managedBinding),
+			bind: vi.fn(async () => managedBinding),
+			reset: vi.fn(async () => ({
+				...managedBinding,
+				bound: false,
+				revision: 2,
+			})),
+			archive: vi.fn(async () => ({
+				chatId: "managed-chat",
+				catalogState: "archived",
+				revision: 2,
+				sessions: [{ sessionId: "managed-root" }],
+				bindings: [],
+			})),
+			activate: vi.fn(async () => ({
+				chatId: "managed-chat",
+				catalogState: "active",
+				revision: 3,
+				sessions: [{ sessionId: "managed-root" }],
+				bindings: [],
+			})),
+			rename: vi.fn(async () => ({
+				chatId: "managed-chat",
+				catalogState: "active",
+				title: "Research queue",
+				titleSource: "manual",
+				revision: 4,
+				sessions: [{ sessionId: "managed-root" }],
+				bindings: [],
+			})),
+			purge: vi.fn(async () => ({
+				chatId: "managed-chat",
+				sessionIds: ["managed-root"],
+				applied: true,
+			})),
+			stop: vi.fn(async () => undefined),
+			manages: vi.fn((sessionId: string) => sessionId === "managed-root"),
+			residentAuthoritySignal: vi.fn(() => managedAuthority.signal),
+			dispose: vi.fn(async () => undefined),
+		};
+		const disposeComposition = vi.fn();
+		createRuntimeHostMock.mockResolvedValue(host);
+		getCatalogManagedCompositionMock.mockReturnValue({
+			runtime,
+			workspaceRoot: "/tmp/workspace",
+			dispose: disposeComposition,
+		});
+		const disposeBootstrap = vi.fn();
+		const core = await ClineCore.create({
+			prepare: async () => ({
+				applyToStartSessionInput: (input) => ({
+					...input,
+					config: { ...input.config, systemPrompt: "managed bootstrap" },
+				}),
+				dispose: disposeBootstrap,
+			}),
+		});
+
+		expect(core.chatLifecycle).toBeDefined();
+		await expect(core.start(createStartInput())).rejects.toThrow(
+			"core.chatLifecycle",
+		);
+		const result = await core.chatLifecycle.startRoot({
+			operationId: "managed-root-operation",
+			sessionId: "managed-root",
+			startInput: createStartInput(),
+		});
+
+		expect(runtime.startRoot).toHaveBeenCalledWith(
+			expect.objectContaining({
+				operationId: "managed-root-operation",
+				startInput: expect.objectContaining({
+					config: expect.objectContaining({
+						systemPrompt: "managed bootstrap",
+					}),
+				}),
+			}),
+		);
+		expect(result).toEqual(managedResult);
+		expect(JSON.stringify(result)).not.toContain("leaseToken");
+		expect(core.managedSessionAuthoritySignal("managed-root")).toBe(
+			managedAuthority.signal,
+		);
+		expect(runtime.residentAuthoritySignal).toHaveBeenCalledWith(
+			"managed-root",
+		);
+		await expect(
+			core.chatLifecycle.startRelated({
+				operationId: "managed-related-operation",
+				sessionId: "managed-related",
+				chatId: "managed-chat",
+				parentSessionId: "managed-root",
+				relationKind: "recovery",
+				expectedRevision: 1,
+				startInput: createStartInput(),
+			}),
+		).resolves.toEqual(managedRelatedResult);
+		expect(runtime.startRelated).toHaveBeenCalledWith(
+			expect.objectContaining({
+				operationId: "managed-related-operation",
+				relationKind: "recovery",
+				expectedRevision: 1,
+				startInput: expect.objectContaining({
+					config: expect.objectContaining({
+						sessionId: "managed-related",
+						systemPrompt: "managed bootstrap",
+					}),
+				}),
+			}),
+		);
+		await expect(
+			core.chatLifecycle.restoreCheckpoint({
+				operationId: "managed-restore-operation",
+				sessionId: "managed-restored",
+				chatId: "managed-restored-chat",
+				parentSessionId: "managed-root",
+				checkpointRunCount: 1,
+				restore: { workspace: false },
+				startInput: createStartInput(),
+			}),
+		).resolves.toEqual(managedRestoreResult);
+		expect(runtime.restoreCheckpoint).toHaveBeenCalledWith(
+			expect.objectContaining({
+				operationId: "managed-restore-operation",
+				chatId: "managed-restored-chat",
+				parentSessionId: "managed-root",
+				checkpointRunCount: 1,
+				restore: { workspace: false },
+				startInput: expect.objectContaining({
+					config: expect.objectContaining({
+						sessionId: "managed-restored",
+						systemPrompt: "managed bootstrap",
+					}),
+				}),
+			}),
+		);
+		await expect(
+			core.chatLifecycle.recoverLostLease({
+				operationId: "managed-recover-operation",
+				sessionId: "managed-recovered",
+				startInput: createStartInput(),
+			}),
+		).resolves.toEqual(managedRecoveryResult);
+		expect(runtime.recoverLostLease).toHaveBeenCalledWith(
+			expect.objectContaining({
+				operationId: "managed-recover-operation",
+				startInput: expect.objectContaining({
+					config: expect.objectContaining({
+						sessionId: "managed-recovered",
+						systemPrompt: "managed bootstrap",
+					}),
+				}),
+			}),
+		);
+		const bindingTarget = {
+			bindingId: "binding-1",
+			transport: "telegram",
+			instanceId: "bot-1",
+			threadId: "thread-1",
+			expectedBindingRevision: 0,
+		};
+		await expect(
+			core.chatLifecycle.bind({
+				operationId: "managed-bind-operation",
+				sessionId: "managed-related",
+				target: bindingTarget,
+			}),
+		).resolves.toEqual(managedBinding);
+		await expect(
+			core.chatLifecycle.getBinding({
+				transport: "telegram",
+				instanceId: "bot-1",
+				threadId: "thread-1",
+			}),
+		).resolves.toEqual(managedBinding);
+		await expect(
+			core.chatLifecycle.reset({
+				operationId: "managed-reset-operation",
+				sessionId: "managed-related",
+				binding: { ...bindingTarget, expectedBindingRevision: 1 },
+			}),
+		).resolves.toMatchObject({ bound: false, revision: 2 });
+		expect(runtime.reset).toHaveBeenCalledWith(
+			expect.objectContaining({
+				operationId: "managed-reset-operation",
+				sessionId: "managed-related",
+			}),
+		);
+		await expect(
+			core.chatLifecycle.archive({
+				operationId: "managed-archive-operation",
+				chatId: "managed-chat",
+				expectedRevision: 1,
+				stopRunning: true,
+				clearBindings: true,
+			}),
+		).resolves.toMatchObject({ catalogState: "archived", revision: 2 });
+		expect(runtime.archive).toHaveBeenCalledWith({
+			operationId: "managed-archive-operation",
+			chatId: "managed-chat",
+			expectedRevision: 1,
+			stopRunning: true,
+			clearBindings: true,
+		});
+		await expect(
+			core.chatLifecycle.activate({
+				operationId: "managed-activate-operation",
+				chatId: "managed-chat",
+				expectedRevision: 2,
+			}),
+		).resolves.toMatchObject({ catalogState: "active", revision: 3 });
+		await expect(
+			core.chatLifecycle.rename({
+				operationId: "managed-rename-operation",
+				chatId: "managed-chat",
+				title: "Research queue",
+				expectedRevision: 3,
+			}),
+		).resolves.toMatchObject({
+			title: "Research queue",
+			titleSource: "manual",
+			revision: 4,
+		});
+		expect(runtime.rename).toHaveBeenCalledWith({
+			operationId: "managed-rename-operation",
+			chatId: "managed-chat",
+			title: "Research queue",
+			expectedRevision: 3,
+		});
+		await expect(
+			core.chatLifecycle.purge({
+				operationId: "managed-purge-operation",
+				chatId: "managed-chat",
+				expectedRevision: 4,
+			}),
+		).resolves.toEqual({
+			chatId: "managed-chat",
+			sessionIds: ["managed-root"],
+			applied: true,
+		});
+		await expect(
+			core.send({ sessionId: "managed-root", prompt: "bypass" }),
+		).rejects.toThrow("core.chatLifecycle.runTurn");
+		await expect(
+			core.chatLifecycle.runTurn({
+				operationId: "managed-turn-operation",
+				sessionId: "managed-root",
+				prompt: "continue",
+			}),
+		).resolves.toMatchObject({ text: "managed turn" });
+		expect(runtime.runTurn).toHaveBeenCalledWith({
+			operationId: "managed-turn-operation",
+			sessionId: "managed-root",
+			prompt: "continue",
+		});
+		await expect(core.stop("managed-root")).rejects.toThrow(
+			"core.chatLifecycle.stop",
+		);
+		await expect(
+			core.restore({
+				sessionId: "managed-root",
+				checkpointRunCount: 1,
+			}),
+		).rejects.toThrow("restore checkpoints through core.chatLifecycle");
+		await core.chatLifecycle.stop({
+			operationId: "managed-stop-operation",
+			sessionId: "managed-root",
+		});
+		await core.chatLifecycle.stop({
+			operationId: "managed-restored-stop-operation",
+			sessionId: "managed-restored",
+		});
+		await core.chatLifecycle.stop({
+			operationId: "managed-recovered-stop-operation",
+			sessionId: "managed-recovered",
+		});
+		expect(runtime.stop).toHaveBeenCalledWith(
+			"managed-root",
+			"managed-stop-operation",
+		);
+		expect(disposeBootstrap).toHaveBeenCalledTimes(4);
+
+		await core.dispose("managed-core-dispose");
+		expect(runtime.dispose).toHaveBeenCalledWith("managed-core-dispose");
+		expect(host.dispose).toHaveBeenCalledWith("managed-core-dispose");
+		expect(disposeComposition).toHaveBeenCalledTimes(1);
 	});
 
 	it("preserves an omitted workspace until the execution host resolves it", async () => {

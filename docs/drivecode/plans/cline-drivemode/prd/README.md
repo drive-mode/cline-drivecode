@@ -10,11 +10,10 @@ Product requirements for Drivecode features that sit on top of the existing driv
 | PRD 9 | [prd-task-bank-drive-loop.md](prd-task-bank-drive-loop.md) | Task bank; plans sequence tasks |
 | — | [prd-success-metrics.md](prd-success-metrics.md) | Phase gates / privacy CI (not session satisfaction) |
 | PRD 10 | [prd-task-satisfaction-observability.md](prd-task-satisfaction-observability.md) | Task-centric session satisfaction + closed-loop improve |
-| PRD 11 | [prd-magic-hotkey.md](prd-magic-hotkey.md) | Magic Hotkey — next-action prediction with a DO / SKIP / UNDO triad |
+| — | [prd-adr-planner.md](prd-adr-planner.md) | Cline-native pre-plan and ADR planning plugin installed by `qh2-template` |
 
 Related plan docs: [06-platform-config.md](../foundation/06-platform-config.md), [05-workflows.md](../foundation/05-workflows.md), [../README.md](../README.md).  
-Session satisfaction research: [../research/15-task-satisfaction-observability.md](../research/15-task-satisfaction-observability.md), [../research/16-task-as-unit-models.md](../research/16-task-as-unit-models.md).  
-Next-action prediction research: [../research/21-operator-experience.md](../research/21-operator-experience.md), [../research/29-large-task-models.md](../research/29-large-task-models.md).
+Session satisfaction research: [../research/15-task-satisfaction-observability.md](../research/15-task-satisfaction-observability.md), [../research/16-task-as-unit-models.md](../research/16-task-as-unit-models.md).
 
 Example agent home: [../examples/driveagent-pair-partner/](../examples/driveagent-pair-partner/).
 

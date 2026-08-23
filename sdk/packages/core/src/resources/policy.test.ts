@@ -44,6 +44,7 @@ describe("resolveResourcePolicy", () => {
 					congestionGraceMs: 5_000,
 					closeGraceMs: 1_000,
 					maxInboundPayloadBytes: 1024 * 1024,
+					maxActiveSubscriptions: 256,
 				},
 			},
 			streaming: { flushIntervalMs: 32, maxBatchBytes: 64 * 1024 },
@@ -76,6 +77,7 @@ describe("resolveResourcePolicy", () => {
 					congestionGraceMs: "default",
 					closeGraceMs: "default",
 					maxInboundPayloadBytes: "default",
+					maxActiveSubscriptions: "default",
 				},
 			},
 			streaming: {
@@ -100,7 +102,12 @@ describe("resolveResourcePolicy", () => {
 				maxParallelism: 3,
 				diagnostics: { enabled: true },
 				admission: { pendingPrompts: { maxItems: 7 } },
-				transport: { websocket: { softWatermarkBytes: 2048 } },
+				transport: {
+					websocket: {
+						softWatermarkBytes: 2048,
+						maxActiveSubscriptions: 7,
+					},
+				},
 			},
 		});
 
@@ -119,9 +126,13 @@ describe("resolveResourcePolicy", () => {
 		expect(resolved.profile.transport.websocket).toMatchObject({
 			softWatermarkBytes: 2048,
 			hardWatermarkBytes: 4096,
+			maxActiveSubscriptions: 7,
 		});
 		expect(resolved.sources.admission.pendingPrompts.maxItems).toBe("explicit");
 		expect(resolved.sources.admission.teamRuns.maxQueued).toBe("environment");
+		expect(resolved.sources.transport.websocket.maxActiveSubscriptions).toBe(
+			"explicit",
+		);
 	});
 
 	it("hard-clamps non-finite and out-of-range values", () => {

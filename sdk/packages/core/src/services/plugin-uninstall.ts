@@ -21,6 +21,10 @@ import {
 	resolvePluginConfigSearchPaths,
 } from "@cline/shared/storage";
 import { readGlobalSettings, writeGlobalSettings } from "./global-settings";
+import {
+	assertPluginInstallPathNotReceiptBound,
+	withPluginInstallMutationLock,
+} from "./plugin-install-transaction";
 import { removePluginMcpServersFromSettings } from "./plugin-mcp-settings";
 
 export interface PluginUninstallOptions {
@@ -242,10 +246,15 @@ function createDirectCandidate(
 }
 
 function getPluginRoots(options: PluginUninstallOptions): string[] {
-	const workspaceRoot =
-		options.workspaceRoot?.trim() || options.cwd?.trim() || process.cwd();
+	const workspaceRoot = resolveUninstallWorkspace(options);
 	return resolvePluginConfigSearchPaths(workspaceRoot).filter((directory) =>
 		existsSync(directory),
+	);
+}
+
+function resolveUninstallWorkspace(options: PluginUninstallOptions): string {
+	return resolve(
+		options.workspaceRoot?.trim() || options.cwd?.trim() || process.cwd(),
 	);
 }
 
@@ -370,9 +379,21 @@ function describeCandidate(candidate: PluginUninstallCandidate): string {
 	return `${primaryName} at ${candidate.installPath}`;
 }
 
-export async function uninstallPlugin(
+function assertNotReceiptBound(
+	workspace: string,
+	candidate: PluginUninstallCandidate,
+): void {
+	assertPluginInstallPathNotReceiptBound(
+		workspace,
+		candidate.installPath,
+		candidate.names,
+	);
+}
+
+function uninstallPluginUnlocked(
 	options: PluginUninstallOptions,
-): Promise<PluginUninstallResult> {
+	workspace: string,
+): PluginUninstallResult {
 	const pluginRoots = getPluginRoots(options);
 	const candidates = collectCandidates(pluginRoots);
 	const explicitPath = options.path?.trim();
@@ -408,6 +429,7 @@ export async function uninstallPlugin(
 			`Plugin install path does not exist: ${candidate.installPath}`,
 		);
 	}
+	assertNotReceiptBound(workspace, candidate);
 	removePluginMcpServersFromSettings({
 		pluginPaths: [candidate.installPath, ...candidate.entryPaths],
 		pluginNames: candidate.names,
@@ -427,4 +449,13 @@ export async function uninstallPlugin(
 		removedPaths: [candidate.installPath],
 		entryPaths: candidate.entryPaths,
 	};
+}
+
+export async function uninstallPlugin(
+	options: PluginUninstallOptions,
+): Promise<PluginUninstallResult> {
+	const workspace = resolveUninstallWorkspace(options);
+	return withPluginInstallMutationLock(workspace, () =>
+		uninstallPluginUnlocked(options, workspace),
+	);
 }

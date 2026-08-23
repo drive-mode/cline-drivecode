@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { createRuntimeHostMock } = vi.hoisted(() => ({
-	createRuntimeHostMock: vi.fn(),
-}));
+const { createRuntimeHostMock, getCatalogManagedCompositionMock } = vi.hoisted(
+	() => ({
+		createRuntimeHostMock: vi.fn(),
+		getCatalogManagedCompositionMock: vi.fn(() => undefined),
+	}),
+);
 
 vi.mock("./runtime/host/host", () => ({
 	createRuntimeHost: createRuntimeHostMock,
+	getCatalogManagedLocalRuntimeComposition: getCatalogManagedCompositionMock,
 }));
 
 import { ClineCore } from "./ClineCore";
@@ -31,6 +35,8 @@ function createHost() {
 afterEach(() => {
 	vi.useRealTimers();
 	createRuntimeHostMock.mockReset();
+	getCatalogManagedCompositionMock.mockReset();
+	getCatalogManagedCompositionMock.mockReturnValue(undefined);
 });
 
 describe("ClineCore resource diagnostics", () => {

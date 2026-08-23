@@ -76,7 +76,12 @@ export type {
 	AgentExtensionAutomationEventType,
 	AgentExtensionCapability,
 	AgentExtensionCommand,
+	AgentExtensionCommandInvocationContext,
 	AgentExtensionCommandResult,
+	AgentExtensionInvocationActorKind,
+	AgentExtensionStateEntry,
+	AgentExtensionStateMutationRequest,
+	AgentExtensionStateSnapshot,
 	AgentExtensionHooks,
 	AgentExtensionMcpEnv,
 	AgentExtensionMcpEnvValue,
@@ -595,6 +600,12 @@ export {
 	RUNTIME_CONFIG_EXTENSION_KINDS,
 } from "./session/runtime-config";
 export type { RuntimeEnv } from "./session/runtime-env";
+export * from "./session/chat-catalog";
+export * from "./session/chat-catalog-wire";
+export * from "./session/chat-lifecycle-event-wire";
+export * from "./session/chat-lifecycle-wire";
+export * from "./session/chat-projection-wire";
+export * from "./session/chat-runtime-wire";
 export * from "./session/workspace";
 export * from "./status";
 export {

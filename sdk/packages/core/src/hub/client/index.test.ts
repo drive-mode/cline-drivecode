@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	createInProcessHubWorkspaceCapabilityProvider,
 	HubTransportError,
 	isHubReconnectableTransportError,
 	NodeHubClient,
@@ -15,13 +16,16 @@ class MockWebSocket {
 	static readonly CLOSING = 2;
 	static readonly CLOSED = 3;
 	static instances: MockWebSocket[] = [];
-	static commandPayloads = new Map<string, unknown>();
+	static registrationFailures = 0;
 
 	readyState = MockWebSocket.CONNECTING;
 	readonly sentFrames: unknown[] = [];
 	private readonly listeners = new Map<string, SocketListener[]>();
 
-	constructor(public readonly url: string) {
+	constructor(
+		public readonly url: string,
+		public readonly protocols?: string | string[],
+	) {
 		MockWebSocket.instances.push(this);
 		queueMicrotask(() => {
 			this.readyState = MockWebSocket.OPEN;
@@ -31,7 +35,7 @@ class MockWebSocket {
 
 	static reset(): void {
 		MockWebSocket.instances = [];
-		MockWebSocket.commandPayloads.clear();
+		MockWebSocket.registrationFailures = 0;
 	}
 
 	send(data: string): void {
@@ -41,18 +45,27 @@ class MockWebSocket {
 		};
 		this.sentFrames.push(frame);
 		if (frame.kind === "command" && frame.envelope?.requestId) {
-			const command = frame.envelope.command ?? "client.register";
+			const rejectRegistration =
+				frame.envelope.command === "client.register" &&
+				MockWebSocket.registrationFailures-- > 0;
 			queueMicrotask(() => {
 				this.emit("message", {
 					data: JSON.stringify({
 						kind: "reply",
 						envelope: {
 							version: "v1",
-							command,
+							command: "client.register",
 							requestId: frame.envelope?.requestId,
-							ok: true,
+							ok: !rejectRegistration,
 							clientId: "hub",
-							payload: MockWebSocket.commandPayloads.get(command) ?? {},
+							...(rejectRegistration
+								? {
+										error: {
+											code: "client_conflict",
+											message: "registration rejected",
+										},
+									}
+								: { payload: {} }),
 						},
 					}),
 				});
@@ -193,6 +206,352 @@ describe("NodeHubClient", () => {
 			});
 		});
 
+		it("fences stale events across runtime unsubscribe and resubscribe", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({ url: "ws://127.0.0.1:25463/hub" });
+			await client.connect();
+			const socket = MockWebSocket.instances[0];
+			const firstListener = vi.fn();
+			const releaseFirst = client.subscribe(firstListener, {
+				sessionId: "session-1",
+				fenced: true,
+			});
+			const firstSubscribe = socket.sentFrames.find(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as { subscriptionId?: string } | undefined;
+			expect(firstSubscribe?.subscriptionId).toMatch(/^hub_subscription_/);
+
+			socket.emit("message", {
+				data: JSON.stringify({
+					kind: "event",
+					subscriptionId: firstSubscribe?.subscriptionId,
+					envelope: {
+						version: "v1",
+						event: "chat.runtime",
+						sessionId: "session-1",
+						payload: {},
+					},
+				}),
+			});
+			expect(firstListener).toHaveBeenCalledOnce();
+
+			releaseFirst();
+			const secondListener = vi.fn();
+			client.subscribe(secondListener, {
+				sessionId: "session-1",
+				fenced: true,
+			});
+			const subscriptionFrames = socket.sentFrames.filter(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as Array<{ subscriptionId?: string }>;
+			const secondSubscriptionId = subscriptionFrames.at(-1)?.subscriptionId;
+			expect(secondSubscriptionId).toMatch(/^hub_subscription_/);
+			expect(secondSubscriptionId).not.toBe(firstSubscribe?.subscriptionId);
+
+			for (const subscriptionId of [
+				firstSubscribe?.subscriptionId,
+				undefined,
+				secondSubscriptionId,
+			]) {
+				socket.emit("message", {
+					data: JSON.stringify({
+						kind: "event",
+						...(subscriptionId ? { subscriptionId } : {}),
+						envelope: {
+							version: "v1",
+							event: "chat.runtime",
+							sessionId: "session-1",
+							payload: {},
+						},
+					}),
+				});
+			}
+			expect(secondListener).toHaveBeenCalledOnce();
+			await client.dispose();
+		});
+
+		it("requires durable reclaim before reconnecting a cursor subscription", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				clientId: "cursor-client",
+			});
+			expect(client.getRegisteredConnectionGeneration()).toBeUndefined();
+			await client.connect();
+			const firstConnectionGeneration =
+				client.getRegisteredConnectionGeneration();
+			expect(firstConnectionGeneration).toBeTypeOf("number");
+			if (firstConnectionGeneration === undefined) {
+				throw new Error("registered connection generation missing");
+			}
+			let cursor = {
+				streamId: "runtime-stream-1",
+				sessionSequence: 1,
+			};
+			const onStatus = vi.fn();
+			const release = client.subscribe(() => undefined, {
+				sessionId: "session-1",
+				fenced: true,
+				runtimeCursor: () => cursor,
+				onStatus,
+			});
+			const firstSocket = MockWebSocket.instances[0];
+			const firstSubscribe = firstSocket?.sentFrames.find(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as
+				| {
+						subscriptionId: string;
+						runtimeCursor: typeof cursor;
+				  }
+				| undefined;
+			expect(firstSubscribe?.runtimeCursor).toEqual(cursor);
+			firstSocket?.emit("message", {
+				data: JSON.stringify({
+					kind: "stream.status",
+					clientId: "cursor-client",
+					sessionId: "session-1",
+					subscriptionId: firstSubscribe?.subscriptionId,
+					status: "ready",
+					runtimeCursor: cursor,
+				}),
+			});
+			expect(onStatus).toHaveBeenLastCalledWith({
+				status: "ready",
+				runtimeCursor: cursor,
+			});
+
+			cursor = { ...cursor, sessionSequence: 3 };
+			firstSocket?.emit("close", { code: 1006, reason: "transport lost" });
+			expect(client.getRegisteredConnectionGeneration()).toBeUndefined();
+			expect(onStatus).toHaveBeenLastCalledWith({
+				status: "rejected",
+				errorCode: "session_reclaim_required",
+			});
+			expect(onStatus).toHaveBeenCalledTimes(2);
+			await client.connect();
+			expect(client.getRegisteredConnectionGeneration()).toBeGreaterThan(
+				firstConnectionGeneration,
+			);
+			const secondSocket = MockWebSocket.instances[1];
+			expect(() =>
+				client.subscribe(() => undefined, {
+					sessionId: "session-1",
+					fenced: true,
+					requiredConnectionGeneration: firstConnectionGeneration,
+				}),
+			).toThrow(expect.objectContaining({ code: "hub_connection_changed" }));
+			expect(
+				secondSocket?.sentFrames.filter(
+					(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+				),
+			).toEqual([]);
+			expect(onStatus).toHaveBeenLastCalledWith({
+				status: "rejected",
+				errorCode: "session_reclaim_required",
+			});
+			expect(onStatus).toHaveBeenCalledTimes(2);
+			release();
+			expect(
+				secondSocket?.sentFrames.filter(
+					(frame) => (frame as { kind?: string }).kind === "stream.unsubscribe",
+				),
+			).toEqual([]);
+			await client.dispose();
+		});
+
+		it("re-evaluates a lifecycle checkpoint for each physical subscription", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				clientId: "lifecycle-cursor-client",
+			});
+			await client.connect();
+			let checkpoint = 10;
+			const onStatus = vi.fn();
+			const release = client.subscribe(() => undefined, {
+				fenced: true,
+				lifecycleCursor: () => ({ afterSequence: checkpoint }),
+				onStatus,
+			});
+			const firstSocket = MockWebSocket.instances[0];
+			const firstSubscribe = firstSocket?.sentFrames.find(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as
+				| {
+						subscriptionId: string;
+						lifecycleCursor: { afterSequence: number };
+				  }
+				| undefined;
+			expect(firstSubscribe?.lifecycleCursor).toEqual({ afterSequence: 10 });
+			firstSocket?.emit("message", {
+				data: JSON.stringify({
+					kind: "stream.status",
+					clientId: "lifecycle-cursor-client",
+					subscriptionId: firstSubscribe?.subscriptionId,
+					status: "ready",
+					lifecycleReady: {
+						version: "v1",
+						stream: "chat.changed",
+						afterSequence: 10,
+						throughSequence: 12,
+					},
+				}),
+			});
+			expect(onStatus).toHaveBeenLastCalledWith({
+				status: "ready",
+				lifecycleReady: expect.objectContaining({ throughSequence: 12 }),
+			});
+
+			checkpoint = 15;
+			firstSocket?.emit("close", { code: 1006, reason: "transport lost" });
+			await client.connect();
+			const secondSocket = MockWebSocket.instances[1];
+			const secondSubscribe = secondSocket?.sentFrames.find(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as
+				| {
+						subscriptionId: string;
+						lifecycleCursor: { afterSequence: number };
+				  }
+				| undefined;
+			expect(secondSubscribe?.lifecycleCursor).toEqual({ afterSequence: 15 });
+			expect(onStatus).toHaveBeenCalledTimes(1);
+			release();
+			await client.dispose();
+		});
+
+		it("retires a session-scoped ready frame for a global lifecycle cursor", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				clientId: "lifecycle-scope-client",
+			});
+			await client.connect();
+			client.subscribe(() => undefined, {
+				fenced: true,
+				lifecycleCursor: () => ({ afterSequence: 10 }),
+			});
+			const socket = MockWebSocket.instances[0];
+			const subscribe = socket?.sentFrames.find(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as { subscriptionId?: string } | undefined;
+			socket?.emit("message", {
+				data: JSON.stringify({
+					kind: "stream.status",
+					clientId: "lifecycle-scope-client",
+					sessionId: "session-1",
+					subscriptionId: subscribe?.subscriptionId,
+					status: "ready",
+					lifecycleReady: {
+						version: "v1",
+						stream: "chat.changed",
+						afterSequence: 10,
+						throughSequence: 10,
+					},
+				}),
+			});
+
+			expect(client.getConnectionError()).toMatchObject({
+				code: "hub_protocol_error",
+			});
+			expect(socket?.readyState).toBe(MockWebSocket.CLOSED);
+			await client.dispose();
+		});
+
+		it("rejects a command fenced to a retired connection before sending", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				clientId: "command-generation-client",
+			});
+			await client.connect();
+			const retiredGeneration = client.getRegisteredConnectionGeneration();
+			if (retiredGeneration === undefined) {
+				throw new Error("registered connection generation missing");
+			}
+			client.close();
+			await client.connect();
+			const replacement = MockWebSocket.instances[1];
+
+			await expect(
+				client.command("client.list", undefined, undefined, {
+					requiredConnectionGeneration: retiredGeneration,
+				}),
+			).rejects.toMatchObject({ code: "hub_connection_changed" });
+			expect(
+				replacement?.sentFrames.filter(
+					(frame) =>
+						(frame as { envelope?: { command?: string } }).envelope?.command ===
+						"client.list",
+				),
+			).toEqual([]);
+			await client.dispose();
+		});
+
+		it("rejects every fenced physical subscription that is not acknowledged", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				clientId: "ack-timeout-client",
+			});
+			await client.connect();
+			vi.useFakeTimers();
+			try {
+				const onStatus = vi.fn();
+				client.subscribe(() => undefined, {
+					sessionId: "session-1",
+					fenced: true,
+					onStatus,
+				});
+				await vi.advanceTimersByTimeAsync(10_001);
+				expect(onStatus).toHaveBeenCalledOnce();
+				expect(onStatus).toHaveBeenCalledWith({
+					status: "rejected",
+					errorCode: "subscription_ack_timeout",
+				});
+			} finally {
+				client.close();
+				vi.useRealTimers();
+			}
+		});
+
+		it("cancels the physical acknowledgement watchdog after readiness", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				clientId: "ack-ready-client",
+			});
+			await client.connect();
+			vi.useFakeTimers();
+			try {
+				const onStatus = vi.fn();
+				client.subscribe(() => undefined, {
+					sessionId: "session-1",
+					fenced: true,
+					onStatus,
+				});
+				const socket = MockWebSocket.instances[0];
+				const subscribe = socket?.sentFrames.find(
+					(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+				) as { subscriptionId?: string } | undefined;
+				socket?.emit("message", {
+					data: JSON.stringify({
+						kind: "stream.status",
+						clientId: "ack-ready-client",
+						sessionId: "session-1",
+						subscriptionId: subscribe?.subscriptionId,
+						status: "ready",
+					}),
+				});
+				await vi.advanceTimersByTimeAsync(10_001);
+				expect(onStatus).toHaveBeenCalledOnce();
+				expect(onStatus).toHaveBeenCalledWith({ status: "ready" });
+			} finally {
+				client.close();
+				vi.useRealTimers();
+			}
+		});
+
 		it("reconnects and re-subscribes active listeners after an idle close", async () => {
 			vi.useFakeTimers();
 			vi.stubGlobal("WebSocket", MockWebSocket);
@@ -220,6 +579,224 @@ describe("NodeHubClient", () => {
 			} finally {
 				vi.useRealTimers();
 			}
+		});
+
+		it("acquires a fresh workspace capability for every physical socket", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const credentials = ["A".repeat(43), "B".repeat(43)];
+			const getFreshCapability = vi.fn(() => ({
+				credential: credentials.shift() ?? "C".repeat(43),
+			}));
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				authToken: "daemon-token-must-not-be-combined",
+				workspaceCapabilityProvider: { getFreshCapability },
+			});
+
+			await client.connect();
+			client.close();
+			await client.connect();
+
+			expect(getFreshCapability).toHaveBeenCalledTimes(2);
+			expect(MockWebSocket.instances[0]?.protocols).toEqual([
+				`cline-hub-workspace.${"A".repeat(43)}`,
+			]);
+			expect(MockWebSocket.instances[1]?.protocols).toEqual([
+				`cline-hub-workspace.${"B".repeat(43)}`,
+			]);
+			expect(JSON.stringify(MockWebSocket.instances)).not.toContain(
+				"daemon-token-must-not-be-combined",
+			);
+			await client.dispose();
+		});
+
+		it("retires a rejected registration and retries with a fresh capability", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			MockWebSocket.registrationFailures = 1;
+			const credentials = ["H".repeat(43), "I".repeat(43)];
+			const getFreshCapability = vi.fn(() => ({
+				credential: credentials.shift() ?? "J".repeat(43),
+			}));
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				workspaceCapabilityProvider: { getFreshCapability },
+			});
+
+			await expect(client.connect()).rejects.toMatchObject({
+				code: "client_conflict",
+			});
+			expect(MockWebSocket.instances[0]?.readyState).toBe(MockWebSocket.CLOSED);
+			await expect(client.connect()).resolves.toBeUndefined();
+
+			expect(getFreshCapability).toHaveBeenCalledTimes(2);
+			expect(MockWebSocket.instances).toHaveLength(2);
+			expect(MockWebSocket.instances[1]?.protocols).toEqual([
+				`cline-hub-workspace.${"I".repeat(43)}`,
+			]);
+			await client.dispose();
+		});
+
+		it("retires malformed inbound frames, reconnects, and isolates listeners", async () => {
+			vi.useFakeTimers();
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			try {
+				const client = new NodeHubClient({
+					url: "ws://127.0.0.1:25463/hub",
+				});
+				const delivered = vi.fn();
+				client.subscribe(() => {
+					throw new Error("consumer failed");
+				});
+				client.subscribe(delivered);
+				await client.connect();
+				const firstSocket = MockWebSocket.instances[0];
+				firstSocket.emit("message", { data: "{" });
+
+				expect(client.getConnectionError()).toMatchObject({
+					code: "hub_protocol_error",
+					message: "Hub sent a malformed transport frame.",
+				});
+				expect(firstSocket.readyState).toBe(MockWebSocket.CLOSED);
+				await vi.advanceTimersByTimeAsync(251);
+				await Promise.resolve();
+				await Promise.resolve();
+				const secondSocket = MockWebSocket.instances[1];
+				expect(secondSocket).toBeDefined();
+
+				secondSocket.emit("message", {
+					data: JSON.stringify({
+						kind: "event",
+						envelope: {
+							version: "v1",
+							event: "session.updated",
+							payload: {},
+						},
+					}),
+				});
+				expect(delivered).toHaveBeenCalledOnce();
+				await client.dispose();
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("drops queued frames from a retired physical socket", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+			});
+			await client.connect();
+			const delivered = vi.fn();
+			client.subscribe(delivered, {
+				sessionId: "session-1",
+				fenced: true,
+			});
+			const socket = MockWebSocket.instances[0];
+			const subscription = socket?.sentFrames.find(
+				(frame) => (frame as { kind?: string }).kind === "stream.subscribe",
+			) as { subscriptionId?: string } | undefined;
+
+			socket?.emit("message", { data: "{" });
+			socket?.emit("message", {
+				data: JSON.stringify({
+					kind: "event",
+					subscriptionId: subscription?.subscriptionId,
+					envelope: {
+						version: "v1",
+						event: "chat.runtime",
+						sessionId: "session-1",
+						payload: {},
+					},
+				}),
+			});
+
+			expect(delivered).not.toHaveBeenCalled();
+			client.close();
+		});
+
+		it("deduplicates concurrent capability acquisition and sanitizes failures", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			let resolveGrant: ((grant: { credential: string }) => void) | undefined;
+			const getFreshCapability = vi.fn(
+				() =>
+					new Promise<{ credential: string }>((resolve) => {
+						resolveGrant = resolve;
+					}),
+			);
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				workspaceCapabilityProvider: { getFreshCapability },
+			});
+
+			const first = client.connect();
+			const second = client.connect();
+			expect(getFreshCapability).toHaveBeenCalledTimes(1);
+			resolveGrant?.({ credential: "D".repeat(43) });
+			await Promise.all([first, second]);
+			expect(MockWebSocket.instances).toHaveLength(1);
+			await client.dispose();
+
+			MockWebSocket.reset();
+			const secret = "E".repeat(43);
+			const failing = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				workspaceCapabilityProvider: {
+					getFreshCapability: () => {
+						throw new Error(`provider leaked ${secret}`);
+					},
+				},
+			});
+			await expect(failing.connect()).rejects.toMatchObject({
+				code: "hub_workspace_capability_failed",
+				message: "Failed to obtain a fresh Hub workspace capability.",
+			});
+			expect(failing.getConnectionError()?.message).not.toContain(secret);
+			expect(MockWebSocket.instances).toHaveLength(0);
+		});
+
+		it("adapts the in-process issuer without exposing workspace paths", async () => {
+			const issue = vi.fn(() => ({ credential: "F".repeat(43) }));
+			const provider = createInProcessHubWorkspaceCapabilityProvider(
+				{ issue },
+				"opaque-workspace-id",
+			);
+
+			await expect(
+				Promise.resolve(
+					provider.getFreshCapability({
+						hubUrl: "ws://127.0.0.1:25463/hub",
+						clientId: "client-1",
+					}),
+				),
+			).resolves.toEqual({ credential: "F".repeat(43) });
+			expect(issue).toHaveBeenCalledWith({
+				workspaceId: "opaque-workspace-id",
+			});
+			expect(() =>
+				createInProcessHubWorkspaceCapabilityProvider({ issue }, " "),
+			).toThrow("Workspace ID is required");
+		});
+
+		it("does not open a socket when closed during capability acquisition", async () => {
+			vi.stubGlobal("WebSocket", MockWebSocket);
+			let resolveGrant: ((grant: { credential: string }) => void) | undefined;
+			const client = new NodeHubClient({
+				url: "ws://127.0.0.1:25463/hub",
+				workspaceCapabilityProvider: {
+					getFreshCapability: () =>
+						new Promise<{ credential: string }>((resolve) => {
+							resolveGrant = resolve;
+						}),
+				},
+			});
+			const connecting = client.connect();
+			client.close();
+			resolveGrant?.({ credential: "G".repeat(43) });
+
+			await expect(connecting).rejects.toMatchObject({
+				code: "hub_connection_closed",
+			});
+			expect(MockWebSocket.instances).toHaveLength(0);
 		});
 
 		it("unregisters before closing when disposed", async () => {
@@ -556,9 +1133,7 @@ describe("NodeHubClient", () => {
 			globalThis as unknown as { WebSocket?: typeof RecoveryWebSocket }
 		).WebSocket = RecoveryWebSocket;
 		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: vi.fn(async () => {
-				throw new Error("unexpected ensureDetachedHubServer call");
-			}),
+			spawnDetachedHubServerWithRetry: vi.fn(async () => undefined),
 		}));
 		vi.doMock("../discovery/workspace", () => ({
 			resolveProductionHubOwnerContext: () => ({
@@ -713,9 +1288,7 @@ describe("NodeHubClient", () => {
 			globalThis as unknown as { WebSocket?: typeof ExplicitEndpointWebSocket }
 		).WebSocket = ExplicitEndpointWebSocket;
 		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: vi.fn(async () => {
-				throw new Error("unexpected ensureDetachedHubServer call");
-			}),
+			spawnDetachedHubServerWithRetry: vi.fn(async () => undefined),
 		}));
 		vi.doMock("../discovery/workspace", () => ({
 			resolveProductionHubOwnerContext: () => ({
@@ -777,74 +1350,13 @@ describe("resolveCompatibleLocalHubUrl", () => {
 	// path and fail locally whenever a stray hub daemon is listening on
 	// the default port (passes in CI only because no daemon is running).
 	beforeEach(() => {
-		MockWebSocket.reset();
 		vi.resetModules();
 	});
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
-		vi.unstubAllEnvs();
 		delete process.env.CLINE_HUB_BUILD_ID;
 		vi.resetModules();
-	});
-
-	async function resolveShieldedHub(sessions: unknown[]) {
-		vi.stubGlobal("WebSocket", MockWebSocket);
-		MockWebSocket.commandPayloads.set("session.list", { sessions });
-		const discoveryPath = "/tmp/hub-discovery.json";
-		const oldRecord = {
-			hubId: "old-hub",
-			protocolVersion: "v1",
-			buildId: "old-build",
-			authToken: "old-token",
-			host: "127.0.0.1",
-			port: 59999,
-			url: "ws://127.0.0.1:59999/hub",
-			pid: 12345,
-			startedAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-		vi.doMock("../discovery/workspace", () => ({
-			resolveProductionHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath,
-			}),
-			resolveSharedHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath,
-			}),
-		}));
-		vi.doMock("../discovery", async () => {
-			const actual =
-				await vi.importActual<typeof import("../discovery")>("../discovery");
-			return {
-				...actual,
-				resolveHubBuildId: () => "current-build",
-				readHubDiscovery: vi.fn(async (path: string) =>
-					path === `${discoveryPath}.superseded` ? oldRecord : undefined,
-				),
-				probeHubServer: vi.fn(async () => oldRecord),
-			};
-		});
-
-		const { resolveCompatibleLocalHubUrl } = await import(".");
-		return { oldRecord, resolved: await resolveCompatibleLocalHubUrl() };
-	}
-
-	it("uses a shielded Hub while a participant is attached", async () => {
-		const { oldRecord, resolved } = await resolveShieldedHub([
-			{ status: "idle", participants: [{ clientId: "old-cli" }] },
-		]);
-
-		expect(resolved).toBe(oldRecord.url);
-	});
-
-	it("replaces a participant-less running Hub", async () => {
-		const { resolved } = await resolveShieldedHub([
-			{ status: "running", participants: [] },
-		]);
-
-		expect(resolved).toBeUndefined();
 	});
 
 	it("does not clear discovery on transient probe failure", async () => {
@@ -888,7 +1400,7 @@ describe("resolveCompatibleLocalHubUrl", () => {
 		expect(clearHubDiscoveryMock).not.toHaveBeenCalled();
 	});
 
-	it("returns undefined on build mismatch but keeps discovery for retirement", async () => {
+	it("keeps discovery on build mismatch when protocol is compatible", async () => {
 		const clearHubDiscoveryMock = vi.fn();
 		vi.doMock("../discovery/workspace", () => ({
 			resolveProductionHubOwnerContext: () => ({
@@ -923,60 +1435,6 @@ describe("resolveCompatibleLocalHubUrl", () => {
 					hubId: "hub-test",
 					protocolVersion: "v1",
 					buildId: "old-build",
-					host: "127.0.0.1",
-					port: 59999,
-					url: "ws://127.0.0.1:59999/hub",
-					startedAt: new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
-				})),
-			};
-		});
-
-		const { resolveCompatibleLocalHubUrl } = await import(".");
-
-		await expect(resolveCompatibleLocalHubUrl()).resolves.toBeUndefined();
-		expect(clearHubDiscoveryMock).not.toHaveBeenCalled();
-	});
-
-	it("attaches to a managed hub from a newer build instead of retiring it", async () => {
-		vi.stubEnv("CLINE_HUB_BUILD_EPOCH_MS", "1000");
-		const clearHubDiscoveryMock = vi.fn();
-		vi.doMock("../discovery/workspace", () => ({
-			resolveProductionHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath: "/tmp/hub-discovery.json",
-			}),
-			resolveSharedHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath: "/tmp/hub-discovery.json",
-			}),
-		}));
-		vi.doMock("../discovery", async () => {
-			const actual =
-				await vi.importActual<typeof import("../discovery")>("../discovery");
-			return {
-				...actual,
-				resolveHubBuildId: () => "current-build",
-				readHubDiscovery: vi.fn(async () => ({
-					hubId: "hub-test",
-					protocolVersion: "v1",
-					buildId: "newer-build",
-					buildEpochMs: 2_000,
-					authToken: "newer-token",
-					host: "127.0.0.1",
-					port: 59999,
-					url: "ws://127.0.0.1:59999/hub",
-					startedAt: new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
-				})),
-				clearHubDiscovery: vi.fn(async (...args: unknown[]) => {
-					clearHubDiscoveryMock(...args);
-				}),
-				probeHubServer: vi.fn(async () => ({
-					hubId: "hub-test",
-					protocolVersion: "v1",
-					buildId: "newer-build",
-					buildEpochMs: 2_000,
 					host: "127.0.0.1",
 					port: 59999,
 					url: "ws://127.0.0.1:59999/hub",
@@ -994,43 +1452,7 @@ describe("resolveCompatibleLocalHubUrl", () => {
 		expect(clearHubDiscoveryMock).not.toHaveBeenCalled();
 	});
 
-	it("keeps explicit endpoints protocol-compatible across build identities", async () => {
-		const readHubDiscoveryMock = vi.fn(async () => {
-			throw new Error("explicit endpoint must not consult managed discovery");
-		});
-		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: vi.fn(async () => {
-				throw new Error("explicit endpoint must not start a managed daemon");
-			}),
-		}));
-		vi.doMock("../discovery", async () => {
-			const actual =
-				await vi.importActual<typeof import("../discovery")>("../discovery");
-			return {
-				...actual,
-				resolveHubBuildId: () => "current-build",
-				readHubDiscovery: readHubDiscoveryMock,
-				probeHubServer: vi.fn(async () => ({
-					protocolVersion: "v1",
-					buildId: "different-build",
-					host: "127.0.0.1",
-					port: 59999,
-					url: "ws://127.0.0.1:59999/hub",
-				})),
-			};
-		});
-
-		const { resolveCompatibleLocalHubUrl } = await import(".");
-
-		await expect(
-			resolveCompatibleLocalHubUrl({
-				endpoint: "ws://127.0.0.1:59999/hub",
-			}),
-		).resolves.toBe("ws://127.0.0.1:59999/hub");
-		expect(readHubDiscoveryMock).not.toHaveBeenCalled();
-	});
-
-	it("attaches and keeps discovery when build metadata is missing", async () => {
+	it("keeps discovery when a hub omits build metadata but has compatible protocol", async () => {
 		const clearHubDiscoveryMock = vi.fn();
 		vi.doMock("../discovery/workspace", () => ({
 			resolveProductionHubOwnerContext: () => ({
@@ -1074,10 +1496,6 @@ describe("resolveCompatibleLocalHubUrl", () => {
 
 		const { resolveCompatibleLocalHubUrl } = await import(".");
 
-		// A Hub carrying no build metadata cannot be ordered against this
-		// build, so it is attached over the compatible wire protocol rather
-		// than retired. Retiring an unorderable peer is what let two installs
-		// shut each other's daemon down in a loop.
 		await expect(resolveCompatibleLocalHubUrl()).resolves.toBe(
 			"ws://127.0.0.1:59999/hub",
 		);
@@ -1135,15 +1553,26 @@ describe("resolveCompatibleLocalHubUrl", () => {
 		);
 	});
 
-	it("starts missing local hubs through the retirement-aware daemon ensure API", async () => {
+	it("starts missing local hubs through the retrying daemon spawn API", async () => {
 		vi.stubGlobal("WebSocket", MockWebSocket);
-		const ensureDetachedHubServerMock = vi.fn(async () => ({
+		const spawnDetachedHubServerWithRetryMock = vi.fn(async () => undefined);
+		const record = {
+			hubId: "hub-test",
+			protocolVersion: "v1",
+			buildId: "test-build",
 			authToken: "token",
+			host: "127.0.0.1",
+			port: 25464,
 			url: "ws://127.0.0.1:25464/hub",
-		}));
-		const readHubDiscoveryMock = vi.fn().mockResolvedValue(undefined);
+			startedAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+		const readHubDiscoveryMock = vi
+			.fn()
+			.mockResolvedValueOnce(undefined)
+			.mockResolvedValueOnce(record);
 		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: ensureDetachedHubServerMock,
+			spawnDetachedHubServerWithRetry: spawnDetachedHubServerWithRetryMock,
 		}));
 		vi.doMock("../discovery/workspace", () => ({
 			resolveProductionHubOwnerContext: () => ({
@@ -1162,7 +1591,7 @@ describe("resolveCompatibleLocalHubUrl", () => {
 				...actual,
 				resolveHubBuildId: () => "test-build",
 				readHubDiscovery: readHubDiscoveryMock,
-				probeHubServer: vi.fn(async () => undefined),
+				probeHubServer: vi.fn(async () => record),
 				clearHubDiscovery: vi.fn(async () => undefined),
 			};
 		});
@@ -1175,106 +1604,22 @@ describe("resolveCompatibleLocalHubUrl", () => {
 				cwd: "/tmp/project",
 			}),
 		).resolves.toBe("ws://127.0.0.1:25464/hub");
-		expect(ensureDetachedHubServerMock).toHaveBeenCalledWith("/tmp/project");
+		expect(spawnDetachedHubServerWithRetryMock).toHaveBeenCalledWith(
+			"/tmp/project",
+		);
+		expect(
+			spawnDetachedHubServerWithRetryMock.mock.invocationCallOrder[0],
+		).toBeGreaterThan(readHubDiscoveryMock.mock.invocationCallOrder[0]);
+		expect(
+			spawnDetachedHubServerWithRetryMock.mock.invocationCallOrder[0],
+		).toBeLessThan(readHubDiscoveryMock.mock.invocationCallOrder[1]);
 	});
 
-	it("replaces a stale-build hub without dropping its retirement credentials", async () => {
-		vi.stubGlobal("WebSocket", MockWebSocket);
-		const clearHubDiscoveryMock = vi.fn();
-		const ensureDetachedHubServerMock = vi.fn(async () => ({
-			url: "ws://127.0.0.1:25465/hub",
-			authToken: "new-token",
-		}));
-		const staleRecord = {
-			hubId: "hub-test",
-			protocolVersion: "v1",
-			buildId: "old-build",
-			authToken: "old-token",
-			host: "127.0.0.1",
-			port: 25464,
-			url: "ws://127.0.0.1:25464/hub",
-			pid: 12345,
-			startedAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: ensureDetachedHubServerMock,
-		}));
-		vi.doMock("../discovery/workspace", () => ({
-			resolveProductionHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath: "/tmp/hub-discovery.json",
-			}),
-			resolveSharedHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath: "/tmp/hub-discovery.json",
-			}),
-		}));
-		vi.doMock("../discovery", async () => {
-			const actual =
-				await vi.importActual<typeof import("../discovery")>("../discovery");
-			return {
-				...actual,
-				resolveHubBuildId: () => "current-build",
-				readHubDiscovery: vi.fn(async () => staleRecord),
-				probeHubServer: vi.fn(async () => staleRecord),
-				clearHubDiscovery: vi.fn(async (...args: unknown[]) => {
-					clearHubDiscoveryMock(...args);
-				}),
-			};
-		});
-
-		const { ensureCompatibleLocalHubUrl } = await import(".");
-
-		await expect(
-			ensureCompatibleLocalHubUrl({
-				workspaceRoot: "/tmp/project",
-				cwd: "/tmp/project",
-			}),
-		).resolves.toBe("ws://127.0.0.1:25465/hub");
-		expect(ensureDetachedHubServerMock).toHaveBeenCalledWith("/tmp/project");
-		expect(clearHubDiscoveryMock).not.toHaveBeenCalled();
-	});
-
-	it("returns undefined when managed Hub retirement fails", async () => {
-		const ensureDetachedHubServerMock = vi.fn(async () => {
-			throw new Error("could not retire stale hub");
-		});
-		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: ensureDetachedHubServerMock,
-		}));
-		vi.doMock("../discovery/workspace", () => ({
-			resolveProductionHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath: "/tmp/hub-discovery.json",
-			}),
-			resolveSharedHubOwnerContext: () => ({
-				ownerId: "hub-test",
-				discoveryPath: "/tmp/hub-discovery.json",
-			}),
-		}));
-		vi.doMock("../discovery", async () => {
-			const actual =
-				await vi.importActual<typeof import("../discovery")>("../discovery");
-			return {
-				...actual,
-				readHubDiscovery: vi.fn(async () => undefined),
-				probeHubServer: vi.fn(async () => undefined),
-			};
-		});
-
-		const { ensureCompatibleLocalHubUrl } = await import(".");
-
-		await expect(
-			ensureCompatibleLocalHubUrl({ workspaceRoot: "/tmp/project" }),
-		).resolves.toBeUndefined();
-		expect(ensureDetachedHubServerMock).toHaveBeenCalledWith("/tmp/project");
-	});
-
-	it("resolves managed shared discovery in development builds", async () => {
+	it("waits on shared discovery after spawning in development builds", async () => {
 		vi.stubGlobal("WebSocket", MockWebSocket);
 		const originalBuildEnv = process.env.CLINE_BUILD_ENV;
 		process.env.CLINE_BUILD_ENV = "development";
+		const spawnDetachedHubServerWithRetryMock = vi.fn(async () => undefined);
 		const record = {
 			hubId: "hub-test",
 			protocolVersion: "v1",
@@ -1290,9 +1635,7 @@ describe("resolveCompatibleLocalHubUrl", () => {
 			path === "/tmp/shared-hub-discovery.json" ? record : undefined,
 		);
 		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: vi.fn(async () => {
-				throw new Error("unexpected ensureDetachedHubServer call");
-			}),
+			spawnDetachedHubServerWithRetry: spawnDetachedHubServerWithRetryMock,
 		}));
 		vi.doMock("../discovery/workspace", () => ({
 			resolveProductionHubOwnerContext: () => ({
@@ -1309,7 +1652,6 @@ describe("resolveCompatibleLocalHubUrl", () => {
 				await vi.importActual<typeof import("../discovery")>("../discovery");
 			return {
 				...actual,
-				resolveHubBuildId: () => "test-build",
 				readHubDiscovery: readHubDiscoveryMock,
 				probeHubServer: vi.fn(async () => record),
 				clearHubDiscovery: vi.fn(async () => undefined),
@@ -1363,9 +1705,7 @@ describe("resolveCompatibleLocalHubUrl", () => {
 			}),
 		}));
 		vi.doMock("../daemon", () => ({
-			ensureDetachedHubServer: vi.fn(async () => {
-				throw new Error("unexpected ensureDetachedHubServer call");
-			}),
+			spawnDetachedHubServerWithRetry: vi.fn(async () => undefined),
 		}));
 		vi.doMock("../discovery", async () => {
 			const actual =
@@ -1386,50 +1726,5 @@ describe("resolveCompatibleLocalHubUrl", () => {
 			}),
 		).resolves.toBeUndefined();
 		expect(readHubDiscoveryMock).not.toHaveBeenCalled();
-	});
-});
-
-describe("hasActiveHubSessions", () => {
-	const payload = (sessions: unknown[]) => ({ sessions });
-
-	it("is idle for an empty or malformed list", async () => {
-		const { hasActiveHubSessions } = await import(".");
-		expect(hasActiveHubSessions(payload([]))).toBe(false);
-		expect(hasActiveHubSessions(undefined)).toBe(false);
-		expect(hasActiveHubSessions(payload([null, "junk"]))).toBe(false);
-	});
-
-	it("is busy while anyone is attached, whatever the status", async () => {
-		const { hasActiveHubSessions } = await import(".");
-		expect(
-			hasActiveHubSessions(
-				payload([{ status: "idle", participants: [{ clientId: "tui" }] }]),
-			),
-		).toBe(true);
-		expect(
-			hasActiveHubSessions(
-				payload([{ status: "running", participants: [{ clientId: "tui" }] }]),
-			),
-		).toBe(true);
-	});
-
-	// The session a crashed or killed client leaves behind: a non-terminal
-	// status, nobody attached. Participants are live socket subscriptions, so
-	// a dead client cannot appear here - which is exactly why status must not
-	// be consulted: it stays "running" forever and would pin an outdated hub
-	// as busy until the machine reboots.
-	it("is idle for sessions nobody is attached to, whatever the status", async () => {
-		const { hasActiveHubSessions } = await import(".");
-		expect(
-			hasActiveHubSessions(
-				payload([
-					{ status: "running", participants: [] },
-					{ status: "pending", participants: [] },
-					{ status: "idle", participants: [] },
-					{ status: "completed", participants: [] },
-					{ status: "running" },
-				]),
-			),
-		).toBe(false);
 	});
 });

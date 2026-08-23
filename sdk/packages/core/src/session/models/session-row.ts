@@ -1,6 +1,7 @@
 import type { TeamTeammateSpec } from "@cline/shared";
 import type { AgentTeamsRuntime } from "../../extensions/tools/team";
 import type { SessionSource, SessionStatus } from "../../types/common";
+import type { SessionWriterFenceCredential } from "../writer-fence";
 import type { SessionManifest } from "./session-manifest";
 
 export interface SessionRow {
@@ -36,8 +37,6 @@ export interface SessionRow {
 export interface CreateRootSessionInput {
 	sessionId: string;
 	source: SessionSource;
-	mode?: string;
-	version?: string;
 	pid: number;
 	startedAt: string;
 	interactive: boolean;
@@ -57,8 +56,6 @@ export interface CreateRootSessionInput {
 export interface CreateRootSessionWithArtifactsInput {
 	sessionId: string;
 	source: SessionSource;
-	mode?: string;
-	version?: string;
 	pid: number;
 	interactive: boolean;
 	provider: string;
@@ -72,6 +69,15 @@ export interface CreateRootSessionWithArtifactsInput {
 	prompt?: string;
 	metadata?: Record<string, unknown>;
 	startedAt?: string;
+	writerFence?: SessionWriterFenceCredential;
+}
+
+export interface ReserveCatalogRootSessionInput
+	extends Omit<
+		CreateRootSessionWithArtifactsInput,
+		"startedAt" | "writerFence"
+	> {
+	startedAt: string;
 }
 
 export interface RootSessionArtifacts {

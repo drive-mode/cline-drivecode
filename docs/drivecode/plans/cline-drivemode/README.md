@@ -43,7 +43,7 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [26-request-latency-playbook.md](research/26-request-latency-playbook.md) | A six-fix API latency ladder scored fix-by-fix against a loopback hub ([canvas](../../design/canvases/request-latency-ladder.html)) |
 | [27-agent-compute-substrate.md](research/27-agent-compute-substrate.md) | `@cloudflare/computer` evaluated as an execution substrate against the self-hosted beta |
 | [28-huggingface-speech-to-speech.md](research/28-huggingface-speech-to-speech.md) | HF speech-to-speech evaluated for Drive — not adopted; harvest notes for VAD/ports |
-| [29-large-task-models.md](research/29-large-task-models.md) | Next-action prediction as a training objective; prior art, label economics, and the constraints it may not relax |
+| [29-cross-session-chat-management.md](research/29-cross-session-chat-management.md) | Past-chat evidence and current-code audit for one active/archive chat catalog |
 | [enforced-authority/](initiatives/enforced-authority/) | Wiring declared authority to paths that can refuse; ADR-0025 slices |
 | [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) | Archive: remaining U4 work for PR 24 (AI SDK 7) |
 | [share-and-router/](initiatives/share-and-router/) | Full reference PLAN for demo share + agent router |
@@ -51,12 +51,12 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [task-bank-drive-loop/](initiatives/task-bank-drive-loop/) | Multi-phase plan for the task-bank Drive loop |
 | [task-satisfaction-observability/](initiatives/task-satisfaction-observability/) | Task-centric session metrics + gated plan improve |
 | [session-satisfaction-moments/](initiatives/session-satisfaction-moments/) | Product moments + [visual plan](initiatives/session-satisfaction-moments/visual-plan.md) / [canvas](../../design/canvases/session-satisfaction-moments-canvas.html) |
+| [cross-session-chat-management/](initiatives/cross-session-chat-management/) | Core-owned active/archive lifecycle, bindings, lineage, leases, and safe reset/resume |
 | [drive-product-demo/](initiatives/drive-product-demo/) | Full-system product demo scene-player ([canvas](../../design/canvases/drive-product-demo.html)) |
 | [driveplan-agent-runtime/](initiatives/driveplan-agent-runtime/) | ADR-0018 DriveRun / lease / receipt + Kanban projection stub |
 | [hub-drive-ia-analytics/](initiatives/hub-drive-ia-analytics/) | Drive owns call+history; Analytics page; Status stays ops |
-| [next-action-triad/](initiatives/next-action-triad/) | ADR-0036 wiring; answers Open 6 (operator DO → `ToolPolicy` gate without a turn) |
-| [ios-native-client/](initiatives/ios-native-client/) | Live SwiftUI client architecture, Mobile Drive Gateway, stacked implementation plan, and production-work tests |
-| [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; PRD 11 Magic Hotkey; phase-gate success metrics |
+| [adr-planner/](initiatives/adr-planner/) | Pre-plan and plan plugin, benchmark contract, labeling handbook, and Milestone 0 evidence |
+| [prd/](prd/) | Product requirements. PRD 6 portfolio; PRD 7 PiP; PRD 8 Drive-as-mode; PRD 9 task-bank; PRD 10 session satisfaction; phase-gate success metrics |
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
 | [LEADERSHIP-BRIEF.md](leadership/LEADERSHIP-BRIEF.md) | SE lead / PM brief for the planning wave (defaults, MoSCoW, risks) |

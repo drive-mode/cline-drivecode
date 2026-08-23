@@ -341,6 +341,10 @@ export class PendingPromptsController {
 		return result;
 	}
 
+	clearAborted(session: ActiveSession): void {
+		this.emitPrompts(session);
+	}
+
 	enqueue(
 		sessionId: string,
 		entry: {

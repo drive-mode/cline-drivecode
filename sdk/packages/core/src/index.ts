@@ -33,7 +33,12 @@ export type {
 	AgentExtension as AgentPlugin, // Public-facing alias for extensions
 	AgentExtensionCommand,
 	AgentExtensionCommand as AgentPluginCommand,
+	AgentExtensionCommandInvocationContext,
 	AgentExtensionCommandResult,
+	AgentExtensionInvocationActorKind,
+	AgentExtensionStateEntry,
+	AgentExtensionStateMutationRequest,
+	AgentExtensionStateSnapshot,
 	AgentHooks,
 	AgentMode,
 	AgentResult,
@@ -210,6 +215,8 @@ export type {
 	OcaTokenResolution,
 } from "./auth/types";
 export { ClineCore } from "./ClineCore";
+export type { CatalogSessionHistoryListOptions } from "./chat-catalog/chat-history-projection";
+export { listCatalogSessionHistoryFromBackend } from "./chat-catalog/chat-history-projection";
 export type {
 	ClineAutomationEventIngressResult,
 	ClineAutomationEventLog,
@@ -222,7 +229,28 @@ export type {
 	ClineAutomationSpec,
 	ClineCoreAutomationApi,
 	ClineCoreAutomationOptions,
+	ClineCoreChatLifecycleActivateInput,
+	ClineCoreChatLifecycleApi,
+	ClineCoreChatLifecycleArchiveInput,
+	ClineCoreChatLifecycleBindInput,
+	ClineCoreChatLifecycleBindingScope,
+	ClineCoreChatLifecycleBindingTarget,
+	ClineCoreChatLifecycleConfirmationRequest,
+	ClineCoreChatLifecyclePurgeResult,
+	ClineCoreChatLifecycleRecoverLostLeaseInput,
+	ClineCoreChatLifecycleRenameInput,
+	ClineCoreChatLifecycleResetInput,
+	ClineCoreChatLifecycleRestoreCheckpointInput,
+	ClineCoreChatLifecycleRestoreCheckpointResult,
+	ClineCoreChatLifecycleResumeInput,
+	ClineCoreChatLifecycleRunTurnInput,
+	ClineCoreChatLifecycleStartRelatedInput,
+	ClineCoreChatLifecycleStartResult,
+	ClineCoreChatLifecycleStartRootInput,
+	ClineCoreChatLifecycleStopInput,
 	ClineCoreListHistoryOptions,
+	ClineCoreLocalChatLifecycleOptions,
+	ClineCoreManagedStartInput,
 	ClineCoreOptions,
 	ClineCoreSettingsApi,
 	ClineCoreStartInput,
@@ -243,7 +271,6 @@ export type {
 } from "./extensions";
 export {
 	discoverPluginModulePaths,
-	getPluginDisplayName,
 	loadAgentPluginFromPath,
 	loadAgentPluginsFromPaths,
 	loadAgentPluginsFromPathsWithDiagnostics,
@@ -260,7 +287,6 @@ export type {
 	CreateUserInstructionConfigServiceOptions,
 	CreateWorkflowsConfigDefinitionOptions,
 	ParseMarkdownFrontmatterResult,
-	ResolveRuntimeSlashCommandOptions,
 	RuleConfig,
 	SkillConfig,
 	UnifiedConfigDefinition,
@@ -303,10 +329,8 @@ export {
 	createDisabledMcpToolPolicies,
 	createDisabledMcpToolPolicy,
 	createMcpTools,
-	DEFAULT_MCP_CONNECT_TIMEOUT_MS,
 	type DefaultMcpServerClientFactoryOptions,
 	getMcpServerOAuthState,
-	getMcpServerOAuthStatus,
 	hasMcpSettingsFile,
 	InMemoryMcpManager,
 	type LoadMcpSettingsOptions,
@@ -315,10 +339,8 @@ export {
 	type McpConnectionStatus,
 	type McpManager,
 	type McpManagerOptions,
-	McpOAuthClientChangedError,
 	type McpServerClient,
 	type McpServerClientFactory,
-	type McpServerOAuthClientConfig,
 	type McpServerOAuthState,
 	type McpServerOAuthStatus,
 	type McpServerRegistration,
@@ -338,23 +360,18 @@ export {
 	type McpToolDescriptor,
 	type McpToolNameTransform,
 	type McpToolProvider,
-	type ProbeMcpServerConnectionOptions,
-	type ProbeMcpServerConnectionResult,
-	parseMcpServerRegistration,
-	probeMcpServerConnection,
 	type RegisterMcpServersFromSettingsOptions,
 	registerMcpServersFromSettingsFile,
 	resolveDefaultMcpSettingsPath,
-	resolveMcpServerRegistration,
 	resolveMcpServerRegistrations,
 	type SetMcpServerDisabledOptions,
 	setMcpServerDisabled,
-	type UpdateMcpServerOAuthStateOptions,
 	updateMcpServerOAuthState,
 	updateMcpServerOAuthStateAsync,
 	updateMcpSettingsFile,
 	updateMcpSettingsFileSync,
 } from "./extensions/mcp";
+export { resolvePluginInstallationId } from "./extensions/plugin/plugin-installation-id";
 export {
 	type AgentTask,
 	AgentTeam,
@@ -477,7 +494,6 @@ export {
 } from "./runtime/host/host";
 export { LocalRuntimeHost } from "./runtime/host/local-runtime-host";
 export type {
-	CommandExecutionRuntimeService,
 	PendingPromptMutationResult,
 	PendingPromptsDeleteInput,
 	PendingPromptsListInput,
@@ -499,7 +515,6 @@ export type {
 } from "./runtime/host/runtime-host";
 export {
 	isSessionNotFoundError,
-	isUnusableSessionError,
 	SESSION_NOT_FOUND_ERROR_CODE,
 	SessionNotFoundError,
 	splitCoreSessionConfig,
@@ -526,6 +541,10 @@ export {
 	probeProcessStartToken,
 	probeProcessStartTokenAsync,
 } from "./runtime/process-start-token";
+export type {
+	SessionDisplayMessage,
+} from "./session/display-messages";
+export { projectSessionMessagesForDisplay } from "./session/display-messages";
 export {
 	formatRulesForSystemPrompt,
 	isRuleEnabled,
@@ -583,7 +602,6 @@ export {
 	filterExtensionToolRegistrations,
 	GlobalSettingsSchema,
 	isAutoUpdateEnabledGlobally,
-	isModelToolEnabledGlobally,
 	isPluginDisabledGlobally,
 	isTelemetryOptedOutGlobally,
 	isToolDisabledGlobally,
@@ -592,20 +610,16 @@ export {
 	readGlobalSettings,
 	readPlanActModeGlobally,
 	readToolAutoApproveGlobally,
-	readTuiThemeGlobally,
 	resolveDisabledPluginPaths,
 	resolveDisabledToolNames,
-	resolveModelToolSettings,
 	setAutoUpdateEnabledGlobally,
 	setCompactionModeGlobally,
 	setCompactionStrategyGlobally,
 	setDisabledPlugin,
 	setDisabledTools,
-	setModelToolEnabledGlobally,
 	setPlanActModeGlobally,
 	setTelemetryOptOutGlobally,
 	setToolAutoApproveGlobally,
-	setTuiThemeGlobally,
 	toggleDisabledTool,
 	writeGlobalSettings,
 } from "./services/global-settings";
@@ -632,20 +646,19 @@ export {
 export type {
 	McpInstallOptions,
 	McpInstallResult,
-	McpUninstallOptions,
-	McpUninstallResult,
 } from "./services/mcp-install";
 export {
 	buildMcpInstallTransport,
 	installMcpServer,
 	parseMcpInstallArgs,
-	uninstallMcpServer,
 } from "./services/mcp-install";
 export type {
 	ParsedPluginSource,
 	PluginInstallOptions,
 	PluginInstallResult,
 	PluginInstallSourceType,
+	PluginInstallVerificationExpectations,
+	PluginInstallVerificationResult,
 	PluginMcpOAuthCandidate,
 } from "./services/plugin-install";
 export {
@@ -654,6 +667,20 @@ export {
 	isOfficialPluginSlug,
 	parsePluginSource,
 } from "./services/plugin-install";
+export type {
+	PluginInstallReceiptIntent,
+	PluginInstallRecoveryResult,
+	PluginInstallTransactionFaultPoint,
+	PluginInstallTransactionOptions,
+	PluginInstallTransactionResult,
+} from "./services/plugin-install-transaction";
+export {
+	hashPluginInstallTree,
+	hashPluginReceiptPackageContent,
+	readPluginInstallReceiptIntent,
+	recoverPluginInstallTransactions,
+	withPluginInstallMutationLock,
+} from "./services/plugin-install-transaction";
 export type {
 	PluginMcpSettingsMutation,
 	PluginMcpSettingsSyncResult,
@@ -667,7 +694,6 @@ export {
 } from "./services/plugin-mcp-settings";
 export type {
 	ListPluginToolsResult,
-	PluginContributionSummary,
 	PluginToolSummary,
 } from "./services/plugin-tools";
 export {
@@ -690,13 +716,10 @@ export {
 } from "./services/providers/local-provider-registry";
 export {
 	addLocalProvider,
-	type CreateConfiguredStreamingTranscriptionSessionRequest,
-	createConfiguredStreamingTranscriptionSession,
 	type DeleteLocalProviderRequest,
 	deleteLocalProvider,
 	ensureCustomProvidersLoaded,
 	getLocalProviderModels,
-	isDedicatedTranscriptionModel,
 	listLocalProviders,
 	loginAndSaveLocalProviderOAuthCredentials,
 	loginLocalProvider,
@@ -706,11 +729,6 @@ export {
 	resolveLocalClineAuthToken,
 	saveLocalProviderOAuthCredentials,
 	saveLocalProviderSettings,
-	saveVoiceInputSettings,
-	type TranscribeConfiguredVoiceInputRequest,
-	type TranscribeLocalAudioRequest,
-	transcribeConfiguredVoiceInput,
-	transcribeLocalAudio,
 	type UpdateLocalProviderRequest,
 	updateLocalProvider,
 } from "./services/providers/local-provider-service";
@@ -726,6 +744,12 @@ export {
 	migrateLegacyProviderSettings,
 } from "./services/storage/provider-settings-legacy-migration";
 export { ProviderSettingsManager } from "./services/storage/provider-settings-manager";
+export {
+	type ApplyExtensionStateMutationInput,
+	type ApplyExtensionStateMutationResult,
+	SqliteExtensionStateStore,
+	type SqliteExtensionStateStoreOptions,
+} from "./services/storage/sqlite-extension-state-store";
 export { SqliteSessionStore } from "./services/storage/sqlite-session-store";
 export {
 	SqliteTeamStore,
@@ -754,7 +778,6 @@ export {
 	captureAgentUnexpectedReasoningTokens,
 	captureAuthFailed,
 	captureAuthLoggedOut,
-	captureAuthRefreshSoftFailure,
 	captureAuthStarted,
 	captureAuthSucceeded,
 	captureCompactionExecuted,
@@ -809,7 +832,6 @@ export type {
 } from "./services/workspace";
 export {
 	enrichPromptWithMentions,
-	ensureChatWorkspace,
 	getFileIndex,
 	prewarmFileIndex,
 } from "./services/workspace";
@@ -838,10 +860,6 @@ export {
 	readSessionCheckpointHistory,
 	trimMessagesBeforeUserRun,
 } from "./session/checkpoint-restore";
-export {
-	projectSessionMessagesForDisplay,
-	type SessionDisplayMessage,
-} from "./session/display-messages";
 export {
 	deriveSubsessionStatus,
 	makeSubSessionId,
@@ -937,15 +955,11 @@ export {
 	resolveMessageDisplayRole,
 } from "./session/user-run-messages";
 export type {
-	CorePluginContributions,
-	CorePluginSettingsSnapshot,
-	CorePluginSettingsSource,
 	CoreSettingsItem,
 	CoreSettingsItemKind,
 	CoreSettingsItemSource,
 	CoreSettingsListInput,
 	CoreSettingsMutationResult,
-	CoreSettingsServiceOptions,
 	CoreSettingsSnapshot,
 	CoreSettingsToggleInput,
 	CoreSettingsType,
@@ -1013,7 +1027,6 @@ export {
 	getCoreBuiltinToolCatalog,
 	getCoreDefaultEnabledToolIds,
 	getCoreHeadlessToolNames,
-	isSkillsToolAvailable,
 	MAX_COMMAND_OUTPUT_CHARS,
 	PATCH_MARKERS,
 	PatchActionType,
@@ -1044,7 +1057,6 @@ export {
 	DEFAULT_MODELS_CATALOG_URL,
 	getLiveModelsCatalog,
 	getProviderConfig,
-	isPrivateModelCatalogProvider,
 	OPENAI_COMPATIBLE_PROVIDERS,
 	resolveProviderConfig,
 } from "./services/llms/provider-defaults";
@@ -1151,13 +1163,11 @@ export type {
 } from "./types/events";
 export type {
 	ProviderTokenSource,
-	StoredProviderModes,
 	StoredProviderSettings,
 	StoredProviderSettingsEntry,
 } from "./types/provider-settings";
 export {
 	emptyStoredProviderSettings,
-	StoredProviderModesSchema,
 	StoredProviderSettingsEntrySchema,
 	StoredProviderSettingsSchema,
 } from "./types/provider-settings";

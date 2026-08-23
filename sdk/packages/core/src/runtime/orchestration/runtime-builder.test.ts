@@ -10,7 +10,6 @@ import {
 import { setHomeDir } from "@cline/shared/storage";
 import { afterEach, describe, expect, it } from "vitest";
 import { createUserInstructionConfigService } from "../../extensions/config";
-import { PLAN_MODE_COMMAND_GUARD_EXTENSION_NAME } from "../../extensions/tools/command-guard-extension";
 import { TelemetryService } from "../../services/telemetry/TelemetryService";
 import type { CoreSessionConfig } from "../../types/config";
 import { DefaultRuntimeBuilder } from "./runtime-builder";
@@ -79,13 +78,6 @@ describe("DefaultRuntimeBuilder", () => {
 	});
 
 	it("applies resolved team-run resource limits", async () => {
-		const isolatedHome = mkdtempSync(
-			join(tmpdir(), "runtime-builder-team-home-"),
-		);
-		tempDirs.push(isolatedHome);
-		process.env.HOME = isolatedHome;
-		setHomeDir(isolatedHome);
-
 		const runtime = await new DefaultRuntimeBuilder({
 			teamRuns: {
 				maxConcurrent: 5,
@@ -102,45 +94,6 @@ describe("DefaultRuntimeBuilder", () => {
 			maxRunMessageBytes: 4096,
 		});
 		await runtime.shutdown("test");
-	});
-
-	it("derives enabled provider tools without registering a local executor", async () => {
-		const settingsRoot = mkdtempSync(join(tmpdir(), "cline-model-tools-"));
-		tempDirs.push(settingsRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
-			settingsRoot,
-			"global-settings.json",
-		);
-		writeFileSync(
-			process.env.CLINE_GLOBAL_SETTINGS_PATH,
-			JSON.stringify({ tools: { web_search: { enabled: true } } }),
-		);
-
-		const runtime = await new DefaultRuntimeBuilder().build({
-			config: makeBaseConfig(),
-		});
-
-		expect(runtime.modelTools).toEqual([{ name: "web_search" }]);
-		expect(runtime.tools.some((tool) => tool.name === "web_search")).toBe(
-			false,
-		);
-	});
-
-	it("requests provider image generation for supported language models", async () => {
-		const runtime = await new DefaultRuntimeBuilder().build({
-			config: makeBaseConfig({
-				providerId: "openai-native",
-				modelId: "gpt-5.4",
-			}),
-		});
-
-		expect(runtime.modelTools).toContainEqual({
-			name: "image_generation",
-			outputFormat: "png",
-		});
-		expect(runtime.tools.some((tool) => tool.name === "image_generation")).toBe(
-			false,
-		);
 	});
 
 	it("forwards runtime logger for downstream agent creation", async () => {
@@ -272,39 +225,6 @@ Use the review guidance.`,
 		});
 
 		expect(runtime.tools.map((tool) => tool.name)).not.toContain("editor");
-	});
-
-	it("registers the plan-mode command-guard hook only in plan mode", async () => {
-		const planRuntime = await new DefaultRuntimeBuilder().build({
-			config: makeBaseConfig({
-				mode: "plan",
-			}),
-		});
-		const actRuntime = await new DefaultRuntimeBuilder().build({
-			config: makeBaseConfig(),
-		});
-
-		const planGuards = (planRuntime.extensions ?? []).filter(
-			(extension) => extension.name === PLAN_MODE_COMMAND_GUARD_EXTENSION_NAME,
-		);
-		expect(planGuards).toHaveLength(1);
-		expect(planGuards[0]?.hooks?.beforeTool).toBeTypeOf("function");
-		expect(
-			(actRuntime.extensions ?? []).map((extension) => extension.name),
-		).not.toContain(PLAN_MODE_COMMAND_GUARD_EXTENSION_NAME);
-	});
-
-	it("does not register the plan-mode command-guard when tools are disabled", async () => {
-		const runtime = await new DefaultRuntimeBuilder().build({
-			config: makeBaseConfig({
-				mode: "plan",
-				enableTools: false,
-			}),
-		});
-
-		expect(
-			(runtime.extensions ?? []).map((extension) => extension.name),
-		).not.toContain(PLAN_MODE_COMMAND_GUARD_EXTENSION_NAME);
 	});
 
 	it("uses yolo preset only when yolo mode is explicit", async () => {
@@ -668,10 +588,6 @@ process.stdin.on("data", (chunk) => {
 						broken: {
 							command: process.execPath,
 							args: [serverPath],
-							// Keep the test fast: the Content-Length fallback
-							// attempt otherwise waits out the default connect
-							// budget against this silent server.
-							timeout: 1,
 						},
 					},
 				},
@@ -941,11 +857,8 @@ Use conventional commits.`,
 
 	it("marks configured but disabled skills in executor metadata", async () => {
 		const cwd = mkdtempSync(join(tmpdir(), "runtime-builder-skills-disabled-"));
-		tempDirs.push(cwd);
-		process.env.HOME = cwd;
-		setHomeDir(cwd);
 		const enabledDir = join(cwd, ".cline", "skills", "commit");
-		const disabledDir = join(cwd, ".cline", "skills", "review");
+		const disabledDir = join(cwd, ".cline", "skills", "disabled-fixture-skill");
 		mkdirSync(enabledDir, { recursive: true });
 		mkdirSync(disabledDir, { recursive: true });
 		writeFileSync(
@@ -959,7 +872,7 @@ Enabled skill.`,
 		writeFileSync(
 			join(disabledDir, "SKILL.md"),
 			`---
-name: review
+name: disabled-fixture-skill
 disabled: true
 ---
 Disabled skill.`,
@@ -978,7 +891,7 @@ Disabled skill.`,
 		}
 
 		const disabledResult = await skillsTool.execute(
-			{ skill: "review" },
+			{ skill: "disabled-fixture-skill" },
 			{
 				agentId: "agent-1",
 				conversationId: "conv-1",

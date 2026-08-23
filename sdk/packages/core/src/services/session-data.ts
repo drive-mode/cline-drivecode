@@ -287,39 +287,43 @@ export type MessagesFileContext = {
 };
 
 export function resolveMessagesFileContext(
-	row: SessionRow,
+	row: SessionRow | string,
 ): MessagesFileContext {
-	const historyOrigin = readSessionHistoryOriginMetadata(row.metadata);
+	const session =
+		typeof row === "string" ? ({ sessionId: row } as SessionRow) : row;
+	const historyOrigin = readSessionHistoryOriginMetadata(session.metadata);
 	const origin = {
-		source: row.source,
+		source: session.source,
 		mode: historyOrigin?.mode ?? "user",
-		sessionId: row.sessionId,
-		...(row.parentSessionId ? { parentThreadId: row.parentSessionId } : {}),
-		...(row.agentId ? { subagent: row.agentId } : {}),
+		sessionId: session.sessionId,
+		...(session.parentSessionId
+			? { parentThreadId: session.parentSessionId }
+			: {}),
+		...(session.agentId ? { subagent: session.agentId } : {}),
 		...(historyOrigin?.version ? { version: historyOrigin.version } : {}),
 		...(historyOrigin?.trigger ? { trigger: historyOrigin.trigger } : {}),
 	};
-	const teamTaskMatch = parseTeamTaskSubSessionId(row.sessionId);
+	const teamTaskMatch = parseTeamTaskSubSessionId(session.sessionId);
 	if (teamTaskMatch) {
 		return {
 			agent: "teammate",
-			sessionId: row.sessionId,
+			sessionId: session.sessionId,
 			taskType: "team",
 			origin,
 		};
 	}
-	const subSessionMatch = parseSubSessionId(row.sessionId);
+	const subSessionMatch = parseSubSessionId(session.sessionId);
 	if (subSessionMatch) {
 		return {
 			agent: "subagent",
-			sessionId: row.sessionId,
+			sessionId: session.sessionId,
 			taskType: "subagent_task",
 			origin,
 		};
 	}
 	return {
 		agent: "lead",
-		sessionId: row.sessionId,
+		sessionId: session.sessionId,
 		origin,
 	};
 }

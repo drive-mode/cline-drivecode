@@ -1,4 +1,12 @@
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { BasicLogger, ITelemetryService } from "@cline/shared";
+import type { CatalogManagedSessionRuntime } from "./chat-catalog/catalog-managed-session-runtime";
+import {
+	registerClineCoreCatalogAudienceSource,
+	registerClineCoreCatalogLifecycleEventSource,
+	unregisterClineCoreCatalogLifecycleEventSource,
+} from "./chat-catalog/cline-core-event-source-registry";
+import { ChatCatalogError } from "./chat-catalog/sqlite-chat-catalog-service";
 import {
 	ClineCoreAutomationController,
 	createClineCoreAutomationExtensionContext,
@@ -19,6 +27,21 @@ import { emitSessionStartedTelemetry } from "./cline-core/telemetry";
 import type {
 	ClineCoreAutomationApi,
 	ClineCoreAutomationOptions,
+	ClineCoreChatLifecycleActivateInput,
+	ClineCoreChatLifecycleApi,
+	ClineCoreChatLifecycleArchiveInput,
+	ClineCoreChatLifecycleBindInput,
+	ClineCoreChatLifecycleBindingScope,
+	ClineCoreChatLifecyclePurgeResult,
+	ClineCoreChatLifecycleRecoverLostLeaseInput,
+	ClineCoreChatLifecycleRenameInput,
+	ClineCoreChatLifecycleResetInput,
+	ClineCoreChatLifecycleRestoreCheckpointInput,
+	ClineCoreChatLifecycleRestoreCheckpointResult,
+	ClineCoreChatLifecycleResumeInput,
+	ClineCoreChatLifecycleRunTurnInput,
+	ClineCoreChatLifecycleStartRelatedInput,
+	ClineCoreChatLifecycleStartRootInput,
 	ClineCoreListHistoryOptions,
 	ClineCoreOptions,
 	ClineCoreSettingsApi,
@@ -40,12 +63,18 @@ import {
 import type { RuntimeCapabilities } from "./runtime/capabilities";
 import { normalizeRuntimeCapabilities } from "./runtime/capabilities";
 import { listSessionHistory } from "./runtime/host/history";
-import { createRuntimeHost } from "./runtime/host/host";
+import {
+	type CatalogManagedLocalRuntimeComposition,
+	createRuntimeHost,
+	getCatalogManagedLocalRuntimeComposition,
+} from "./runtime/host/host";
 import type {
 	PendingPromptsServiceApi,
 	RuntimeHost,
 	RuntimeHostSubscribeOptions,
 	SessionConnectionRuntimeService,
+	SessionManualCompactionInput,
+	SessionManualCompactionResult,
 	SessionModelRuntimeService,
 	SessionUsageRuntimeService,
 	StartSessionInput,
@@ -57,10 +86,6 @@ import {
 } from "./services/feature-flags";
 import { resolveCoreDistinctId } from "./services/telemetry/distinct-id";
 import { compareCheckpointToWorkspace } from "./session/checkpoint-diff";
-import {
-	projectSessionMessagesForDisplay,
-	type SessionDisplayMessage,
-} from "./session/display-messages";
 import type { CoreSessionEvent } from "./types/events";
 import type { SessionHistoryRecord } from "./types/sessions";
 
@@ -76,7 +101,28 @@ export type {
 	ClineAutomationSpec,
 	ClineCoreAutomationApi,
 	ClineCoreAutomationOptions,
+	ClineCoreChatLifecycleActivateInput,
+	ClineCoreChatLifecycleApi,
+	ClineCoreChatLifecycleArchiveInput,
+	ClineCoreChatLifecycleBindInput,
+	ClineCoreChatLifecycleBindingScope,
+	ClineCoreChatLifecycleBindingTarget,
+	ClineCoreChatLifecycleConfirmationRequest,
+	ClineCoreChatLifecyclePurgeResult,
+	ClineCoreChatLifecycleRecoverLostLeaseInput,
+	ClineCoreChatLifecycleRenameInput,
+	ClineCoreChatLifecycleResetInput,
+	ClineCoreChatLifecycleRestoreCheckpointInput,
+	ClineCoreChatLifecycleRestoreCheckpointResult,
+	ClineCoreChatLifecycleResumeInput,
+	ClineCoreChatLifecycleRunTurnInput,
+	ClineCoreChatLifecycleStartRelatedInput,
+	ClineCoreChatLifecycleStartResult,
+	ClineCoreChatLifecycleStartRootInput,
+	ClineCoreChatLifecycleStopInput,
 	ClineCoreListHistoryOptions,
+	ClineCoreLocalChatLifecycleOptions,
+	ClineCoreManagedStartInput,
 	ClineCoreOptions,
 	ClineCoreSettingsApi,
 	ClineCoreStartInput,
@@ -109,10 +155,14 @@ export class ClineCore {
 	readonly settings: ClineCoreSettingsApi;
 	readonly featureFlags: FeatureFlagsService;
 	readonly pendingPrompts: PendingPromptsServiceApi;
+	readonly chatLifecycle: ClineCoreChatLifecycleApi;
 	/** Observe-only process resource and event-loop diagnostics. */
 	readonly diagnostics: ResourceDiagnosticsApi;
 	private readonly resourceMonitor: ResourceMonitor;
 	private readonly host: RuntimeHost;
+	private readonly catalogManagedComposition:
+		| CatalogManagedLocalRuntimeComposition
+		| undefined;
 	private readonly prepare: ClineCoreOptions["prepare"] | undefined;
 	private readonly capabilities: RuntimeCapabilities | undefined;
 	private readonly logger: BasicLogger | undefined;
@@ -143,6 +193,8 @@ export class ClineCore {
 		this.clientName = clientName;
 		this.runtimeAddress = runtimeAddress;
 		this.host = host;
+		this.catalogManagedComposition =
+			getCatalogManagedLocalRuntimeComposition(host);
 		this.prepare = prepare;
 		this.capabilities = capabilities;
 		this.logger = logger;
@@ -151,6 +203,161 @@ export class ClineCore {
 		this.featureFlags = featureFlags;
 		this.settings = createClineCoreSettingsApi(host);
 		this.pendingPrompts = createClineCorePendingPromptsApi(host);
+		const managedRuntime = this.catalogManagedComposition?.runtime;
+		if (this.catalogManagedComposition?.eventSource) {
+			registerClineCoreCatalogLifecycleEventSource(
+				this,
+				this.catalogManagedComposition.eventSource,
+			);
+		}
+		if (this.catalogManagedComposition?.audienceSource) {
+			registerClineCoreCatalogAudienceSource(
+				this,
+				this.catalogManagedComposition.audienceSource,
+			);
+		}
+		this.chatLifecycle = managedRuntime
+			? Object.freeze({
+					startRoot: (input: ClineCoreChatLifecycleStartRootInput) =>
+						this.startCatalogManagedRoot(managedRuntime, input),
+					startRelated: (input: ClineCoreChatLifecycleStartRelatedInput) =>
+						this.startCatalogManagedRelated(managedRuntime, input),
+					restoreCheckpoint: (
+						input: ClineCoreChatLifecycleRestoreCheckpointInput,
+					) => this.restoreCatalogManagedCheckpoint(managedRuntime, input),
+					resume: (input: ClineCoreChatLifecycleResumeInput) =>
+						this.resumeCatalogManagedSession(managedRuntime, input),
+					recoverLostLease: (
+						input: ClineCoreChatLifecycleRecoverLostLeaseInput,
+					) => this.recoverCatalogManagedLostLease(managedRuntime, input),
+					runTurn: (input: ClineCoreChatLifecycleRunTurnInput) =>
+						managedRuntime.runTurn(input),
+					getBinding: (scope: ClineCoreChatLifecycleBindingScope) =>
+						managedRuntime.getBinding(scope),
+					bind: (input: ClineCoreChatLifecycleBindInput) =>
+						managedRuntime.bind(input),
+					reset: async (input: ClineCoreChatLifecycleResetInput) => {
+						const binding = await managedRuntime.reset(input);
+						await this.disposeSessionBootstrap(input.sessionId);
+						return binding;
+					},
+					archive: async (input: ClineCoreChatLifecycleArchiveInput) => {
+						const chat = await managedRuntime.archive(input);
+						if (input.stopRunning) {
+							await Promise.all(
+								chat.sessions.map((session) =>
+									this.disposeSessionBootstrap(session.sessionId),
+								),
+							);
+						}
+						return chat;
+					},
+					activate: (input: ClineCoreChatLifecycleActivateInput) =>
+						managedRuntime.activate(input),
+					rename: (input: ClineCoreChatLifecycleRenameInput) =>
+						managedRuntime.rename(input),
+					purge: async (
+						input: ClineCoreChatLifecycleActivateInput,
+					): Promise<ClineCoreChatLifecyclePurgeResult> => {
+						const result = await managedRuntime.purge(input);
+						await Promise.all(
+							result.sessionIds.map((sessionId) =>
+								this.disposeSessionBootstrap(sessionId),
+							),
+						);
+						return result;
+					},
+					stop: async (input: { operationId: string; sessionId: string }) => {
+						await managedRuntime.stop(input.sessionId, input.operationId);
+						await this.disposeSessionBootstrap(input.sessionId);
+					},
+				})
+			: Object.freeze({
+					startRoot: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					startRelated: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					restoreCheckpoint: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					resume: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					recoverLostLease: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					runTurn: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					getBinding: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					bind: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					reset: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					archive: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					activate: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					rename: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					purge: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+					stop: async () => {
+						throw new ChatCatalogError(
+							"unsupported_capability",
+							"catalog-managed lifecycle is unavailable",
+						);
+					},
+				});
 		this.automation = new ClineCoreAutomationController(() => {
 			if (!this.automationService) {
 				throw new Error(
@@ -257,7 +464,19 @@ export class ClineCore {
 				: undefined,
 		);
 		if (automationOptions && automationOptions.autoStart !== false) {
-			await core.automation.start();
+			try {
+				await core.automation.start();
+			} catch (error) {
+				try {
+					await core.dispose("automation_start_failed");
+				} catch (disposeError) {
+					throw new AggregateError(
+						[error, disposeError],
+						"automation startup and Core cleanup failed",
+					);
+				}
+				throw error;
+			}
 		}
 		return core;
 	}
@@ -305,47 +524,241 @@ export class ClineCore {
 	async start(
 		input: StartSessionInput | ClineCoreStartInput,
 	): Promise<StartSessionResult> {
+		if (this.catalogManagedComposition) {
+			throw new Error(
+				"Catalog-managed Core instances must start sessions through core.chatLifecycle with a stable operation id.",
+			);
+		}
+		return await this.runPreparedStart(input, async (preparedInput) => {
+			const result = await this.host.startSession(preparedInput);
+			return { value: result, startResult: result };
+		});
+	}
+
+	private async runPreparedStart<T>(
+		input: StartSessionInput | ClineCoreStartInput,
+		execute: (preparedInput: StartSessionInput) => Promise<{
+			value: T;
+			startResult: StartSessionResult;
+		}>,
+	): Promise<T> {
 		const clineCoreInput = toClineCoreStartInput(input);
 		const bootstrap = await this.prepare?.(clineCoreInput);
 		try {
 			const preparedInput = bootstrap
 				? await bootstrap.applyToStartSessionInput(clineCoreInput)
 				: clineCoreInput;
-			const result = await this.host.startSession(
-				normalizeClineCoreStartInput(preparedInput, {
-					defaultCapabilities: this.capabilities,
-					withExtensionContext: (context) =>
-						createClineCoreAutomationExtensionContext({
-							automationService: this.automationService,
-							automation: this.automation,
-							context,
-							clientName: this.clientName,
-							distinctId: this.distinctId,
-							logger: this.logger,
-							telemetry: this.telemetry,
-						}),
-				}),
-			);
+			const normalizedInput = normalizeClineCoreStartInput(preparedInput, {
+				defaultCapabilities: this.capabilities,
+				withExtensionContext: (context) =>
+					createClineCoreAutomationExtensionContext({
+						automationService: this.automationService,
+						automation: this.automation,
+						context,
+						clientName: this.clientName,
+						distinctId: this.distinctId,
+						logger: this.logger,
+						telemetry: this.telemetry,
+					}),
+			});
+			const { value, startResult } = await execute(normalizedInput);
 			if (bootstrap) {
-				const activeSession = await this.host.getSession(result.sessionId);
+				const activeSession = await this.host.getSession(startResult.sessionId);
 				if (activeSession) {
-					this.activeSessionBootstraps.set(result.sessionId, bootstrap);
+					this.activeSessionBootstraps.set(startResult.sessionId, bootstrap);
 				} else {
 					await Promise.resolve(bootstrap.dispose?.());
 				}
 			}
 			emitSessionStartedTelemetry({
 				input: preparedInput,
-				sessionId: result.sessionId,
+				sessionId: startResult.sessionId,
 				telemetry: this.telemetry,
 				clientName: this.clientName,
 				runtimeAddress: this.runtimeAddress,
 			});
-			return result;
+			return value;
 		} catch (error) {
 			await Promise.resolve(bootstrap?.dispose?.());
 			throw error;
 		}
+	}
+
+	private async startCatalogManagedRoot(
+		runtime: CatalogManagedSessionRuntime,
+		input: ClineCoreChatLifecycleStartRootInput,
+	) {
+		return await this.runPreparedStart(input.startInput, async (startInput) => {
+			const managedStartInput = this.resolveCatalogManagedStartInput(
+				startInput,
+				input.sessionId,
+			);
+			const result = await runtime.startRoot({
+				operationId: input.operationId,
+				...(input.chatId ? { chatId: input.chatId } : {}),
+				...(input.title ? { title: input.title } : {}),
+				...(input.titleSource ? { titleSource: input.titleSource } : {}),
+				...(input.leaseTtlMs === undefined
+					? {}
+					: { leaseTtlMs: input.leaseTtlMs }),
+				startInput: managedStartInput,
+			});
+			return { value: result, startResult: result.startResult };
+		});
+	}
+
+	private async startCatalogManagedRelated(
+		runtime: CatalogManagedSessionRuntime,
+		input: ClineCoreChatLifecycleStartRelatedInput,
+	) {
+		return await this.runPreparedStart(input.startInput, async (startInput) => {
+			const managedStartInput = this.resolveCatalogManagedStartInput(
+				startInput,
+				input.sessionId,
+			);
+			const result = await runtime.startRelated({
+				operationId: input.operationId,
+				chatId: input.chatId,
+				parentSessionId: input.parentSessionId,
+				relationKind: input.relationKind,
+				...(input.expectedRevision === undefined
+					? {}
+					: { expectedRevision: input.expectedRevision }),
+				...(input.title ? { title: input.title } : {}),
+				...(input.titleSource ? { titleSource: input.titleSource } : {}),
+				...(input.leaseTtlMs === undefined
+					? {}
+					: { leaseTtlMs: input.leaseTtlMs }),
+				startInput: managedStartInput,
+			});
+			return { value: result, startResult: result.startResult };
+		});
+	}
+
+	private async resumeCatalogManagedSession(
+		runtime: CatalogManagedSessionRuntime,
+		input: ClineCoreChatLifecycleResumeInput,
+	) {
+		return await this.runPreparedStart(input.startInput, async (startInput) => {
+			const managedStartInput = this.resolveCatalogManagedStartInput(
+				startInput,
+				input.sessionId,
+			);
+			const result = await runtime.resume({
+				operationId: input.operationId,
+				...(input.expectedLeaseRevision === undefined
+					? {}
+					: { expectedLeaseRevision: input.expectedLeaseRevision }),
+				...(input.leaseTtlMs === undefined
+					? {}
+					: { leaseTtlMs: input.leaseTtlMs }),
+				startInput: managedStartInput,
+			});
+			return { value: result, startResult: result.startResult };
+		});
+	}
+
+	private async restoreCatalogManagedCheckpoint(
+		runtime: CatalogManagedSessionRuntime,
+		input: ClineCoreChatLifecycleRestoreCheckpointInput,
+	): Promise<ClineCoreChatLifecycleRestoreCheckpointResult> {
+		return await this.runPreparedStart(input.startInput, async (startInput) => {
+			const managedStartInput = this.resolveCatalogManagedStartInput(
+				startInput,
+				input.sessionId,
+			);
+			const result = await runtime.restoreCheckpoint({
+				operationId: input.operationId,
+				chatId: input.chatId,
+				parentSessionId: input.parentSessionId,
+				checkpointRunCount: input.checkpointRunCount,
+				...(input.cwd === undefined ? {} : { cwd: input.cwd }),
+				...(input.restore === undefined ? {} : { restore: input.restore }),
+				...(input.title ? { title: input.title } : {}),
+				...(input.titleSource ? { titleSource: input.titleSource } : {}),
+				...(input.leaseTtlMs === undefined
+					? {}
+					: { leaseTtlMs: input.leaseTtlMs }),
+				startInput: managedStartInput,
+			});
+			return { value: result, startResult: result.startResult };
+		});
+	}
+
+	private async recoverCatalogManagedLostLease(
+		runtime: CatalogManagedSessionRuntime,
+		input: ClineCoreChatLifecycleRecoverLostLeaseInput,
+	) {
+		return await this.runPreparedStart(input.startInput, async (startInput) => {
+			const managedStartInput = this.resolveCatalogManagedStartInput(
+				startInput,
+				input.sessionId,
+			);
+			const result = await runtime.recoverLostLease({
+				operationId: input.operationId,
+				...(input.leaseTtlMs === undefined
+					? {}
+					: { leaseTtlMs: input.leaseTtlMs }),
+				startInput: managedStartInput,
+			});
+			return { value: result, startResult: result.startResult };
+		});
+	}
+
+	private resolveCatalogManagedStartInput(
+		input: StartSessionInput,
+		sessionIdInput: string,
+	): StartSessionInput {
+		const composition = this.catalogManagedComposition;
+		if (!composition) {
+			throw new Error("Catalog-managed lifecycle is unavailable.");
+		}
+		const sessionId = sessionIdInput.trim();
+		const configuredSessionId = input.config.sessionId?.trim();
+		if (
+			!sessionId ||
+			(configuredSessionId && configuredSessionId !== sessionId)
+		) {
+			throw new Error(
+				"Managed start requires one stable, non-conflicting session id.",
+			);
+		}
+		const workspaceRootInput = input.config.workspaceRoot?.trim() ?? "";
+		const cwdInput = input.config.cwd?.trim() ?? "";
+		if (
+			!workspaceRootInput ||
+			!cwdInput ||
+			!isAbsolute(workspaceRootInput) ||
+			!isAbsolute(cwdInput)
+		) {
+			throw new Error(
+				"Managed start requires resolved absolute cwd and workspaceRoot paths.",
+			);
+		}
+		const workspaceRoot = resolve(workspaceRootInput);
+		const cwd = resolve(cwdInput);
+		if (workspaceRoot !== composition.workspaceRoot) {
+			throw new Error(
+				"Managed start workspace does not match the Core authority scope.",
+			);
+		}
+		const relativeCwd = relative(workspaceRoot, cwd);
+		if (
+			relativeCwd === ".." ||
+			relativeCwd.startsWith(`..${sep}`) ||
+			isAbsolute(relativeCwd)
+		) {
+			throw new Error("Managed start cwd is outside the workspace authority.");
+		}
+		return {
+			...input,
+			config: {
+				...input.config,
+				sessionId,
+				cwd,
+				workspaceRoot,
+			},
+		};
 	}
 	/**
 	 * Sends a message or command to an active session.
@@ -361,7 +774,14 @@ export class ClineCore {
 	 * });
 	 * ```
 	 */
-	send: RuntimeHost["runTurn"] = (...args) => this.host.runTurn(...args);
+	send: RuntimeHost["runTurn"] = async (...args) => {
+		if (this.catalogManagedComposition?.runtime.manages(args[0].sessionId)) {
+			throw new Error(
+				"Catalog-managed sessions must run turns through core.chatLifecycle.runTurn with a stable operation id.",
+			);
+		}
+		return await this.host.runTurn(...args);
+	};
 	/**
 	 * Retrieves accumulated token and cost usage for a session.
 	 *
@@ -395,6 +815,44 @@ export class ClineCore {
 	 * ```
 	 */
 	abort: RuntimeHost["abort"] = (...args) => this.host.abort(...args);
+
+	managedSessionAuthoritySignal(sessionId: string): AbortSignal {
+		const runtime = this.catalogManagedComposition?.runtime;
+		if (!runtime) {
+			throw new ChatCatalogError(
+				"unsupported_capability",
+				"catalog-managed lifecycle is unavailable",
+			);
+		}
+		return runtime.residentAuthoritySignal(sessionId);
+	}
+
+	async verifyManagedSessionAuthority(sessionId: string) {
+		const runtime = this.catalogManagedComposition?.runtime;
+		if (!runtime) {
+			throw new ChatCatalogError(
+				"unsupported_capability",
+				"catalog-managed lifecycle is unavailable",
+			);
+		}
+		return await runtime.verifyResidentAuthority(sessionId);
+	}
+
+	async rekeyManagedSessionAuthority(input: {
+		operationId: string;
+		sessionId: string;
+		expectedWriterGeneration: number;
+		signal?: AbortSignal;
+	}) {
+		const runtime = this.catalogManagedComposition?.runtime;
+		if (!runtime) {
+			throw new ChatCatalogError(
+				"unsupported_capability",
+				"catalog-managed lifecycle is unavailable",
+			);
+		}
+		return await runtime.rekeyResidentAuthority(input);
+	}
 	/**
 	 * Stops an active session gracefully.
 	 *
@@ -408,6 +866,11 @@ export class ClineCore {
 	 * ```
 	 */
 	stop: RuntimeHost["stopSession"] = async (sessionId) => {
+		if (this.catalogManagedComposition?.runtime.manages(sessionId)) {
+			throw new Error(
+				"Catalog-managed sessions must be stopped through core.chatLifecycle.stop with a stable operation id.",
+			);
+		}
 		await this.host.stopSession(sessionId);
 		await this.disposeSessionBootstrap(sessionId);
 	};
@@ -425,16 +888,37 @@ export class ClineCore {
 	 * ```
 	 */
 	dispose: RuntimeHost["dispose"] = async (...args) => {
+		const failures: unknown[] = [];
 		try {
-			await this.automationService?.dispose();
-			await this.host.dispose(...args);
+			try {
+				await this.automationService?.dispose();
+			} catch (error) {
+				failures.push(error);
+			}
+			try {
+				await this.catalogManagedComposition?.runtime.dispose(
+					args[0] ?? "cline_core_dispose",
+				);
+			} catch (error) {
+				failures.push(error);
+			}
+			try {
+				await this.host.dispose(...args);
+			} catch (error) {
+				failures.push(error);
+			}
 		} finally {
+			unregisterClineCoreCatalogLifecycleEventSource(this);
+			this.catalogManagedComposition?.dispose();
 			this.resourceMonitor.dispose();
 			this.unsubscribeBootstrapCleanup();
 			const sessionIds = [...this.activeSessionBootstraps.keys()];
 			await Promise.allSettled(
 				sessionIds.map((sessionId) => this.disposeSessionBootstrap(sessionId)),
 			);
+		}
+		if (failures.length > 0) {
+			throw new AggregateError(failures, "ClineCore disposal failed");
 		}
 	};
 	/**
@@ -531,12 +1015,26 @@ export class ClineCore {
 		...args
 	) => this.host.readSessionCompactionState(...args);
 	/**
-	 * Reads the canonical message history for a session.
+	 * Runs manual compaction inside the trusted resident runtime. The admitted
+	 * session profile remains the sole source of provider and policy authority.
+	 */
+	async runSessionManualCompaction(
+		input: SessionManualCompactionInput,
+	): Promise<SessionManualCompactionResult> {
+		const run = this.host.runSessionManualCompaction;
+		if (!run) {
+			throw new ChatCatalogError(
+				"unsupported_capability",
+				"manual compaction is unavailable on this runtime",
+			);
+		}
+		return await run.call(this.host, input);
+	}
+	/**
+	 * Reads message history for a session.
 	 *
-	 * This is the model/replay representation used by resume, fork, and
-	 * compaction. Provider-owned model-tool activity remains observational
-	 * metadata here. Use {@link readDisplayMessages} for a UI transcript with
-	 * that activity projected into ordinary tool blocks.
+	 * Retrieves the full message transcript for a specific session, including all
+	 * user messages, agent responses, and tool interactions.
 	 *
 	 * @example
 	 * ```ts
@@ -548,20 +1046,6 @@ export class ClineCore {
 	 */
 	readMessages: RuntimeHost["readSessionMessages"] = (...args) =>
 		this.host.readSessionMessages(...args);
-
-	/**
-	 * Reads a transcript projected for presentation. Observational model-tool
-	 * activity is represented with the same tool blocks as ordinary local tools.
-	 *
-	 * Use {@link readMessages} for resume, fork, compaction, or model replay.
-	 */
-	async readDisplayMessages(
-		sessionId: string,
-	): Promise<SessionDisplayMessage[]> {
-		return projectSessionMessagesForDisplay(
-			await this.host.readSessionMessages(sessionId),
-		);
-	}
 
 	/**
 	 * Reads message history for a session, preferring the live in-memory
@@ -580,6 +1064,11 @@ export class ClineCore {
 			: this.host.readSessionMessages(sessionId);
 
 	async restore(input: RestoreInput): Promise<RestoreResult> {
+		if (this.catalogManagedComposition) {
+			throw new Error(
+				"Catalog-managed Core instances must restore checkpoints through core.chatLifecycle with a stable operation id.",
+			);
+		}
 		const normalizedStart = input.start
 			? normalizeClineCoreStartInput(input.start, {
 					defaultCapabilities: this.capabilities,

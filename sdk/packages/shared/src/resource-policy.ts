@@ -38,6 +38,7 @@ export const ResourceTransportPolicySchema = z
 				congestionGraceMs: z.number().finite().int().nonnegative(),
 				closeGraceMs: z.number().finite().int().nonnegative(),
 				maxInboundPayloadBytes: z.number().finite().int().positive(),
+				maxActiveSubscriptions: z.number().finite().int().positive(),
 			})
 			.strict()
 			.refine(

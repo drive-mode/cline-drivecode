@@ -504,7 +504,6 @@
     <div class="nav-group"><span class="nav-group-label">Product</span>
       <button type="button" data-view="system" aria-pressed="true">System context</button>
       <button type="button" data-view="golden" aria-pressed="false">Golden path</button>
-      <button type="button" data-view="current-target" aria-pressed="false">Current → target</button>
       <button type="button" data-view="chat" aria-pressed="false">Chat lifecycle</button>
       <button type="button" data-view="authority" aria-pressed="false">Presenter authority</button>
       <button type="button" data-view="local" aria-pressed="false">Local AI</button>
@@ -518,10 +517,6 @@
       <button type="button" data-view="efficiency" aria-pressed="false">Efficiency design</button>
       <button type="button" data-view="anticipation" aria-pressed="false">Anticipatory path</button>
       <button type="button" data-view="time" aria-pressed="false">Time contracts</button>
-    </div>
-    <div class="nav-group"><span class="nav-group-label">Delivery</span>
-      <button type="button" data-view="diagram-workbench" aria-pressed="false">Diagram workbench</button>
-      <button type="button" data-view="architecture-tasks" aria-pressed="false">Architecture → tasks</button>
     </div>
     <div class="nav-group"><span class="nav-group-label">Evidence</span>
       <button type="button" data-view="time-review" aria-pressed="false">Temporal review</button>
@@ -672,9 +667,6 @@
     <span>Spotlight = UI surface · stage = wire term · Presenter = temporary title · Director = host policy</span>
     <nav aria-label="Architecture sources">
       <a href="../../reference/architecture.md">Living architecture</a>
-      <a href="../../plans/cline-drivemode/initiatives/portfolio-now/README.md">Golden-path task map</a>
-      <a href="../../../../.agents/skills/architecture-to-task/SKILL.md">Architecture-to-task skill</a>
-      <a href="../../plans/cline-drivemode/adr/ADR-0000-status-board.md">ADR status board</a>
       <a href="../../plans/cline-drivemode/foundation/01-architecture.md">Foundation decisions</a>
       <a href="../../../../sdk/ARCHITECTURE.md">SDK architecture</a>
       <a href="https://docs.aws.amazon.com/wellarchitected/latest/framework/the-pillars-of-the-framework.html">AWS Well-Architected</a>
@@ -682,11 +674,6 @@
       <a href="https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html">SQS delivery leases</a>
       <a href="https://www.rfc-editor.org/rfc/rfc7519">JWT time claims</a>
       <a href="https://www.rfc-editor.org/rfc/rfc9111.html">HTTP freshness</a>
-      <a href="https://harrisonhalperin.com/work/diagram-generator">Diagram Generator</a>
-      <a href="https://harrisonhalperin.com/work/diagram-first">Diagram-First</a>
-      <a href="https://harrisonhalperin.com/work/clear-diagrams">Clear Diagrams</a>
-      <a href="https://harrisonhalperin.com/work/constellation">Constellation</a>
-      <a href="https://harrisonhalperin.com/work/terragram">Terragram</a>
     </nav>
   </footer>
 </div>
@@ -799,7 +786,7 @@
       facts: [
         ["Core proof", "Pair a host, choose a real target, send once, receive typed work, then resume after interruption."],
         ["Critical gaps", "Trusted pairing, host target registry, managed chat, remote calls, and native durable replay."],
-        ["Protocol convergence", "Cline, the harness, and MCP now agree on Presenter cleanup and coordinator-idempotent room end."],
+        ["Merge gate", "Fix room-end idempotency in harness and MCP before calling Presenter cleanup converged."],
         ["Failure posture", "Offline, revoked, expired, and cursor-gap states must be typed and actionable."]
       ],
       source: `flowchart LR
@@ -822,7 +809,7 @@
   end
 
   subgraph Return["4 · Return safely"]
-    End["Idempotent room end<br/>foundation"]
+    End["Idempotent room end<br/>blocked"]
     Resume["Durable cursor resume<br/>gap"]
     Failure["Typed recovery state<br/>gap"]
   end
@@ -847,68 +834,9 @@
   classDef current fill:#12382f,stroke:#57d3a3,color:#e8fff7
   classDef partial fill:#2c2550,stroke:#9f8cff,color:#f5f1ff
   classDef gap fill:#351f31,stroke:#f183c5,color:#fff0fa
-  class Work,Runtime,Events,End current
+  class Work,Runtime,Events current
   class Presenter,Outcome partial
-  class Pair,Target,Chat,Call,Resume,Failure gap`
-    },
-
-    "current-target": {
-      kicker: "Architecture delta · evidence before aspiration",
-      title: "What exists, what is missing, what the target requires",
-      subtitle: "The transition view separates shipped protocol foundations from integration gaps and desired outcomes. It does not treat a target box as implementation evidence.",
-      status: "Current evidence + proposed target",
-      state: "target",
-      note: "Solid green nodes are evidenced foundations. Pink nodes are implementation gaps. Violet nodes are target outcomes that remain gated on the incoming evidence path.",
-      aria: "Transition map from current Drive client, host, protocol, and persistence foundations through trust, target, chat, resume, and native projection gaps to the supported target experience.",
-      facts: [
-        ["Current", "HubDaemon, typed collaboration contracts, deterministic folds, StatusPlane, and runtime seams exist."],
-        ["Missing", "Production trust, opaque target resolution, managed chat catalog, restart-safe resume, and native binding remain open."],
-        ["Target", "A fresh client completes and resumes real repository work through one authenticated, observable path."],
-        ["Evidence rule", "A target becomes current only when the claims registry names repeatable repository evidence under ADR-0026."]
-      ],
-      source: `flowchart LR
-  subgraph Current["Current · evidenced foundation"]
-    Clients["Hub UI + CLI projections<br/>iOS shell"]
-    HubDaemon["HubDaemon<br/>single writer"]
-    Protocol["Typed room + title events<br/>deterministic fold"]
-    State["Room log + StatusPlane<br/>runtime seams"]
-  end
-
-  subgraph Gap["Implementation gap"]
-    Trust["GP1 host trust"]
-    Targets["GP2 target registry"]
-    Catalog["GP3 managed chat"]
-    Native["GP4 iOS binding"]
-    Resume["GP5 durable resume"]
-    Proof["GP8 conformance"]
-  end
-
-  subgraph Target["Target · supported outcome"]
-    Session["Authenticated target-aware session"]
-    Work["Observable agent work"]
-    Return["Restart-safe return"]
-  end
-
-  Clients -->|"command frames"| HubDaemon
-  HubDaemon -->|"ordered events"| Protocol
-  Protocol -->|"durable records"| State
-  HubDaemon -.->|"host identity"| Trust
-  Trust -.->|"access grant"| Targets
-  Targets -.->|"opaque target ref"| Catalog
-  Catalog -.->|"typed projection"| Native
-  Catalog -.->|"conversation cursor"| Resume
-  Native -.->|"scenario evidence"| Proof
-  Resume -.->|"replay evidence"| Proof
-  Proof -.->|"accepted evidence"| Session
-  Session -.->|"runtime events"| Work
-  Work -.->|"resume cursor"| Return
-
-  classDef current fill:#12382f,stroke:#57d3a3,color:#e8fff7
-  classDef gap fill:#351f31,stroke:#f183c5,color:#fff0fa
-  classDef target fill:#2c2550,stroke:#9f8cff,color:#f5f1ff
-  class Clients,HubDaemon,Protocol,State current
-  class Trust,Targets,Catalog,Native,Resume,Proof gap
-  class Session,Work,Return target`
+  class Pair,Target,Chat,Call,End,Resume,Failure gap`
     },
 
     chat: {
@@ -1390,127 +1318,6 @@
   WriterLease *-- ValidityWindow : ValidityWindow
   WorkItem *-- WorkWindow : WorkWindow
   CacheEntry *-- FreshnessWindow : FreshnessWindow`
-    },
-
-    "diagram-workbench": {
-      kicker: "Architecture analysis workbench · designed",
-      title: "Evidence becomes inspectable diagrams before it becomes policy or code",
-      subtitle: "A versioned architecture model drives deterministic diagrams and validation. Read-only discovery carries provenance and uncertainty; humans control disputed evidence, promotion, decisions, and infrastructure changes.",
-      status: "Proposed toolchain · patterns attributed",
-      state: "target",
-      note: "This composes proven patterns from Diagram Generator, Diagram-First, Clear Diagrams, Constellation, and Terragram into a Drive-native workbench. Their linked patterns are inputs to the design, not evidence that this integrated pipeline is shipped.",
-      aria: "Architecture workbench flow from an evidence allowlist and read-only crawl through stable identity resolution, human evidence moderation, a schema-validated architecture model, deterministic rendering, multi-artifact validation, repair and promotion, plus a policy-gated Terraform pull request lane that never applies infrastructure.",
-      facts: [
-        ["Diagram Generator", "Architecture JSON is normalized, rendered into Mermaid, SVG, HTML, and Markdown, measured geometrically, repaired, and promoted."],
-        ["Diagram-First + Clear Diagrams", "Schema validation, deterministic rendering, split Mermaid sources, browser gates, cold-read claim checks, coverage, and path-leak checks make visual claims testable."],
-        ["Constellation", "A read-only crawl merges stable identities while preserving evidence locators, freshness, uncertainty, and human confirm/reject/mute authority."],
-        ["Terragram", "Target architecture passes policy and approved-module gates before producing a Terraform pull request; the workbench never applies infrastructure."],
-        ["Drive adaptation", "The same normalized model can feed the architecture-to-task flow without making either diagrams or discovered nodes a task source of truth."]
-      ],
-      source: `flowchart LR
-  Brief["Architecture brief"]
-  Manifest["Evidence allowlist + manifest"]
-  Crawl["Read-only repository crawl"]
-  Identity["Stable identity merge"]
-  Evidence["Evidence graph<br/>locator · freshness · uncertainty"]
-  Moderate["Human confirm · reject · mute"]
-  Model["Versioned ArchitectureModel<br/>ARD JSON · DiagramSpec"]
-  Normalize["Schema validation + normalization"]
-  Sources["Split Mermaid sources"]
-  Render["Deterministic renderer + icons"]
-  Artifacts["SVG · HTML · Markdown"]
-  Geometry["Geometry metrics"]
-  Browser["Browser render gate"]
-  Claims["Coverage · path-leak · cold-read checks"]
-  Gate{"Promotion gate"}
-  Fix["Analyze + repair"]
-  Promote["Promoted architecture packet"]
-  Policy["Architecture policy gate"]
-  Modules["Approved IaC modules"]
-  Terraform["Terraform pull request<br/>never apply"]
-
-  Brief -->|"desired outcomes"| Model
-  Manifest -->|"allowed evidence classes"| Crawl
-  Crawl -->|"repository observations"| Identity
-  Identity -->|"stable node candidates"| Evidence
-  Evidence -->|"provenance + confidence"| Moderate
-  Moderate -->|"accepted evidence refs"| Model
-  Model -->|"versioned model"| Normalize
-  Normalize -->|"normalized graph"| Sources
-  Sources -->|"diagram source"| Render
-  Render -->|"artifact bundle"| Artifacts
-  Artifacts -->|"layout observations"| Geometry
-  Artifacts -->|"render observations"| Browser
-  Artifacts -->|"claim observations"| Claims
-  Geometry -->|"metric verdict"| Gate
-  Browser -->|"render verdict"| Gate
-  Claims -->|"evidence verdict"| Gate
-  Gate -->|"failed diagnostics"| Fix
-  Fix -->|"model correction"| Model
-  Gate -->|"validated packet"| Promote
-  Model -.->|"target architecture"| Policy
-  Policy -.->|"allowed components"| Modules
-  Modules -.->|"inspectable change"| Terraform`
-    },
-
-    "architecture-tasks": {
-      kicker: "ADR-aware delivery flow · designed",
-      title: "Turn architecture deltas into non-duplicate, evidence-backed tasks",
-      subtitle: "Architecture analysis proposes a minimal change set. Repository truth, the ADR board, the claims registry, and explicit human decisions decide whether that proposal may become delivery work.",
-      status: "Workflow candidate · no readiness claim",
-      state: "target",
-      note: "ADR Planner is not installed on this main snapshot, so this canvas applies its documented invariants as read-only guidance. It cannot validate artifacts, pass readiness, accept an ADR, waive risk, or authorize implementation.",
-      aria: "Architecture-to-task flow from desired outcomes and bounded repository evidence through six-dimension profiling, concern routing, duplicate detection, proposed ADR and human decision gates, task dependencies, claims registry proposals, and acceptance evidence.",
-      facts: [
-        ["Evidence first", "Compare the desired outcome with code, tests, ADR status, claims, initiatives, and known unknowns before creating work."],
-        ["Dedupe", "Match existing claim IDs, task IDs, requirement clauses, and ADR concerns; amend the canonical owner instead of minting parallel tasks."],
-        ["Decision authority", "Only significant durable forks become Proposed ADR candidates, and only a human may accept or reject them."],
-        ["Task quality", "Every task names dependencies, owner, affected system pieces, failure cases, and executable acceptance evidence."],
-        ["Fail closed", "Unavailable ADR Planner tools and unvalidated machine artifacts mean no passing readiness verdict exists."]
-      ],
-      source: `flowchart TD
-  Outcome["Desired architecture + user outcome"]
-  Evidence["Bounded repository evidence<br/>code · tests · docs"]
-  Authority["Canonical authority<br/>ADR board · claims · initiative"]
-  Profile["Six-dimension profile<br/>facts · assumptions · unknowns"]
-  Concerns["Concern inventory<br/>applicable · unknown · not applicable"]
-  Match{"Existing owner?"}
-  Amend["Amend existing claim / requirement"]
-  Route{"Change type?"}
-  Requirement["Requirement delta"]
-  Candidate["Proposed ADR candidate"]
-  Operations["Runbook or risk delta"]
-  Human{"Explicit human decision"}
-  Blocked["Blocked / unknown preserved"]
-  Tasks["Minimal task deltas"]
-  Graph["Dependency + owner graph"]
-  Claims["Claims-registry change proposal"]
-  EvidencePlan["Executable acceptance evidence"]
-  Review{"Human plan review"}
-  Delivery["Authorized implementation queue"]
-
-  Outcome -->|"outcome statement"| Profile
-  Evidence -->|"provenance records"| Profile
-  Authority -->|"current decisions + work"| Concerns
-  Profile -->|"three-valued dimensions"| Concerns
-  Concerns -->|"normalized concern"| Match
-  Match -->|"matching identifier"| Amend
-  Match -->|"unowned delta"| Route
-  Route -->|"behavior clause"| Requirement
-  Route -->|"durable architecture fork"| Candidate
-  Route -->|"operational duty or exposure"| Operations
-  Candidate -->|"decision packet"| Human
-  Human -->|"defer · reject · unanswered"| Blocked
-  Human -->|"accepted decision reference"| Tasks
-  Amend -->|"canonical delta"| Tasks
-  Requirement -->|"requirement reference"| Tasks
-  Operations -->|"control reference"| Tasks
-  Tasks -->|"task dependencies"| Graph
-  Graph -->|"status mutation proposal"| Claims
-  Claims -->|"claim obligations"| EvidencePlan
-  EvidencePlan -->|"review packet"| Review
-  Review -->|"approved scope"| Delivery
-  Review -->|"missing evidence"| Blocked`
     }
   };
 
@@ -2023,13 +1830,7 @@
       form: "Paved-road gap map",
       question: "Which exact stages separate the current preview from one supportable end-to-end user outcome?",
       rationale: "A staged gap map distinguishes available foundations, partial integrations, and missing road segments without repeating the detailed chat sequence.",
-      basis: "Canonical golden-path initiative and current cross-repository protocol evidence"
-    },
-    "current-target": {
-      form: "Evidence-to-target transition map",
-      question: "Which capabilities are current evidence, which are gaps, and which outcomes remain targets?",
-      rationale: "A transition map keeps migration state separate from both the user journey and the runtime interaction sequence.",
-      basis: "Current code, claims registry, ADR implementation states, and golden-path GP1–GP8"
+      basis: "Current iOS, Cline, harness, MCP, and four-PR integration audit"
     },
     chat: {
       form: "Interaction sequence",
@@ -2041,7 +1842,7 @@
       form: "Authority state machine",
       question: "Which states may a Presenter grant occupy, and which events change ownership?",
       rationale: "Exclusive authority is a lifecycle invariant, so states and legal transitions matter more than component topology.",
-      basis: "Designed AgentTitleGrant contract and shipped presenter-coordinator primitives"
+      basis: "Approved AgentTitleGrant and Presenter target contract"
     },
     local: {
       form: "Capability decision tree",
@@ -2084,18 +1885,6 @@
       question: "How do four different time contracts compose with the resources that use them?",
       rationale: "A type model prevents event order, authority, deadlines, freshness, and deletion from collapsing into one TTL.",
       basis: "Repository time audit plus AWS and IETF semantics"
-    },
-    "diagram-workbench": {
-      form: "Evidence-to-artifact toolchain",
-      question: "How can architecture discovery, rendering, validation, repair, promotion, and safe IaC generation remain inspectable?",
-      rationale: "A pipeline exposes artifact boundaries and human gates while keeping the read-only evidence lane separate from policy-controlled output lanes.",
-      basis: "Attributed patterns from Diagram Generator, Diagram-First, Clear Diagrams, Constellation, and Terragram"
-    },
-    "architecture-tasks": {
-      form: "Decision-gated transformation flow",
-      question: "How does an architecture delta become the smallest non-duplicate set of authorized tasks?",
-      rationale: "A decision flow exposes evidence collection, concern routing, duplicate detection, ADR human authority, readiness limits, and delivery handoff as separate gates.",
-      basis: "Claims registry, ADR status board, portfolio-now map, and read-only ADR Planner workflow guidance"
     },
     "time-review": {
       form: "Resource × concern matrix",

@@ -1,4 +1,6 @@
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { lstat, readdir, rmdir, unlink } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type * as LlmsProviders from "@cline/llms";
 import type { AgentResult, BasicLogger } from "@cline/shared";
 import { nanoid } from "nanoid";
@@ -30,15 +32,62 @@ import type {
 	SessionPersistenceAdapter,
 	StoredMessageWithMetadata,
 } from "../../types/session";
-import { withSessionHistoryOriginMetadata } from "../history-origin";
 import type { SessionCompactionState } from "../models/session-compaction";
+import type {
+	SessionManualCompactionBeginResult,
+	SessionManualCompactionOperationReceipt,
+} from "../models/session-manual-compaction-operation";
 import type { SessionRow } from "../models/session-row";
 import { SessionManifestStore } from "../stores/session-manifest-store";
 import { TeamChildSessionManager } from "../team";
+import type { SessionWriterFenceCredential } from "../writer-fence";
 
 export type { PersistedSessionUpdateInput, SessionPersistenceAdapter };
 
 const OCC_MAX_RETRIES = 4;
+
+async function removePurgeArtifact(
+	path: string | null | undefined,
+	signal: AbortSignal,
+	recursive = false,
+): Promise<void> {
+	if (!path?.trim()) return;
+	signal.throwIfAborted();
+	let stats: Awaited<ReturnType<typeof lstat>>;
+	try {
+		stats = await lstat(path);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+		throw error;
+	}
+	signal.throwIfAborted();
+	if (stats.isDirectory() && !stats.isSymbolicLink()) {
+		if (!recursive) {
+			throw new Error("catalog purge expected a file artifact");
+		}
+		for (const entry of (await readdir(path)).sort()) {
+			signal.throwIfAborted();
+			await removePurgeArtifact(join(path, entry), signal, true);
+		}
+		signal.throwIfAborted();
+		try {
+			await rmdir(path);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		}
+	} else {
+		signal.throwIfAborted();
+		try {
+			await unlink(path);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		}
+	}
+	signal.throwIfAborted();
+	if (existsSync(path)) {
+		throw new Error("catalog purge artifact deletion could not be verified");
+	}
+}
 
 export class UnifiedSessionPersistenceService {
 	private readonly manifestStore: SessionManifestStore;
@@ -69,35 +118,46 @@ export class UnifiedSessionPersistenceService {
 	}
 
 	private toPersistedMessages(
-		messages: LlmsProviders.MessageWithMetadata[] | undefined,
+		messages: LlmsProviders.Message[] | undefined,
 		result?: AgentResult,
-		previousMessages?: LlmsProviders.MessageWithMetadata[],
+		previousMessages?: LlmsProviders.Message[],
 	): StoredMessageWithMetadata[] | undefined {
 		if (!messages) return undefined;
 		return result
 			? withLatestAssistantTurnMetadata(
 					result.messages,
 					result,
-					previousMessages,
+					previousMessages as LlmsProviders.MessageWithMetadata[] | undefined,
 				)
-			: normalizeStoredMessagesForPersistence(messages);
+			: normalizeStoredMessagesForPersistence(
+					messages as LlmsProviders.MessageWithMetadata[],
+				);
 	}
 
 	ensureSessionsDir(): string {
 		return this.manifestStore.ensureSessionsDir();
 	}
 
-	writeSessionManifest(
+	async writeSessionManifest(
 		manifestPath: string,
 		manifest: import("../models/session-manifest").SessionManifest,
-	): void {
-		this.manifestStore.writeSessionManifest(manifestPath, manifest);
+		writerFence?: SessionWriterFenceCredential,
+	): Promise<void> {
+		await this.manifestStore.writeSessionManifest(
+			manifestPath,
+			manifest,
+			writerFence,
+		);
 	}
 
-	readSessionManifest(
+	async readSessionManifest(
 		sessionId: string,
-	): import("../models/session-manifest").SessionManifest | undefined {
-		return this.manifestStore.readSessionManifest(sessionId);
+	): Promise<import("../models/session-manifest").SessionManifest | undefined> {
+		return await this.manifestStore.readSessionManifest(sessionId);
+	}
+
+	async isSessionCatalogManaged(sessionId: string): Promise<boolean> {
+		return await this.adapter.isCatalogManaged(sessionId);
 	}
 
 	async createRootSessionWithArtifacts(
@@ -114,10 +174,7 @@ export class UnifiedSessionPersistenceService {
 		const manifestPath =
 			this.manifestStore.artifacts.sessionManifestPath(sessionId);
 		const metadata = resolveMetadataWithTitle({
-			metadata: withSessionHistoryOriginMetadata(input.metadata, {
-				mode: input.mode,
-				version: input.version,
-			}),
+			metadata: input.metadata,
 			prompt: input.prompt,
 		});
 		const manifest = {
@@ -141,46 +198,68 @@ export class UnifiedSessionPersistenceService {
 			messages_path: messagesPath,
 		};
 
-		const row: SessionRow = {
-			sessionId,
-			source: input.source,
-			pid: input.pid,
-			startedAt,
-			endedAt: null,
-			exitCode: null,
-			status: "running",
-			statusLock: 0,
-			interactive: input.interactive,
-			provider: input.provider,
-			model: input.model,
-			cwd: input.cwd,
-			workspaceRoot: input.workspaceRoot,
-			teamName: input.teamName ?? null,
-			enableTools: input.enableTools,
-			enableSpawn: input.enableSpawn,
-			enableTeams: input.enableTeams,
-			parentSessionId: null,
-			parentAgentId: null,
-			agentId: null,
-			conversationId: null,
-			isSubagent: false,
-			prompt: manifest.prompt ?? null,
-			metadata: sanitizeMetadata(manifest.metadata),
-			hookPath: "",
-			messagesPath,
-			updatedAt: nowIso(),
-		};
-		await this.adapter.upsertSession(row);
+		await this.adapter.upsertSession(
+			{
+				sessionId,
+				source: input.source,
+				pid: input.pid,
+				startedAt,
+				endedAt: null,
+				exitCode: null,
+				status: "running",
+				statusLock: 0,
+				interactive: input.interactive,
+				provider: input.provider,
+				model: input.model,
+				cwd: input.cwd,
+				workspaceRoot: input.workspaceRoot,
+				teamName: input.teamName ?? null,
+				enableTools: input.enableTools,
+				enableSpawn: input.enableSpawn,
+				enableTeams: input.enableTeams,
+				parentSessionId: null,
+				parentAgentId: null,
+				agentId: null,
+				conversationId: null,
+				isSubagent: false,
+				prompt: manifest.prompt ?? null,
+				metadata: sanitizeMetadata(manifest.metadata),
+				hookPath: "",
+				messagesPath,
+				updatedAt: nowIso(),
+			},
+			input.writerFence,
+		);
 
-		this.manifestStore.initializeMessagesFile(row, messagesPath, startedAt);
-		this.manifestStore.writeSessionManifest(manifestPath, manifest);
-		return { manifestPath, messagesPath, compactionPath, manifest };
+		const committedMessagesPath =
+			await this.manifestStore.initializeMessagesFile(
+				sessionId,
+				messagesPath,
+				startedAt,
+				input.writerFence,
+			);
+		manifest.messages_path = committedMessagesPath;
+		await this.manifestStore.writeSessionManifest(
+			manifestPath,
+			manifest,
+			input.writerFence,
+		);
+		const managedHead = input.writerFence
+			? await this.adapter.getCatalogManagedArtifactHead(sessionId)
+			: undefined;
+		return {
+			manifestPath: managedHead?.manifestPath ?? manifestPath,
+			messagesPath: managedHead?.messagesPath ?? committedMessagesPath,
+			compactionPath,
+			manifest,
+		};
 	}
 
 	async updateSessionStatus(
 		sessionId: string,
 		status: SessionStatus,
 		exitCode?: number | null,
+		writerFence?: SessionWriterFenceCredential,
 	): Promise<{ updated: boolean; endedAt?: string }> {
 		let endedAt: string | undefined;
 		const result = await withOccRetry(
@@ -189,6 +268,7 @@ export class UnifiedSessionPersistenceService {
 				endedAt = isNonTerminalSessionStatus(status) ? undefined : nowIso();
 				return this.adapter.updateSession({
 					sessionId,
+					writerFence,
 					status,
 					endedAt: endedAt ?? null,
 					exitCode: isNonTerminalSessionStatus(status)
@@ -215,6 +295,7 @@ export class UnifiedSessionPersistenceService {
 
 	async updateSession(input: {
 		sessionId: string;
+		writerFence?: SessionWriterFenceCredential;
 		prompt?: string | null;
 		metadata?: Record<string, unknown> | null;
 		title?: string | null;
@@ -252,6 +333,7 @@ export class UnifiedSessionPersistenceService {
 
 			const changed = await this.adapter.updateSession({
 				sessionId: input.sessionId,
+				writerFence: input.writerFence,
 				prompt: input.prompt,
 				metadata: hasMetadataChange
 					? Object.keys(baseMeta).length > 0
@@ -263,8 +345,13 @@ export class UnifiedSessionPersistenceService {
 			});
 			if (!changed.updated) continue;
 
-			const { path: manifestPath, manifest } =
-				this.manifestStore.readManifestFile(input.sessionId);
+			const manifestPath = this.manifestStore.artifacts.sessionManifestPath(
+				input.sessionId,
+				false,
+			);
+			const manifest = await this.manifestStore.readSessionManifest(
+				input.sessionId,
+			);
 			if (manifest) {
 				if (input.prompt !== undefined) {
 					manifest.prompt = input.prompt ?? undefined;
@@ -276,7 +363,11 @@ export class UnifiedSessionPersistenceService {
 				if (nextTitle) manifestMeta.title = nextTitle;
 				manifest.metadata =
 					Object.keys(manifestMeta).length > 0 ? manifestMeta : undefined;
-				this.manifestStore.writeSessionManifest(manifestPath, manifest);
+				await this.manifestStore.writeSessionManifest(
+					manifestPath,
+					manifest,
+					input.writerFence,
+				);
 			}
 			return { updated: true };
 		}
@@ -309,14 +400,18 @@ export class UnifiedSessionPersistenceService {
 
 	persistSessionMessages(
 		sessionId: string,
-		messages: LlmsProviders.MessageWithMetadata[],
+		messages: LlmsProviders.Message[],
 		systemPrompt?: string,
+		writerFence?: SessionWriterFenceCredential,
 	): Promise<void> {
-		const normalizedMessages = normalizeStoredMessagesForPersistence(messages);
+		const normalizedMessages = normalizeStoredMessagesForPersistence(
+			messages as LlmsProviders.MessageWithMetadata[],
+		);
 		return this.manifestStore.persistSessionMessages(
 			sessionId,
 			normalizedMessages,
 			systemPrompt,
+			writerFence,
 		);
 	}
 
@@ -329,12 +424,65 @@ export class UnifiedSessionPersistenceService {
 	async persistSessionCompactionState(
 		sessionId: string,
 		state: SessionCompactionState,
+		writerFence?: SessionWriterFenceCredential,
 	): Promise<void> {
-		await this.manifestStore.persistSessionCompactionState(sessionId, state);
+		await this.manifestStore.persistSessionCompactionState(
+			sessionId,
+			state,
+			writerFence,
+		);
 	}
 
-	async deleteSessionCompactionState(sessionId: string): Promise<void> {
-		await this.manifestStore.deleteSessionCompactionState(sessionId);
+	async beginSessionManualCompactionOperation(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionBeginResult> {
+		return await this.manifestStore.beginSessionManualCompactionOperation(
+			input,
+		);
+	}
+
+	async recoverSessionManualCompactionOperations(input: {
+		sessionId: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<number> {
+		return await this.manifestStore.recoverSessionManualCompactionOperations(
+			input,
+		);
+	}
+
+	async persistSessionManualCompactionState(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		state: SessionCompactionState;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionOperationReceipt> {
+		return await this.manifestStore.persistSessionManualCompactionState(input);
+	}
+
+	async finishSessionManualCompactionOperation(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		status: "skipped" | "failed";
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionOperationReceipt> {
+		return await this.manifestStore.finishSessionManualCompactionOperation(
+			input,
+		);
+	}
+
+	async deleteSessionCompactionState(
+		sessionId: string,
+		writerFence?: SessionWriterFenceCredential,
+	): Promise<void> {
+		await this.manifestStore.deleteSessionCompactionState(
+			sessionId,
+			writerFence,
+		);
 	}
 
 	applySubagentStatus(
@@ -378,7 +526,7 @@ export class UnifiedSessionPersistenceService {
 		status: SessionStatus,
 		summary?: string,
 		result?: AgentResult,
-		messages?: LlmsProviders.MessageWithMetadata[],
+		messages?: LlmsProviders.Message[],
 	): Promise<void> {
 		return this.teamChildren.onTeamTaskEnd(
 			rootSessionId,
@@ -436,6 +584,7 @@ export class UnifiedSessionPersistenceService {
 	private async reconcileDeadRunningSession(
 		row: SessionRow,
 	): Promise<SessionRow | undefined> {
+		if (await this.adapter.isCatalogManaged(row.sessionId)) return row;
 		if (
 			isNonTerminalSessionStatus(row.status) === false ||
 			this.isPidAlive(row.pid)
@@ -483,7 +632,7 @@ export class UnifiedSessionPersistenceService {
 			const { path: manifestPath } = this.manifestStore.readManifestFile(
 				latest.sessionId,
 			);
-			this.manifestStore.writeSessionManifest(manifestPath, manifest);
+			await this.manifestStore.writeSessionManifest(manifestPath, manifest);
 			this.manifestStore.appendStaleSessionHookLog(
 				detectedAt,
 				latest.sessionId,
@@ -502,6 +651,11 @@ export class UnifiedSessionPersistenceService {
 			};
 		}
 		return await this.adapter.getSession(row.sessionId);
+	}
+
+	async getSession(sessionId: string): Promise<SessionRow | undefined> {
+		const id = sessionId.trim();
+		return id ? await this.adapter.getSession(id) : undefined;
 	}
 
 	async listSessions(limit = 200): Promise<SessionRow[]> {
@@ -603,6 +757,79 @@ export class UnifiedSessionPersistenceService {
 			}
 		}
 		return { deleted: true };
+	}
+
+	/**
+	 * Idempotently removes transcript/checkpoint/manifest/compaction files for a
+	 * catalog purge without using the generic session-row deletion path. Catalog
+	 * tombstones remain authoritative while cleanup is in progress.
+	 */
+	async purgeSessionArtifacts(
+		sessionId: string,
+		signal: AbortSignal,
+	): Promise<void> {
+		const id = sessionId.trim();
+		if (!id) throw new Error("session id is required");
+		signal.throwIfAborted();
+		const row = await this.adapter.getSession(id);
+		if (!row) return;
+
+		const children = row.isSubagent
+			? []
+			: await this.adapter.listSessions({
+					limit: Number.MAX_SAFE_INTEGER,
+					parentSessionId: id,
+				});
+		for (const child of children) {
+			signal.throwIfAborted();
+			await deleteCheckpointRefs(child.cwd, child.sessionId, {
+				signal,
+				strict: true,
+			});
+			signal.throwIfAborted();
+			await removePurgeArtifact(child.messagesPath, signal);
+			signal.throwIfAborted();
+			await removePurgeArtifact(
+				this.manifestStore.artifacts.sessionCompactionPath(child.sessionId),
+				signal,
+			);
+			signal.throwIfAborted();
+			await removePurgeArtifact(
+				this.manifestStore.artifacts.sessionManifestPath(
+					child.sessionId,
+					false,
+				),
+				signal,
+			);
+			signal.throwIfAborted();
+			await removePurgeArtifact(
+				this.manifestStore.artifacts.sessionArtifactsDir(child.sessionId),
+				signal,
+				true,
+			);
+		}
+
+		signal.throwIfAborted();
+		await deleteCheckpointRefs(row.cwd, id, { signal, strict: true });
+		signal.throwIfAborted();
+		await removePurgeArtifact(row.messagesPath, signal);
+		signal.throwIfAborted();
+		await removePurgeArtifact(
+			this.manifestStore.artifacts.sessionCompactionPath(id),
+			signal,
+		);
+		signal.throwIfAborted();
+		await removePurgeArtifact(
+			this.manifestStore.artifacts.sessionManifestPath(id, false),
+			signal,
+		);
+		signal.throwIfAborted();
+		await removePurgeArtifact(
+			this.manifestStore.artifacts.sessionArtifactsDir(id),
+			signal,
+			true,
+		);
+		signal.throwIfAborted();
 	}
 
 	private async deleteSessionCompactionStateIfExists(

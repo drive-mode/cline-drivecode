@@ -3,9 +3,11 @@ import { createHash } from "node:crypto";
 import {
 	type Dirent,
 	existsSync,
+	lstatSync,
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	realpathSync,
 	renameSync,
 	rmSync,
 	statSync,
@@ -16,21 +18,39 @@ import {
 	basename,
 	dirname,
 	extname,
+	isAbsolute,
 	join,
 	relative,
 	resolve,
 	sep,
 } from "node:path";
 import {
+	type AgentConfig,
+	type AgentTool,
+	createContributionRegistry,
+	type Message,
+} from "@cline/shared";
+import {
 	isPluginModulePath,
 	resolveClineDir,
 	resolvePluginModuleEntries,
 } from "@cline/shared/storage";
+import { parseSkillConfigFromMarkdown } from "../extensions/config/user-instruction-config-loader";
 import {
 	type McpServerRegistration,
 	resolveDefaultMcpSettingsPath,
 	resolveMcpServerRegistrations,
 } from "../extensions/mcp";
+import { resolvePluginSkillDirectoriesFromPaths } from "../extensions/plugin/plugin-config-loader";
+import { loadSandboxedPlugins } from "../extensions/plugin/plugin-sandbox";
+import {
+	commitPluginInstallTransaction,
+	createPluginInstallStagingPath,
+	hashPluginInstallTree,
+	hashPluginReceiptPackageContent,
+	type PluginInstallTransactionOptions,
+	type PluginInstallTransactionResult,
+} from "./plugin-install-transaction";
 import {
 	type PluginMcpSettingsSyncResult,
 	syncPluginMcpServersToSettings,
@@ -43,6 +63,28 @@ export interface PluginInstallOptions {
 	force?: boolean;
 	npmCommand?: string;
 	officialPluginsRepo?: string;
+	verification?: PluginInstallVerificationExpectations;
+	transaction?: PluginInstallTransactionOptions;
+}
+
+export interface PluginInstallVerificationExpectations {
+	packageName?: string;
+	pluginNames?: readonly string[];
+	capabilities?: readonly string[];
+	commandNames?: readonly string[];
+	toolNames?: readonly string[];
+	skillNames?: readonly string[];
+}
+
+export interface PluginInstallVerificationResult {
+	status: "verified";
+	stagedContentSha256: string;
+	packageName?: string;
+	pluginNames: string[];
+	capabilities: string[];
+	commandNames: string[];
+	toolNames: string[];
+	skillNames: string[];
 }
 
 export interface PluginInstallResult {
@@ -51,6 +93,8 @@ export interface PluginInstallResult {
 	entryPaths: string[];
 	mcpSyncFailures: PluginMcpSettingsSyncResult["failures"];
 	mcpOAuthCandidates: PluginMcpOAuthCandidate[];
+	verification?: PluginInstallVerificationResult;
+	transaction?: PluginInstallTransactionResult;
 }
 
 export interface PluginMcpOAuthCandidate {
@@ -91,8 +135,9 @@ export type ParsedPluginSource =
 export type PluginInstallSourceType = "npm" | "git" | "local" | "remote";
 
 interface PluginPackageManifest {
+	name?: string;
 	cline?: {
-		plugins?: Array<{ paths?: string[] } | string>;
+		plugins?: Array<{ paths?: string[]; capabilities?: string[] } | string>;
 	};
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
@@ -120,6 +165,336 @@ const WRAPPER_PACKAGE_JSON = {
 		plugins: [] as Array<{ paths: string[] }>,
 	},
 };
+
+function normalizeExpectedContractValues(values: Iterable<string>): string[] {
+	return [...values]
+		.map((value) => value.trim())
+		.filter(Boolean)
+		.sort();
+}
+
+function collectActualContractValues(
+	values: Iterable<string>,
+	label: string,
+	options: { unique?: boolean } = {},
+): string[] {
+	const collected: string[] = [];
+	for (const value of values) {
+		if (!value || value !== value.trim()) {
+			throw new Error(
+				`Plugin verification failed: ${label} must be non-empty canonical strings`,
+			);
+		}
+		collected.push(value);
+	}
+	collected.sort();
+	return options.unique ? [...new Set(collected)] : collected;
+}
+
+function collectPluginSkillNames(pluginPaths: readonly string[]): string[] {
+	const names: string[] = [];
+	for (const skillsDirectory of resolvePluginSkillDirectoriesFromPaths(
+		pluginPaths,
+	)) {
+		const realSkillsDirectory = realpathSync(skillsDirectory);
+		for (const entry of readdirSync(skillsDirectory, { withFileTypes: true })) {
+			if (!entry.isDirectory()) {
+				continue;
+			}
+			const skillPath = join(skillsDirectory, entry.name, "SKILL.md");
+			if (!existsSync(skillPath)) {
+				continue;
+			}
+			const stats = lstatSync(skillPath);
+			if (
+				stats.isSymbolicLink() ||
+				!stats.isFile() ||
+				!isContainedPath(realSkillsDirectory, realpathSync(skillPath))
+			) {
+				throw new Error(
+					`Plugin verification failed: skill file must be a contained regular file: ${skillPath}`,
+				);
+			}
+			const skill = parseSkillConfigFromMarkdown(
+				readFileSync(skillPath, "utf8"),
+				entry.name,
+			);
+			if (skill.disabled !== true) {
+				names.push(skill.name);
+			}
+		}
+	}
+	return collectActualContractValues(names, "skill names");
+}
+
+function isContainedPath(root: string, candidate: string): boolean {
+	const child = relative(root, candidate);
+	return (
+		child !== "" &&
+		child !== ".." &&
+		!child.startsWith(`..${sep}`) &&
+		!isAbsolute(child)
+	);
+}
+
+function assertStrictStagedEntries(input: {
+	entryPaths: readonly string[];
+	packageRoot: string;
+}): PluginPackageManifest {
+	const manifest = readPackageManifest(input.packageRoot);
+	if (!manifest) {
+		throw new Error(
+			"Plugin verification failed: a valid package.json is required",
+		);
+	}
+	const declaredPaths = getManifestPaths(manifest);
+	if (declaredPaths.length === 0) {
+		throw new Error(
+			"Plugin verification failed: package.json must declare plugin entry paths",
+		);
+	}
+
+	const realPackageRoot = realpathSync(input.packageRoot);
+	const expectedEntries: string[] = [];
+	const seen = new Set<string>();
+	for (const declaredPath of declaredPaths) {
+		if (typeof declaredPath !== "string" || !declaredPath.trim()) {
+			throw new Error(
+				"Plugin verification failed: declared plugin entry paths must be non-empty strings",
+			);
+		}
+		const entryPath = resolve(input.packageRoot, declaredPath);
+		if (!isContainedPath(input.packageRoot, entryPath)) {
+			throw new Error(
+				`Plugin verification failed: declared entry escapes the package root: ${declaredPath}`,
+			);
+		}
+		if (seen.has(entryPath)) {
+			throw new Error(
+				`Plugin verification failed: duplicate declared entry: ${declaredPath}`,
+			);
+		}
+		seen.add(entryPath);
+		if (!existsSync(entryPath)) {
+			throw new Error(
+				`Plugin verification failed: declared entry does not exist: ${declaredPath}`,
+			);
+		}
+		const entryStats = lstatSync(entryPath);
+		if (
+			entryStats.isSymbolicLink() ||
+			!entryStats.isFile() ||
+			!isPluginModulePath(entryPath)
+		) {
+			throw new Error(
+				`Plugin verification failed: declared entry must be a regular .js or .ts file: ${declaredPath}`,
+			);
+		}
+		if (!isContainedPath(realPackageRoot, realpathSync(entryPath))) {
+			throw new Error(
+				`Plugin verification failed: declared entry resolves outside the package root: ${declaredPath}`,
+			);
+		}
+		expectedEntries.push(entryPath);
+	}
+
+	const actualEntries = [...input.entryPaths]
+		.map((entry) => resolve(entry))
+		.sort();
+	expectedEntries.sort();
+	if (
+		actualEntries.length !== expectedEntries.length ||
+		actualEntries.some((entry, index) => entry !== expectedEntries[index])
+	) {
+		throw new Error(
+			"Plugin verification failed: discovered entries do not exactly match package.json",
+		);
+	}
+	return manifest;
+}
+
+function formatVerificationDiagnostic(input: {
+	pluginPath: string;
+	pluginName?: string;
+	phase?: string;
+	message: string;
+}): string {
+	const owner = input.pluginName ? ` (${input.pluginName})` : "";
+	const phase = input.phase ? ` during ${input.phase}` : "";
+	return `${input.pluginPath}${owner}${phase}: ${input.message}`;
+}
+
+function assertExactContract(
+	label: string,
+	actual: readonly string[],
+	expected: readonly string[] | undefined,
+): void {
+	if (expected === undefined) {
+		return;
+	}
+	const normalizedExpected = normalizeExpectedContractValues(expected);
+	if (
+		actual.length !== normalizedExpected.length ||
+		actual.some((value, index) => value !== normalizedExpected[index])
+	) {
+		throw new Error(
+			`Plugin verification failed: expected ${label} [${normalizedExpected.join(", ")}], received [${actual.join(", ")}]`,
+		);
+	}
+}
+
+async function verifyStagedPluginInstall(input: {
+	entryPaths: readonly string[];
+	packageRoot: string;
+	stagingRoot: string;
+	cwd: string;
+	expectations: PluginInstallVerificationExpectations;
+}): Promise<PluginInstallVerificationResult> {
+	const packageManifest = assertStrictStagedEntries(input);
+	const stagedContentSha256 = hashPluginInstallTree(input.stagingRoot);
+	const loaded = await loadSandboxedPlugins({
+		pluginPaths: [...input.entryPaths],
+		cwd: input.cwd,
+		workspaceInfo: { rootPath: input.cwd },
+	});
+	let result: PluginInstallVerificationResult | undefined;
+	try {
+		if (loaded.failures.length > 0) {
+			throw new Error(
+				`Plugin verification failed: ${loaded.failures.map(formatVerificationDiagnostic).join("; ")}`,
+			);
+		}
+		if (loaded.warnings.length > 0) {
+			throw new Error(
+				`Plugin verification failed: ${loaded.warnings.map(formatVerificationDiagnostic).join("; ")}`,
+			);
+		}
+		const extensions = loaded.extensions ?? [];
+		if (extensions.length === 0) {
+			throw new Error("Plugin verification failed: no plugins were loaded");
+		}
+
+		const registry = createContributionRegistry<
+			NonNullable<AgentConfig["extensions"]>[number],
+			AgentTool,
+			Message[]
+		>({
+			extensions,
+			setupContext: { workspaceInfo: { rootPath: input.cwd } },
+		});
+		await registry.initialize();
+		const snapshot = registry.getRegistrySnapshot();
+		const declaredRuntimeCapabilities = new Set(
+			extensions.flatMap((extension) => extension.manifest.capabilities),
+		);
+		for (const [capability, count] of [
+			["tools", snapshot.tools.length],
+			["commands", snapshot.commands.length],
+			["rules", snapshot.rules.length],
+			["messageBuilders", snapshot.messageBuilder.length],
+			["providers", snapshot.providers.length],
+			["automationEvents", snapshot.automationEventTypes.length],
+			["mcp", snapshot.mcpServers.length],
+		] as const) {
+			if (count > 0 && !declaredRuntimeCapabilities.has(capability)) {
+				throw new Error(
+					`Plugin verification failed: registered ${capability} contributions without declaring the capability`,
+				);
+			}
+		}
+		const packageName = packageManifest.name;
+		if (
+			packageName !== undefined &&
+			(!packageName || packageName !== packageName.trim())
+		) {
+			throw new Error(
+				"Plugin verification failed: package name must be a non-empty canonical string",
+			);
+		}
+		result = {
+			status: "verified",
+			stagedContentSha256,
+			...(packageName ? { packageName } : {}),
+			pluginNames: collectActualContractValues(
+				extensions.map((extension) => extension.name),
+				"plugin names",
+			),
+			capabilities: collectActualContractValues(
+				extensions.flatMap((extension) => extension.manifest.capabilities),
+				"capabilities",
+				{ unique: true },
+			),
+			commandNames: collectActualContractValues(
+				snapshot.commands.map((command) => command.name),
+				"command names",
+			),
+			toolNames: collectActualContractValues(
+				snapshot.tools.map((tool) => tool.name),
+				"tool names",
+			),
+			skillNames: collectPluginSkillNames(loaded.pluginPaths),
+		};
+		const declaredCapabilities = collectActualContractValues(
+			(packageManifest.cline?.plugins ?? []).flatMap((entry) =>
+				typeof entry === "string" ? [] : (entry.capabilities ?? []),
+			),
+			"package-declared capabilities",
+			{ unique: true },
+		);
+		if (declaredCapabilities.length > 0) {
+			assertExactContract(
+				"runtime capabilities declared by package.json",
+				result.capabilities,
+				declaredCapabilities,
+			);
+		}
+		if (
+			input.expectations.packageName !== undefined &&
+			packageName !== input.expectations.packageName.trim()
+		) {
+			throw new Error(
+				`Plugin verification failed: expected package name ${input.expectations.packageName.trim()}, received ${packageName ?? "<missing>"}`,
+			);
+		}
+
+		assertExactContract(
+			"plugin names",
+			result.pluginNames,
+			input.expectations.pluginNames,
+		);
+		assertExactContract(
+			"capabilities",
+			result.capabilities,
+			input.expectations.capabilities,
+		);
+		assertExactContract(
+			"command names",
+			result.commandNames,
+			input.expectations.commandNames,
+		);
+		assertExactContract(
+			"tool names",
+			result.toolNames,
+			input.expectations.toolNames,
+		);
+		assertExactContract(
+			"skill names",
+			result.skillNames,
+			input.expectations.skillNames,
+		);
+	} finally {
+		await loaded.shutdown();
+	}
+	if (hashPluginInstallTree(input.stagingRoot) !== stagedContentSha256) {
+		throw new Error(
+			"Plugin verification failed: staged package content changed during verification",
+		);
+	}
+	if (!result) {
+		throw new Error("Plugin verification failed without a result");
+	}
+	return result;
+}
 
 function resolveHomePath(value: string): string {
 	if (value === "~") {
@@ -975,6 +1350,7 @@ async function installLocalPackage(
 	stagingRoot: string,
 	cwd: string,
 	npmCommand: string,
+	onPackageCopied?: (packageRoot: string) => void,
 ): Promise<string> {
 	const absolutePath = resolve(cwd, resolveHomePath(parsed.path));
 	if (!existsSync(absolutePath)) {
@@ -1003,6 +1379,7 @@ async function installLocalPackage(
 			return name !== ".git" && name !== "node_modules";
 		},
 	});
+	onPackageCopied?.(packageRoot);
 	await installPackageDependencies(packageRoot, npmCommand);
 	return packageRoot;
 }
@@ -1019,10 +1396,17 @@ function replaceInstallPath(
 	stagingRoot: string,
 	installPath: string,
 	force: boolean,
+	validateInstalled?: () => void,
 ): void {
 	mkdirSync(dirname(installPath), { recursive: true });
 	if (!existsSync(installPath)) {
 		renameSync(stagingRoot, installPath);
+		try {
+			validateInstalled?.();
+		} catch (error) {
+			rmSync(installPath, { recursive: true, force: true });
+			throw error;
+		}
 		return;
 	}
 	if (!force) {
@@ -1040,8 +1424,12 @@ function replaceInstallPath(
 	renameSync(installPath, backupPath);
 	try {
 		renameSync(stagingRoot, installPath);
+		validateInstalled?.();
 	} catch (error) {
-		if (!existsSync(installPath) && existsSync(backupPath)) {
+		if (existsSync(installPath)) {
+			rmSync(installPath, { recursive: true, force: true });
+		}
+		if (existsSync(backupPath)) {
 			renameSync(backupPath, installPath);
 		}
 		throw error;
@@ -1073,8 +1461,7 @@ function getPluginOwner(
 ): { pluginName: string; pluginPath: string } | undefined {
 	const metadata = registration.metadata;
 	if (
-		!metadata ||
-		metadata.source !== "plugin" ||
+		metadata?.source !== "plugin" ||
 		typeof metadata.pluginName !== "string" ||
 		typeof metadata.pluginPath !== "string"
 	) {
@@ -1142,11 +1529,23 @@ export async function installPlugin(
 	const sourceKey = getInstallSourceKey(parsed, cwd, officialPluginsRepo);
 	const installPath = getInstallPath(pluginRoot, parsed, sourceKey);
 	const wrapperPackageName = getWrapperPackageName(parsed, cwd);
-	const stagingParent = join(pluginRoot, INSTALLS_DIRECTORY_NAME, ".tmp");
-	const stagingRoot = join(
-		stagingParent,
-		`${Date.now()}-${process.pid}-${hashSource(`${source}:${Math.random()}`)}`,
-	);
+	if (options.transaction && !explicitCwd) {
+		throw new Error(
+			"Transactional plugin installs require an explicit workspace cwd",
+		);
+	}
+	if (options.transaction && !options.verification) {
+		throw new Error(
+			"Transactional plugin installs require staged verification",
+		);
+	}
+	if (options.transaction && parsed.type !== "local") {
+		throw new Error(
+			"Transactional plugin installs currently support only local package directories",
+		);
+	}
+	const stagingRoot = createPluginInstallStagingPath(cwd);
+	const stagingParent = dirname(stagingRoot);
 	const npmCommand =
 		options.npmCommand ?? (process.env.CLINE_NPM_COMMAND?.trim() || "npm");
 
@@ -1155,6 +1554,9 @@ export async function installPlugin(
 	await mkdir(stagingParent, { recursive: true });
 
 	let packageRoot: string;
+	let transactionSourceIdentity:
+		| { packageManifestSha256: string; packageContentSha256: string }
+		| undefined;
 	try {
 		if (parsed.type === "npm") {
 			packageRoot = await installNpmPackage(parsed, stagingRoot, npmCommand);
@@ -1175,6 +1577,17 @@ export async function installPlugin(
 				stagingRoot,
 				cwd,
 				npmCommand,
+				options.transaction
+					? (copiedPackageRoot) => {
+							transactionSourceIdentity = {
+								packageManifestSha256: createHash("sha256")
+									.update(readFileSync(join(copiedPackageRoot, "package.json")))
+									.digest("hex"),
+								packageContentSha256:
+									hashPluginReceiptPackageContent(copiedPackageRoot),
+							};
+						}
+					: undefined,
 			);
 		}
 
@@ -1189,18 +1602,70 @@ export async function installPlugin(
 						packageRoot,
 						wrapperPackageName,
 					);
+		if (options.transaction && !transactionSourceIdentity) {
+			throw new Error(
+				"Transactional plugin installs require a local package directory",
+			);
+		}
 		if (entryPaths.length === 0) {
 			throw new Error(`No plugin entry files found for ${source}`);
 		}
+		const stagedEntryPaths = entryPaths.map((entry) =>
+			resolve(stagingRoot, entry),
+		);
+		const verification = options.verification
+			? await verifyStagedPluginInstall({
+					entryPaths: stagedEntryPaths,
+					packageRoot,
+					stagingRoot,
+					cwd,
+					expectations: options.verification,
+				})
+			: undefined;
 
-		replaceInstallPath(stagingRoot, installPath, force);
+		const transaction = options.transaction
+			? commitPluginInstallTransaction({
+					workspacePath: cwd,
+					stagingRoot,
+					installPath,
+					entryPaths,
+					verification: verification as PluginInstallVerificationResult,
+					force,
+					transaction: options.transaction,
+					sourceIdentity: transactionSourceIdentity as NonNullable<
+						typeof transactionSourceIdentity
+					>,
+				})
+			: undefined;
+		if (!transaction) {
+			replaceInstallPath(
+				stagingRoot,
+				installPath,
+				force,
+				verification
+					? () => {
+							const installedContentSha256 = hashPluginInstallTree(installPath);
+							if (installedContentSha256 !== verification.stagedContentSha256) {
+								throw new Error(
+									"Plugin verification failed: installed package content does not match the verified staging content",
+								);
+							}
+						}
+					: undefined,
+			);
+		}
 		const result = {
 			source,
 			installPath,
 			entryPaths: entryPaths.map((entry) => resolve(installPath, entry)),
 			mcpSyncFailures: [] as PluginMcpSettingsSyncResult["failures"],
 			mcpOAuthCandidates: [] as PluginMcpOAuthCandidate[],
+			...(verification ? { verification } : {}),
+			...(transaction ? { transaction } : {}),
 		};
+		if (transaction) {
+			return result;
+		}
 		const syncResult = await syncPluginMcpServersToSettings({
 			pluginPaths: result.entryPaths,
 			cwd,

@@ -67,6 +67,81 @@ describe("BoundedOutboundChannel", () => {
 		expect(socket.writes.map(({ data }) => data)).toEqual(["block", "new"]);
 	});
 
+	it("merges adjacent additive messages in place after the soft watermark", async () => {
+		const socket = createSocket();
+		const channel = new BoundedOutboundChannel(socket, {
+			softWatermarkBytes: 4,
+			hardWatermarkBytes: 30,
+		});
+		const additiveMerge = {
+			key: "runtime:session-1:run-1:assistant.delta",
+			merge: (previousData: string, incomingData: string) =>
+				previousData + incomingData,
+		};
+		channel.send("block");
+		channel.send("a", { priority: "high", additiveMerge });
+		channel.send("é", { priority: "high", additiveMerge });
+
+		expect(channel.getCounters()).toMatchObject({
+			queuedMessages: 2,
+			queuedBytes: 8,
+			coalescedMessages: 1,
+			droppedMessages: 0,
+		});
+		socket.writes[0]?.complete();
+		await flush();
+		expect(socket.writes.map(({ data }) => data)).toEqual(["block", "aé"]);
+	});
+
+	it("does not merge additive messages across another queued entry", () => {
+		const socket = createSocket();
+		const channel = new BoundedOutboundChannel(socket, {
+			softWatermarkBytes: 1,
+			hardWatermarkBytes: 30,
+		});
+		const additiveMerge = {
+			key: "runtime:session-1:run-1:assistant.delta",
+			merge: (previousData: string, incomingData: string) =>
+				previousData + incomingData,
+		};
+		channel.send("block");
+		channel.send("a", { priority: "high", additiveMerge });
+		channel.send("terminal", { priority: "high" });
+		channel.send("b", { priority: "high", additiveMerge });
+
+		expect(channel.getCounters()).toMatchObject({
+			queuedMessages: 4,
+			coalescedMessages: 0,
+		});
+	});
+
+	it("falls back to separate delivery when a merged payload exceeds the hard bound", () => {
+		const socket = createSocket();
+		const channel = new BoundedOutboundChannel(socket, {
+			softWatermarkBytes: 1,
+			hardWatermarkBytes: 8,
+		});
+		const additiveMerge = {
+			key: "runtime:session-1:run-1:assistant.delta",
+			merge: () => "x".repeat(9),
+		};
+		channel.send("block");
+		channel.send("a", { priority: "high", additiveMerge });
+		expect(
+			channel.send("b", {
+				priority: "high",
+				additiveMerge,
+				closeOnDrop: true,
+			}),
+		).toBe(true);
+		expect(channel.getCounters()).toMatchObject({
+			queuedMessages: 3,
+			coalescedMessages: 0,
+			droppedMessages: 0,
+		});
+		expect(socket.closed).toEqual([]);
+	});
+
 	it("keeps a slow client's queue bounded during a long snapshot stream", async () => {
 		const socket = createSocket();
 		const hardWatermarkBytes = 1024;
@@ -140,6 +215,22 @@ describe("BoundedOutboundChannel", () => {
 			closeRequests: 1,
 			terminations: 1,
 			disposed: true,
+		});
+	});
+
+	it("closes immediately when a non-replayable message cannot be queued", () => {
+		vi.useFakeTimers();
+		const socket = createSocket();
+		const channel = new BoundedOutboundChannel(socket, {
+			softWatermarkBytes: 4,
+			hardWatermarkBytes: 8,
+		});
+		channel.send("12345678");
+		expect(channel.send("required", { closeOnDrop: true })).toBe(false);
+		expect(socket.closed).toEqual([[1013, "WebSocket outbound congestion"]]);
+		expect(channel.getCounters()).toMatchObject({
+			hardPressureEvents: 1,
+			closeRequests: 1,
 		});
 	});
 

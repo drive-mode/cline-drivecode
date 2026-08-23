@@ -16,7 +16,6 @@ import {
 	normalizePluginManifest,
 	type PluginManifest,
 } from "@cline/shared";
-import { installParentDisconnectGuard } from "../../runtime/tools/subprocess-sandbox-lifecycle";
 import { importPluginModule } from "./plugin-module-import";
 import {
 	matchesPluginManifestTargeting,
@@ -41,6 +40,7 @@ interface PluginCommand {
 	description?: string;
 	handler?: (
 		input: string,
+		context?: unknown,
 	) => Promise<PluginCommandResult> | PluginCommandResult;
 }
 
@@ -838,13 +838,14 @@ async function executeCommand(args: {
 	pluginId: string;
 	contributionId: string;
 	input: string;
+	context?: unknown;
 }): Promise<PluginCommandResult> {
 	const state = getPlugin(args.pluginId);
 	const handler = state.handlers.commands.get(args.contributionId);
 	if (typeof handler !== "function") {
 		return "";
 	}
-	return await handler(args.input);
+	return await handler(args.input, args.context);
 }
 
 async function buildMessages(args: {
@@ -884,8 +885,6 @@ const methods: Record<string, (args: never) => Promise<unknown>> = {
 	buildMessages,
 	resolveRuleContent,
 };
-
-installParentDisconnectGuard();
 
 process.on(
 	"message",
