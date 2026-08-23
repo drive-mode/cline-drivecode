@@ -1,0 +1,141 @@
+{
+  "summary": "Plan a small static portfolio around a low-friction editing workflow and a reliable, documented CDN publishing path.",
+  "concerns": [
+    {
+      "id": "editing-workflow",
+      "concern": "Choose how the maintainer edits pages and assets.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["The goal is easy edits.", "There is one maintainer."],
+      "unknowns": ["The maintainer's preferred editing format and tooling are not specified."],
+      "rationale": "The authoring approach determines whether routine portfolio updates remain easy for the sole maintainer."
+    },
+    {
+      "id": "static-site-build-approach",
+      "concern": "Choose the pre-rendering approach and resulting site structure.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": ["editing-workflow"],
+      "evidence": ["The portfolio uses pre-rendered pages and assets."],
+      "unknowns": ["No static-site generator, framework, or existing codebase is specified."],
+      "rationale": "This choice affects editing ergonomics, build steps, and what must be published to the CDN."
+    },
+    {
+      "id": "cdn-publishing-constraints",
+      "concern": "Confirm the selected CDN's deployment, domain, cache, and rollback capabilities.",
+      "applicability": "unknown",
+      "resolution": "external_constraint",
+      "urgency": "next",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": ["static-site-build-approach"],
+      "evidence": ["Deployment is through a CDN.", "The goal is reliable publishing."],
+      "unknowns": ["The CDN provider, deployment mechanism, domain setup, cache behavior, and rollback support are not specified."],
+      "rationale": "Provider constraints can determine the publishing workflow and the ability to correct a bad release."
+    },
+    {
+      "id": "publishing-workflow",
+      "concern": "Define a repeatable build, deployment, verification, and recovery workflow for the sole maintainer.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "runbook",
+      "lifecycle_gate": "release",
+      "criticality": "major",
+      "prerequisites": ["static-site-build-approach", "cdn-publishing-constraints"],
+      "evidence": ["The goal is reliable publishing.", "There is one maintainer.", "Deployment is through a CDN."],
+      "unknowns": ["The desired publishing trigger and acceptable recovery procedure are not specified."],
+      "rationale": "A simple documented workflow reduces publishing errors and gives the sole maintainer a way to recover from them."
+    },
+    {
+      "id": "release-checks",
+      "concern": "Define proportionate checks that confirm the generated static site and contact link work before publication.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "release",
+      "criticality": "standard",
+      "prerequisites": ["publishing-workflow"],
+      "evidence": ["The portfolio contains pre-rendered pages and assets.", "Contact is a `mailto` link.", "The goal is reliable publishing."],
+      "unknowns": ["The portfolio's page set, supported browsers, and required verification depth are not specified."],
+      "rationale": "Basic release checks help catch broken pages, missing assets, and an incorrect contact destination."
+    },
+    {
+      "id": "contact-scope",
+      "concern": "Keep contact limited to the supplied `mailto` link unless the brief changes.",
+      "applicability": "applicable",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": ["Contact is a `mailto` link."],
+      "unknowns": ["The destination email address is not specified."],
+      "rationale": "Adding a contact form or messaging service would expand the stated static-site scope."
+    },
+    {
+      "id": "accounts-database-analytics",
+      "concern": "Do not plan accounts, a database, or analytics.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": ["There are no accounts, no database, and no analytics."],
+      "unknowns": [],
+      "rationale": "These capabilities are explicitly outside the case scope and should not create planning or readiness work."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What editing format and tool should the maintainer use for page content and assets?",
+      "changes": ["editing-workflow", "static-site-build-approach"]
+    },
+    {
+      "question": "Which CDN provider and deployment mechanism will host the portfolio?",
+      "changes": ["cdn-publishing-constraints", "publishing-workflow"]
+    },
+    {
+      "question": "What recovery action is acceptable if a published update is incorrect?",
+      "changes": ["cdn-publishing-constraints", "publishing-workflow"]
+    },
+    {
+      "question": "What email address should the `mailto` link target?",
+      "changes": ["contact-scope", "release-checks"]
+    },
+    {
+      "question": "Which pages and asset types are in the initial portfolio?",
+      "changes": ["static-site-build-approach", "release-checks"]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "not_applicable",
+    "release": "blocked",
+    "operate": "blocked",
+    "blockers": ["editing-workflow", "static-site-build-approach", "cdn-publishing-constraints", "publishing-workflow"]
+  },
+  "unsupported_inferences_to_avoid": [
+    "A user authentication system is needed.",
+    "A database or content management system is needed.",
+    "Analytics, consent management, or tracking requirements apply.",
+    "A contact form or email-processing backend is required.",
+    "Multiple maintainers, approval workflows, or enterprise change management are required.",
+    "A pilot program or staged user rollout is required."
+  ]
+}

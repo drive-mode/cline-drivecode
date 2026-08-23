@@ -1,0 +1,52 @@
+{
+	"name": "@cline/adr-planner",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Cline pre-plan and ADR planning plugin with deterministic validation and readiness checks",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./catalog": "./src/catalog/index.ts",
+		"./core": "./src/core/index.ts",
+		"./schema": "./src/schema/index.ts"
+	},
+	"files": [
+		"src",
+		"skills",
+		"README.md",
+		"package.json"
+	],
+	"scripts": {
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "bun test",
+		"check": "bun run typecheck && bun run test"
+	},
+	"cline": {
+		"plugins": [
+			{
+				"paths": [
+					"./src/index.ts"
+				],
+				"capabilities": [
+					"commands",
+					"tools"
+				]
+			}
+		]
+	},
+	"peerDependencies": {
+		"@cline/sdk": "*"
+	},
+	"peerDependenciesMeta": {
+		"@cline/sdk": {
+			"optional": true
+		}
+	},
+	"dependencies": {
+		"zod": "4.3.6"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"license": "Apache-2.0"
+}

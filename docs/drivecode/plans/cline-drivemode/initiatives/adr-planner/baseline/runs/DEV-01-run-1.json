@@ -1,0 +1,314 @@
+{
+  "summary": "The project is a greenfield multi-tenant B2B SaaS with payments, operational-data storage, asynchronous integrations, and design-partner pilots, but key operating and isolation constraints remain unspecified.",
+  "concerns": [
+    {
+      "id": "tenancy-isolation",
+      "concern": "Define tenant data-isolation model and enforcement boundaries.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [],
+      "evidence": [
+        "The product is multi-tenant.",
+        "It stores customer operational data.",
+        "Tenancy isolation is unspecified."
+      ],
+      "unknowns": [
+        "Required isolation level and enforcement approach."
+      ],
+      "rationale": "This determines data access design, database patterns, authorization behavior, and pilot safety."
+    },
+    {
+      "id": "regions-and-data-location",
+      "concern": "Decide initial deployment region and any customer data-location constraints.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": [
+        "Regions are unspecified.",
+        "The product stores customer operational data."
+      ],
+      "unknowns": [
+        "Initial customer geography.",
+        "Data-residency expectations."
+      ],
+      "rationale": "This can affect hosting choices, database placement, latency, and customer suitability."
+    },
+    {
+      "id": "service-objectives",
+      "concern": "Set proportional availability, latency, support, and recovery expectations for the pilot.",
+      "applicability": "applicable",
+      "resolution": "requirement",
+      "urgency": "next",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "pilot",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": [
+        "Service objectives are unspecified.",
+        "External design partners will pilot the product."
+      ],
+      "unknowns": [
+        "Pilot uptime, performance, support, and recovery expectations."
+      ],
+      "rationale": "These expectations determine what reliability work and operating coverage are needed before pilot use."
+    },
+    {
+      "id": "data-retention",
+      "concern": "Define retention and deletion expectations for customer operational data.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": [
+        "The product stores customer operational data.",
+        "Retention is unspecified."
+      ],
+      "unknowns": [
+        "Retention duration.",
+        "Deletion expectations after account changes or termination."
+      ],
+      "rationale": "This affects data modeling, backup handling, product behavior, and customer commitments."
+    },
+    {
+      "id": "account-and-role-model",
+      "concern": "Specify team-account membership, role permissions, and admin-console authority.",
+      "applicability": "applicable",
+      "resolution": "requirement",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [
+        "tenancy-isolation"
+      ],
+      "evidence": [
+        "The product includes team accounts and roles.",
+        "The product includes an admin console."
+      ],
+      "unknowns": [
+        "Role set and permissions.",
+        "Whether and how administrators may access customer data."
+      ],
+      "rationale": "This defines core authorization behavior and can affect tenant isolation."
+    },
+    {
+      "id": "stripe-subscription-lifecycle",
+      "concern": "Define subscription states, entitlement behavior, and handling of billing events.",
+      "applicability": "applicable",
+      "resolution": "requirement",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": [
+        "The product uses Stripe subscriptions.",
+        "The product receives inbound webhooks."
+      ],
+      "unknowns": [
+        "Plans and entitlement rules.",
+        "Expected behavior for payment failures, cancellations, and subscription changes."
+      ],
+      "rationale": "Billing events need a defined relationship to customer access before implementation."
+    },
+    {
+      "id": "webhook-job-reliability",
+      "concern": "Design and test reliable processing for inbound webhooks and asynchronous jobs.",
+      "applicability": "applicable",
+      "resolution": "experiment",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [
+        "stripe-subscription-lifecycle"
+      ],
+      "evidence": [
+        "The product has inbound webhooks and asynchronous jobs."
+      ],
+      "unknowns": [
+        "Webhook sources beyond Stripe.",
+        "Required behavior for duplicate, delayed, failed, or out-of-order events."
+      ],
+      "rationale": "Unreliable event processing can produce incorrect billing or operational-data outcomes."
+    },
+    {
+      "id": "operational-observability",
+      "concern": "Establish proportionate monitoring and failure-handling procedures for the browser app, admin console, webhooks, jobs, and database.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "runbook",
+      "lifecycle_gate": "pilot",
+      "criticality": "major",
+      "prerequisites": [
+        "service-objectives",
+        "webhook-job-reliability"
+      ],
+      "evidence": [
+        "The product includes a browser app and admin console.",
+        "The product uses PostgreSQL, inbound webhooks, and asynchronous jobs.",
+        "External design partners will pilot it."
+      ],
+      "unknowns": [
+        "Who will respond to pilot failures.",
+        "Which failure signals and recovery actions are required."
+      ],
+      "rationale": "Pilot users require a way for the small team to detect and address service or processing failures."
+    },
+    {
+      "id": "pilot-scope-and-feedback",
+      "concern": "Define pilot participants, access process, success criteria, support channel, and feedback collection.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "pilot",
+      "criticality": "standard",
+      "prerequisites": [
+        "service-objectives"
+      ],
+      "evidence": [
+        "External design partners will pilot the product.",
+        "The team has three engineers."
+      ],
+      "unknowns": [
+        "Number and identity of design partners.",
+        "Pilot timeline and success criteria.",
+        "Support and feedback process."
+      ],
+      "rationale": "The pilot needs bounded expectations and a workable feedback loop for a three-engineer team."
+    },
+    {
+      "id": "security-and-privacy-requirements",
+      "concern": "Identify any required security or privacy commitments for customer operational data before pilot access.",
+      "applicability": "unknown",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "risk_register",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [
+        "tenancy-isolation",
+        "data-retention",
+        "regions-and-data-location"
+      ],
+      "evidence": [
+        "The product stores customer operational data.",
+        "External design partners will pilot it."
+      ],
+      "unknowns": [
+        "Customer contractual, security, privacy, or compliance requirements."
+      ],
+      "rationale": "External requirements could alter the required safeguards, hosting decisions, and pilot readiness."
+    },
+    {
+      "id": "scale-capacity-planning",
+      "concern": "Enterprise-scale capacity planning is not currently justified.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": [
+        "The project is greenfield.",
+        "External design partners will pilot it.",
+        "The team has three engineers."
+      ],
+      "unknowns": [
+        "Expected usage volume."
+      ],
+      "rationale": "The brief does not establish production scale or capacity targets that warrant enterprise capacity work before the pilot."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What level of tenant isolation is required, including any administrative access to customer data?",
+      "changes": [
+        "tenancy-isolation",
+        "account-and-role-model",
+        "security-and-privacy-requirements"
+      ]
+    },
+    {
+      "question": "Which region will host the initial pilot, and do any design partners require data residency in a particular location?",
+      "changes": [
+        "regions-and-data-location",
+        "security-and-privacy-requirements"
+      ]
+    },
+    {
+      "question": "What retention and deletion behavior is expected for customer operational data?",
+      "changes": [
+        "data-retention",
+        "security-and-privacy-requirements"
+      ]
+    },
+    {
+      "question": "What service, support, recovery, and performance expectations apply during the design-partner pilot?",
+      "changes": [
+        "service-objectives",
+        "operational-observability",
+        "pilot-scope-and-feedback"
+      ]
+    },
+    {
+      "question": "What subscription plans, entitlements, and payment-failure behaviors should Stripe events control?",
+      "changes": [
+        "stripe-subscription-lifecycle",
+        "webhook-job-reliability"
+      ]
+    },
+    {
+      "question": "Which design partners will participate, and what constitutes a successful pilot?",
+      "changes": [
+        "pilot-scope-and-feedback",
+        "service-objectives"
+      ]
+    },
+    {
+      "question": "Do design partners impose contractual, privacy, security, or compliance requirements before receiving access?",
+      "changes": [
+        "security-and-privacy-requirements",
+        "tenancy-isolation",
+        "data-retention",
+        "regions-and-data-location"
+      ]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "blocked",
+    "release": "blocked",
+    "operate": "blocked",
+    "blockers": [
+      "tenancy-isolation",
+      "regions-and-data-location",
+      "data-retention",
+      "account-and-role-model",
+      "security-and-privacy-requirements"
+    ]
+  },
+  "unsupported_inferences_to_avoid": [
+    "That a particular cloud provider, region, or architecture has been selected.",
+    "That a specific regulatory framework or certification applies.",
+    "That customer operational data includes any particular data category.",
+    "That the pilot has production-scale traffic or enterprise availability requirements.",
+    "That Stripe is the only inbound webhook source.",
+    "That design partners have agreed to specific contractual, support, or security terms."
+  ]
+}
