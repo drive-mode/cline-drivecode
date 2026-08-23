@@ -115,6 +115,7 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [DEC-drive-mark-official](../decisions/DEC-drive-mark-official.md) | Official Drive mark + motion axes | **Accepted** |
 | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) | Shared semantics across hub/pwa/ios/tui | **Proposed** |
 | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) | Codebase-map explain-only; no portfolio/Status writes | **Proposed** |
+| [DEC-licence-visibility](../decisions/DEC-licence-visibility.md) | Licence × visibility pairings (repo-ownership step 7) | **Open** (inventory only; no moves) |
 
 ## Architecture D1–D10
 

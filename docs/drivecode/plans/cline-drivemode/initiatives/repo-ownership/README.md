@@ -1,7 +1,9 @@
 # repo-ownership · one concept, one owner
 
-**Status:** active — D1/D1a/D1b/D2 decided; MCP consumes the generated kernel;
-`collaboration-harness` archived; in-tree `apps/drive-ios` deleted
+**Status:** active — D1/D1a/D1b/D2 decided; MCP PR consumes the generated kernel;
+`collaboration-harness` GitHub-archive waits on that MCP merge; in-tree
+`apps/drive-ios` deleted on the kernel stack (still on public `main` until it
+merges)
 **Purpose:** for the Cline Drive Mode line specifically, name a single owner for
 each shared concept and sequence the deduplication. Delivery status remains
 authoritative in
@@ -12,6 +14,7 @@ describes repository topology and ownership, not claim status.
 [drive-cloud-beta](../drive-cloud-beta/),
 [multi-device](../multi-device/),
 [DEC-package-location](../../decisions/DEC-package-location.md),
+[DEC-licence-visibility](../../decisions/DEC-licence-visibility.md),
 [ADR-0013](../../adr/ADR-0013-state-partition.md),
 [PLANNING.md](PLANNING.md)
 
@@ -25,7 +28,7 @@ describes repository topology and ownership, not claim status.
 | Repository | Visibility | Role |
 |---|---|---|
 | `cline-drivecode` | public | Cline host + the vocabulary, port, fold, conformance kit |
-| `collaboration-harness` | private | **archived** — use `@drive-mode/drive-kernel` |
+| `collaboration-harness` | private | archive-docs landed / pending GitHub archive — use `@drive-mode/drive-kernel` |
 | `drivemode-mcp` | private | MCP writer + curated packs |
 | `drive-ios` | private | native SwiftUI client |
 | `site` | private | marketing surface |
@@ -182,7 +185,9 @@ Ordered so each step removes duplication permanently rather than relocating it.
 6. **Delete `apps/drive-ios`** from this repository. **Done** — fixture removed;
    product remains standalone `drive-ios`.
 7. **Fix licence and visibility pairings** so each repository's terms match its
-   tier.
+   tier. **Inventory recorded 2026-08-23** in
+   [DEC-licence-visibility](../../decisions/DEC-licence-visibility.md) (Open).
+   No visibility or SPDX moves until an owner picks a row.
 
 ## Open decisions
 
