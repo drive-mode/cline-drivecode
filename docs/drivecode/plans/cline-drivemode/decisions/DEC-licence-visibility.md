@@ -18,7 +18,7 @@ This pass inventories mismatches. It does not `gh repo edit --visibility`, add L
 | `drive-mode/cline-drivecode` | Public, GitHub Apache-2.0 | Apache Cline copyright + Drive product nest | Keep as-is unless you later split docs out |
 | `drive-mode/cursor-drive` | Public, GitHub “Other” (proprietary LICENSE) | Public + proprietary | Parked D3 — record, do not migrate |
 | `hhalperin/cline-drivecode` | Public fork | Live public parent of the Drive fork | Leave; do not push Drive there |
-| `drive-mode/collaboration-harness` | Private, `isArchived: false`, GitHub “Other”; local LICENSE Apache-2.0 | Docs already say archived; MCP `main` still file-depends on it | Merge archive-docs PR, then `gh repo archive` **after** MCP `main` consumes `@drive-mode/drive-kernel` |
+| `drive-mode/collaboration-harness` | Private, `isArchived: false`, GitHub “Other”; local LICENSE Apache-2.0 | Archive-docs [#7](https://github.com/drive-mode/collaboration-harness/pull/7) merged 2026-08-23; MCP `main` still file-depends on it | `gh repo archive` **after** MCP `main` consumes `@drive-mode/drive-kernel` |
 | `drive-mode/drivemode-mcp` | Private, GitHub “Other”; `package.json` + LICENSE Apache-2.0 | GH licence metadata ≠ file | Align GitHub `license` with the Apache file; keep private |
 | `drive-mode/drive-ios` | Private, no LICENSE, GitHub license null | Private app with no terms on disk | Add a private-repo LICENSE when you next touch the repo |
 | `drive-mode/site` | Private, no LICENSE, GitHub license null | Same | Add a private-repo LICENSE when you next touch the repo |

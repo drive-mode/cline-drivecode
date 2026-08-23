@@ -28,7 +28,7 @@ describes repository topology and ownership, not claim status.
 | Repository | Visibility | Role |
 |---|---|---|
 | `cline-drivecode` | public | Cline host + the vocabulary, port, fold, conformance kit |
-| `collaboration-harness` | private | archive-docs landed / pending GitHub archive — use `@drive-mode/drive-kernel` |
+| `collaboration-harness` | private | archive-docs [#7](https://github.com/drive-mode/collaboration-harness/pull/7) merged; GitHub archive waits on MCP `main` consuming `@drive-mode/drive-kernel` |
 | `drivemode-mcp` | private | MCP writer + curated packs |
 | `drive-ios` | private | native SwiftUI client |
 | `site` | private | marketing surface |
