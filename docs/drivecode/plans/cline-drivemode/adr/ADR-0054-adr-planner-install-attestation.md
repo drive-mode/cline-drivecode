@@ -1,4 +1,4 @@
-# ADR-0044 · ADR Planner reproducible install and upgrade attestation
+# ADR-0054 · ADR Planner reproducible install and upgrade attestation
 
 **Status:** Proposed — coordinated install/receipt transaction, crash recovery,
 concurrency, and adversarial evidence implemented; owner acceptance and release
@@ -7,8 +7,8 @@ gates remain open
 **Owner:** Harrison / Drivecode
 **Initiative:** [adr-planner](../initiatives/adr-planner/)
 **Plan:** [Milestone 6](../initiatives/adr-planner/milestone-6-implementation-plan.md)
-**Depends on:** [ADR-0036](ADR-0036-adr-planner-plugin-boundary.md) and
-[ADR-0037](ADR-0037-adr-planner-package-contract.md)
+**Depends on:** [ADR-0046](ADR-0046-adr-planner-plugin-boundary.md) and
+[ADR-0047](ADR-0047-adr-planner-package-contract.md)
 
 ## Context
 
@@ -82,7 +82,7 @@ These are separate claims and must not be collapsed:
    receipt commit and roll-forward after it at all six durable boundaries.
 10. The immutable source ref and accepted publication coordinate are distinct
    release channels. The Git-subdirectory bootstrap may serve private beta;
-   general release waits for ADR-0037's coordinate and registry authority.
+   general release waits for ADR-0047's coordinate and registry authority.
 11. CI must test a fresh install, exact same-pin no-op, same-tree/different-host
     replacement, successful cross-pin upgrade, dependency-install failure,
     malformed receipt/journal/lock, unknown content, path and symlink escape,

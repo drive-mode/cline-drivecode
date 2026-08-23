@@ -56,29 +56,29 @@ development proceeds against public cases.
 
 ## Decision 5 · Production package contract
 
-[ADR-0037](../../adr/ADR-0037-adr-planner-package-contract.md) proposes
+[ADR-0047](../../adr/ADR-0047-adr-planner-package-contract.md) proposes
 `plugins/adr-planner`, package coordinate `@cline/adr-planner`, explicit
 `/adr-preplan` and `/adr-plan` commands, pure validation/readiness tools, and no
 MVP hooks or background execution. The coordinate depends on registry
 namespace authority; the path does not.
 
-Owner response required: accept ADR-0037 as proposed, change its path or
+Owner response required: accept ADR-0047 as proposed, change its path or
 coordinate, or defer package implementation.
 
 ## Decision 6 · Repository evidence trust boundary
 
-[ADR-0038](../../adr/ADR-0038-adr-planner-evidence-trust-boundary.md)
+[ADR-0048](../../adr/ADR-0048-adr-planner-evidence-trust-boundary.md)
 proposes explicit, Git-visible, allowlisted metadata collection from the
 host-provided workspace root. It rejects arbitrary paths, raw source output,
 ignored/secret/symlink reads, background scans, writes, telemetry evidence
 payloads, and network access; profiling preserves unknowns.
 
-Owner response required: accept ADR-0038 as proposed, amend the read or signal
+Owner response required: accept ADR-0048 as proposed, amend the read or signal
 policy, or keep M2 as a private reversible proof pending later acceptance.
 
 ## Decision 7 · Concern catalog and rule authority
 
-[ADR-0039](../../adr/ADR-0039-adr-planner-concern-catalog-and-rule-authority.md)
+[ADR-0049](../../adr/ADR-0049-adr-planner-concern-catalog-and-rule-authority.md)
 proposes a versioned package-owned concern catalog, source registry, constrained
 three-valued rule language, open-world repository facts, deterministic routing,
 and prerequisite ordering. The public model-facing tool accepts no facts,
@@ -86,13 +86,13 @@ catalog, rules, classifications, or significance assertions. The 12-concern
 nucleus is an implementation and evaluation seed, not a claim of catalog
 completeness.
 
-Owner response required: accept ADR-0039 as proposed, amend catalog/rule
+Owner response required: accept ADR-0049 as proposed, amend catalog/rule
 authority or source policy, or keep M3 as a private reversible proof pending
 catalog precision review.
 
 ## Decision 8 · Host-attested workflow authority
 
-[ADR-0040](../../adr/ADR-0040-adr-planner-host-attested-workflow-authority.md)
+[ADR-0050](../../adr/ADR-0050-adr-planner-host-attested-workflow-authority.md)
 proposes an explicit `/adr-attest` channel for controlled Boolean human facts,
 host-owned session state, explicit pre-plan/plan selection, and an empty-input
 canonical workflow compiler. The private proof now bridges separate command and
@@ -108,7 +108,7 @@ serialized `host-composed` text as independent proof.
 
 ## Decision 9 · Reproducible install and upgrade attestation
 
-[ADR-0044](../../adr/ADR-0044-adr-planner-install-attestation.md) separates
+[ADR-0054](../../adr/ADR-0054-adr-planner-install-attestation.md) separates
 immutable source identity, installed-content identity, host compatibility, and
 atomic upgrade. Its first private slice pins direct runtime dependencies and
 has `qh2-template` materialize only the package runtime allowlist at one stable
@@ -116,7 +116,7 @@ ignored source path, preventing both temporary-path duplicate installs and
 source-tree leakage. Structural installed-package verification, real
 generated-repository smoke, and staged post-load rollback remain open.
 
-Owner response required: accept ADR-0044's boundary, amend its receipt or
+Owner response required: accept ADR-0054's boundary, amend its receipt or
 upgrade model, or keep M6 private. Acceptance does not supply the still-missing
 remote source commit or publication authority.
 
@@ -128,9 +128,9 @@ ADR Planner M0 decisions
 - Release policy: accept m0.1 | changes: ...
 - qh2-template: resolved harrison-quant-h2/qh2-template
 - Standing reviewer: <name/role> | defer release-gold construction
-- Package contract: accept ADR-0037 | changes: ...
-- Evidence boundary: accept ADR-0038 | private proof only | changes: ...
-- Catalog/rule authority: accept ADR-0039 | private proof only | changes: ...
-- Workflow authority: accept provisional ADR-0040 | private proof only | changes: ...
-- Install attestation: accept ADR-0044 | private proof only | changes: ...
+- Package contract: accept ADR-0047 | changes: ...
+- Evidence boundary: accept ADR-0048 | private proof only | changes: ...
+- Catalog/rule authority: accept ADR-0049 | private proof only | changes: ...
+- Workflow authority: accept provisional ADR-0050 | private proof only | changes: ...
+- Install attestation: accept ADR-0054 | private proof only | changes: ...
 ```

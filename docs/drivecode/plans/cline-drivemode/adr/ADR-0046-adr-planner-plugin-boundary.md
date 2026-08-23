@@ -1,4 +1,4 @@
-# ADR-0036 · ADR Planner plugin ownership and installation boundary
+# ADR-0046 · ADR Planner plugin ownership and installation boundary
 
 **Status:** Accepted (2026-08-14)
 **Owner:** Harrison / Drivecode

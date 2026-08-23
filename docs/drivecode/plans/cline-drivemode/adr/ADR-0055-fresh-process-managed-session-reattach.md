@@ -1,4 +1,4 @@
-# ADR-0045 · Fresh-process managed-session reattach
+# ADR-0055 · Fresh-process managed-session reattach
 
 **Status:** Proposed
 
@@ -9,14 +9,14 @@ caller adoption remain open
 
 **Owner:** Harrison / Cline runtime owner
 
-**Related:** [ADR-0041](ADR-0041-cross-session-chat-catalog-authority.md),
-[ADR-0042](ADR-0042-managed-session-reconnect-authority.md),
+**Related:** [ADR-0051](ADR-0051-cross-session-chat-catalog-authority.md),
+[ADR-0052](ADR-0052-managed-session-reconnect-authority.md),
 [caller adoption](../initiatives/cross-session-chat-management/caller-adoption-plan.md),
 AUTH-035, REL-034, REL-040, REL-041
 
 ## Context
 
-Accepted ADR-0042 defines the only durable transfer of a resident managed
+Accepted ADR-0052 defines the only durable transfer of a resident managed
 session: a caller that knows the exact current writer generation requests a
 lease rekey behind the resident guard and host barrier, then installs one new
 runtime/lifecycle owner. The shared controller now proves that flow for a
@@ -26,13 +26,13 @@ the generation, runtime cursor, and operation state.
 A fresh CLI, connector, or UI process has none of those hints. Its catalog
 binding may identify the session, while the still-running daemon retains either
 a live owner or an orphaned resident host. Calling ordinary lifecycle `resume`
-conflicts with that residency. Calling ADR-0042 reclaim is impossible without
+conflicts with that residency. Calling ADR-0052 reclaim is impossible without
 the expected generation, and inferring ownership from a PID, cache, binding, or
-session ID would recreate the process-local takeover rejected by ADR-0042.
+session ID would recreate the process-local takeover rejected by ADR-0052.
 
 This case is different from a managed authority/daemon process restart. After
 daemon loss the resident host and plaintext lease credential are gone, so
-ADR-0042 correctly requires ordinary lease expiry/resume or confirmed
+ADR-0052 correctly requires ordinary lease expiry/resume or confirmed
 lost-lease recovery.
 
 ## Decision
@@ -41,9 +41,9 @@ lost-lease recovery.
 
 | Observed state | Allowed action |
 |---|---|
-| Replacement socket; caller process survives | Existing ADR-0042 controller flow |
+| Replacement socket; caller process survives | Existing ADR-0052 controller flow |
 | Fresh caller process; resident daemon has a live owner | Return non-enumerating busy; never steal |
-| Fresh caller process; resident daemon has an orphaned owner | Read-only continuity lookup, then exact ADR-0042 durable reclaim |
+| Fresh caller process; resident daemon has an orphaned owner | Read-only continuity lookup, then exact ADR-0052 durable reclaim |
 | Managed authority/daemon process restarted | Treat as nonresident; ordinary resume, lease expiry, or confirmed recovery |
 
 ```mermaid
@@ -55,7 +55,7 @@ flowchart TD
     Lease -->|"no"| Ready["Hydrate + subscribe + fenced ready"]
     Lease -->|"yes / stranded"| Recovery["Expiry wait or owner-confirmed recovery"]
     Recovery --> Resume
-    Lookup -->|"orphaned + generation + baseline"| Reclaim["ADR-0042 durable rekey"]
+    Lookup -->|"orphaned + generation + baseline"| Reclaim["ADR-0052 durable rekey"]
     Reclaim --> Reconcile["Bounded hydrate + exact replay or explicit replacement"]
     Reconcile --> Ready
     DaemonLoss["Managed daemon restarted"] --> Resume
@@ -84,11 +84,11 @@ ID, PID, canonical path, client identity, profile secrets, pending prompt
 content, transcript, or unrelated audience data. `owned_elsewhere` reveals no
 owner detail. The lookup itself grants no mutation or subscription authority.
 
-### 3. Reuse ADR-0042 for the authority transfer
+### 3. Reuse ADR-0052 for the authority transfer
 
 After an `orphaned` result, the new process allocates a fresh reclaim operation
 and sends the exact writer generation through the existing strict reclaim
-command. The resident coordinator repeats every ADR-0042 requirement: inactive
+command. The resident coordinator repeats every ADR-0052 requirement: inactive
 prior connection, no active run, exclusive guard transition, nonterminal host
 barrier, durable token rotation and generation advance, exact replay, and
 post-commit orphan fencing.
@@ -158,7 +158,7 @@ acceptance remains the only ADR-local decision gate.
 2. Resident-adapter and managed-client tests return only fixed busy for a live
    owner and never include owner, generation, or cursor detail.
 3. Orphan continuity returns only the exact generation and bounded baseline;
-   adapter, client, and physical WebSocket tests prove one ADR-0042 durable
+   adapter, client, and physical WebSocket tests prove one ADR-0052 durable
    rekey before hydration/subscription.
 4. The two-socket physical test commits durable rekey, deliberately loses its
    successful reply while leaving the physical socket alive, retries the exact

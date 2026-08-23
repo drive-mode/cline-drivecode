@@ -2,7 +2,7 @@
 
 **Verified:** 2026-08-14
 **Scope:** reversible host-mediated private proof; production hardening incomplete
-**Decision state:** ADR-0036 Accepted; ADR-0037 through ADR-0040 Proposed
+**Decision state:** ADR-0046 Accepted; ADR-0047 through ADR-0050 Proposed
 **Catalog:** `m3-nucleus.1`
 **Workflow policy:** `m4-workflow.1`
 
@@ -25,7 +25,7 @@ are not proof, authenticated connector-principal policy is incomplete, and
 third-party mutation consent needs a host-owned declarative grammar or explicit
 confirmation UI.
 
-The proof does not accept ADR-0040, persist planning artifacts, promote ordinary
+The proof does not accept ADR-0050, persist planning artifacts, promote ordinary
 prose into facts, accept ADRs or business risk, waive obligations, ingest
 implementation-resolution evidence, authorize deployment, publish the package,
 or pin the package in `qh2-template`.
@@ -127,7 +127,7 @@ script, or evaluator canaries.
 
 ## Remaining gates
 
-1. Harrison accepts or amends ADR-0040 after reviewing the host design, trust
+1. Harrison accepts or amends ADR-0050 after reviewing the host design, trust
    limits, and lifecycle evidence.
 2. Add authenticated connector-principal policy and real connector-thread,
    reset, fork, resume, deletion, and retention lifecycle tests.
@@ -144,5 +144,5 @@ script, or evaluator canaries.
    deferred; M4 returns previews and writes no planning artifact.
 8. M5 must add brownfield history and accepted-decision change impact without
    weakening the M2–M4 boundaries.
-9. Publication and immutable `qh2-template` pinning remain blocked on ADR-0037
+9. Publication and immutable `qh2-template` pinning remain blocked on ADR-0047
    and M6 fresh/upgrade install gates.

@@ -1,9 +1,9 @@
 # ADR Planner Milestone 2 implementation plan
 
-**Status:** private implementation proof verified; ADR-0038 owner decision pending
-**Architecture candidate:** [ADR-0038](../../adr/ADR-0038-adr-planner-evidence-trust-boundary.md)
+**Status:** private implementation proof verified; ADR-0048 owner decision pending
+**Architecture candidate:** [ADR-0048](../../adr/ADR-0048-adr-planner-evidence-trust-boundary.md)
 **Product requirements:** [ADR Planner PRD](../../prd/prd-adr-planner.md)
-**Depends on:** M1 private package proof; ADR-0036 Accepted
+**Depends on:** M1 private package proof; ADR-0046 Accepted
 
 ## Outcome
 
@@ -191,7 +191,7 @@ remain unknown until a future host-attested brief/user/decision channel exists.
 
 ## Milestone 2 exit
 
-- [ ] ADR-0038 is accepted or the private implementation is explicitly allowed
+- [ ] ADR-0048 is accepted or the private implementation is explicitly allowed
       to remain a reversible proof.
 - [x] Collection uses host workspace context and Git visibility only.
 - [x] Allowlist, secret, symlink, containment, count, timeout, and byte policies
@@ -205,7 +205,7 @@ remain unknown until a future host-attested brief/user/decision channel exists.
 
 The proof and commands behind checked items are recorded in
 [milestone-2-evidence.md](milestone-2-evidence.md). Checked items do not accept
-ADR-0038 or authorize publication/template integration.
+ADR-0048 or authorize publication/template integration.
 
 ## Deferred to later milestones
 

@@ -1,13 +1,13 @@
-# ADR-0039 · ADR Planner concern catalog and rule authority
+# ADR-0049 · ADR Planner concern catalog and rule authority
 
 **Status:** Proposed
 **Owner:** Harrison / Drivecode
 **Decider:** Harrison
 **Initiative:** [adr-planner](../initiatives/adr-planner/)
 **Plan:** [Milestone 3](../initiatives/adr-planner/milestone-3-implementation-plan.md)
-**Constrained by:** [ADR-0036](ADR-0036-adr-planner-plugin-boundary.md),
-[ADR-0037](ADR-0037-adr-planner-package-contract.md),
-[ADR-0038](ADR-0038-adr-planner-evidence-trust-boundary.md)
+**Constrained by:** [ADR-0046](ADR-0046-adr-planner-plugin-boundary.md),
+[ADR-0047](ADR-0047-adr-planner-package-contract.md),
+[ADR-0048](ADR-0048-adr-planner-evidence-trust-boundary.md)
 
 ## Context
 

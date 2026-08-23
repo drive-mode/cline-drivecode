@@ -1,11 +1,11 @@
-# ADR-0042 · Durable managed-session reconnect authority
+# ADR-0052 · Durable managed-session reconnect authority
 
 **Status:** Accepted
 
 **Date:** 2026-08-15
 
 **Owner:** Harrison / Cline runtime owner
-**Related:** [ADR-0041](ADR-0041-cross-session-chat-catalog-authority.md), [ADR-0045](ADR-0045-fresh-process-managed-session-reattach.md), [runtime parity companion](../initiatives/cross-session-chat-management/runtime-parity-companion-design.md), [requirements](../initiatives/cross-session-chat-management/requirements.md), REL-034
+**Related:** [ADR-0051](ADR-0051-cross-session-chat-catalog-authority.md), [ADR-0055](ADR-0055-fresh-process-managed-session-reattach.md), [runtime parity companion](../initiatives/cross-session-chat-management/runtime-parity-companion-design.md), [requirements](../initiatives/cross-session-chat-management/requirements.md), REL-034
 
 ## Context
 
@@ -115,7 +115,7 @@ expiry/resume or the confirmed lost-lease recovery path is the fallback.
 
 A fresh CLI, connector, or UI process while that daemon and resident host
 survive is a different failure domain. This accepted ADR does not itself
-authorize a new caller to discover the current generation or cursor. ADR-0045
+authorize a new caller to discover the current generation or cursor. ADR-0055
 defines that separate target-authorized continuity lookup and now has a complete
 gate-off implementation, but remains Proposed pending explicit owner
 acceptance. Its implementation invokes this unchanged durable transition;

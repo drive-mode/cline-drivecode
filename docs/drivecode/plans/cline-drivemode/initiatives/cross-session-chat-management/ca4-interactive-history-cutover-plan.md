@@ -13,10 +13,10 @@ Core consumer seam required to preserve current interactive behavior
 **Related requirements:** FR-054, FR-065 through FR-072, AUTH-022, AUTH-034,
 AUTH-037, REL-031, REL-040 through REL-045
 
-**Related decisions:** [ADR-0041](../../adr/ADR-0041-cross-session-chat-catalog-authority.md),
-[ADR-0042](../../adr/ADR-0042-managed-session-reconnect-authority.md),
-[ADR-0043](../../adr/ADR-0043-trusted-managed-manual-compaction.md), and
-[ADR-0045](../../adr/ADR-0045-fresh-process-managed-session-reattach.md)
+**Related decisions:** [ADR-0051](../../adr/ADR-0051-cross-session-chat-catalog-authority.md),
+[ADR-0052](../../adr/ADR-0052-managed-session-reconnect-authority.md),
+[ADR-0053](../../adr/ADR-0053-trusted-managed-manual-compaction.md), and
+[ADR-0055](../../adr/ADR-0055-fresh-process-managed-session-reattach.md)
 
 ## Executive decision
 
@@ -34,7 +34,7 @@ reconciliation, reattach, or readiness is terminal for that caller. It never
 authorizes a generic Core, raw Hub, force-local SQLite, or direct artifact
 fallback.
 
-This plan does not accept ADR-0041 or ADR-0045, select the production owner
+This plan does not accept ADR-0051 or ADR-0055, select the production owner
 confirmation surface, or enable the production gate.
 
 ## Outcomes
@@ -75,7 +75,7 @@ CA-4 is complete only when:
 
 - connector launcher/adapters, Drive workers, ACP, Zen, Agent, automation, Hub
   UI, and other CA-5 through CA-7 callers;
-- accepting ADR-0045 or changing fresh-process reattach policy;
+- accepting ADR-0055 or changing fresh-process reattach policy;
 - choosing workspace identity across clones/worktrees;
 - adding provider credentials, raw messages, tool payloads, paths, or catalog
   authority to the managed wire;
@@ -273,7 +273,7 @@ one release-gate changeset.
 | User/runtime intent | Managed authority | Required adaptation |
 |---|---|---|
 | Fresh chat | `ManagedHubChatClient.startRoot` | Generate stable operation/session IDs; pass only an authorized opaque profile and workspace-relative cwd |
-| Resume from history | `ManagedHubChatClient.reattach` after ADR-0045 acceptance | Target the projected head session; let server continuity choose normal resume, busy denial, or exact orphan reclaim |
+| Resume from history | `ManagedHubChatClient.reattach` after ADR-0055 acceptance | Target the projected head session; let server continuity choose normal resume, busy denial, or exact orphan reclaim |
 | Same-process normal resume | `ManagedHubChatClient.resume` where continuity proves nonresidency | Never infer writer availability from app cache |
 | Model/mode/config change | `startRelated` with `relationKind: "config_restart"` | Create a successor using projected chat revision; do not preserve the old session ID or clone messages in the CLI |
 | `/new` or reset | current session `reset`, then `startRoot` when a new chat is requested | Stop/unbind without archive; no local deletion |
@@ -433,7 +433,7 @@ terminates raw `SessionHistoryRecord` data inside the adapter, returns frozen
 authority-neutral items, and has no mutation surface. Export re-resolves the
 session through an injected trusted authority resolver before artifact access;
 missing, changed, or managed authority fails closed. Managed rows advertise no
-resume/export action until the corresponding app ports and ADR-0045 policy are
+resume/export action until the corresponding app ports and ADR-0055 policy are
 available. Managed and Legacy item keys are namespaced, duplicate authority
 keys fail instead of overwrite, and catalog lifecycle—not runtime status—drives
 Active/Archived actions. The branded identity factory has a closed operation-
@@ -453,7 +453,7 @@ session identities, strict display/event projections, and bounded operation
 results. It exposes no generic Core, raw Hub command, managed handle, provider-
 native message, local artifact, credential, or transport object. The operation
 factory is narrowed to implemented interactive actions; `resume`, `reattach`,
-and recovery remain absent until ADR-0045 acceptance.
+and recovery remain absent until ADR-0055 acceptance.
 
 Every lifecycle/runtime request and result is checked through its strict Shared
 schema at the app boundary. The event reducer performs a bounded acyclic graph
@@ -565,7 +565,7 @@ off.
    fork; checkpoint restore calls managed restore and consumes bounded returned
    summaries; `/compact` calls managed compaction and never invokes the CLI
    compaction provider or writes a sidecar. Managed fresh-process resume remains
-   an explicit unsupported action while ADR-0045 is Proposed. No missing-session
+   an explicit unsupported action while ADR-0055 is Proposed. No missing-session
    recovery may clone local messages into a replacement.
 7. **CA4-D6 · Fence shutdown and negative paths.** Abort is correlated to the
    active managed run, and shutdown performs one stop/dispose sequence. Enabled-
@@ -586,7 +586,7 @@ The current caller dependencies make D0-D6 intentionally ordered:
 | Fork authors mutable metadata and clones transcript/compaction state | Managed structural fork and catalog lineage | D5 |
 | Restore reads local checkpoint metadata and returns raw messages | Managed checkpoint summary plus structural restore | D5 |
 | `/compact` invokes a CLI provider and persists a local sidecar | Trusted managed compaction command and bounded summary | D5 |
-| Missing-session recovery and history resume reload local messages | Fail explicitly; reattach is unavailable until ADR-0045 acceptance | D5-D6 |
+| Missing-session recovery and history resume reload local messages | Fail explicitly; reattach is unavailable until ADR-0055 acceptance | D5-D6 |
 | Hooks, tool policy, credentials, approval, and `askQuestion` are passed into local Core construction | Daemon profile plus correlated managed callback brokerage | D2-D4 |
 
 CA4-D exits only when a fake managed app port drives the same TUI command paths
@@ -683,7 +683,7 @@ independent P0/P1 review before claiming CA-4 complete.
 ### Interactive runtime
 
 - fresh start and ready-before-turn;
-- fresh-process resume paths remain unavailable until ADR-0045 acceptance;
+- fresh-process resume paths remain unavailable until ADR-0055 acceptance;
 - config change creates one revision-bound `config_restart` successor;
 - `/new` resets/unbinds and creates a new root without archive/delete;
 - turn streaming, terminal result, queue, steer, and cross-run rejection;
@@ -726,7 +726,7 @@ For the managed branch, tests shall fail if it invokes or imports:
 
 | Decision | Recommended default | Blocks |
 |---|---|---|
-| ADR-0045 fresh-process reattach | Review and explicitly accept only after owner approval | Production history resume and process restart |
+| ADR-0055 fresh-process reattach | Review and explicitly accept only after owner approval | Production history resume and process restart |
 | Trusted owner confirmation surface | Interactive TUI/CLI owner surface for CA-4, with target-only prompt contract | Running archive, purge, confirmed recovery |
 | Interactive cross-audience administration | Keep closed-by-default until separately ratified | One workspace-wide view across connector/headless audiences |
 | `history delete` semantics | Deprecate for managed rows; use archive and explicit purge language | Final command/TUI copy and compatibility behavior |

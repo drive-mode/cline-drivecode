@@ -1,9 +1,9 @@
 # ADR Planner Milestone 4 implementation plan
 
 **Status:** provisional private host-mediated proof; production hardening open
-**Architecture candidate:** [ADR-0040](../../adr/ADR-0040-adr-planner-host-attested-workflow-authority.md)
+**Architecture candidate:** [ADR-0050](../../adr/ADR-0050-adr-planner-host-attested-workflow-authority.md)
 **Product requirements:** [ADR Planner PRD](../../prd/prd-adr-planner.md)
-**Depends on:** M3 private concern-planning proof; ADR-0036 Accepted
+**Depends on:** M3 private concern-planning proof; ADR-0046 Accepted
 
 ## Outcome
 
@@ -135,7 +135,7 @@ the bounded collection result. Volatile execution metadata remains outside.
 
 ### M4.1 · ADR and schemas
 
-- Add ADR-0040 and this plan before implementation.
+- Add ADR-0050 and this plan before implementation.
 - Add strict attestation, question, experiment, routed-output, obligation,
   readiness-summary, and canonical-plan schemas.
 - Extend concern-plan authority with `host-composed`.
@@ -212,7 +212,7 @@ result receipts, and isolation from malicious same-user plugins.
 
 ## Milestone 4 exit
 
-- [ ] ADR-0040 is accepted or the private proof is explicitly retained as
+- [ ] ADR-0050 is accepted or the private proof is explicitly retained as
       reversible.
 - [x] Host invocation provenance and task-scoped state are implemented in the
       SDK/runtime.
@@ -229,7 +229,7 @@ result receipts, and isolation from malicious same-user plugins.
 - [x] M1–M3 and package-boundary regressions remain green.
 
 The checked items are backed by an M4 private-proof evidence artifact. They do
-not accept ADR-0040, publish the package, write planning artifacts, or authorize
+not accept ADR-0050, publish the package, write planning artifacts, or authorize
 an immutable `qh2-template` plugin pin.
 
 ## Deferred

@@ -3,9 +3,9 @@
 **Status:** active — package reproducibility, staged compatibility, and
 crash-recoverable install/receipt transaction implemented; immutable release,
 evaluation, publication, and owner acceptance remain open
-**Architecture candidate:** [ADR-0044](../../adr/ADR-0044-adr-planner-install-attestation.md)
+**Architecture candidate:** [ADR-0054](../../adr/ADR-0054-adr-planner-install-attestation.md)
 **Product requirements:** [ADR Planner PRD](../../prd/prd-adr-planner.md)
-**Depends on:** M4 private workflow proof; M0/ADR-0037 owner decisions for release
+**Depends on:** M4 private workflow proof; M0/ADR-0047 owner decisions for release
 
 ## Outcome
 
@@ -36,7 +36,7 @@ authority boundaries.
 |---|---|---|---|
 | Trusted local path | checkout ref + dirty bit | development only | none |
 | Immutable Git commit + package subdir | repository + 40-char commit + subdir | private beta while package coordinate is unresolved | only after full M6 fixture passes |
-| Exact package coordinate | package name + exact version + archive digest | production target | only after ADR-0037/0044 and release policy acceptance |
+| Exact package coordinate | package name + exact version + archive digest | production target | only after ADR-0047/0044 and release policy acceptance |
 | `--without-adr-planner` | explicit exception receipt | deliberate bootstrap exception | never a planner-ready claim |
 
 ## Work packages
@@ -166,7 +166,7 @@ evaluation, publication, ADR acceptance, and remote default pinning remain open.
 
 ## Milestone 6 exit
 
-- [ ] ADR-0037 and ADR-0044 are accepted or the release remains explicitly private/reversible.
+- [ ] ADR-0047 and ADR-0054 are accepted or the release remains explicitly private/reversible.
 - [x] Direct runtime dependencies are exact and enforced by package tests.
 - [x] Candidate archive digest and normalized inventory are deterministic and
       recorded by package verification.
@@ -196,7 +196,7 @@ evaluation, publication, ADR acceptance, and remote default pinning remain open.
 ## Explicit external gates
 
 1. Harrison accepts/amends M0 gold and release policy.
-2. Harrison accepts/amends ADR-0037 and ADR-0044.
+2. Harrison accepts/amends ADR-0047 and ADR-0054.
 3. A standing independent human release reviewer is named or release gold is
    explicitly deferred.
 4. The ADR Planner package exists at a reviewed immutable remote commit or an

@@ -1,12 +1,12 @@
-# ADR-0040 · ADR Planner host-attested workflow authority
+# ADR-0050 · ADR Planner host-attested workflow authority
 
 **Status:** Proposed — private host-mediated proof; production hardening pending
 **Date:** 2026-08-14
 **Initiative:** [adr-planner](../initiatives/adr-planner/)
 **Plan:** [Milestone 4](../initiatives/adr-planner/milestone-4-implementation-plan.md)
-**Depends on:** [ADR-0037](ADR-0037-adr-planner-package-contract.md),
-[ADR-0038](ADR-0038-adr-planner-evidence-trust-boundary.md), and
-[ADR-0039](ADR-0039-adr-planner-concern-catalog-and-rule-authority.md)
+**Depends on:** [ADR-0047](ADR-0047-adr-planner-package-contract.md),
+[ADR-0048](ADR-0048-adr-planner-evidence-trust-boundary.md), and
+[ADR-0049](ADR-0049-adr-planner-concern-catalog-and-rule-authority.md)
 
 ## Context
 

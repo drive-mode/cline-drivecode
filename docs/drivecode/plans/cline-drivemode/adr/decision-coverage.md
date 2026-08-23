@@ -637,7 +637,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0036 · ADR Planner plugin ownership and installation boundary
+## ADR-0046 · ADR Planner plugin ownership and installation boundary
 
 1. **Status / Impl.** Accepted · **partial** (Milestone 0 active; private M1 package proof verified)
 2. **Decision.** `cline-drivecode` owns a bounded Cline package plugin with a bundled pre-plan/plan skill; `hh-template` owns a pinned project-local install and upgrade integration.
@@ -650,13 +650,13 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
    - Public development labels may live here; held-out briefs and gold remain outside package/build context.
    - Cline owns sandboxed materialization/discovery; generated repositories do not maintain a forked planner source by default.
 4. **Non-goals / rejected.** Claude-only implementation · standalone repository for first release · root git install · runtime auto-update · second planning daemon/runtime.
-5. **Open.** ADR-0037 acceptance and package coordinate; canonical `hh-template` source recovery; standing second benchmark reviewer.
+5. **Open.** ADR-0047 acceptance and package coordinate; canonical `hh-template` source recovery; standing second benchmark reviewer.
 6. **Domain tags.** `planning`, `distribution`, `authority`, `adlc`
 7. **Coverage quality.** Decision
 
 ---
 
-## ADR-0037 · ADR Planner production package and invocation contract
+## ADR-0047 · ADR Planner production package and invocation contract
 
 1. **Status / Impl.** Proposed · **partial** (private implementation proof; not publication authority)
 2. **Decision.** Add a top-level production plugin workspace at `plugins/adr-planner`, propose `@cline/adr-planner`, and expose explicit namespaced workflow commands plus pure deterministic tools.
@@ -679,7 +679,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0038 · ADR Planner repository-evidence trust boundary
+## ADR-0048 · ADR Planner repository-evidence trust boundary
 
 1. **Status / Impl.** Proposed · **none**
 2. **Decision.** Explicit M2 collection uses the host workspace root and Git's
@@ -713,7 +713,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0039 · ADR Planner concern catalog and rule authority
+## ADR-0049 · ADR Planner concern catalog and rule authority
 
 1. **Status / Impl.** Proposed · **partial** (private implementation proof; not catalog-policy acceptance)
 2. **Decision.** Evaluate a versioned package-owned, source-backed concern
@@ -747,7 +747,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0040 · ADR Planner host-attested workflow authority
+## ADR-0050 · ADR Planner host-attested workflow authority
 
 1. **Status / Impl.** Proposed · **partial** (private host-mediated proof verified; production hardening open)
 2. **Decision.** Use host-owned, task-scoped extension state and attributable
@@ -792,7 +792,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0041 · Cross-session chat catalog authority
+## ADR-0051 · Cross-session chat catalog authority
 
 1. **Status / Impl.** Proposed · **advanced partial** (catalog/lifecycle
    authority, managed Hub scope, writer-fenced local runtime, profile
@@ -861,7 +861,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 5. **Open.** Legacy adoption policy; cross-clone/hosted workspace identity;
    retention/purge defaults; production owner-responder product wiring; production adoption
    of the replacement-socket controller; production manual-compaction
-   authorization; explicit ADR-0045 owner acceptance; non-admission operation
+   authorization; explicit ADR-0055 owner acceptance; non-admission operation
    replay classification; ADR-0014-conformant Drive coordinator/worker policy;
    unscoped compatibility target isolation; interactive/connector
    callback/runtime caller convergence; M3 handoff and M4 context-swapping
@@ -890,8 +890,8 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
    shared direct/managed bounds, physical failure paths, stale-revision denial,
    authoritative archived-resume target resolution, and exact replay proof in
    **5 files / 104 tests**. The evidence ledger records one unrelated flaky
-   crash-fixture test in the latest default full-Core run. ADR-0042 is accepted
-   and complete; ADR-0043 is advanced partial; ADR-0045 awaits owner acceptance.
+   crash-fixture test in the latest default full-Core run. ADR-0052 is accepted
+   and complete; ADR-0053 is advanced partial; ADR-0055 awaits owner acceptance.
    The daemon release gate remains hard off pending owner-responder wiring,
    caller adoption, broader operation replay, Drive, compaction closure, and
    all-caller conformance.
@@ -900,7 +900,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0042 · Durable managed-session reconnect authority
+## ADR-0052 · Durable managed-session reconnect authority
 
 1. **Status / Impl.** Accepted · **complete** (durable rekey, token-free
    writer-generation projection, guard reservation, host barrier, shared owner
@@ -925,7 +925,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
      authority/daemon process restart falls back to ordinary expiry/resume or
      confirmed lost-lease recovery.
    - Fresh caller-process loss while the daemon/resident host survives is
-     outside this accepted scope. ADR-0045 separately defines and implements
+     outside this accepted scope. ADR-0055 separately defines and implements
      the gate-off read-only continuity discovery that invokes this unchanged
      rekey; formal owner acceptance remains open.
    - A new physical connection may reconcile that receipt only while the owner
@@ -941,7 +941,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
    adoption · a second durable connection-delegation authority · raw connection
    IDs in catalog output · stop/resume masquerading as direct atomic reclaim.
 5. **Open.** Chat-wide stop-and-archive owner enumeration remains outside this
-   ADR and fail-closed. ADR-0045 fresh-process discovery is a separate Proposed
+   ADR and fail-closed. ADR-0055 fresh-process discovery is a separate Proposed
    decision with a complete gate-off implementation, not part of this completed
    transition. Production callers have not adopted the controller; broader
    PC-4 release/caller cutover is still gated.
@@ -961,7 +961,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0043 · Trusted managed manual compaction authority
+## ADR-0053 · Trusted managed manual compaction authority
 
 1. **Status / Impl.** Proposed · **advanced partial** (host-owned action,
    durable receipt state machine, atomic completed commit, exact-sidecar replay,
@@ -996,7 +996,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0044 · ADR Planner reproducible install and upgrade attestation
+## ADR-0054 · ADR Planner reproducible install and upgrade attestation
 
 1. **Status / Impl.** Proposed · **partial** (exact direct runtime dependency
    and stable runtime-only template candidate/receipt slice implemented)
@@ -1032,14 +1032,14 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
-## ADR-0045 · Fresh-process managed-session reattach
+## ADR-0055 · Fresh-process managed-session reattach
 
 1. **Status / Impl.** Proposed · **complete (gate-off)** (the decision
    kernel and technical acceptance matrix are implemented; explicit owner
    acceptance and production caller adoption remain open)
 2. **Decision.** When a fresh caller process finds an orphaned resident session
    in a surviving daemon, permit one audience-authorized read-only continuity
-   lookup and then reuse the unchanged ADR-0042 durable rekey. Daemon-process
+   lookup and then reuse the unchanged ADR-0052 durable rekey. Daemon-process
    loss remains expiry/resume or confirmed recovery.
 3. **Binding clauses if accepted**
    - Continuity returns only `not_resident`, `owned_elsewhere`, or `orphaned`.
@@ -1049,7 +1049,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
      installed-instance issuer; each installation receives a stable opaque
      audience and mismatched binding coordinates reject.
    - Lookup is observation, not authority. Reclaim still performs every
-     ADR-0042 guard, host-barrier, durable rekey, replay, and orphan-fence step.
+     ADR-0052 guard, host-barrier, durable rekey, replay, and orphan-fence step.
    - Live owners return busy; daemon restart invalidates the resident epoch;
      cached cursors/generations and process/connection IDs are never authority.
    - Bounded state hydration plus exact replay or explicit authoritative
@@ -1192,15 +1192,15 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 | **economics** | ADR-0022, DEC-mobile-consumer-owner, ADR-0016 | Meter placement/advisory vs enforce (Paper/Open); freemium failure ops (hole) |
 | **spawn** | ADR-0023, ADR-0003, ADR-0012, ADR-0014, ADR-0025, ADR-0027 | Live `capPreset` on `call_seat` (D1); consult vs delegate product; spawn UI behind E2 |
 | **web-runtime** | ADR-0024, ADR-0029 H4–H5, DEC-mobile, ADR-0016 | Conformance-passing browser host (Paper); hosted signaling |
-| **authority** | ADR-0025, ADR-0026, ADR-0018, ADR-0023, ADR-0027, ADR-0041, ADR-0042, ADR-0045 | Caller cutover, owner-responder product wiring, Drive coordinator policy, compatibility isolation, and ADR-0045 owner acceptance |
-| **chat/session** | ADR-0014, ADR-0041, ADR-0042, ADR-0043, ADR-0045 | ADR-0041/0043 acceptance; legacy adoption, caller convergence, and compaction policy |
-| **runtime/reconnect** | ADR-0041, ADR-0042, ADR-0045 | Broader operation replay, production controller adoption, connector delivery, and all-caller conformance |
+| **authority** | ADR-0025, ADR-0026, ADR-0018, ADR-0023, ADR-0027, ADR-0051, ADR-0052, ADR-0055 | Caller cutover, owner-responder product wiring, Drive coordinator policy, compatibility isolation, and ADR-0055 owner acceptance |
+| **chat/session** | ADR-0014, ADR-0051, ADR-0052, ADR-0053, ADR-0055 | ADR-0051/0043 acceptance; legacy adoption, caller convergence, and compaction policy |
+| **runtime/reconnect** | ADR-0051, ADR-0052, ADR-0055 | Broader operation replay, production controller adoption, connector delivery, and all-caller conformance |
 | **roles** | ADR-0027, ADR-0023 | Vocabulary convergence (hole/follow-on); typed third tier blocked on D1 |
 | **adlc** | ADR-0028, ADR-0015 | Plane-naming ADR; first-use on-ramps blocked on 0021 Paper |
 | **hotpath** | ADR-0029 (amends ADR-0013) | H5 only |
 | **brand** | DEC-drive-mark-official, DEC-open-product-forks (violet edge), DEC-mobile (“Cline Drive”) | Mask layers for eyes; install string vs mark are separate |
 | **product-forks** | DEC-open-product-forks, DEC-agent-source-of-truth, DEC-package-location, DEC-mobile, ADR-0007, ADR-0016 | Catch-up copy; one-shot fork; TextChannels; multi-device parity contract (hole) |
-| **planning** | ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0044, ADR-0028, ADR-0026 | M0 owner adjudication and release policy acceptance; M1–M4 private proofs exist; ADR-0040 hardening, ADR-0044 installed-runtime/atomic-upgrade completion, publication, and artifact persistence remain open |
+| **planning** | ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0054, ADR-0028, ADR-0026 | M0 owner adjudication and release policy acceptance; M1–M4 private proofs exist; ADR-0050 hardening, ADR-0054 installed-runtime/atomic-upgrade completion, publication, and artifact persistence remain open |
 
 ---
 
@@ -1218,6 +1218,8 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | Multi-device parity | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) | Paper |
 | Codebase-map firewall | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) | Paper |
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) | Paper |
+| Operator next-action layer (+ first training-label corpus grant) | [ADR-0036](ADR-0036-next-action-triad.md) | Paper |
+| Desktop signal source + sensing consent surface | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) (amends ADR-0036 1/12) | Paper |
 
 ### Still Open (product gaps — not holes in the ADR sense, but undecided product detail)
 
@@ -1247,5 +1249,6 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | **0033** | Managed cards refuse bank archive from Kanban Done |
 | **0034** | After delivery D1; unified seat role writes only |
 | **0035** | Catch-up line on leave/return + snapshot gap path |
+| **0036** | Triad on tip **and** a kept-rate being measured — not when the hint renders |
 | **DEC-multi-device-parity** | MATRIX Tier 1 rows green on primary devices (or explicit lite) |
 | **DEC-codebase-map-firewall** | Skill + AGENTS refuse path; no write side channel |

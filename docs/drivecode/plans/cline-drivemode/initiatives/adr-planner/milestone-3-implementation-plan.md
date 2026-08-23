@@ -1,9 +1,9 @@
 # ADR Planner Milestone 3 implementation plan
 
-**Status:** private implementation proof verified; ADR-0039 owner decision pending
-**Architecture candidate:** [ADR-0039](../../adr/ADR-0039-adr-planner-concern-catalog-and-rule-authority.md)
+**Status:** private implementation proof verified; ADR-0049 owner decision pending
+**Architecture candidate:** [ADR-0049](../../adr/ADR-0049-adr-planner-concern-catalog-and-rule-authority.md)
 **Product requirements:** [ADR Planner PRD](../../prd/prd-adr-planner.md)
-**Depends on:** M2 private evidence/profile proof; ADR-0036 Accepted
+**Depends on:** M2 private evidence/profile proof; ADR-0046 Accepted
 
 ## Outcome
 
@@ -209,7 +209,7 @@ composed, ADR, non-ADR, prerequisite, and urgency behavior. It is not the final
 
 ## Milestone 3 exit
 
-- [ ] ADR-0039 is accepted or the private proof is explicitly retained as
+- [ ] ADR-0049 is accepted or the private proof is explicitly retained as
       reversible.
 - [x] Strict catalog/rule/fact/result contracts are implemented.
 - [x] Three-valued evaluation and open-world unknown behavior are proven.
@@ -221,7 +221,7 @@ composed, ADR, non-ADR, prerequisite, and urgency behavior. It is not the final
 - [x] M1–M2 and package-boundary regressions remain green.
 
 Checked items will be backed by commands and outputs in a separate M3 evidence
-artifact. They do not accept ADR-0039, publish the package, or authorize
+artifact. They do not accept ADR-0049, publish the package, or authorize
 `qh2-template` integration.
 
 ## Deferred to later milestones

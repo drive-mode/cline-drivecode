@@ -3,7 +3,7 @@
 **Status:** active; catalog/runtime plus CA-1 target authority, CA-2 reattach, and CA-3 confirmation-authority kernels implemented behind the gate; owner responder and caller convergence open; release gate off
 
 **Scope:** Milestone 0 production composition and caller cutover
-**Decision record:** [ADR-0041](../../adr/ADR-0041-cross-session-chat-catalog-authority.md)
+**Decision record:** [ADR-0051](../../adr/ADR-0051-cross-session-chat-catalog-authority.md)
 
 ## Target topology
 
@@ -89,7 +89,7 @@ Source: `sdk/packages/core/src/hub/server/`, `sdk/packages/core/src/chat-catalog
 | Trusted confirmation authority | gate-off kernel implemented; product surface open | One command-scoped Core responder, target-only owner prompt, shared bounds, final mutation fence, physical approve/decline/disconnect/shutdown, revision-race, replay, and injection proof pass; no production owner UI selected |
 | Production profile authority | profile continuity and closed-default target authorization implemented | Ten stable profiles/classes, installation-derived connector audiences, audience-keyed pool isolation, writer-fenced continuity, sanitized admission authority, raw-catalog denial, and known-ID audience checks exist; production launcher delivery and any future owner-wide admin policy remain open |
 | Managed read projection | implemented behind gate | Audience-filtered list/get, connection/query-bound snapshot identity/sequence, exact chained lifecycle replay, and delivery-admitted ready exist; production advertisement/caller selection remain off |
-| Fresh-process reattach | complete gate-off kernel; [ADR-0045](../../adr/ADR-0045-fresh-process-managed-session-reattach.md) Proposed | Audience-authorized nonresident/live-owner/orphan continuity, exact lost-reply ADR-0042 reclaim, bounded hydration/replay, ready-before-turn, and physical daemon-restart/new-stream proof pass; acceptance and caller adoption remain |
+| Fresh-process reattach | complete gate-off kernel; [ADR-0055](../../adr/ADR-0055-fresh-process-managed-session-reattach.md) Proposed | Audience-authorized nonresident/live-owner/orphan continuity, exact lost-reply ADR-0052 reclaim, bounded hydration/replay, ready-before-turn, and physical daemon-restart/new-stream proof pass; acceptance and caller adoption remain |
 | Runtime parity companion | in progress | Strict v1 wire, scoped dispatch/events, resident ownership, admission-only starts, fenced additive delivery, bounded cursor recovery, durable reconnect/fresh-reattach orchestration, close-on-loss outbound bounds, durable compaction receipts with atomic exact-sidecar replay, and one profile-granted `askQuestion` callback with physical WebSocket/cancellation conformance are implemented; production compaction authorization, reasoning/checkpoint product policy, caller adoption, and all-caller conformance remain |
 | Interactive/history convergence | open | Raw `ClineCore` and force-local session mutation remain |
 | Connector convergence | open | JSON binding authority and raw `HubSessionClient` remain |
@@ -335,7 +335,7 @@ operation across a lost initial reply, performs bounded hydration before its
 first subscription, and exposes the handle only after fenced ready. Physical
 evidence drops a committed WebSocket reply without closing the socket and
 separately restarts the Hub to prove ordinary resume, a new stream ID, and old
-cursor rejection. This slice remains unadvertised pending ADR-0045 acceptance.
+cursor rejection. This slice remains unadvertised pending ADR-0055 acceptance.
 
 #### Completed PC-4 slice · Physical reconnect/reclaim orchestration
 

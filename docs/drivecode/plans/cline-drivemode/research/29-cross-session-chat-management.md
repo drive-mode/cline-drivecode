@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-14  
 **Status:** research synthesis; implementation decisions remain Proposed  
-**Related:** [ADR-0041](../adr/ADR-0041-cross-session-chat-catalog-authority.md), [initiative](../initiatives/cross-session-chat-management/)
+**Related:** [ADR-0051](../adr/ADR-0051-cross-session-chat-catalog-authority.md), [initiative](../initiatives/cross-session-chat-management/)
 
 ## Question
 

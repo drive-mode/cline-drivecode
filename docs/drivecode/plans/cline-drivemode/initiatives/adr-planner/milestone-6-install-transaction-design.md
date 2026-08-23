@@ -3,7 +3,7 @@
 **Status:** implemented for the project-local ADR Planner channel — coordinated
 commit, real crash-process recovery, same-tree recovery, concurrent mutation,
 adversarial path/digest/lock, and immutable local-Git A-to-B evidence pass  
-**Decision:** [ADR-0044](../../adr/ADR-0044-adr-planner-install-attestation.md)  
+**Decision:** [ADR-0054](../../adr/ADR-0054-adr-planner-install-attestation.md)  
 **Milestone:** [Milestone 6](milestone-6-implementation-plan.md)  
 **Frozen contract:** [Transaction contract](milestone-6-transaction-contract.md)
 

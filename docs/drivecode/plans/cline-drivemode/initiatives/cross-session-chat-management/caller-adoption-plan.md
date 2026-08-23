@@ -5,10 +5,10 @@
 **Scope:** PC-3 target authority through PC-8 client composition and caller convergence
 
 **Release posture:** `managedChatLifecycleEnabled` remains `false`
-**Related decisions:** [ADR-0041](../../adr/ADR-0041-cross-session-chat-catalog-authority.md),
-[ADR-0042](../../adr/ADR-0042-managed-session-reconnect-authority.md),
-[ADR-0043](../../adr/ADR-0043-trusted-managed-manual-compaction.md), and
-[ADR-0045](../../adr/ADR-0045-fresh-process-managed-session-reattach.md)
+**Related decisions:** [ADR-0051](../../adr/ADR-0051-cross-session-chat-catalog-authority.md),
+[ADR-0052](../../adr/ADR-0052-managed-session-reconnect-authority.md),
+[ADR-0053](../../adr/ADR-0053-trusted-managed-manual-compaction.md), and
+[ADR-0055](../../adr/ADR-0055-fresh-process-managed-session-reattach.md)
 
 ## Outcome
 
@@ -51,7 +51,7 @@ falling back operation by operation.
 | Zen | `runtime/run-zen.ts` sends `session.create` and `session.send_input` | Move to the Zen managed profile after facade conformance |
 | Raw catalog on scoped sockets | The managed transport now rejects `chat_catalog.*` before catalog/Core entry; the production route remains unadvertised and gate-off | Preserve denial through atomic caller cutover; never expose the raw port |
 | Lifecycle event continuity | Audience-filtered snapshot/replay/ready now exists behind the disabled gate with separate scanned and delivered cursors | Compose it only through the managed facade and preserve snapshot replacement on unavailable replay |
-| Fresh-process reattach | Gate-off continuity classifies nonresident/live/orphaned state; initial reclaim, bounded hydration/replay, and ready-before-handle share one controller | Keep unadvertised until ADR-0045 acceptance and adopt only through the complete managed facade |
+| Fresh-process reattach | Gate-off continuity classifies nonresident/live/orphaned state; initial reclaim, bounded hydration/replay, and ready-before-handle share one controller | Keep unadvertised until ADR-0055 acceptance and adopt only through the complete managed facade |
 | Drive room/fork/wave | Room linking accepts a session ID; fork/wave handlers call the legacy `sessionHost` for worker create/turn/delete and parent injection | Classify explicitly; managed targets use structural lifecycle/runtime authority or reject before legacy host access |
 | Other consumers | Agent, ACP, schedules, Hub UI, VS Code/desktop examples, and Kanban use generic Core or raw Hub surfaces | Classify each as managed or explicitly unscoped before release |
 | Daemon | Managed composition and ten profiles are present, but the production gate is hard off | Keep off until the all-caller matrix passes |
@@ -389,7 +389,7 @@ returning that sanitized result. If the socket closes after commit/registration
 but before the reply reaches the caller, replay from a new connection can
 reconcile the durable lifecycle operation but cannot silently inherit resident
 ownership. Registering the new socket at the old generation would violate
-ADR-0042, while the caller does not yet have the generation needed to reclaim.
+ADR-0052, while the caller does not yet have the generation needed to reclaim.
 
 CA-2 closes this gap in the gate-off kernel; the production caller rule is:
 
@@ -447,9 +447,9 @@ trusted writer generation or runtime cursor. Calling lifecycle `resume` while
 the daemon still retains an orphaned resident owner currently conflicts, while
 calling reclaim without an authoritative generation/cursor is impossible.
 
-This remains a proposed decision, not behavior accepted by ADR-0042. Its
-complete gate-off implementation is inert: ADR-0045 must be accepted before a
-production caller can select or advertise the continuity lookup. ADR-0042's
+This remains a proposed decision, not behavior accepted by ADR-0052. Its
+complete gate-off implementation is inert: ADR-0055 must be accepted before a
+production caller can select or advertise the continuity lookup. ADR-0052's
 durable rekey algorithm remains unchanged. If the managed authority/daemon
 process itself restarts, its existing expiry/resume or confirmed-recovery rule
 continues to apply.
@@ -469,7 +469,7 @@ by existing durable operations, not client-side ownership inference:
    left a durable lease without resident authority, the reviewed lease-expiry
    or confirmed recovery policy applies; a connector does not auto-revoke it.
 5. `orphaned` invokes the existing exact-generation durable reclaim. The
-   server aborts/drains any orphan work under ADR-0042 and transfers only after
+   server aborts/drains any orphan work under ADR-0052 and transfers only after
    the writer generation advances. A lost or timed-out initial reply retries
    the identical operation/generation through the shared controller; a failed
    preparation retains exact cancellation authority.
@@ -698,7 +698,7 @@ reconciliation, events/hydration before ready, stale-cache rejection, replay
 eviction cancellation, a physical fresh socket, an actual Hub restart/new
 stream epoch, lease-expiry takeover, and owner-confirmed recovery. Production
 connector restart still awaits CA-5 launcher/adopter wiring. CA-2 remains
-unadvertised and cannot be selected until proposed ADR-0045 is accepted.
+unadvertised and cannot be selected until proposed ADR-0055 is accepted.
 
 ### CA-3 · Trusted confirmation responder — authority kernel implemented behind gate
 
@@ -1014,8 +1014,8 @@ legacy session or make force-local deletion an emergency fallback.
    `chat_projection.v1` plus durable lifecycle `catalogSequence`, replay cursor,
    and fenced ready contract. Exposing `HubChatCatalogPort` or joining at the
    current event head is rejected.
-5. **Fresh-process reattach:** accept ADR-0045's audience-authorized three-state
-   continuity lookup and reuse the existing ADR-0042 durable reclaim path.
+5. **Fresh-process reattach:** accept ADR-0055's audience-authorized three-state
+   continuity lookup and reuse the existing ADR-0052 durable reclaim path.
    Cached client cursors, process IDs, raw connection IDs, and automatic
    headless lease revocation are rejected as ownership evidence.
 6. **Confirmation product surface:** choose the production owner responder and

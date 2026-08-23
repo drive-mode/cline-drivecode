@@ -1,4 +1,4 @@
-# ADR-0041 · Cross-session chat catalog authority
+# ADR-0051 · Cross-session chat catalog authority
 
 **Status:** Proposed
 
@@ -9,11 +9,11 @@
 **Related:** [research](../research/29-cross-session-chat-management.md),
 [initiative](../initiatives/cross-session-chat-management/),
 [ADR-0025](ADR-0025-enforced-authority.md),
-[ADR-0036](ADR-0036-adr-planner-plugin-boundary.md),
-[ADR-0040](ADR-0040-adr-planner-host-attested-workflow-authority.md),
-[ADR-0042](ADR-0042-managed-session-reconnect-authority.md),
-[ADR-0043](ADR-0043-trusted-managed-manual-compaction.md), and
-[ADR-0045](ADR-0045-fresh-process-managed-session-reattach.md)
+[ADR-0046](ADR-0046-adr-planner-plugin-boundary.md),
+[ADR-0050](ADR-0050-adr-planner-host-attested-workflow-authority.md),
+[ADR-0052](ADR-0052-managed-session-reconnect-authority.md),
+[ADR-0053](ADR-0053-trusted-managed-manual-compaction.md), and
+[ADR-0055](ADR-0055-fresh-process-managed-session-reattach.md)
 
 ## Context
 
@@ -463,7 +463,7 @@ Do not accept this ADR until:
 20. bounded projection snapshot identity/sequence, durable chained lifecycle
     event sequence, exact authorized replay, fenced ready, and authoritative
     snapshot replacement close every reconnect and pagination gap; and
-21. accepted ADR-0045 fresh-process nonresident/live-owner/orphan reattach and
+21. accepted ADR-0055 fresh-process nonresident/live-owner/orphan reattach and
     ADR-0014-conformant managed Drive room/fork/wave policy pass physical
     negative-fallback conformance.
 
@@ -580,10 +580,10 @@ fresh-process reattach, and Drive room/fork/wave access to legacy authority.
 CA-1 closes the first two behind the disabled gate with copied-database,
 known-ID, snapshot, replay, and readiness evidence. The CA-2 checkpoint now
 closes fresh-process reattach behind that same gate with audience-authorized
-continuity, installation-bound connector audiences, unchanged ADR-0042 rekey,
+continuity, installation-bound connector audiences, unchanged ADR-0052 rekey,
 bounded hydration/replay, exact initial-reclaim lost-reply reconciliation, a
 physical fresh-facade WebSocket proof, and an actual Hub restart/new-stream
-proof. ADR-0045 still awaits explicit owner acceptance; trusted connector
+proof. ADR-0055 still awaits explicit owner acceptance; trusted connector
 launcher delivery, Drive, and production caller convergence remain pre-release
 work. No production routing or capability advertisement changed.
 

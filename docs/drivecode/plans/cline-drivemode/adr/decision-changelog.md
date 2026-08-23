@@ -28,7 +28,9 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-08 — ADR cleanup on main: reconcile 0023; Accept 0023/0027/0028/0029; path H fold; current-truth hygiene; chronology extracted to this file.
 - 2026-08-08 — Comprehensive git-mined changelog + full binding-clause inventory ([decision-coverage.md](decision-coverage.md)).
 - 2026-08-08 — Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (Proposed).
-- 2026-08-14 — ADR-0036 Accepted; ADR Planner Milestone 0 benchmark and governance artifacts opened.
+- 2026-08-11 — ADR-0036 next-action triad + PRD 11 + research 29 (Proposed); closes the 21-operator-experience gap and answers research 16 open question 3.
+- 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
+- 2026-08-14 — ADR-0046 Accepted; ADR Planner Milestone 0 benchmark and governance artifacts opened.
 
 ---
 
@@ -247,11 +249,19 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 
 - 2026-08-08 — Proposed (snapshot/delta + one factual catch-up line).
 
-## ADR-0036 · ADR Planner plugin boundary
+## ADR-0036 · Next-action triad
+
+- 2026-08-16 — Decisions 1 and 12 amended by ADR-0037 (invocation-scoped desktop sensing). Decision 2 left standing; decisions 3–11 and 13–15 unchanged.
+
+## ADR-0037 · Invocation-scoped sensing
+
+- 2026-08-17 — Decision 7 re-pointed after ADR-0036 Open 6 was answered: the gate is `prepareToolExecution` in `@cline/agents`, the resolution is the canonical `resolveToolPolicy` in `@cline/shared` (private duplicate deleted by the next-action-triad initiative). Open 8 added to record constraint C2 as inherited and undecided here.
+
+## ADR-0046 · ADR Planner plugin boundary
 
 - 2026-08-14 — Accepted (`cline-drivecode` package plugin + bundled skill; pinned project-local install owned by `hh-template`).
 
-## ADR-0037 · ADR Planner package contract
+## ADR-0047 · ADR Planner package contract
 
 - 2026-08-14 — Proposed (`plugins/adr-planner`, proposed `@cline/adr-planner`, explicit namespaced commands and pure tools; owner/namespace acceptance pending).
 - 2026-08-14 — Implementation evidence only: private package scaffold, pure
@@ -259,7 +269,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   review, and atomic install/upgrade fixture verified. ADR remains Proposed;
   no publication or `hh-template` mutation occurred.
 
-## ADR-0038 · ADR Planner evidence trust boundary
+## ADR-0048 · ADR Planner evidence trust boundary
 
 - 2026-08-14 — Proposed (explicit Git-visible allowlisted metadata collection;
   host workspace root only; secret/symlink/size containment; controlled signals;
@@ -269,7 +279,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   adversarial privacy/limit fixtures, real-repository exercise, and copied
   installed-package sandbox smoke verified. ADR remains Proposed.
 
-## ADR-0039 · ADR Planner concern catalog and rule authority
+## ADR-0049 · ADR Planner concern catalog and rule authority
 
 - 2026-08-14 — Proposed (versioned source-backed concern catalog; constrained
   three-valued rules; open-world facts; deterministic routing, ADR filtering,
@@ -279,7 +289,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   adversarial rule/graph/authority tests, real-repository exercise, and fresh
   installed-package privacy smoke verified. ADR remains Proposed.
 
-## ADR-0040 · ADR Planner host-attested workflow authority
+## ADR-0050 · ADR Planner host-attested workflow authority
 
 - 2026-08-14 — Proposed (controlled Boolean facts enter only through explicit
   `/adr-attest`; workflow and gate selection use explicit commands; session
@@ -295,7 +305,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   not task scope, command input has no actor provenance, and bundled source
   cannot mint trusted authority. M4 registration was removed, internal output
   relabeled `untrusted-command-session`, and the model-facing readiness tool
-  was forced to block caller-authored passes. ADR-0040 remains Proposed and is
+  was forced to block caller-authored passes. ADR-0050 remains Proposed and is
   now blocked on a host-owned provenance/task-state capability.
 - 2026-08-14 — Superseding private implementation evidence: the host now
   supplies task-scoped command provenance, persists bounded extension state
@@ -308,9 +318,9 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   production trust claim: explicit mutation confirmation or a host-owned
   declarative grammar, authenticated connector actors, stronger receipts and
   isolation, lifecycle/retention policy, and least-privilege controls remain
-  open. ADR-0040 remains Proposed.
+  open. ADR-0050 remains Proposed.
 
-## ADR-0041 · Cross-session chat catalog authority
+## ADR-0051 · Cross-session chat catalog authority
 
 - 2026-08-14 — Proposed: model chat as a durable organizational entity above
   execution sessions; keep active/archive orthogonal to runtime status and
@@ -410,10 +420,10 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   hard-boundary seed/promote/audit semantics, or fail-closed managed-target
   rejection. These are release blockers; the production gate remains hard off.
 - 2026-08-17 — Planning-consistency closure: a final independent review found
-  two P1 and five P2 contradictions. AUTH-022 and ADR-0041 now make one gate
+  two P1 and five P2 contradictions. AUTH-022 and ADR-0051 now make one gate
   atomically select callers, route projection/lifecycle/runtime commands and
-  events, and advertise every managed capability. Proposed ADR-0045 separates
-  fresh caller-process loss from ADR-0042 daemon-process loss. The M0 kernel
+  events, and advertise every managed capability. Proposed ADR-0055 separates
+  fresh caller-process loss from ADR-0052 daemon-process loss. The M0 kernel
   checkpoint no longer claims milestone completion; PC-3 target authority is
   explicitly open; PC/CA numbering is distinct; multi-workspace selection is
   deferred rather than release-blocking; and Drive convergence preserves
@@ -435,7 +445,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   The final independent P0/P1 correctness and security re-review returned
   **PASS**.
 
-## ADR-0042 · Durable managed-session reconnect authority
+## ADR-0052 · Durable managed-session reconnect authority
 
 - 2026-08-15 — Proposed: reject process-local connection takeover and
   stop-then-resume as REL-034 implementations. Reconnect must rekey the existing
@@ -471,7 +481,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   **14/14**, and host **84/84** follow-ups.
   The production release gate remains hard off pending caller adoption.
 
-## ADR-0043 · Trusted managed manual compaction authority
+## ADR-0053 · Trusted managed manual compaction authority
 
 - 2026-08-15 — Proposed: managed clients may request compaction but never
   provide transcripts, provider configuration, compactors, callbacks, writer
@@ -500,12 +510,12 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   P0/P1/P2 for this slice. ADR remains Proposed pending production profile
   authorization and the complete stop/rekey/renew/process-loss matrix.
 
-## ADR-0045 · Fresh-process managed-session reattach
+## ADR-0055 · Fresh-process managed-session reattach
 
 - 2026-08-17 — Proposed: distinguish caller-process loss while the managed
   daemon/resident host survives from managed authority/daemon process loss.
   The former may use one target-authorized, read-only three-state continuity
-  lookup and then the unchanged ADR-0042 durable rekey; the latter continues to
+  lookup and then the unchanged ADR-0052 durable rekey; the latter continues to
   require ordinary expiry/resume or confirmed lost-lease recovery. The result
   exposes generation/baseline only for an orphan and no owner, connection, or
   credential detail. Acceptance requires bounded hydration/replay and the full
@@ -518,7 +528,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
   commands, including anti-steal after ready. A second physical WebSocket/fresh
   facade proves an event committed during rekey is replayed before readiness;
   stale generation, live owner, replay eviction, cancellation, and daemon
-  epoch restart fail closed. The production gate remains hard off, and ADR-0045
+  epoch restart fail closed. The production gate remains hard off, and ADR-0055
   remains Proposed pending explicit owner acceptance.
 - 2026-08-17 — CA-2 closure checkpoint: fresh reattach now enters the shared
   controller before its first reclaim, so an unknown initial reply retries the

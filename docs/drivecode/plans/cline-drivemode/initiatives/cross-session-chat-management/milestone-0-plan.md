@@ -17,7 +17,7 @@ reset/resume semantics before building Active/Archived UI or semantic memory.
 
 ### M0.0 · Decision and baseline fixtures
 
-1. Review and amend ADR-0041.
+1. Review and amend ADR-0051.
 2. Freeze lifecycle vocabulary and error codes.
 3. Add fixtures covering interactive root, connector-bound root, fork,
    checkpoint restore, stale binding, concurrent resume, and purge failure.
@@ -95,7 +95,7 @@ can resurrect a tombstone.
 
 Run authority, concurrency, crash, migration, privacy, and plugin-boundary
 reviews. Produce an evidence ledger with exact commands and fresh database
-fixtures. Keep ADR-0041 Proposed until owner review and all acceptance evidence
+fixtures. Keep ADR-0051 Proposed until owner review and all acceptance evidence
 passes.
 
 Current evidence and open findings are maintained in
@@ -303,11 +303,11 @@ modules if code review identifies a cleaner boundary.
   and tool status streaming, current-run-only abort, connection/run-bound
   one-shot tool approvals, private temporary attachment materialization with
   cleanup, byte-bounded close-on-loss delivery, sequence-gap detection, and a
-  strict client adapter. Accepted ADR-0042 also provides durable resident
+  strict client adapter. Accepted ADR-0052 also provides durable resident
   reclaim through lease rekey, host drain, and one runtime/lifecycle owner
   transition. Focused Shared and Core matrices pass; the release gate remains
   off.
-- PC-4 now includes the second ADR-0043 host-owned manual-compaction checkpoint:
+- PC-4 now includes the second ADR-0053 host-owned manual-compaction checkpoint:
   strict managed dispatch, daemon-owned config/provider selection, per-session
   run exclusion, disconnect cancellation, direct writer-fenced sidecar
   persistence without agent restore, durable

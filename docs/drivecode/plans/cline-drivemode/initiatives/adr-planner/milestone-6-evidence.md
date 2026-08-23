@@ -3,7 +3,7 @@
 **Recorded:** 2026-08-16
 **Scope:** private package reproducibility, staged compatibility, and
 crash-recoverable install/receipt transaction slice
-**Decision state:** ADR-0036 Accepted; ADR-0037 through ADR-0040 and ADR-0044 Proposed
+**Decision state:** ADR-0046 Accepted; ADR-0047 through ADR-0050 and ADR-0054 Proposed
 
 ## Verdict
 
@@ -129,5 +129,5 @@ release gate.
 ## Remaining M6 gates
 
 See [Milestone 6 implementation plan](milestone-6-implementation-plan.md). No
-successful package/template test can self-accept ADR-0037/0044, publish the package, or
+successful package/template test can self-accept ADR-0047/0044, publish the package, or
 set the remote `qh2-template` pin.

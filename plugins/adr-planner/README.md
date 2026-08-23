@@ -26,7 +26,7 @@ authenticated organization principals, connector-specific assurance, and
 host-owned confirmation UI remain later hardening work.
 
 The package is not published and is not yet pinned by `qh2-template`.
-ADR-0037 remains Proposed until the package path, coordinate, and registry
+ADR-0047 remains Proposed until the package path, coordinate, and registry
 authority are accepted.
 
 ## Development

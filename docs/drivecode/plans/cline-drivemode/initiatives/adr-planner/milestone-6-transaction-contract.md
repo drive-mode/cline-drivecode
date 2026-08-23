@@ -1,7 +1,7 @@
 # ADR Planner install transaction contract
 
 **Status:** frozen for implementation  
-**Decision:** [ADR-0044](../../adr/ADR-0044-adr-planner-install-attestation.md)  
+**Decision:** [ADR-0054](../../adr/ADR-0054-adr-planner-install-attestation.md)  
 **Design:** [Install transaction design](milestone-6-install-transaction-design.md)
 
 ## Scope

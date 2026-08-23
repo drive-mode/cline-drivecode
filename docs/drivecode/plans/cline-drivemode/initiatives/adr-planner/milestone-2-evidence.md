@@ -3,7 +3,7 @@
 **Recorded:** 2026-08-14
 **Branch:** `feat/adr-planner-milestone-0`
 **Package:** `plugins/adr-planner` (`@cline/adr-planner@0.0.0`, private)
-**Decision state:** ADR-0036 Accepted; ADR-0037 and ADR-0038 Proposed
+**Decision state:** ADR-0046 Accepted; ADR-0047 and ADR-0048 Proposed
 
 ## Result
 
@@ -15,7 +15,7 @@ the same bounded evidence and accepts no caller-authored evidence or
 assertions. Neither tool writes, persists, accepts decisions, emits telemetry
 evidence, accesses the network, or runs during plugin setup.
 
-This proof does not accept ADR-0038, publish the package, modify `qh2-template`,
+This proof does not accept ADR-0048, publish the package, modify `qh2-template`,
 or claim that M3 concern generation and M4 complete workflows exist.
 
 ## Implemented boundary
@@ -71,9 +71,9 @@ installed sandbox smoke under the production build environment.
 
 ## Remaining gates
 
-1. Harrison accepts ADR-0038 or explicitly keeps M2 as a private reversible
+1. Harrison accepts ADR-0048 or explicitly keeps M2 as a private reversible
    proof while its read/signal policy is evaluated.
-2. M0 gold/release decisions and ADR-0037 publication authority remain open.
+2. M0 gold/release decisions and ADR-0047 publication authority remain open.
 3. The canonical `qh2-template` source must be recovered or recreated before a
    pinned consumer integration can be verified.
 4. M3 must turn evidence/profile outputs into applicable, unknown, and explicit

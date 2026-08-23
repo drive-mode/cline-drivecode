@@ -1,6 +1,6 @@
 # Cross-session chat management requirements
 
-**Status:** draft contract for ADR-0041
+**Status:** draft contract for ADR-0051
 **Scope:** Milestone 0 authority plus interfaces required by M1/M2
 
 ## Terms
@@ -232,7 +232,7 @@
   smuggling before managed admission. It shall expose no generic Core, raw Hub
   command, provider-native message, local artifact, or transport handle. Fresh-
   process `resume`, `reattach`, and recovery methods shall remain absent until
-  ADR-0045 is accepted. Malformed or stale admission results shall be stopped,
+  ADR-0055 is accepted. Malformed or stale admission results shall be stopped,
   released, and fenced from app event delivery; an adapter-wide failure shall
   also retire and release any predecessor context.
 
@@ -590,7 +590,7 @@
   Stop-then-resume, implicit adoption by session ID, and
   process-local connection replacement are not conforming recovery paths. The
   strict reclaim command shall remain unadvertised until the durable mutation
-  and conformance suite land together. See [ADR-0042](../../adr/ADR-0042-managed-session-reconnect-authority.md).
+  and conformance suite land together. See [ADR-0052](../../adr/ADR-0052-managed-session-reconnect-authority.md).
 - **REL-035** Managed manual compaction shall use one per-session exclusive
   operation bound to session, current writer generation, operation ID, intent
   digest, and server compaction-policy identity. Identical requests shall
@@ -598,7 +598,7 @@
   events; changed intent shall conflict. Sidecar-head selection and the
   completed receipt shall commit atomically under the current writer fence. A
   `running` receipt recovered after process loss shall become `indeterminate`
-  and shall not execute automatically. See [ADR-0043](../../adr/ADR-0043-trusted-managed-manual-compaction.md).
+  and shall not execute automatically. See [ADR-0053](../../adr/ADR-0053-trusted-managed-manual-compaction.md).
 - **REL-036** Every strict runtime event subscription shall use a fresh opaque
   transport fence captured by that exact server listener and echoed outside the
   runtime event envelope. The client shall deliver fenced output only to the
@@ -685,8 +685,8 @@
   restart shall invalidate the resident epoch, and client cursor caches,
   process IDs, or connection IDs shall never become authority. This
   extension shall remain unavailable until proposed
-  [ADR-0045](../../adr/ADR-0045-fresh-process-managed-session-reattach.md) is
-  accepted; it reuses, and does not alter, ADR-0042's durable rekey.
+  [ADR-0055](../../adr/ADR-0055-fresh-process-managed-session-reattach.md) is
+  accepted; it reuses, and does not alter, ADR-0052's durable rekey.
 - **REL-042** Runtime app-observer delivery shall preserve the strict event
   order accepted by the managed controller. A throwing, slow, removed, or
   retained listener shall not corrupt controller correlation, block another
@@ -819,7 +819,7 @@ separate badge, order by last activity, and show fork/restore/recovery lineage.
 | Abort before run correlation | One bounded intent waits for the matching `run.started`, aborts only that run, and is consumed by any terminal race |
 | Managed profile smuggling | Unknown start-profile fields, credentials, absolute paths, and parent traversal reject before managed admission |
 | Malformed managed successor | Successor is stopped/released, predecessor is retired/released on adapter-wide failure, and neither context can deliver another app event |
-| Managed reattach before ADR-0045 | Interactive adapter exposes no resume, reattach, or recovery method; no local or ordinary-start substitute is attempted |
+| Managed reattach before ADR-0055 | Interactive adapter exposes no resume, reattach, or recovery method; no local or ordinary-start substitute is attempted |
 | Managed config restart | One revision-bound structural successor; no same-ID restart, transcript clone, mutable-lineage metadata, or connection-label patch |
 | Managed history action | Rendered target retains chat/head/state/revision through admission; stale revision refreshes and requires a new destructive action |
 | Legacy history action | Visibly Legacy and read-only; no managed mutation and no heuristic adoption |

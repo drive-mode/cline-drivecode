@@ -2,7 +2,7 @@
 
 **Status:** active — production convergence; release gate off
 
-**Decision:** [ADR-0041](../../adr/ADR-0041-cross-session-chat-catalog-authority.md) Proposed
+**Decision:** [ADR-0051](../../adr/ADR-0051-cross-session-chat-catalog-authority.md) Proposed
 **Research:** [Research 29](../../research/29-cross-session-chat-management.md)
 
 ## Outcome
@@ -51,7 +51,7 @@ shutdown plus revision-race, replay, and injection tests fail closed. No
 production owner surface has been selected or wired.
 
 Production adoption of the controller, real connector-launcher audience
-delivery, explicit ADR-0045 acceptance, broader non-admission operation replay,
+delivery, explicit ADR-0055 acceptance, broader non-admission operation replay,
 production manual-compaction authority, owner-responder product wiring, bounded caller
 residency, server-side isolation of managed rows from the legacy compatibility
 lane, ADR-0014-conformant Drive room/fork/wave convergence, and every
@@ -115,15 +115,15 @@ currently reachable?” These questions must never share one state field.
   PC-4 command/event, sanitization, callback, race, and reliability contract.
 - [Research 29](../../research/29-cross-session-chat-management.md) — past-chat
   evidence and current-code audit.
-- [ADR-0041](../../adr/ADR-0041-cross-session-chat-catalog-authority.md) — proposed
+- [ADR-0051](../../adr/ADR-0051-cross-session-chat-catalog-authority.md) — proposed
   source-of-truth decision.
-- [ADR-0042](../../adr/ADR-0042-managed-session-reconnect-authority.md) — accepted
+- [ADR-0052](../../adr/ADR-0052-managed-session-reconnect-authority.md) — accepted
   durable resident reconnect authority.
-- [ADR-0043](../../adr/ADR-0043-trusted-managed-manual-compaction.md) — proposed
+- [ADR-0053](../../adr/ADR-0053-trusted-managed-manual-compaction.md) — proposed
   trusted host-owned manual-compaction transaction and replay contract.
-- [ADR-0045](../../adr/ADR-0045-fresh-process-managed-session-reattach.md) —
+- [ADR-0055](../../adr/ADR-0055-fresh-process-managed-session-reattach.md) —
   proposed audience-authorized fresh-caller-process discovery that reuses the
-  accepted ADR-0042 durable rekey.
+  accepted ADR-0052 durable rekey.
 
 ## Roadmap
 

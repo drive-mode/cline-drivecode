@@ -1,9 +1,9 @@
 # Milestone 0 evidence ledger
 
-**Status:** catalog kernel, atomic root/related admission, managed checkpoint restore, durable writer fence, explicit mandatory-SQLite ClineCore composition, guarded local managed runtime, connector preservation, local catalog-first compatibility history, authenticated-Hub authority/upgrade/reconnect/confirmation/workspace pool, strict lifecycle/event wires, concrete local ClineCore/profile adapter, final commit-boundary revocation fence, authoritative ordered lifecycle event source, strict lifecycle/runtime clients, staged legacy/managed coexistence, singleton owner capability delivery, inert daemon composition, production profile resolution/continuity, accepted resident reconnect, durable manual-compaction receipts with atomic exact-sidecar replay, byte-bounded close-on-loss runtime delivery, admission-only managed starts, profile-gated callback brokerage, fenced additive delivery, bounded cursor recovery, shared replacement-socket orchestration with physical WebSocket/cancellation proof, the inert CA-0 managed caller seam, the gate-off CA-1 immutable audience/migration/projection/replay kernel, the gate-off CA-2 installation-bound audience/admission/fresh-process reattach fault kernel, the gate-off CA-3 invocation-scoped confirmation-authority kernel, the gate-off CA4-A runtime observer, the gate-off CA4-B authority-tagged history contracts, the gate-off CA4-C managed interactive adapter, the gate-off CA4-D0 app-owned runtime contract, and the gate-off CA4-D1a data-projection/Legacy-read checkpoint; ADR-0045 acceptance, D1a event/capability closure, the stateful Legacy adapter, connector-launcher delivery, Drive convergence, production compaction authorization, owner-responder product wiring, caller target cutover, broader operation replay, and app command-path convergence remain open; not release-ready
+**Status:** catalog kernel, atomic root/related admission, managed checkpoint restore, durable writer fence, explicit mandatory-SQLite ClineCore composition, guarded local managed runtime, connector preservation, local catalog-first compatibility history, authenticated-Hub authority/upgrade/reconnect/confirmation/workspace pool, strict lifecycle/event wires, concrete local ClineCore/profile adapter, final commit-boundary revocation fence, authoritative ordered lifecycle event source, strict lifecycle/runtime clients, staged legacy/managed coexistence, singleton owner capability delivery, inert daemon composition, production profile resolution/continuity, accepted resident reconnect, durable manual-compaction receipts with atomic exact-sidecar replay, byte-bounded close-on-loss runtime delivery, admission-only managed starts, profile-gated callback brokerage, fenced additive delivery, bounded cursor recovery, shared replacement-socket orchestration with physical WebSocket/cancellation proof, the inert CA-0 managed caller seam, the gate-off CA-1 immutable audience/migration/projection/replay kernel, the gate-off CA-2 installation-bound audience/admission/fresh-process reattach fault kernel, the gate-off CA-3 invocation-scoped confirmation-authority kernel, the gate-off CA4-A runtime observer, the gate-off CA4-B authority-tagged history contracts, the gate-off CA4-C managed interactive adapter, the gate-off CA4-D0 app-owned runtime contract, and the gate-off CA4-D1a data-projection/Legacy-read checkpoint; ADR-0055 acceptance, D1a event/capability closure, the stateful Legacy adapter, connector-launcher delivery, Drive convergence, production compaction authorization, owner-responder product wiring, caller target cutover, broader operation replay, and app command-path convergence remain open; not release-ready
 
 **Last verified:** 2026-08-18
-**Decision:** [ADR-0041](../../adr/ADR-0041-cross-session-chat-catalog-authority.md) remains Proposed
+**Decision:** [ADR-0051](../../adr/ADR-0051-cross-session-chat-catalog-authority.md) remains Proposed
 
 ## Current result
 
@@ -405,7 +405,7 @@ reply while keeping the socket live; the exact retry replays the receipt and
 the durable runtime rekey occurs once. A separate physical Hub close/start
 constructs a new managed factory, chooses ordinary nonresident resume, creates
 a new runtime stream, and rejects the prior cursor. The trusted issuer is not
-yet wired into production connector launchers, ADR-0045 remains Proposed, and
+yet wired into production connector launchers, ADR-0055 remains Proposed, and
 the production gate remains `managedChatLifecycleEnabled: false`.
 
 ### CA-3 invocation-scoped confirmation authority — 2026-08-17
@@ -509,7 +509,7 @@ current session port without exposing either to app callers. It adapts root,
 config restart, fork, checkpoint restore, turn, exact abort, approval,
 `askQuestion`, pending prompts, display messages, checkpoints, usage,
 compaction, reset, stop, and deterministic disposal. Fresh-process resume,
-reattach, and recovery are absent while ADR-0045 remains Proposed.
+reattach, and recovery are absent while ADR-0055 remains Proposed.
 
 Strict Shared schemas validate every request, result, and runtime event at the
 app boundary. A bounded acyclic graph check, exact nested projection,
@@ -1010,10 +1010,10 @@ heartbeat/correlation omissions, and aggregate/Unicode outbound loss. A narrow
 final re-review of the byte-budget/delivery fix returned **no P0/P1**. One
 architectural P1 remained explicit in REL-034: a replacement physical
 connection needed an atomic, durable-revision-checked reclaim that transfers
-resident runtime and lifecycle ownership together. ADR-0042 now closes that
+resident runtime and lifecycle ownership together. ADR-0052 now closes that
 implementation gap while the global managed-chat release gate remains off.
 
-ADR-0042 now implements the selected architecture for that remaining P1. A
+ADR-0052 now implements the selected architecture for that remaining P1. A
 map-only swap was rejected during implementation review because durable writer
 verification alone neither invalidates the stale credential nor drains
 background writers. The selected target rekeys the existing lease token and
@@ -1040,7 +1040,7 @@ orphan owner generation for strict reclaim, and producer descendants remain
 admitted while any causal producer is tracked. Direct and factory-level orphan
 reclaim plus late-producer fixed-point regressions close both findings.
 
-ADR-0043 now records the trusted managed manual-compaction boundary. Its second
+ADR-0053 now records the trusted managed manual-compaction boundary. Its second
 hard-off checkpoint routes `chat_runtime.compaction.run` only after exact
 connection/session ownership, then delegates through ClineCore to a resident
 host operation. The host synchronously reserves per-session exclusivity before
@@ -1094,7 +1094,7 @@ matrix and independent review stay open.
 Focused checkpoint proof passes Shared SQLite schema **1 file/8 tests** and Core
 receipt-store, persistence, managed-adapter, and local-host **4 files/109
 tests**. This is
-deliberately not ADR-0043 acceptance: production profile authorization, the complete
+deliberately not ADR-0053 acceptance: production profile authorization, the complete
 stop/rekey/renew/process-loss matrix, and later PC release gates remain open.
 
 The final independent re-review approved the remediated checkpoint with no
@@ -1302,12 +1302,12 @@ pending production caller adoption and the remaining PC-4 convergence work.
 | Managed confirmation could diverge from the direct coordinator or outlive its command | fixed behind the disabled gate: one invocation-scoped responder checks the Core target, exposes only frozen target display data, shares direct/managed prompt bounds and termination, reaches the final mutation fence, and is retired after dispatch; the production owner surface remains an explicit product choice |
 | Scoped audiences still share workspace-wide catalog authority | fixed behind the disabled gate: immutable target scope and audience-before-disclosure checks exist, managed sockets deny raw catalog access, installation-bound same-transport audiences use separate Core instances, and the ordinary interactive owner remains closed by default |
 | Lifecycle reconnect can join at the current event head | fixed behind the disabled gate: one audience/query snapshot cut feeds exact retained suffix replay with separate scanned/delivered cursors and delivery-admitted ready; unavailable/ahead replay fails closed so the CA-0 client can replace from a fresh snapshot |
-| A fresh process cannot safely reattach to an established resident session | fixed behind the disabled gate: audience-authorized nonresident/live-owner/orphan continuity, unchanged ADR-0042 reclaim with exact unknown-reply retry, bounded hydration/replay, and ready-before-turn pass without treating client cache as authority; ADR-0045 acceptance and caller adoption remain |
+| A fresh process cannot safely reattach to an established resident session | fixed behind the disabled gate: audience-authorized nonresident/live-owner/orphan continuity, unchanged ADR-0052 reclaim with exact unknown-reply retry, bounded hydration/replay, and ready-before-turn pass without treating client cache as authority; ADR-0055 acceptance and caller adoption remain |
 | Drive room/fork/wave paths can reach legacy session authority | open release blocker: managed links require authorized projection; managed workers require a server-owned coordinator, closed profile, structural lineage, managed stop/retention, and fenced parent injection, otherwise reject before room mutation or legacy host access |
 
 ## Release blockers
 
-1. Accept ADR-0045, then adopt the implemented fresh-process reattach atomically
+1. Accept ADR-0055, then adopt the implemented fresh-process reattach atomically
    through production callers. Preserve the proven
    `not_resident`/`owned_elsewhere`/`orphaned` continuity result, exact durable
    reclaim/lost-reply reconciliation, bounded runtime hydration, and
@@ -1359,6 +1359,6 @@ The ordered dependency and conformance matrix now live in
 
 ## Decision gate
 
-Do not accept ADR-0041, publish the catalog as production authority, or pin this
+Do not accept ADR-0051, publish the catalog as production authority, or pin this
 plugin commit into `qh2-template` until the release blockers above and the
 owner decisions in the M0 plan are resolved.

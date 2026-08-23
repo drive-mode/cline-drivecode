@@ -36,7 +36,7 @@ document describes the full PC-4 target, not a claim that the exit criteria are
 complete.
 
 Reconnect authority is specified by
-[ADR-0042](../../adr/ADR-0042-managed-session-reconnect-authority.md). A
+[ADR-0052](../../adr/ADR-0052-managed-session-reconnect-authority.md). A
 process-local owner-map replacement was rejected because it cannot durably
 transfer writer authority or drain background producers. The strict reclaim
 command now lands with lease-token-proven rekey, exclusive guard transition,

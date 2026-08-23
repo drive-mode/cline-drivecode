@@ -1,11 +1,11 @@
-# ADR-0043 · Trusted managed manual compaction authority
+# ADR-0053 · Trusted managed manual compaction authority
 
 **Status:** Proposed
 
 **Date:** 2026-08-15
 
 **Owner:** Harrison / Cline runtime owner
-**Related:** [ADR-0041](ADR-0041-cross-session-chat-catalog-authority.md), [ADR-0042](ADR-0042-managed-session-reconnect-authority.md), [runtime parity companion](../initiatives/cross-session-chat-management/runtime-parity-companion-design.md), FR-056, REL-032
+**Related:** [ADR-0051](ADR-0051-cross-session-chat-catalog-authority.md), [ADR-0052](ADR-0052-managed-session-reconnect-authority.md), [runtime parity companion](../initiatives/cross-session-chat-management/runtime-parity-companion-design.md), FR-056, REL-032
 
 ## Context
 

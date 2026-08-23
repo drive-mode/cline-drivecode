@@ -2,7 +2,7 @@
 
 **Verified:** 2026-08-14
 **Scope:** private reversible implementation proof in `cline-drivecode`
-**Decision state:** ADR-0036 Accepted; ADR-0037, ADR-0038, and ADR-0039 Proposed
+**Decision state:** ADR-0046 Accepted; ADR-0047, ADR-0048, and ADR-0049 Proposed
 **Catalog:** `m3-nucleus.1`
 **Catalog digest:** `sha256:013d10d2cdd8539389759ad4c1ad596f4234c6149bc5cc85db7fe450858fc567`
 
@@ -14,7 +14,7 @@ inventory using a versioned 12-concern nucleus, controlled open-world facts,
 strong Kleene rules, ADR significance filtering, prerequisite validation,
 applicable-only urgency propagation, and stable topological ordering.
 
-This proof does not accept ADR-0039, claim that the nucleus is a complete
+This proof does not accept ADR-0049, claim that the nucleus is a complete
 production checklist, publish the package, add host-attested brief answers,
 calculate a passing readiness gate, write planning artifacts, or modify
 `qh2-template`.
@@ -47,7 +47,7 @@ locally.
 | No controlled fact registry | Confirmed and fixed with key/type/operator/authority validation. |
 | Set values and fact references order-sensitive | Already normalized in the inspected implementation; retained and strengthened with schema transforms and permutation tests. |
 | Dominated unknowns leaked into question lineage | Confirmed and fixed while retaining full child trace steps. |
-| Unknown urgency and ordering policy underspecified | Confirmed and resolved: only applicable dependents propagate urgency; ready ordering is urgency, band, id. ADR-0039 and the M3 plan now state this. |
+| Unknown urgency and ordering policy underspecified | Confirmed and resolved: only applicable dependents propagate urgency; ready ordering is urgency, band, id. ADR-0049 and the M3 plan now state this. |
 | Result schema allowed blocked partial output | Confirmed and fixed with fail-closed and cross-reference refinements. |
 | Acceptance tests had gaps | Confirmed and expanded for mutation, digest, fact registry/type, dominated unknowns, unknown dependents, lifecycle-band inversion, distinct permutations, authority markers, result shape, and malicious installed input. |
 
@@ -113,12 +113,12 @@ Stable active order:
 
 ## Remaining gates
 
-1. Harrison accepts or amends ADR-0039 and the controlled fact/catalog policy,
+1. Harrison accepts or amends ADR-0049 and the controlled fact/catalog policy,
    or explicitly retains M3 as a private reversible proof.
 2. M4 adds host-attested facts, bounded questions/experiments, and readiness
    obligation compilation without weakening the M2/M3 authority boundary.
 3. Catalog expansion waits for nucleus precision review against owner-approved
    development gold and the pre-registered release policy.
-4. Publication and `qh2-template` integration remain blocked on ADR-0037,
+4. Publication and `qh2-template` integration remain blocked on ADR-0047,
    canonical template recovery/recreation, registry authority, and M6 install
    gates.

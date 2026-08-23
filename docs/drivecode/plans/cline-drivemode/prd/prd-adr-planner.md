@@ -2,12 +2,12 @@
 
 **Status:** active; M0 owner acceptance, M1–M4 private proofs, M4 hardening open
 **Owner:** Harrison / Drivecode
-**Architecture:** [ADR-0036](../adr/ADR-0036-adr-planner-plugin-boundary.md);
-[ADR-0037](../adr/ADR-0037-adr-planner-package-contract.md),
-[ADR-0038](../adr/ADR-0038-adr-planner-evidence-trust-boundary.md), and
-[ADR-0039](../adr/ADR-0039-adr-planner-concern-catalog-and-rule-authority.md), and
-[ADR-0040](../adr/ADR-0040-adr-planner-host-attested-workflow-authority.md) and
-[ADR-0044](../adr/ADR-0044-adr-planner-install-attestation.md)
+**Architecture:** [ADR-0046](../adr/ADR-0046-adr-planner-plugin-boundary.md);
+[ADR-0047](../adr/ADR-0047-adr-planner-package-contract.md),
+[ADR-0048](../adr/ADR-0048-adr-planner-evidence-trust-boundary.md), and
+[ADR-0049](../adr/ADR-0049-adr-planner-concern-catalog-and-rule-authority.md), and
+[ADR-0050](../adr/ADR-0050-adr-planner-host-attested-workflow-authority.md) and
+[ADR-0054](../adr/ADR-0054-adr-planner-install-attestation.md)
 (Proposed implementation candidates)
 **Initiative:** [adr-planner](../initiatives/adr-planner/)
 

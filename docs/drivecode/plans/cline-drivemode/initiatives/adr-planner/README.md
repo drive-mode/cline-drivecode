@@ -1,12 +1,12 @@
 # adr-planner · Initiative index
 
 **Status:** active (M0 owner acceptance; M1–M4 private proofs; M4 hardening and M6 distribution work open)
-**ADRs:** [ADR-0036](../../adr/ADR-0036-adr-planner-plugin-boundary.md) (Accepted),
-[ADR-0037](../../adr/ADR-0037-adr-planner-package-contract.md) (Proposed),
-[ADR-0038](../../adr/ADR-0038-adr-planner-evidence-trust-boundary.md) (Proposed),
-[ADR-0039](../../adr/ADR-0039-adr-planner-concern-catalog-and-rule-authority.md) (Proposed),
-[ADR-0040](../../adr/ADR-0040-adr-planner-host-attested-workflow-authority.md) (Proposed),
-[ADR-0044](../../adr/ADR-0044-adr-planner-install-attestation.md) (Proposed)
+**ADRs:** [ADR-0046](../../adr/ADR-0046-adr-planner-plugin-boundary.md) (Accepted),
+[ADR-0047](../../adr/ADR-0047-adr-planner-package-contract.md) (Proposed),
+[ADR-0048](../../adr/ADR-0048-adr-planner-evidence-trust-boundary.md) (Proposed),
+[ADR-0049](../../adr/ADR-0049-adr-planner-concern-catalog-and-rule-authority.md) (Proposed),
+[ADR-0050](../../adr/ADR-0050-adr-planner-host-attested-workflow-authority.md) (Proposed),
+[ADR-0054](../../adr/ADR-0054-adr-planner-install-attestation.md) (Proposed)
 **PRD:** [ADR Planner](../../prd/prd-adr-planner.md)
 **Owner:** Harrison / Drivecode
 
@@ -93,9 +93,9 @@ workspace role. The repository root itself is not installable as the plugin.
 |---|---|---|
 | M0 | Output contract, benchmark, governance, prompt-only baseline protocol | active |
 | M1 | Package skeleton, schemas, validators, fixtures, template install contract | private proof verified; owner decision pending |
-| M2 | Evidence ingestion and six-dimension project profiler | private proof verified; ADR-0038 pending |
-| M3 | Concern applicability, significance routing, dependency graph | private proof verified; ADR-0039 pending |
-| M4 | Pre-plan and plan workflows, artifact generation, readiness gate | private proof verified; ADR-0040 and production hardening pending |
+| M2 | Evidence ingestion and six-dimension project profiler | private proof verified; ADR-0048 pending |
+| M3 | Concern applicability, significance routing, dependency graph | private proof verified; ADR-0049 pending |
+| M4 | Pre-plan and plan workflows, artifact generation, readiness gate | private proof verified; ADR-0050 and production hardening pending |
 | M5 | Brownfield change-impact mode and history-aware planning | pending |
 | M6 | Evaluation hardening, packaging, qh2-template fresh/upgrade tests | active; reproducibility and staged compatibility gate implemented; transaction open |
 
@@ -112,7 +112,7 @@ workspace role. The repository root itself is not installable as the plugin.
 - [x] Prompt-only baseline has been executed and structurally/stability scored.
 - [ ] Gold-relative baseline scores have owner-adjudicated concern matching.
 - [x] Gold-answer separation and change governance are specified.
-- [x] Product ownership and installation boundary are accepted in ADR-0036.
+- [x] Product ownership and installation boundary are accepted in ADR-0046.
 
 ## Open inputs
 
@@ -123,15 +123,15 @@ workspace role. The repository root itself is not installable as the plugin.
    intentionally unset while the plugin worktree is uncommitted.
 2. Name the second standing benchmark reviewer. Until then, two independent
    agents may pilot the process, but release gold requires a human owner.
-3. Accept or amend ADR-0037. The private implementation proves
+3. Accept or amend ADR-0047. The private implementation proves
    `plugins/adr-planner`; the publication coordinate and registry authority
    remain unresolved.
 4. Accept or amend the pre-registered evaluation policy before Milestone 1 is
    scored against it.
-5. Accept or amend ADR-0038 and ADR-0039. Review ADR-0040's provisional host
+5. Accept or amend ADR-0048 and ADR-0049. Review ADR-0050's provisional host
    proof and explicit trust limits before acceptance. All private proofs are reversible;
    publication and template integration remain unauthorized.
-6. Accept or amend ADR-0044 before enabling a production remote default. The
+6. Accept or amend ADR-0054 before enabling a production remote default. The
    exact-dependency, stable runtime-only candidate, and staged compatibility
    verification slices are implemented; structural receipt parsing,
    installed-runtime attestation, and atomic post-swap recovery are still open.

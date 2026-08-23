@@ -3,7 +3,7 @@
 **Recorded:** 2026-08-14
 **Branch:** `feat/adr-planner-milestone-0`
 **Package:** `plugins/adr-planner` (`@cline/adr-planner@0.0.0`, private)
-**Decision state:** ADR-0036 Accepted; ADR-0037 Proposed
+**Decision state:** ADR-0046 Accepted; ADR-0047 Proposed
 
 ## Result
 
@@ -13,7 +13,7 @@ workspace and CI, registers only explicit commands and pure tools, bundles one
 skill, validates versioned artifacts deterministically, calculates readiness
 fail-closed, and installs through the real Cline CLI into a fresh project.
 
-This is implementation evidence, not owner acceptance of ADR-0037 and not a
+This is implementation evidence, not owner acceptance of ADR-0047 and not a
 release claim. M0 gold, release policy, registry authority, canonical template
 source, installed-byte policy, and standing reviewer decisions remain open.
 
@@ -86,7 +86,7 @@ configured npm-compatible dependency installer because neither `node` nor
 
 ## Remaining release gates
 
-1. Harrison accepts or amends ADR-0037 and confirms a publication coordinate
+1. Harrison accepts or amends ADR-0047 and confirms a publication coordinate
    with registry authority.
 2. Harrison accepts M0 gold boundaries and release policy, supplies or defers a
    standing release reviewer, and identifies or authorizes recreation of

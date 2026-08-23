@@ -2,7 +2,7 @@
 
 **Status:** active; baseline captured, owner adjudication pending
 **Owner:** Harrison / Drivecode
-**Decision:** [ADR-0036](../../adr/ADR-0036-adr-planner-plugin-boundary.md)
+**Decision:** [ADR-0046](../../adr/ADR-0046-adr-planner-plugin-boundary.md)
 
 ## Objective
 

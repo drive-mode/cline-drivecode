@@ -1,15 +1,15 @@
-# ADR-0037 · ADR Planner production package and invocation contract
+# ADR-0047 · ADR Planner production package and invocation contract
 
 **Status:** Proposed
 **Owner:** Harrison / Drivecode
 **Decider:** Harrison
 **Initiative:** [adr-planner](../initiatives/adr-planner/)
 **Plan:** [Milestone 1](../initiatives/adr-planner/milestone-1-implementation-plan.md)
-**Constrained by:** [ADR-0036](ADR-0036-adr-planner-plugin-boundary.md)
+**Constrained by:** [ADR-0046](ADR-0046-adr-planner-plugin-boundary.md)
 
 ## Context
 
-ADR-0036 requires a bounded package plugin rather than a skill-only install or
+ADR-0046 requires a bounded package plugin rather than a skill-only install or
 the monorepo root. The repository currently has production SDK package and app
 workspace roles plus `sdk/examples/plugins/*`, but no production plugin role.
 Using the examples directory would make release ownership and CI coverage
@@ -53,7 +53,7 @@ must state this rather than imply cross-host availability.
    `cline plugin install --npm <coordinate>@<version> --cwd .`. Upgrade uses
    the same exact coordinate with `--force`; no planning run performs install
    or update. Git-root install is not a fallback.
-   Before registry authority exists, ADR-0044 permits a private-beta bridge:
+   Before registry authority exists, ADR-0054 permits a private-beta bridge:
    checkout an immutable repository commit, materialize only this package's
    declared runtime files at one stable ignored project path, and install that
    bounded candidate locally. Installing the temporary clone or monorepo source
@@ -82,7 +82,7 @@ must state this rather than imply cross-host availability.
 | `sdk/examples/plugins/adr-planner` | Rejected. Example workspaces do not prove production packaging or release governance. |
 | `sdk/packages/adr-planner` | Rejected. It conflates a host-loaded plugin with SDK libraries and existing SDK publication. |
 | Root `.cline/plugins/adr-planner.ts` file | Rejected. It cannot bundle schemas, tests, dependencies, and a skill as one versioned install unit. |
-| Git install of `cline-drivecode` | Rejected by ADR-0036; no monorepo subdirectory selector. |
+| Git install of `cline-drivecode` | Rejected by ADR-0046; no monorepo subdirectory selector. |
 | Vendor plugin source in `qh2-template` | Rejected. It creates a second source of truth and template drift. |
 | Hooks/rules that run planning automatically | Rejected for MVP. Planning writes and readiness evaluation require explicit invocation. |
 

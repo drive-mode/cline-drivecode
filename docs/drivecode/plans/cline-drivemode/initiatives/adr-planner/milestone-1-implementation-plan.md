@@ -1,8 +1,8 @@
 # ADR Planner Milestone 1 implementation plan
 
 **Status:** private implementation proof verified; release and template
-integration wait on M0 owner decisions and ADR-0037
-**Architecture candidate:** [ADR-0037](../../adr/ADR-0037-adr-planner-package-contract.md)
+integration wait on M0 owner decisions and ADR-0047
+**Architecture candidate:** [ADR-0047](../../adr/ADR-0047-adr-planner-package-contract.md)
 **Product requirements:** [ADR Planner PRD](../../prd/prd-adr-planner.md)
 
 ## Outcome
@@ -267,7 +267,7 @@ store. Evaluator output is captured outside the candidate workspace.
 
 ## Milestone 1 exit
 
-- [ ] ADR-0037 package path and coordinate are accepted or amended.
+- [ ] ADR-0047 package path and coordinate are accepted or amended.
 - [x] Production plugin workspace participates in local and CI quality gates.
 - [x] Versioned schemas cover every required machine artifact.
 - [x] Graph, route, readiness, and canonicalization code is deterministic.
@@ -279,7 +279,7 @@ store. Evaluator output is captured outside the candidate workspace.
 
 The implementation and command evidence for these checks is recorded in
 [milestone-1-evidence.md](milestone-1-evidence.md). Checked items prove the
-private development package; they do not accept ADR-0037, authorize publication,
+private development package; they do not accept ADR-0047, authorize publication,
 or claim `qh2-template` integration.
 
 ## Revisit triggers
