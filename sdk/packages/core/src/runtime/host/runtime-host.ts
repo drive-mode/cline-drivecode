@@ -10,7 +10,7 @@ import type { CheckpointEntry } from "../../hooks/checkpoint-hooks";
 import type { ProviderSettings } from "../../services/llms/provider-settings";
 import type { SessionCompactionState } from "../../session/models/session-compaction";
 import type { SessionManifest } from "../../session/models/session-manifest";
-import type { SessionSource } from "../../types/common";
+import type { SessionSource, SessionStatus } from "../../types/common";
 import type {
 	ClineCoreStartConfig,
 	CoreSessionConfig,
@@ -49,47 +49,6 @@ export function isSessionNotFoundError(
 			error !== null &&
 			"code" in error &&
 			(error as { code?: unknown }).code === SESSION_NOT_FOUND_ERROR_CODE)
-	);
-}
-
-function errorMessageOf(error: unknown): string {
-	if (error instanceof Error) {
-		return error.message;
-	}
-	if (typeof error === "object" && error !== null && "message" in error) {
-		const message = (error as { message?: unknown }).message;
-		return typeof message === "string" ? message : "";
-	}
-	return typeof error === "string" ? error : "";
-}
-
-/**
- * A session that cannot serve another turn, whatever the caller does with it.
- *
- * Two distinct causes, one remedy: the session is gone (`session_not_found`,
- * after a hub restart, a deletion, or retention cleanup), or its runtime is stuck
- * with a run that never drained (`session_run_in_progress`). A caller holding a
- * long-lived mapping to that session — a connector thread, for instance — has to
- * replace the session rather than keep retrying against it.
- *
- * Errors reaching a connector have crossed the hub's JSON boundary, so the code
- * may be gone and only the message survives; both are checked, which also keeps
- * this working when the hub and the CLI are different versions.
- */
-export function isUnusableSessionError(error: unknown): boolean {
-	if (isSessionNotFoundError(error)) {
-		return true;
-	}
-	if (
-		typeof error === "object" &&
-		error !== null &&
-		"code" in error &&
-		(error as { code?: unknown }).code === "session_run_in_progress"
-	) {
-		return true;
-	}
-	return errorMessageOf(error).includes(
-		"shutdown called while a run is in progress",
 	);
 }
 
@@ -151,15 +110,14 @@ export interface LocalRuntimeStartOptions {
 
 export interface StartSessionInput {
 	config: StartSessionConfig;
-	/** The process/client that starts the session. E.g., "vscode", "cli". */
 	source?: SessionSource;
-	/** How the session was initiated, such as user, automation, or subagent. */
-	mode?: string;
 	prompt?: string;
 	interactive?: boolean;
 	sessionMetadata?: Record<string, unknown>;
-	initialMessages?: LlmsProviders.MessageWithMetadata[];
+	initialMessages?: LlmsProviders.Message[];
 	initialCompactionState?: SessionCompactionState;
+	/** Ephemeral writer fence. Never persist this credential in session metadata. */
+	writerLease?: SessionWriterLease;
 	userImages?: string[];
 	userFiles?: string[];
 	/**
@@ -170,6 +128,46 @@ export interface StartSessionInput {
 	localRuntime?: LocalRuntimeStartOptions;
 	capabilities?: RuntimeCapabilities;
 	toolPolicies?: import("@cline/shared").AgentConfig["toolPolicies"];
+}
+
+export interface SessionWriterLease {
+	leaseToken: string;
+	revision: number;
+	writerGeneration: number;
+	expiresAt: string;
+}
+
+export interface SessionQuiescenceReceipt {
+	sessionId: string;
+	lifecycleEpoch: number;
+	quiescedAt: string;
+	persistenceDrained: true;
+	terminalStatus?: SessionStatus;
+}
+
+export interface SessionWriterLeaseRuntimeService {
+	updateSessionWriterLease(
+		sessionId: string,
+		lease: SessionWriterLease,
+	): Promise<void>;
+	transitionSessionWriterLease?<T>(
+		sessionId: string,
+		input: SessionWriterLeaseTransitionInput,
+		transition: () => Promise<SessionWriterLeaseTransitionResult<T>>,
+	): Promise<T>;
+}
+
+export interface SessionWriterLeaseTransitionInput {
+	operationId: string;
+	expectedLease: SessionWriterLease;
+	/** Cancels only before the durable rekey callback begins. */
+	signal?: AbortSignal;
+}
+
+export interface SessionWriterLeaseTransitionResult<T> {
+	lease: SessionWriterLease;
+	value: T;
+	afterInstall?: () => Promise<void> | void;
 }
 
 /** Session input after the execution host has resolved a concrete workspace. */
@@ -271,6 +269,24 @@ export interface SessionUsageSummary {
 	aggregateUsage?: SessionAccumulatedUsage;
 }
 
+export interface SessionManualCompactionInput {
+	operationId: string;
+	sessionId: string;
+	reason?: string;
+	signal?: AbortSignal;
+	/** Host-local notification emitted only after a new durable running receipt. */
+	onStarted?: () => void;
+	/** Host-local notification emitted only after a durable failed receipt commits. */
+	onFailed?: () => void;
+}
+
+export interface SessionManualCompactionResult {
+	operationId: string;
+	sessionId: string;
+	outcome: "compacted" | "skipped";
+	state?: SessionCompactionState;
+}
+
 export interface PendingPromptMutationResult {
 	sessionId: string;
 	prompts: SessionPendingPrompt[];
@@ -329,10 +345,6 @@ export interface SessionConnectionRuntimeService {
 	): Promise<void>;
 }
 
-export interface CommandExecutionRuntimeService {
-	proceedWhileRunning(sessionId: string, toolCallId?: string): Promise<number>;
-}
-
 export interface RuntimeHostSubscribeOptions {
 	sessionId?: string;
 }
@@ -352,7 +364,7 @@ export interface RestoreSessionInput {
 export interface RestoreSessionResult {
 	sessionId?: string;
 	startResult?: StartSessionResult;
-	messages?: LlmsProviders.MessageWithMetadata[];
+	messages?: LlmsProviders.Message[];
 	checkpoint: CheckpointEntry;
 }
 
@@ -368,6 +380,10 @@ export interface RuntimeHost {
 	restoreSession(input: RestoreSessionInput): Promise<RestoreSessionResult>;
 	abort(sessionId: string, reason?: unknown): Promise<void>;
 	stopSession(sessionId: string): Promise<void>;
+	quiesceSession?(
+		sessionId: string,
+		reason?: string,
+	): Promise<SessionQuiescenceReceipt>;
 	dispose(reason?: string): Promise<void>;
 	getSession(sessionId: string): Promise<SessionRecord | undefined>;
 	listSessions(limit?: number): Promise<SessionRecord[]>;
@@ -387,9 +403,29 @@ export interface RuntimeHost {
 	readSessionCompactionState(
 		sessionId: string,
 	): Promise<SessionCompactionState | undefined>;
-	readSessionMessages(
+	/**
+	 * Runs manual compaction inside the trusted resident host. The host chooses
+	 * provider/model credentials and compaction policy from the admitted session;
+	 * callers can request the action but cannot supply compaction state.
+	 */
+	runSessionManualCompaction?(
+		input: SessionManualCompactionInput,
+	): Promise<SessionManualCompactionResult>;
+	readSessionMessages(sessionId: string): Promise<LlmsProviders.Message[]>;
+	updateSessionWriterLease?(
 		sessionId: string,
-	): Promise<LlmsProviders.MessageWithMetadata[]>;
+		lease: SessionWriterLease,
+	): Promise<void>;
+	/**
+	 * Runs a durable writer-authority transition behind a host-owned,
+	 * nonterminal persistence barrier. Admission reopens only after the new
+	 * credential has been verified and installed in the resident session.
+	 */
+	transitionSessionWriterLease?<T>(
+		sessionId: string,
+		input: SessionWriterLeaseTransitionInput,
+		transition: () => Promise<SessionWriterLeaseTransitionResult<T>>,
+	): Promise<T>;
 	readTeamState?(sessionId: string): Promise<TeamRuntimeState | undefined>;
 	listTeamStates?(): Promise<TeamRuntimeState[]>;
 	/**
@@ -401,9 +437,7 @@ export interface RuntimeHost {
 	 * session for a mode switch. Optional: hosts without live-session access
 	 * (e.g. hub clients) fall back to the persisted transcript.
 	 */
-	readLiveSessionMessages?(
-		sessionId: string,
-	): Promise<LlmsProviders.MessageWithMetadata[]>;
+	readLiveSessionMessages?(sessionId: string): Promise<LlmsProviders.Message[]>;
 	dispatchHookEvent(payload: HookEventPayload): Promise<void>;
 	subscribe(
 		listener: (event: CoreSessionEvent) => void,

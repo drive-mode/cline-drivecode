@@ -1,0 +1,217 @@
+{
+  "summary": "Plan a static, CDN-deployed personal portfolio with an editing and publishing workflow that a single maintainer can use reliably.",
+  "concerns": [
+    {
+      "id": "static-delivery-model",
+      "concern": "Pages and assets must be pre-rendered and deployed through a CDN.",
+      "applicability": "applicable",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": [
+        "The portfolio uses pre-rendered pages and assets.",
+        "Deployment is through a CDN."
+      ],
+      "unknowns": [
+        "Which static-site tooling and CDN will be used."
+      ],
+      "rationale": "This constrains the project to a static delivery model and shapes publishing choices."
+    },
+    {
+      "id": "editing-workflow",
+      "concern": "Choose an editing approach that makes routine portfolio updates easy for one maintainer.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [
+        "static-delivery-model"
+      ],
+      "evidence": [
+        "The goal is easy edits.",
+        "There is one maintainer."
+      ],
+      "unknowns": [
+        "What kinds of content will be edited most often.",
+        "Whether the maintainer prefers code, structured content files, or another editing interface."
+      ],
+      "rationale": "The editing model directly determines whether the stated ease-of-editing goal is met."
+    },
+    {
+      "id": "publishing-workflow",
+      "concern": "Define a repeatable publishing workflow for static assets and pages.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "now",
+      "artifact_route": "plan",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [
+        "static-delivery-model",
+        "editing-workflow"
+      ],
+      "evidence": [
+        "The goal is reliable publishing.",
+        "Deployment is through a CDN.",
+        "There is one maintainer."
+      ],
+      "unknowns": [
+        "How builds and deployments will be triggered.",
+        "How a failed or incorrect publication will be handled."
+      ],
+      "rationale": "Reliable publishing requires an explicit workflow rather than ad hoc deployment steps."
+    },
+    {
+      "id": "publish-validation",
+      "concern": "Establish a proportionate check that published pages and assets are available after deployment.",
+      "applicability": "applicable",
+      "resolution": "experiment",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "pilot",
+      "criticality": "standard",
+      "prerequisites": [
+        "publishing-workflow"
+      ],
+      "evidence": [
+        "The goal is reliable publishing.",
+        "Pages and assets are deployed through a CDN."
+      ],
+      "unknowns": [
+        "What validation is sufficient for this portfolio.",
+        "Whether CDN propagation behavior affects the desired publishing experience."
+      ],
+      "rationale": "A small publish-and-verify exercise can confirm that the proposed workflow reliably delivers the site."
+    },
+    {
+      "id": "mailto-contact",
+      "concern": "Contact must remain a mailto link and does not require a form-handling service.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": [
+        "Contact is a mailto link."
+      ],
+      "unknowns": [
+        "The destination email address."
+      ],
+      "rationale": "This limits contact functionality and avoids introducing unnecessary server-side handling."
+    },
+    {
+      "id": "no-user-data-services",
+      "concern": "Accounts and database-backed functionality are out of scope.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": [
+        "There are no accounts.",
+        "There is no database."
+      ],
+      "unknowns": [],
+      "rationale": "Authentication and database work would add scope not supported by the brief."
+    },
+    {
+      "id": "analytics",
+      "concern": "Analytics collection is out of scope.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": [
+        "There is no analytics."
+      ],
+      "unknowns": [],
+      "rationale": "Analytics tooling is not required for the stated portfolio goal."
+    },
+    {
+      "id": "maintainer-operating-notes",
+      "concern": "Document the selected edit, publish, and recovery steps for the sole maintainer.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "runbook",
+      "lifecycle_gate": "release",
+      "criticality": "standard",
+      "prerequisites": [
+        "editing-workflow",
+        "publishing-workflow"
+      ],
+      "evidence": [
+        "There is one maintainer.",
+        "The goals are easy edits and reliable publishing."
+      ],
+      "unknowns": [
+        "The maintainer's preferred level of documentation detail."
+      ],
+      "rationale": "Concise operating notes make the chosen workflow repeatable for its only operator."
+    }
+  ],
+  "questions": [
+    {
+      "question": "Which static-site tooling and CDN will be used?",
+      "changes": [
+        "static-delivery-model",
+        "editing-workflow",
+        "publishing-workflow"
+      ]
+    },
+    {
+      "question": "What content is expected to change regularly?",
+      "changes": [
+        "editing-workflow"
+      ]
+    },
+    {
+      "question": "How should publishing be triggered and checked after deployment?",
+      "changes": [
+        "publishing-workflow",
+        "publish-validation",
+        "maintainer-operating-notes"
+      ]
+    },
+    {
+      "question": "What email address should the mailto link target?",
+      "changes": [
+        "mailto-contact"
+      ]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "blocked",
+    "release": "blocked",
+    "operate": "blocked",
+    "blockers": [
+      "static-delivery-model",
+      "editing-workflow",
+      "publishing-workflow",
+      "publish-validation",
+      "maintainer-operating-notes"
+    ]
+  },
+  "unsupported_inferences_to_avoid": [
+    "The portfolio needs user authentication.",
+    "The portfolio needs a database.",
+    "The portfolio needs analytics.",
+    "The portfolio needs a contact form or server-side email handling.",
+    "The portfolio requires multiple maintainers or an enterprise approval process.",
+    "The portfolio requires a CMS."
+  ]
+}

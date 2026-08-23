@@ -8,7 +8,7 @@ import type {
 } from "@cline/core";
 import {
 	ClineCore,
-	listSessionHistoryFromBackend,
+	listCatalogSessionHistoryFromBackend,
 	resolveSessionBackend,
 } from "@cline/core";
 import {
@@ -108,11 +108,12 @@ export async function listSessions(
 	const backend = await resolveSessionBackend({
 		telemetry: getCliTelemetryService(),
 	});
-	return await listSessionHistoryFromBackend(backend, {
+	return await listCatalogSessionHistoryFromBackend(backend, {
 		limit,
 		includeManifestFallback: true,
 		hydrate: options?.hydrate ?? false,
 		includeSubagents: false,
+		workspaceRoot: options?.workspaceRoot,
 	});
 }
 

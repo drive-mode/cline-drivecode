@@ -1,26 +1,30 @@
 import { timingSafeEqual } from "node:crypto";
 import http from "node:http";
+import net from "node:net";
 import { URL } from "node:url";
 import {
 	CURRENT_HUB_PROTOCOL_VERSION,
 	HUB_CAPABILITIES,
+	isHubProtocolCompatible,
 	MAX_CLIENT_HUB_PROTOCOL_VERSION,
 	MIN_CLIENT_HUB_PROTOCOL_VERSION,
 } from "@cline/shared";
 import { WebSocketServer } from "ws";
 import corePackage from "../../../package.json";
+import {
+	type HubChatCatalogConfirmationTarget,
+	normalizeHubChatCatalogConfirmationTarget,
+} from "../../chat-catalog/hub-chat-catalog-confirmation-broker";
 import { resolveResourcePolicy } from "../../resources/policy";
 import { rememberRecoverableLocalHubUrl, verifyHubConnection } from "../client";
 import {
 	clearHubDiscovery,
-	clearHubDiscoveryIfOwned,
 	createHubAuthToken,
 	createHubServerUrl,
+	createHubWorkspaceScopeId,
 	type HubServerDiscoveryRecord,
-	isManagedHubReusable,
 	probeHubServer,
 	readHubDiscovery,
-	resolveHubBuildEpochMs,
 	resolveHubBuildId,
 	resolveHubOwnerContext,
 	withHubStartupLock,
@@ -33,21 +37,50 @@ import type {
 	EnsuredHubWebSocketServerResult,
 	EnsureHubWebSocketServerOptions,
 	HubWebSocketServer,
-	HubWebSocketServerClose,
 	HubWebSocketServerOptions,
+	HubWorkspaceConnectionDescriptor,
 } from "./hub-server-options";
 import { HubServerTransport } from "./hub-server-transport";
-import { NativeHubTransportAdapter } from "./native-transport";
+import {
+	bindHubWorkspaceConnectionPolicyToInstalledInstance,
+	HUB_WORKSPACE_DENY_ALL_POLICY,
+	type HubAuthenticatedConnection,
+	HubWorkspaceCapabilityAuthority,
+	normalizeHubWorkspaceConnectionPolicy,
+} from "./workspace-capability-authority";
+import { HubWorkspaceCapabilityRegistry } from "./workspace-capability-registry";
+import {
+	type HubWorkspaceManagedConfirmationRequester,
+	HubWorkspaceManagedCorePool,
+} from "./workspace-managed-core-pool";
 
 export { truncateNotificationBody } from "./hub-notifications";
 export type {
 	EnsuredHubWebSocketServerResult,
 	EnsureHubWebSocketServerOptions,
 	HubWebSocketServer,
-	HubWebSocketServerClose,
 	HubWebSocketServerOptions,
 } from "./hub-server-options";
 export { HubServerTransport } from "./hub-server-transport";
+
+/** @internal Exported for capability-advertisement tests. */
+export function resolveHubCapabilities(
+	options: Pick<
+		HubWebSocketServerOptions,
+		"chatCatalog" | "managedChatLifecycleEnabled"
+	>,
+): readonly string[] {
+	return [
+		...HUB_CAPABILITIES,
+		...(options.managedChatLifecycleEnabled === true
+			? ([
+					"chat_projection.v1",
+					"chat_lifecycle.v1",
+					"chat_runtime.v1",
+				] as const)
+			: []),
+	];
+}
 
 type NodeWebSocketLike = {
 	send(data: string, callback?: (error?: Error) => void): void;
@@ -137,17 +170,6 @@ function rejectUnauthorizedUpgradeSocket(socket: NodeUpgradeSocketLike): void {
 	}
 }
 
-function rejectStartingUpgradeSocket(socket: NodeUpgradeSocketLike): void {
-	try {
-		socket.write(
-			"HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n",
-		);
-		socket.end();
-	} catch {
-		socket.destroy();
-	}
-}
-
 function isValidHubAuthToken(
 	candidate: string | null,
 	expected: string,
@@ -196,6 +218,28 @@ function formatHubStartupError(
 	return wrapped;
 }
 
+async function resolveEphemeralPort(host: string): Promise<number> {
+	return await new Promise<number>((resolve, reject) => {
+		const probe = net.createServer();
+		probe.once("error", reject);
+		probe.listen(0, host, () => {
+			const address = probe.address();
+			if (!address || typeof address === "string") {
+				probe.close(() => reject(new Error("Failed to resolve free port")));
+				return;
+			}
+			const port = address.port;
+			probe.close((error) => {
+				if (error) {
+					reject(error);
+					return;
+				}
+				resolve(port);
+			});
+		});
+	});
+}
+
 function isAddressInUseError(error: unknown): boolean {
 	return (
 		error instanceof Error &&
@@ -204,70 +248,14 @@ function isAddressInUseError(error: unknown): boolean {
 	);
 }
 
-function hubUrlMatchesEndpoint(
-	url: string,
-	host: string,
-	port: number,
-	pathname: string,
-): boolean {
-	try {
-		const actual = new URL(url);
-		const expected = new URL(
-			createHubServerUrl(host, port === 0 ? 1 : port, pathname),
-		);
-		return (
-			actual.protocol === expected.protocol &&
-			actual.hostname === expected.hostname &&
-			actual.pathname === expected.pathname &&
-			(port === 0 || actual.port === expected.port)
-		);
-	} catch {
-		return false;
-	}
-}
-
-function createHubEndpointConflictError(
-	ownerId: string,
-	runningUrl: string,
-	requestedUrl: string,
-): Error {
-	return new Error(
-		`Hub owner ${ownerId} is already running at ${runningUrl}; refusing a second endpoint at ${requestedUrl}`,
-	);
-}
-
-interface SharedHubServerEntry {
-	promise: Promise<HubWebSocketServer>;
-	server?: HubWebSocketServer;
-	state: "starting" | "open" | "closing";
-}
-
-const SHARED_SERVERS = new Map<string, SharedHubServerEntry>();
+const SHARED_SERVERS = new Map<string, Promise<HubWebSocketServer>>();
 const HUB_AUTH_PROTOCOL_PREFIX = "cline-hub-auth.";
+const HUB_WORKSPACE_AUTH_PROTOCOL_PREFIX = "cline-hub-workspace.";
 const HUB_SOCKET_HEARTBEAT_INTERVAL_MS = 30_000;
-const HUB_STARTUP_ROLLBACK_TIMEOUT_MS = 2_000;
-
-async function settlesWithin(
-	promise: Promise<unknown>,
-	timeoutMs: number,
-): Promise<boolean> {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	try {
-		return await Promise.race([
-			promise.then(
-				() => true,
-				() => true,
-			),
-			new Promise<boolean>((resolve) => {
-				timer = setTimeout(() => resolve(false), timeoutMs);
-			}),
-		]);
-	} finally {
-		if (timer) {
-			clearTimeout(timer);
-		}
-	}
-}
+const DEFAULT_CATALOG_CONFIRMATION_PROMPT_TIMEOUT_MS = 30_000;
+const MAX_CATALOG_CONFIRMATION_PROMPT_TIMEOUT_MS = 5 * 60_000;
+const MAX_PENDING_CATALOG_CONFIRMATIONS_PER_CONNECTION = 8;
+const MAX_PENDING_CATALOG_CONFIRMATIONS = 1_024;
 
 function parseHeaderValue(value: string | string[] | undefined): string {
 	return Array.isArray(value) ? value.join(",") : (value ?? "");
@@ -346,6 +334,24 @@ function readWebSocketAuthToken(
 	return null;
 }
 
+/** @internal Exported for workspace-upgrade protocol tests. */
+export function readWebSocketWorkspaceCapability(
+	value: string | string[] | undefined,
+): string | null {
+	let credential: string | undefined;
+	for (const protocol of parseHeaderValue(value).split(",")) {
+		const trimmed = protocol.trim();
+		if (trimmed.startsWith(HUB_WORKSPACE_AUTH_PROTOCOL_PREFIX)) {
+			const candidate = trimmed
+				.slice(HUB_WORKSPACE_AUTH_PROTOCOL_PREFIX.length)
+				.trim();
+			if (!candidate || credential !== undefined) return null;
+			credential = candidate;
+		}
+	}
+	return credential ?? null;
+}
+
 /** @internal Exported for websocket auth tests. */
 export function isLocalHubHostName(value: string): boolean {
 	const normalized = value.trim().toLowerCase();
@@ -376,23 +382,187 @@ export async function startHubWebSocketServer(
 	options: HubWebSocketServerOptions,
 ): Promise<HubWebSocketServer> {
 	const resolvedOptions = resolveHubResourceOptions(options);
+	let chatCatalogHostDisposed = false;
+	const disposeChatCatalogHost = async (): Promise<void> => {
+		if (chatCatalogHostDisposed) return;
+		chatCatalogHostDisposed = true;
+		await resolvedOptions.chatCatalog?.dispose?.();
+	};
 	const owner = options.owner ?? resolveHubOwnerContext();
 	const host = options.host ?? "127.0.0.1";
 	const pathname = options.pathname ?? "/hub";
 	const configuredPort = options.port ?? resolveDefaultHubPort();
-	const requestedPort = configuredPort;
+	const requestedPort =
+		configuredPort === 0 ? await resolveEphemeralPort(host) : configuredPort;
 	let port = requestedPort;
 	let url = createHubServerUrl(host, requestedPort, pathname);
 	const buildId = resolveHubBuildId();
-	const buildEpochMs = resolveHubBuildEpochMs();
 	const authToken = createHubAuthToken();
-	const transport = new HubServerTransport(resolvedOptions);
-	await transport.start();
-	const hubId = transport.getHubId();
+	const trustedWorkspaceKeys =
+		resolvedOptions.workspaceAuthority?.trustedWorkspaceKeys ?? [];
+	const configuredConnectionPolicies = new Map(
+		(resolvedOptions.workspaceAuthority?.connectionPolicies ?? []).map(
+			(candidate) => {
+				const policy = normalizeHubWorkspaceConnectionPolicy(candidate);
+				return [policy.authorityClassId, policy] as const;
+			},
+		),
+	);
+	if (
+		configuredConnectionPolicies.size !==
+		(resolvedOptions.workspaceAuthority?.connectionPolicies?.length ?? 0)
+	) {
+		throw new Error("Hub workspace authority classes must be unique.");
+	}
+	const configuredInstanceBoundAuthorityClassIds = (
+		resolvedOptions.workspaceAuthority?.instanceBoundAuthorityClassIds ?? []
+	).map((authorityClassId) => authorityClassId.trim());
+	if (
+		configuredInstanceBoundAuthorityClassIds.some(
+			(authorityClassId) => !authorityClassId || authorityClassId.length > 512,
+		) ||
+		new Set(configuredInstanceBoundAuthorityClassIds).size !==
+			configuredInstanceBoundAuthorityClassIds.length
+	) {
+		throw new Error(
+			"Hub instance-bound workspace authority classes must be unique and valid.",
+		);
+	}
+	const instanceBoundAuthorityClassIds = new Set(
+		configuredInstanceBoundAuthorityClassIds,
+	);
+	for (const authorityClassId of instanceBoundAuthorityClassIds) {
+		if (!configuredConnectionPolicies.has(authorityClassId)) {
+			throw new Error(
+				"Hub instance-bound workspace authority class is unavailable.",
+			);
+		}
+	}
+	for (const policy of configuredConnectionPolicies.values()) {
+		if (policy.installedInstanceId !== undefined) {
+			throw new Error(
+				"Hub configured workspace connection policies must be unbound templates.",
+			);
+		}
+		if (
+			policy.allowedBindingProfileIds.length > 0 !==
+			instanceBoundAuthorityClassIds.has(policy.authorityClassId)
+		) {
+			throw new Error(
+				"Hub binding-capable workspace authority classes must require an installed instance.",
+			);
+		}
+	}
+	const defaultConnectionPolicy = normalizeHubWorkspaceConnectionPolicy(
+		resolvedOptions.workspaceAuthority?.defaultConnectionPolicy ??
+			HUB_WORKSPACE_DENY_ALL_POLICY,
+	);
+	const registeredDefaultPolicy = configuredConnectionPolicies.get(
+		defaultConnectionPolicy.authorityClassId,
+	);
+	if (
+		configuredConnectionPolicies.size > 0 &&
+		(!registeredDefaultPolicy ||
+			JSON.stringify(registeredDefaultPolicy) !==
+				JSON.stringify(defaultConnectionPolicy))
+	) {
+		throw new Error(
+			"Hub default workspace authority class must exactly match its registry entry.",
+		);
+	}
+	if (
+		instanceBoundAuthorityClassIds.has(defaultConnectionPolicy.authorityClassId)
+	) {
+		throw new Error(
+			"Hub default workspace authority cannot require an installed-instance binding.",
+		);
+	}
+	const workspaceScopeId =
+		trustedWorkspaceKeys.length === 1 && trustedWorkspaceKeys[0]
+			? createHubWorkspaceScopeId(authToken, trustedWorkspaceKeys[0])
+			: undefined;
+	const workspaceCapabilities = new HubWorkspaceCapabilityAuthority();
+	if (resolvedOptions.workspaceAuthority && !resolvedOptions.chatCatalog) {
+		throw new Error(
+			"Hub workspace authority requires a configured chat catalog host.",
+		);
+	}
+	if (
+		resolvedOptions.workspaceManagedCoreFactory &&
+		!resolvedOptions.workspaceAuthority
+	) {
+		throw new Error(
+			"Hub workspace managed Core requires configured workspace authority.",
+		);
+	}
+	if (
+		resolvedOptions.managedChatLifecycleEnabled === true &&
+		!resolvedOptions.workspaceManagedCoreFactory
+	) {
+		throw new Error(
+			"Enabled Hub managed lifecycle requires a configured managed Core factory.",
+		);
+	}
+	const workspaceManagedCores = resolvedOptions.workspaceManagedCoreFactory
+		? new HubWorkspaceManagedCorePool(
+				workspaceCapabilities,
+				resolvedOptions.workspaceManagedCoreFactory,
+			)
+		: undefined;
+	const confirmationPromptTimeoutMs =
+		resolvedOptions.workspaceAuthority?.confirmationPromptTimeoutMs ??
+		DEFAULT_CATALOG_CONFIRMATION_PROMPT_TIMEOUT_MS;
+	if (
+		!Number.isSafeInteger(confirmationPromptTimeoutMs) ||
+		confirmationPromptTimeoutMs < 1 ||
+		confirmationPromptTimeoutMs > MAX_CATALOG_CONFIRMATION_PROMPT_TIMEOUT_MS
+	) {
+		throw new Error("Hub catalog confirmation prompt timeout is invalid.");
+	}
+	const workspaceRegistry = new HubWorkspaceCapabilityRegistry(
+		workspaceCapabilities,
+	);
+	for (const workspaceKey of trustedWorkspaceKeys) {
+		workspaceRegistry.register({
+			principalId: owner.ownerId,
+			tenantId: "local",
+			workspaceKey,
+		});
+	}
+	let requestManagedCatalogConfirmation: HubWorkspaceManagedConfirmationRequester =
+		async () => {
+			throw new Error("Hub catalog confirmation is not configured.");
+		};
+	const transport = new HubServerTransport(
+		resolvedOptions,
+		workspaceCapabilities,
+		workspaceManagedCores,
+		(input) => requestManagedCatalogConfirmation(input),
+	);
+	try {
+		await transport.start();
+	} catch (error) {
+		const cleanup = await Promise.allSettled([
+			transport.stop(),
+			disposeChatCatalogHost(),
+		]);
+		const failures = cleanup.flatMap((result) =>
+			result.status === "rejected" ? [result.reason] : [],
+		);
+		if (failures.length > 0) {
+			throw new AggregateError(
+				[error, ...failures],
+				"Hub transport startup and cleanup failed",
+			);
+		}
+		throw error;
+	}
 	const adapter = new BrowserWebSocketHubAdapter(
-		new NativeHubTransportAdapter(transport),
 		options.telemetry,
 		resolvedOptions.websocketDelivery,
+		resolveResourcePolicy({
+			overrides: resolvedOptions.resourcePolicy,
+		}).profile.transport.websocket.maxActiveSubscriptions,
 	);
 	const cleanup = new Set<() => void>();
 	const startedAt = new Date().toISOString();
@@ -400,103 +570,385 @@ export async function startHubWebSocketServer(
 		protocolVersion: CURRENT_HUB_PROTOCOL_VERSION,
 		minClientProtocolVersion: MIN_CLIENT_HUB_PROTOCOL_VERSION,
 		maxClientProtocolVersion: MAX_CLIENT_HUB_PROTOCOL_VERSION,
-		capabilities: HUB_CAPABILITIES,
+		capabilities: resolveHubCapabilities(resolvedOptions),
 		coreVersion: corePackage.version,
 		buildId,
-		buildEpochMs,
 		pid: process.pid,
 		startedAt,
 	} as const;
 	const sockets = new Set<TrackedNodeWebSocket>();
+	const activeWorkspaceConnections = new Map<
+		string,
+		HubAuthenticatedConnection
+	>();
+	const pendingCatalogConfirmationPrompts = new Map<
+		string,
+		Set<AbortController>
+	>();
+	let pendingCatalogConfirmationPromptCount = 0;
 	let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
-	let closeHandle: HubWebSocketServerClose | undefined;
-	let exposedServer: HubWebSocketServer | undefined;
-	let published = false;
-
-	const beginClose = (): HubWebSocketServerClose => {
-		if (closeHandle) {
-			return closeHandle;
+	let closePromise: Promise<void> | undefined;
+	let workspaceAuthorityActive = true;
+	const assertWorkspaceAuthorityActive = (): void => {
+		if (!workspaceAuthorityActive) {
+			throw new Error("Hub workspace authority is closed.");
 		}
-		if (exposedServer) {
-			const shared = SHARED_SERVERS.get(owner.discoveryPath);
-			if (shared?.server === exposedServer) {
-				shared.state = "closing";
+	};
+	const describeWorkspaceConnection = (
+		identity: HubAuthenticatedConnection,
+	): HubWorkspaceConnectionDescriptor => {
+		workspaceCapabilities.assertActive(identity);
+		const registration = workspaceRegistry.registrationForConnection(identity);
+		return Object.freeze({
+			connectionId: identity.connectionId,
+			principalId: identity.principalId,
+			tenantId: identity.tenantId,
+			workspaceId: registration.workspaceId,
+			workspaceEpoch: identity.workspaceEpoch,
+			authorityClassId: identity.policy.authorityClassId,
+			policyEpoch: identity.policy.policyEpoch,
+			authenticatedAt: identity.authenticatedAt,
+		});
+	};
+	const requireActiveWorkspaceConnection = (
+		connectionId: string,
+	): HubAuthenticatedConnection => {
+		const normalized = connectionId.trim();
+		const identity = activeWorkspaceConnections.get(normalized);
+		if (!normalized || normalized.length > 512 || !identity) {
+			throw new Error("Hub workspace connection is missing or inactive.");
+		}
+		workspaceCapabilities.assertActive(identity);
+		return identity;
+	};
+	const revokeWorkspaceConnection = (connectionId: string): void => {
+		activeWorkspaceConnections.delete(connectionId);
+		const prompts = pendingCatalogConfirmationPrompts.get(connectionId);
+		pendingCatalogConfirmationPrompts.delete(connectionId);
+		for (const controller of prompts ?? []) controller.abort();
+		resolvedOptions.chatCatalog?.confirmationBroker.revokeClient(connectionId);
+	};
+	const promptCatalogMutation = async (
+		identity: HubAuthenticatedConnection,
+		rawTarget: HubChatCatalogConfirmationTarget,
+		externalSignal?: AbortSignal,
+	): Promise<boolean> => {
+		assertWorkspaceAuthorityActive();
+		const confirm = resolvedOptions.workspaceAuthority?.confirmCatalogMutation;
+		if (!confirm) {
+			throw new Error("Hub catalog confirmation is not configured.");
+		}
+		const activeIdentity = requireActiveWorkspaceConnection(
+			identity.connectionId,
+		);
+		if (activeIdentity !== identity) {
+			throw new Error("Hub catalog confirmation failed.");
+		}
+		const descriptor = describeWorkspaceConnection(identity);
+		const target = normalizeHubChatCatalogConfirmationTarget(rawTarget);
+		const displayTarget = Object.freeze({
+			confirmation: target.confirmation,
+			aggregateKind: target.aggregateKind,
+			aggregateId: target.aggregateId,
+			expectedRevision: target.expectedRevision,
+			...(target.effects
+				? { effects: Object.freeze([...target.effects]) }
+				: {}),
+		});
+		const controller = new AbortController();
+		let prompts = pendingCatalogConfirmationPrompts.get(identity.connectionId);
+		if (
+			(prompts?.size ?? 0) >=
+				MAX_PENDING_CATALOG_CONFIRMATIONS_PER_CONNECTION ||
+			pendingCatalogConfirmationPromptCount >= MAX_PENDING_CATALOG_CONFIRMATIONS
+		) {
+			throw new Error("Hub catalog confirmation limit was reached.");
+		}
+		if (externalSignal?.aborted) {
+			throw new Error("Hub catalog confirmation failed.");
+		}
+		if (!prompts) {
+			prompts = new Set();
+			pendingCatalogConfirmationPrompts.set(identity.connectionId, prompts);
+		}
+		const abortFromExternal = () => controller.abort();
+		externalSignal?.addEventListener("abort", abortFromExternal, {
+			once: true,
+		});
+		prompts.add(controller);
+		pendingCatalogConfirmationPromptCount += 1;
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+		let confirmed: boolean;
+		try {
+			const aborted = new Promise<never>((_resolve, reject) => {
+				controller.signal.addEventListener(
+					"abort",
+					() => reject(new Error("confirmation aborted")),
+					{ once: true },
+				);
+			});
+			timeout = setTimeout(
+				() => controller.abort(),
+				confirmationPromptTimeoutMs,
+			);
+			confirmed = await Promise.race([
+				Promise.resolve().then(() =>
+					confirm(
+						Object.freeze({
+							target: displayTarget,
+							signal: controller.signal,
+						}),
+					),
+				),
+				aborted,
+			]);
+		} catch {
+			throw new Error("Hub catalog confirmation failed.");
+		} finally {
+			if (timeout) clearTimeout(timeout);
+			controller.abort();
+			externalSignal?.removeEventListener("abort", abortFromExternal);
+			prompts.delete(controller);
+			pendingCatalogConfirmationPromptCount -= 1;
+			if (prompts.size === 0) {
+				pendingCatalogConfirmationPrompts.delete(identity.connectionId);
 			}
 		}
-		if (heartbeatTimer) {
-			clearInterval(heartbeatTimer);
-			heartbeatTimer = undefined;
+		try {
+			assertWorkspaceAuthorityActive();
+			const current = requireActiveWorkspaceConnection(identity.connectionId);
+			if (
+				current !== identity ||
+				describeWorkspaceConnection(current).workspaceId !==
+					descriptor.workspaceId
+			) {
+				throw new Error("identity changed");
+			}
+		} catch {
+			throw new Error("Hub catalog confirmation failed.");
 		}
+		return confirmed === true;
+	};
+	requestManagedCatalogConfirmation = async (input) => {
+		const target = normalizeHubChatCatalogConfirmationTarget({
+			...input.request,
+			invocationId: input.operationId,
+		});
+		return await promptCatalogMutation(input.identity, target, input.signal);
+	};
+	const workspaceAuthority = resolvedOptions.workspaceAuthority
+		? Object.freeze({
+				list: () => {
+					assertWorkspaceAuthorityActive();
+					return workspaceRegistry.list({
+						principalId: owner.ownerId,
+						tenantId: "local",
+					});
+				},
+				listConnections: () => {
+					assertWorkspaceAuthorityActive();
+					const descriptors: HubWorkspaceConnectionDescriptor[] = [];
+					for (const [connectionId, identity] of activeWorkspaceConnections) {
+						try {
+							descriptors.push(describeWorkspaceConnection(identity));
+						} catch {
+							activeWorkspaceConnections.delete(connectionId);
+						}
+					}
+					return Object.freeze(
+						descriptors.sort((left, right) =>
+							left.connectionId.localeCompare(right.connectionId),
+						),
+					);
+				},
+				issue: (input: {
+					workspaceId: string;
+					ttlMs?: number;
+					authorityClassId?: string;
+				}) => {
+					assertWorkspaceAuthorityActive();
+					const policy = input.authorityClassId
+						? configuredConnectionPolicies.get(input.authorityClassId.trim())
+						: defaultConnectionPolicy;
+					if (!policy) {
+						throw new Error("Hub workspace authority class is unavailable.");
+					}
+					if (instanceBoundAuthorityClassIds.has(policy.authorityClassId)) {
+						throw new Error(
+							"Hub workspace authority class requires an installed-instance binding.",
+						);
+					}
+					return workspaceRegistry.issue({
+						principalId: owner.ownerId,
+						tenantId: "local",
+						workspaceId: input.workspaceId,
+						...(input.ttlMs !== undefined ? { ttlMs: input.ttlMs } : {}),
+						policy,
+					});
+				},
+				issueForInstalledInstance: (input: {
+					workspaceId: string;
+					authorityClassId: string;
+					installedInstanceId: string;
+					ttlMs?: number;
+				}) => {
+					assertWorkspaceAuthorityActive();
+					const authorityClassId = input.authorityClassId.trim();
+					if (!instanceBoundAuthorityClassIds.has(authorityClassId)) {
+						throw new Error(
+							"Hub installed-instance workspace authority class is unavailable.",
+						);
+					}
+					const template = configuredConnectionPolicies.get(authorityClassId);
+					if (!template) {
+						throw new Error("Hub workspace authority class is unavailable.");
+					}
+					const policy = bindHubWorkspaceConnectionPolicyToInstalledInstance(
+						template,
+						input.installedInstanceId,
+					);
+					return workspaceRegistry.issue({
+						principalId: owner.ownerId,
+						tenantId: "local",
+						workspaceId: input.workspaceId,
+						...(input.ttlMs !== undefined ? { ttlMs: input.ttlMs } : {}),
+						policy,
+					});
+				},
+				requestCatalogConfirmation: async (input: {
+					connectionId: string;
+					target: HubChatCatalogConfirmationTarget;
+					ttlMs?: number;
+				}) => {
+					assertWorkspaceAuthorityActive();
+					const broker = resolvedOptions.chatCatalog?.confirmationBroker;
+					if (!broker) {
+						throw new Error("Hub catalog confirmation is not configured.");
+					}
+					const identity = requireActiveWorkspaceConnection(input.connectionId);
+					const target = normalizeHubChatCatalogConfirmationTarget(
+						input.target,
+					);
+					if (!(await promptCatalogMutation(identity, target))) {
+						throw new Error("Hub catalog confirmation was declined.");
+					}
+					assertWorkspaceAuthorityActive();
+					if (
+						requireActiveWorkspaceConnection(identity.connectionId) !== identity
+					) {
+						throw new Error("Hub catalog confirmation failed.");
+					}
+					return broker.issue({
+						authenticatedClientId: identity.connectionId,
+						target,
+						...(input.ttlMs !== undefined ? { ttlMs: input.ttlMs } : {}),
+					});
+				},
+				revoke: async (workspaceId: string) => {
+					assertWorkspaceAuthorityActive();
+					const revocation = workspaceRegistry.revoke({
+						principalId: owner.ownerId,
+						tenantId: "local",
+						workspaceId,
+					});
+					await workspaceManagedCores?.revokeWorkspace({
+						tenantId: revocation.tenantId,
+						workspaceKey: revocation.workspaceKey,
+					});
+				},
+				unregister: async (workspaceId: string) => {
+					assertWorkspaceAuthorityActive();
+					const result = workspaceRegistry.unregister({
+						principalId: owner.ownerId,
+						tenantId: "local",
+						workspaceId,
+					});
+					await workspaceManagedCores?.revokeWorkspace({
+						tenantId: result.revocation.tenantId,
+						workspaceKey: result.revocation.workspaceKey,
+					});
+				},
+			})
+		: undefined;
 
-		const webSocketClosed = new Promise<void>((resolve, reject) => {
-			wss.close((error?: Error) => {
-				if (error) {
-					reject(error);
-					return;
+	const closeServer = async (): Promise<void> => {
+		if (closePromise) {
+			return closePromise;
+		}
+		closePromise = (async () => {
+			workspaceAuthorityActive = false;
+			const workspaceRetirements: Promise<void>[] = [];
+			for (const registration of workspaceRegistry.list({
+				principalId: owner.ownerId,
+				tenantId: "local",
+			})) {
+				const result = workspaceRegistry.unregister({
+					principalId: owner.ownerId,
+					tenantId: "local",
+					workspaceId: registration.workspaceId,
+				});
+				if (workspaceManagedCores) {
+					workspaceRetirements.push(
+						workspaceManagedCores.revokeWorkspace({
+							tenantId: result.revocation.tenantId,
+							workspaceKey: result.revocation.workspaceKey,
+						}),
+					);
 				}
-				resolve();
-			});
-		});
-		const listenerClosed = new Promise<void>((resolve, reject) => {
-			server.close((error) => {
-				if (error) {
-					reject(error);
-					return;
-				}
-				resolve();
-			});
-		});
-		const transportStopped = Promise.resolve().then(() => transport.stop());
-		const discoveryRetired = transportStopped.then(async () => {
-			await clearHubDiscoveryIfOwned(owner.discoveryPath, hubId);
-		});
-		const closed = (async () => {
-			const closeResults = await Promise.allSettled([
-				webSocketClosed,
-				listenerClosed,
-				transportStopped,
-				discoveryRetired,
+			}
+			if (heartbeatTimer) {
+				clearInterval(heartbeatTimer);
+				heartbeatTimer = undefined;
+			}
+			for (const websocket of sockets) {
+				websocket.terminate?.();
+			}
+			sockets.clear();
+			for (const detach of cleanup) {
+				detach();
+			}
+			cleanup.clear();
+			for (const connectionId of [...activeWorkspaceConnections.keys()]) {
+				revokeWorkspaceConnection(connectionId);
+			}
+			const settled = await Promise.allSettled([
+				...workspaceRetirements,
+				new Promise<void>((resolve, reject) => {
+					wss.close((error?: Error) => {
+						if (error) reject(error);
+						else resolve();
+					});
+				}),
+				new Promise<void>((resolve, reject) => {
+					server.close((error) => {
+						if (error) reject(error);
+						else resolve();
+					});
+				}),
+				transport.stop(),
+				(async () => {
+					const current = await readHubDiscovery(owner.discoveryPath);
+					if (current?.url === url) {
+						await clearHubDiscovery(owner.discoveryPath);
+					}
+				})(),
 			]);
-			const closeErrors = closeResults.flatMap((result) =>
+			const failures = settled.flatMap((result) =>
 				result.status === "rejected" ? [result.reason] : [],
 			);
-			if (closeErrors.length > 0) {
-				throw new AggregateError(closeErrors, "hub server close failed");
+			try {
+				await disposeChatCatalogHost();
+			} catch (error) {
+				failures.push(error);
 			}
-		})().finally(() => {
-			const shared = SHARED_SERVERS.get(owner.discoveryPath);
-			if (shared?.server === exposedServer) {
-				SHARED_SERVERS.delete(owner.discoveryPath);
+			if (failures.length > 0) {
+				throw new AggregateError(failures, "Hub server shutdown failed");
 			}
-		});
-		closeHandle = { transportStopped, closed };
-
-		// Terminate sockets and detach handlers only after the memo handle is
-		// assigned. websocket.terminate() fires close events whose microtask
-		// continuations can re-enter beginClose() (e.g. the daemon coordinator's
-		// deferred cleanup reaching server.beginClose()); entering before the
-		// handle exists built a second set of close operations whose wss/listener
-		// closes rejected with "Server is not running", spuriously failing the
-		// close aggregate.
-		for (const websocket of sockets) {
-			websocket.terminate?.();
-		}
-		sockets.clear();
-		for (const detach of cleanup) {
-			detach();
-		}
-		cleanup.clear();
-
-		return closeHandle;
+		})();
+		return closePromise;
 	};
-	const closeServer = (): Promise<void> => beginClose().closed;
 
 	const server = http.createServer((req, res) => {
-		if (!published) {
-			res.statusCode = 503;
-			res.end("Starting");
-			return;
-		}
 		if ((req.url ?? "/") === "/health") {
 			const body = JSON.stringify({
 				ok: true,
@@ -504,8 +956,6 @@ export async function startHubWebSocketServer(
 				minClientProtocolVersion: versionPayload.minClientProtocolVersion,
 				maxClientProtocolVersion: versionPayload.maxClientProtocolVersion,
 				coreVersion: versionPayload.coreVersion,
-				buildId: versionPayload.buildId,
-				buildEpochMs: versionPayload.buildEpochMs,
 				host,
 				port,
 				url,
@@ -527,8 +977,9 @@ export async function startHubWebSocketServer(
 				return;
 			}
 			const body = JSON.stringify({
-				hubId,
+				hubId: transport.getHubId(),
 				...versionPayload,
+				...(workspaceScopeId ? { workspaceScopeId } : {}),
 				authToken,
 				host,
 				port,
@@ -547,6 +998,81 @@ export async function startHubWebSocketServer(
 			return;
 		}
 		const requestUrl = new URL(req.url ?? "/", `http://${host}:${port}`);
+		if (
+			requestUrl.pathname === "/workspace-capability" &&
+			req.method === "POST"
+		) {
+			if (
+				!isValidHubAuthToken(
+					readBearerToken(req.headers.authorization),
+					authToken,
+				)
+			) {
+				res.statusCode = 401;
+				res.end("Unauthorized");
+				return;
+			}
+			if (!workspaceAuthority) {
+				res.statusCode = 404;
+				res.end("Not found");
+				return;
+			}
+			if (requestUrl.search !== "") {
+				res.statusCode = 400;
+				res.setHeader("content-type", "application/json");
+				res.end(
+					JSON.stringify({
+						error:
+							"Hub workspace capability request must not select a workspace.",
+					}),
+				);
+				return;
+			}
+			const contentLength = req.headers["content-length"]?.trim();
+			if (
+				req.headers["transfer-encoding"] !== undefined ||
+				(contentLength !== undefined && contentLength !== "0")
+			) {
+				res.statusCode = 400;
+				res.setHeader("content-type", "application/json");
+				res.end(
+					JSON.stringify({
+						error: "Hub workspace capability request must be empty.",
+					}),
+				);
+				req.resume();
+				return;
+			}
+			try {
+				const registrations = workspaceAuthority.list();
+				if (registrations.length !== 1 || !registrations[0]) {
+					res.statusCode = 409;
+					res.setHeader("content-type", "application/json");
+					res.end(
+						JSON.stringify({
+							error: "Hub workspace selection is unavailable.",
+						}),
+					);
+					return;
+				}
+				const grant = workspaceAuthority.issue({
+					workspaceId: registrations[0].workspaceId,
+				});
+				res.statusCode = 201;
+				res.setHeader("content-type", "application/json");
+				res.setHeader("cache-control", "no-store");
+				res.end(JSON.stringify(grant));
+			} catch {
+				res.statusCode = 503;
+				res.setHeader("content-type", "application/json");
+				res.end(
+					JSON.stringify({
+						error: "Hub workspace capability is unavailable.",
+					}),
+				);
+			}
+			return;
+		}
 		if (requestUrl.pathname === "/shutdown" && req.method === "POST") {
 			if (
 				!isValidHubAuthToken(
@@ -562,21 +1088,7 @@ export async function startHubWebSocketServer(
 			res.setHeader("content-type", "application/json");
 			res.end(JSON.stringify({ ok: true }));
 			queueMicrotask(() => {
-				try {
-					void Promise.resolve(options.onShutdownRequested?.()).catch(
-						() => undefined,
-					);
-				} catch {
-					// The accepted request still closes the server if owner
-					// notification fails.
-				} finally {
-					// Closing is memoized, so the daemon coordinator and this
-					// safety path converge on the same teardown operation. Close
-					// failures are observed and reported by the owner's own await
-					// on the same memoized promise; an unobserved rejection here
-					// must not take the daemon's unhandledRejection fatal path.
-					closeServer().catch(() => undefined);
-				}
+				void closeServer();
 			});
 			return;
 		}
@@ -613,20 +1125,48 @@ export async function startHubWebSocketServer(
 	}, HUB_SOCKET_HEARTBEAT_INTERVAL_MS);
 
 	server.on("upgrade", (request, socket, head) => {
-		if (!published) {
-			rejectStartingUpgradeSocket(socket);
-			return;
-		}
 		const requestUrl = new URL(request.url ?? "/", `http://${host}:${port}`);
 		if (requestUrl.pathname !== pathname) {
 			socket.destroy();
 			return;
 		}
+		const protocolHeader = request.headers["sec-websocket-protocol"];
+		const workspaceCredential =
+			readWebSocketWorkspaceCapability(protocolHeader);
+		const workspaceProtocolPresented = parseHeaderValue(protocolHeader)
+			.split(",")
+			.some((protocol) =>
+				protocol.trim().startsWith(HUB_WORKSPACE_AUTH_PROTOCOL_PREFIX),
+			);
+		let upgradedSocket: NodeWebSocketLike | undefined;
+		let authenticatedConnection: HubAuthenticatedConnection | undefined;
+		if (workspaceProtocolPresented) {
+			if (!workspaceCredential) {
+				rejectUnauthorizedUpgradeSocket(socket);
+				return;
+			}
+			try {
+				authenticatedConnection = workspaceCapabilities.consume({
+					credential: workspaceCredential,
+					transport: "websocket",
+					close: () => {
+						const connectionId = authenticatedConnection?.connectionId;
+						if (connectionId) {
+							revokeWorkspaceConnection(connectionId);
+						}
+						upgradedSocket?.close(4003, "Workspace authority revoked");
+					},
+				});
+			} catch {
+				// A presented but invalid workspace credential cannot downgrade to
+				// daemon-token or Origin authentication.
+				rejectUnauthorizedUpgradeSocket(socket);
+				return;
+			}
+		}
 		const isAuthorized =
-			isValidHubAuthToken(
-				readWebSocketAuthToken(request.headers["sec-websocket-protocol"]),
-				authToken,
-			) ||
+			authenticatedConnection !== undefined ||
+			isValidHubAuthToken(readWebSocketAuthToken(protocolHeader), authToken) ||
 			(isLocalHubHostName(host) && isLocalHubOrigin(request.headers.origin));
 		if (!isAuthorized) {
 			rejectUnauthorizedUpgradeSocket(socket);
@@ -638,22 +1178,42 @@ export async function startHubWebSocketServer(
 				socket,
 				head,
 				(websocket: NodeWebSocketLike) => {
+					upgradedSocket = websocket;
 					const tracked = websocket as TrackedNodeWebSocket;
 					tracked.isAlive = true;
 					tracked.on("pong", () => {
 						tracked.isAlive = true;
 					});
 					sockets.add(tracked);
-					const detach = adapter.attach(wrapWsSocket(websocket));
+					const socketTransport = authenticatedConnection
+						? transport.openConnection(authenticatedConnection)
+						: transport.openUnscopedConnection();
+					const detach = adapter.attach(
+						wrapWsSocket(websocket),
+						socketTransport,
+					);
+					if (authenticatedConnection) {
+						activeWorkspaceConnections.set(
+							authenticatedConnection.connectionId,
+							authenticatedConnection,
+						);
+					}
 					cleanup.add(detach);
 					websocket.once("close", () => {
 						sockets.delete(tracked);
+						if (authenticatedConnection) {
+							revokeWorkspaceConnection(authenticatedConnection.connectionId);
+						}
 						detach();
 						cleanup.delete(detach);
 					});
 				},
 			);
 		} catch {
+			if (authenticatedConnection) {
+				revokeWorkspaceConnection(authenticatedConnection.connectionId);
+				workspaceCapabilities.release(authenticatedConnection);
+			}
 			rejectUpgradeSocket(socket);
 		}
 	});
@@ -691,23 +1251,32 @@ export async function startHubWebSocketServer(
 			clearInterval(heartbeatTimer);
 			heartbeatTimer = undefined;
 		}
-		await settlesWithin(
-			Promise.resolve().then(() => transport.stop()),
-			HUB_STARTUP_ROLLBACK_TIMEOUT_MS,
+		const cleanup = await Promise.allSettled([
+			transport.stop(),
+			disposeChatCatalogHost(),
+		]);
+		const failures = cleanup.flatMap((result) =>
+			result.status === "rejected" ? [result.reason] : [],
 		);
+		if (failures.length > 0) {
+			throw new AggregateError(
+				[error, ...failures],
+				"Hub server startup and cleanup failed",
+			);
+		}
 		throw error;
 	}
 
 	try {
 		await writeHubDiscovery(owner.discoveryPath, {
-			hubId,
+			hubId: transport.getHubId(),
 			protocolVersion: CURRENT_HUB_PROTOCOL_VERSION,
 			minClientProtocolVersion: MIN_CLIENT_HUB_PROTOCOL_VERSION,
 			maxClientProtocolVersion: MAX_CLIENT_HUB_PROTOCOL_VERSION,
 			capabilities: [...versionPayload.capabilities],
 			coreVersion: corePackage.version,
 			buildId,
-			buildEpochMs,
+			...(workspaceScopeId ? { workspaceScopeId } : {}),
 			authToken,
 			host,
 			port,
@@ -716,37 +1285,27 @@ export async function startHubWebSocketServer(
 			startedAt,
 			updatedAt: startedAt,
 		});
-		published = true;
 	} catch (error) {
-		// Listening without a published auth token creates an undiscoverable
-		// daemon that still owns the endpoint. Start full rollback immediately,
-		// but do not let Bun's WebSocket/http close bug prevent startup from
-		// rejecting into the daemon's fatal-exit path.
-		const rollbackSettled = await settlesWithin(
-			beginClose().closed,
-			HUB_STARTUP_ROLLBACK_TIMEOUT_MS,
-		);
-		if (!rollbackSettled) {
-			try {
-				server.closeAllConnections();
-				server.unref();
-			} catch {
-				// The original publication error remains authoritative. The owning
-				// daemon will take its fatal process-exit path after this rejects.
-			}
+		try {
+			await closeServer();
+		} catch (cleanupError) {
+			throw new AggregateError(
+				[error, cleanupError],
+				"Hub discovery write and cleanup failed",
+			);
 		}
 		throw error;
 	}
 
-	exposedServer = {
+	return {
 		host,
 		port,
 		url,
 		authToken,
-		beginClose,
+		...(workspaceScopeId ? { workspaceScopeId } : {}),
+		...(workspaceAuthority ? { workspaceAuthority } : {}),
 		close: closeServer,
 	};
-	return exposedServer;
 }
 
 export async function ensureHubWebSocketServer(
@@ -763,6 +1322,23 @@ export async function ensureHubWebSocketServer(
 	const pathname = options.pathname ?? "/hub";
 	const expectedUrl = createHubServerUrl(host, port, pathname);
 	const sharedKey = owner.discoveryPath;
+	const expectedWorkspaceScopeId = (authToken: string): string | undefined => {
+		const keys = options.workspaceAuthority?.trustedWorkspaceKeys ?? [];
+		return keys.length === 1 && keys[0]
+			? createHubWorkspaceScopeId(authToken, keys[0])
+			: undefined;
+	};
+	const assertMatchingWorkspaceScope = (
+		authToken: string,
+		...actual: Array<string | undefined>
+	): void => {
+		const expected = expectedWorkspaceScopeId(authToken);
+		if (expected && actual.some((candidate) => candidate !== expected)) {
+			throw new Error(
+				"The running Cline Hub is enrolled for a different workspace.",
+			);
+		}
+	};
 	const rememberIfManaged = <T extends EnsuredHubWebSocketServerResult>(
 		result: T,
 	): T => {
@@ -773,67 +1349,50 @@ export async function ensureHubWebSocketServer(
 	};
 	const existing = SHARED_SERVERS.get(sharedKey);
 	if (existing) {
-		const server = await existing.promise;
-		if (existing.state === "closing") {
-			// Runtime teardown alone does not release the HTTP endpoint. Keep the
-			// closing generation authoritative until its listener is also closed so
-			// a same-port replacement cannot race into EADDRINUSE or fallback. The
-			// aggregate rejects only after every close operation has settled, so a
-			// cleanup error is reported to close callers without blocking recovery.
-			await server.beginClose().closed.catch(() => undefined);
-			if (SHARED_SERVERS.get(sharedKey) === existing) {
-				SHARED_SERVERS.delete(sharedKey);
-			}
-		} else if (
-			hubUrlMatchesEndpoint(server.url, host, port, pathname) ||
-			options.allowPortFallback === true
-		) {
+		const server = await existing;
+		if (server.url === expectedUrl) {
+			assertMatchingWorkspaceScope(server.authToken, server.workspaceScopeId);
 			return rememberIfManaged({
 				server,
 				url: server.url,
 				authToken: server.authToken,
 				action: "reuse",
 			});
-		} else {
-			throw createHubEndpointConflictError(
-				owner.ownerId,
-				server.url,
-				expectedUrl,
-			);
 		}
 	}
 
 	return await withHubStartupLock(owner.discoveryPath, async () => {
 		const discovered = await readHubDiscovery(owner.discoveryPath);
-		if (discovered?.url) {
+		const canReuseDiscovered =
+			discovered?.url &&
+			(discovered.url === expectedUrl || options.allowPortFallback === true);
+		if (canReuseDiscovered) {
 			const healthy = await probeHubServer(discovered.url, {
 				authToken: discovered.authToken,
 			});
 			if (
 				healthy?.url &&
-				isManagedHubReusable(healthy) &&
+				isHubProtocolCompatible(healthy).compatible &&
 				(await verifyHubConnection(healthy.url, {
 					authToken: discovered.authToken,
 				}))
 			) {
-				if (
-					hubUrlMatchesEndpoint(discovered.url, host, port, pathname) ||
-					options.allowPortFallback === true
-				) {
-					return rememberIfManaged({
-						url: healthy.url,
-						authToken: discovered.authToken,
-						action: "reuse",
-					});
-				}
-				throw createHubEndpointConflictError(
-					owner.ownerId,
-					discovered.url,
-					expectedUrl,
+				assertMatchingWorkspaceScope(
+					discovered.authToken,
+					discovered.workspaceScopeId,
+					healthy.workspaceScopeId,
 				);
+				return rememberIfManaged({
+					url: healthy.url,
+					authToken: discovered.authToken,
+					action: "reuse",
+				});
 			}
+		}
 
-			// A discovered endpoint that cannot be authenticated/verified is stale.
+		// The discovered hub was not reusable (missing, mismatched, or failed
+		// verification), so its record is stale either way.
+		if (discovered?.url) {
 			await clearHubDiscovery(owner.discoveryPath);
 		}
 
@@ -841,15 +1400,9 @@ export async function ensureHubWebSocketServer(
 			startOptions: HubWebSocketServerOptions,
 		): Promise<EnsuredHubWebSocketServerResult> => {
 			const serverPromise = startHubWebSocketServer({ ...startOptions, owner });
-			const sharedEntry: SharedHubServerEntry = {
-				promise: serverPromise,
-				state: "starting",
-			};
-			SHARED_SERVERS.set(sharedKey, sharedEntry);
+			SHARED_SERVERS.set(sharedKey, serverPromise);
 			try {
 				const server = await serverPromise;
-				sharedEntry.server = server;
-				sharedEntry.state = "open";
 				return rememberIfManaged({
 					server,
 					url: server.url,
@@ -857,9 +1410,7 @@ export async function ensureHubWebSocketServer(
 					action: "started",
 				});
 			} catch (error) {
-				if (SHARED_SERVERS.get(sharedKey) === sharedEntry) {
-					SHARED_SERVERS.delete(sharedKey);
-				}
+				SHARED_SERVERS.delete(sharedKey);
 				throw error;
 			}
 		};

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isHubProtocolCompatible, readHubScheduleMode } from "./hub";
+import {
+	getDefaultHubCommandTimeoutMs,
+	isHubProtocolCompatible,
+	readHubScheduleMode,
+} from "./hub";
 
 describe("isHubProtocolCompatible", () => {
 	it("accepts a hub whose supported client range includes the client protocol", () => {
@@ -49,4 +53,11 @@ describe("readHubScheduleMode", () => {
 			);
 		},
 	);
+});
+
+describe("managed command timeout policy", () => {
+	it("lets the bounded run-turn contract own long-running timeouts", () => {
+		expect(getDefaultHubCommandTimeoutMs("chat_lifecycle.run_turn")).toBeNull();
+		expect(getDefaultHubCommandTimeoutMs("chat_lifecycle.rename")).toBe(30_000);
+	});
 });

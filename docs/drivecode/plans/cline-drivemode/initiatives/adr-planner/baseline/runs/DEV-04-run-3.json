@@ -1,0 +1,252 @@
+{
+  "summary": "The proposed launch handles sensitive patient and insurance information with an LLM and SMS, but ownership and required privacy, security, legal, clinical-safety, and messaging decisions are unresolved before a launch requested this week.",
+  "concerns": [
+    {
+      "id": "accountability-owners",
+      "concern": "No security, privacy, or legal owner is named.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "now",
+      "artifact_route": "plan",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [],
+      "evidence": [
+        "No security/privacy/legal owner is named."
+      ],
+      "unknowns": [
+        "Who is authorized to make security, privacy, and legal decisions before launch."
+      ],
+      "rationale": "Required review and risk decisions cannot be assigned or accepted without accountable owners."
+    },
+    {
+      "id": "privacy-review-deferral",
+      "concern": "The founder proposes skipping privacy review until after launch.",
+      "applicability": "applicable",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "risk_register",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [
+        "accountability-owners"
+      ],
+      "evidence": [
+        "The founder says to skip privacy review until after launch."
+      ],
+      "unknowns": [
+        "Whether launch may proceed without a privacy review under applicable obligations."
+      ],
+      "rationale": "The product will store symptoms and insurance identifiers for US hospital patients, so deferring review may conflict with applicable requirements."
+    },
+    {
+      "id": "applicable-obligations",
+      "concern": "Applicable privacy, security, legal, and healthcare obligations have not been identified.",
+      "applicability": "unknown",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [
+        "accountability-owners"
+      ],
+      "evidence": [
+        "The intake is for US hospital patients.",
+        "The system stores symptoms and insurance identifiers."
+      ],
+      "unknowns": [
+        "Which laws, contracts, hospital policies, and regulatory obligations apply.",
+        "Whether the founder or hospital will operate the service and determine required safeguards."
+      ],
+      "rationale": "The applicable obligations determine whether the intended collection, storage, debugging retention, LLM use, and SMS delivery are permissible and what controls are required."
+    },
+    {
+      "id": "sensitive-data-handling",
+      "concern": "Data handling requirements for symptoms and insurance identifiers are unspecified.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "implementation",
+      "criticality": "critical",
+      "prerequisites": [
+        "applicable-obligations"
+      ],
+      "evidence": [
+        "The web intake stores symptoms and insurance identifiers."
+      ],
+      "unknowns": [
+        "What data is necessary to collect.",
+        "Where data will be stored, who can access it, and how it will be protected.",
+        "How long each data type must be retained or deleted."
+      ],
+      "rationale": "These choices directly affect the product design and compliance posture."
+    },
+    {
+      "id": "llm-urgency-safety",
+      "concern": "The safety boundaries and validation approach for LLM urgency recommendations are unspecified.",
+      "applicability": "applicable",
+      "resolution": "experiment",
+      "urgency": "now",
+      "artifact_route": "risk_register",
+      "lifecycle_gate": "pilot",
+      "criticality": "critical",
+      "prerequisites": [
+        "applicable-obligations"
+      ],
+      "evidence": [
+        "An LLM recommends urgency."
+      ],
+      "unknowns": [
+        "What urgency categories and escalation rules are intended.",
+        "Whether recommendations will be reviewed by people.",
+        "What failure modes are acceptable and how the recommendation will be evaluated before patient use."
+      ],
+      "rationale": "An urgency recommendation can influence patient action, so its intended use and failure handling can materially change launch readiness."
+    },
+    {
+      "id": "sms-result-delivery",
+      "concern": "SMS delivery requirements and permitted result content are unspecified.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [
+        "applicable-obligations",
+        "llm-urgency-safety"
+      ],
+      "evidence": [
+        "SMS sends results."
+      ],
+      "unknowns": [
+        "What result content will be sent by SMS.",
+        "How recipients are identified and whether they have consented to receive messages.",
+        "How delivery errors, wrong numbers, and urgent results will be handled."
+      ],
+      "rationale": "The delivery channel determines exposure of sensitive information and whether urgent guidance reliably reaches the intended patient."
+    },
+    {
+      "id": "raw-prompt-retention",
+      "concern": "Raw prompts are retained for debugging without a defined necessity, access model, or retention limit.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [
+        "sensitive-data-handling",
+        "applicable-obligations"
+      ],
+      "evidence": [
+        "Raw prompts are retained for debugging.",
+        "The system stores symptoms and insurance identifiers."
+      ],
+      "unknowns": [
+        "Whether raw prompts include symptoms, insurance identifiers, or other patient information.",
+        "Who can access retained prompts and how long they are retained.",
+        "Whether debugging can be supported with less sensitive data."
+      ],
+      "rationale": "Debugging retention may expand the amount and duration of sensitive information held by the system."
+    },
+    {
+      "id": "launch-scope-and-readiness",
+      "concern": "A ship-this-week target is set before the unresolved launch obligations are assessed.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "now",
+      "artifact_route": "plan",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [
+        "accountability-owners",
+        "applicable-obligations",
+        "llm-urgency-safety",
+        "sms-result-delivery"
+      ],
+      "evidence": [
+        "A founder asks to ship this week."
+      ],
+      "unknowns": [
+        "Whether the launch is a limited pilot or a broader release.",
+        "What evidence is required to authorize launch."
+      ],
+      "rationale": "The requested timeline may be incompatible with unresolved requirements and validation work."
+    }
+  ],
+  "questions": [
+    {
+      "question": "Who will own and authorize security, privacy, and legal decisions before any launch?",
+      "changes": [
+        "accountability-owners",
+        "privacy-review-deferral",
+        "applicable-obligations"
+      ]
+    },
+    {
+      "question": "What privacy, security, legal, contractual, and hospital-policy obligations apply to this service?",
+      "changes": [
+        "privacy-review-deferral",
+        "applicable-obligations",
+        "sensitive-data-handling",
+        "sms-result-delivery",
+        "raw-prompt-retention"
+      ]
+    },
+    {
+      "question": "Will the launch be a limited pilot or a broader patient release, and what approval evidence is required?",
+      "changes": [
+        "launch-scope-and-readiness",
+        "llm-urgency-safety"
+      ]
+    },
+    {
+      "question": "What exact urgency categories, escalation rules, and human-review model will govern LLM recommendations?",
+      "changes": [
+        "llm-urgency-safety",
+        "sms-result-delivery"
+      ]
+    },
+    {
+      "question": "What result content may be sent by SMS, and how will recipient consent, identity, and delivery failures be handled?",
+      "changes": [
+        "sms-result-delivery"
+      ]
+    },
+    {
+      "question": "Do raw prompts contain patient or insurance information, and what retention, access, and deletion rules are required?",
+      "changes": [
+        "raw-prompt-retention",
+        "sensitive-data-handling"
+      ]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "blocked",
+    "release": "blocked",
+    "operate": "blocked",
+    "blockers": [
+      "accountability-owners",
+      "privacy-review-deferral",
+      "applicable-obligations",
+      "sensitive-data-handling",
+      "llm-urgency-safety",
+      "sms-result-delivery",
+      "raw-prompt-retention",
+      "launch-scope-and-readiness"
+    ]
+  },
+  "unsupported_inferences_to_avoid": [
+    "That a particular law or regulatory regime definitely applies.",
+    "That the LLM provides a diagnosis or makes autonomous clinical decisions.",
+    "That a hospital has approved, contracted for, or will operate the service.",
+    "That patients have consented to SMS communication or data collection.",
+    "That raw prompts definitely contain protected or identifying information.",
+    "That any specific vendor, cloud provider, or LLM provider is used."
+  ]
+}

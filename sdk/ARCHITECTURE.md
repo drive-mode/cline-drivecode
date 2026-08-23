@@ -145,109 +145,9 @@ event payload and `source` field.
 4. Hosts attach and detach from shared sessions without stopping the authority runtime, so another client can keep streaming or resume the same session later.
 5. The hub-hosted runtime executes the agent loop using `@cline/agents` and `@cline/llms`.
 6. `@cline/core` hub services broker sessions, events, approvals, schedules, and client-owned runtime capabilities such as session-local tool executors.
-7. Hub event forwarding preserves structured streaming lifecycle boundaries: text/reasoning deltas, final text/reasoning completion, tool start/update/finish, and agent done events are translated across the hub transport so host UIs can reliably close loading/streaming state. `run.started` is emitted only after the target session is resolved and carries the originating command's `requestId` and `clientId`, allowing multi-client hosts to correlate delivery acknowledgments.
+7. Hub event forwarding preserves structured streaming lifecycle boundaries: text/reasoning deltas, final text/reasoning completion, tool start/finish, and agent done events are translated across the hub transport so host UIs can reliably close loading/streaming state.
 8. Hub client adapters exported from `@cline/core/hub` (`NodeHubClient`, `HubSessionClient`, `HubUIClient`, `connectToHub`) translate command/reply and event streams into host-facing APIs.
 9. Hub `session.get` records include both canonical root-session usage and explicit aggregate usage from the hub-owned `RuntimeHost`, so attached clients can intentionally render either root-only or root-plus-teammate costs without replaying event streams.
-
-Command progress follows the same runtime event boundary as other agent output.
-Shell executors emit structured stdout/stderr chunks through
-`AgentToolContext.emitUpdate`; the agent runtime projects them as tool
-`content_update` events, and the Hub publishes them as `tool.updated` with the
-session, tool-call, and tool identifiers intact. Hub clients reconstruct the
-tool update for their host-facing event stream. Client-contributed executors
-must forward capability progress through this same path rather than creating a
-host-specific side channel. The built-in shell executor coalesces output on a
-short interval and bounds each stream's pending tail before it enters the event
-pipeline; consumers independently coalesce and cap their rendered scrollback.
-
-Proceed-while-running is an explicit command lifecycle, separate from client
-or session detachment. A shell process advertises detachability only after it
-has spawned and registered with the host-scoped command execution controller.
-The client sends `run.proceed_while_running` with the owning `sessionId` and,
-when available, `toolCallId`; the Hub delegates to the authoritative
-`RuntimeHost`, which releases every matching registered process from the tool
-call. The executor removes its abort and timeout ownership, resolves the tool
-call with the current bounded output and a temporary log path, and continues
-draining the process into that log. Detached logs are size-capped, retained for
-a bounded inspection window after the command exits, and then their temporary
-directories are removed. Every process that constructs a `LocalRuntimeHost`
-starts one detached-log reconciliation: it reaps completed logs outside the
-retention window, reschedules retained logs, and follows active detached-command
-identities until they exit, so cleanup does not depend on timers from the process
-that launched the command. Hub daemons and direct embedders therefore share the
-same detachment and restart lifecycle instead of relying on a daemon-specific
-entrypoint. Active-command markers pair the PID with a process-generation start
-token, preventing an unrelated process that later reuses the PID from extending
-the log lifetime. Completion markers distinguish a live, possibly silent command
-from a completed log. Process probes distinguish an absent process from an
-unavailable identity provider. Transient probe failures retain the active marker
-and are never treated as evidence of command completion. Reconciliation keeps
-the advertised log and retries until the provider can prove that the original
-process still exists, its PID belongs to a replacement process, or the process
-is absent. A host exit alone never starts the retention window for a surviving
-command; the replacement host continues polling the process identity and begins
-retention only after the command ends. During persistent provider unavailability,
-the capped log may outlive the normal retention window because preserving a
-potentially live command's advertised path takes precedence over guessing that
-it exited. A detached client connection alone never changes process ownership or
-command execution.
-
-### Generated Media Operation and Event Flow
-
-Model modalities and provider operations are separate facts. Modalities describe
-values a model accepts or produces; the explicit operation selects the provider
-transport. Language models keep the normal agent loop even when they can emit
-media, while `operation: "image-generation"` selects `generateImage` and
-`operation: "transcription"` selects a declared speech-to-text transport.
-Operation-specific execution variants such as recorded and realtime
-transcription live in `operationModes`, not in the generic capability list.
-Specialized operations fail closed unless the provider manifest and adapter
-both implement them, so an OpenAI-compatible chat endpoint never implies an
-image, audio, transcription, or video endpoint.
-
-Generated media crosses package boundaries as follows:
-
-1. `@cline/llms` validates provider output once and creates canonical
-   `GeneratedMedia` values. The contract carries a stable ID, modality, MIME type,
-   and a discriminated base64, HTTP(S), or artifact source. Current producers emit
-   images; audio, video, and large artifact-backed files use the same contract.
-2. Provider model tools are adapters, not raw AI SDK tools. An adapter owns its
-   native result projection into canonical media. The generic stream layer
-   coalesces preliminary or repeated results, enforces the per-turn media budget,
-   and persists only a compact activity summary rather than duplicating base64 in
-   model-tool metadata.
-3. `@cline/agents` appends media events at their exact stream position in the
-   assistant message. That message is the canonical replay and persistence source;
-   observational provider-tool activity remains display-only metadata.
-4. `@cline/core` projects live media as `content_end(media)`. The hub publishes
-   `assistant.media`, preserving the same media ID, and clients deduplicate live
-   and hydrated content by that ID.
-5. Web clients share `GeneratedMediaContent` from `@cline/ui` for image, audio,
-   video, file, and unavailable-source rendering. Inline bytes are exposed only
-   through short-lived browser-owned object URLs; remote and artifact sources
-   require a client-owned trusted resolver. CLI and ACP clients provide
-   transport-appropriate materialization or fallback output without changing
-   the canonical message.
-
-Image-edit inference is intentionally local: when a dedicated image model accepts
-image input and the current user message has no explicit image, only an image on
-the immediately preceding assistant message is reused. Older images are not
-implicitly attached across intervening turns.
-
-Session history provenance keeps the client surface and initiation mode separate.
-`StartSessionInput.source` identifies the client (`vscode`, `desktop`, `cli`,
-`core`, and so on), while top-level `StartSessionInput.mode` identifies how the
-session began (`user`, `automation`, `subagent`, or `team`). The persisted messages
-envelope records both values, along with client version and child-session
-lineage. Missing initiation mode defaults to `user`; automation runtime adapters
-must pass `mode: "automation"` explicitly.
-
-Root-session persistence is lazy. Starting a runtime allocates its session ID
-and keeps configuration or seeded history in memory, but does not create a
-database row, manifest, or messages artifact. The first accepted user turn
-persists that same ID and its artifacts. Closing a runtime before a user turn
-therefore leaves no empty history entry, and persistence code never allocates a
-replacement ID for an unknown session.
 
 Workspace bootstrap is owned by the runtime that executes the session. Hub
 clients preserve an omitted `cwd` and `workspaceRoot` across the transport so
@@ -278,67 +178,12 @@ public health/build metadata, but they cannot attach to sessions, issue
 commands, or stop the daemon.
 
 Local hub rediscovery is limited to managed shared-daemon endpoints obtained
-through discovery or `ensure*HubServer(...)` startup paths. Managed local hubs
-must match both the supported wire protocol and the current Hub build identity;
-a protocol-compatible daemon from another build is retired before its
-replacement starts so upgrades cannot keep executing stale runtime code. SDK
-builds embed a deterministic fingerprint of the runtime sources, package
-manifests, build configuration, and dependency lock, so the identity changes
-with the executable Hub code even before package versions are bumped. Builds
-also embed a build epoch that orders them in time: when the fingerprints
-differ, a managed Hub produced *after* the client's own build is reused over
-the compatible wire protocol instead of being retired (replacing it would
-downgrade the daemon), and the client's build-mismatch watcher prompts the
-user to update and restart. Hubs that are older, unordered, or missing build
-metadata are retired and replaced as before, so two concurrently running
-installations converge on the newest build instead of repeatedly replacing
-each other's daemons.
-Explicit endpoints, including loopback URLs such as
-`ws://127.0.0.1:<port>/hub`, are sticky exact targets and remain protocol-only:
-reconnects may retry the same socket URL, but command recovery and
+through discovery or `ensure*HubServer(...)` startup paths. Explicit endpoints,
+including loopback URLs such as `ws://127.0.0.1:<port>/hub`, are sticky exact
+targets: reconnects may retry the same socket URL, but command recovery and
 startup-deadlock recovery must not replace them with the workspace-discovered
 hub. This keeps custom local hubs and remote hubs from silently drifting to a
 different process.
-
-#### Drive Agent Title authority and Director policy
-
-The Cline hub is the sole coordinator for temporary Drive Agent Titles. Clients
-may request one of six capability-oriented definitions: Presenter, Researcher,
-Builder, Reviewer, Verifier, or Scribe. `createClineDriveHost` replaces
-client-proposed ids, permissions, bundles, resources, delegation, policy, and
-temporal metadata with the signed host recipe before appending
-`control.title_*` events. Sanitized definitions include obligations as well as
-powers; they never contain prompts, routing, model configuration, credentials,
-endpoints, or full skill contents.
-
-The title-authorization API accepts exactly one explicit `grantId`; it has no
-multi-grant form. Command paths that adopt title authority must pass through
-this gate before performing privileged work. Against its own clock, the host
-validates agent, opaque scope, permission, not-before/expiry/revocation,
-generation, the definition signature, and exclusivity without unioning
-permissions from another grant. Presenter is
-exclusive per stage, Builder per target, and Scribe per room/task namespace.
-Researchers, Reviewers, and Verifiers may be concurrent, but one agent cannot
-review its own Builder target. Disconnect, room end, expiry, transfer, or revoke
-ends authority synchronously; cleanup is not the authority boundary. Existing
-Director/Spotlight compatibility commands retain their audited Presenter
-coordination while they migrate to caller-supplied grant attribution.
-
-The room fold permits an agent on the typed stage only while that agent owns
-the one active Presenter grant. Transfer is atomic, revoke clears the agent
-stage, and competing presentation mutations fail before changing live Director
-state. Other titles never acquire stage ownership. Human
-selection/file/terminal sharing remains independent. Pixel sharing is not a
-host capability. Legacy Presenter events remain readable; newly minted grants
-carry definition, generation, exclusivity, issuer, policy, and temporal refs.
-
-The built-in Director policy stays in `@cline/core`. Clients can read only a
-signed, versioned, non-exportable descriptor and the allowlisted overlay keys
-(`pace`, `handoffs`); prompts, routing, scoring, tool/model maps, endpoints, and
-signing secrets never enter shared protocol payloads. The legacy
-`drive.spotlight.set` command is a compatibility alias that requests an audited
-Presenter transfer before changing an agent stage; new clients should use the
-`drive.presenter.*` command family.
 
 ### Interactive CLI Startup
 
@@ -432,6 +277,447 @@ Design implication:
   root usage and teammate usage as separate buckets, then derives aggregate
   totals from those buckets while telemetry remains scoped to the primary
   lead/root agent.
+
+#### Catalog-managed session authority
+
+Cross-session chat management adds a trusted-core composition above
+`RuntimeHost`; it does not add a lease credential to generic hub commands.
+`CatalogManagedSessionRuntime` acquires authority through
+`ChatSessionLifecycleCoordinator`, supplies the ephemeral credential only to a
+co-located `LocalRuntimeHost`, and returns sanitized chat/revision/expiry state.
+
+```mermaid
+sequenceDiagram
+  participant M as CatalogManagedSessionRuntime
+  participant C as ChatSessionLifecycleCoordinator
+  participant H as LocalRuntimeHost
+  participant D as Shared sessions.db
+
+  M->>C: admit fresh root (stable operation ID)
+  C->>D: BEGIN IMMEDIATE
+  D->>D: reserve session + root chat + membership + writer head + lease
+  D-->>C: COMMIT generation 1
+  C-->>M: token, chat, revision, writer generation, expiry
+  M->>C: start verified lease guard
+  M->>H: start managed session with ephemeral credential
+  H->>D: commit candidate under BEGIN IMMEDIATE
+  D->>D: validate active token and writer generation
+  D-->>H: advance commit sequence and authoritative head
+  M->>H: quiesceSession
+  H->>H: close admission, abort, drain, stop producers
+  H->>D: persist terminal row and manifest last
+  H-->>M: SessionQuiescenceReceipt
+  M->>C: release lease with operation id
+```
+
+The durable fence has two counters with different meanings:
+
+- lease `revision` advances for acquire, renewal, and release CAS/audit;
+- `writer_generation` advances only when writer authority is newly created or
+  replaced and is the stale-writer fencing generation.
+
+Catalog-managed transcripts, compaction sidecars, manifests, row metadata, and
+status updates publish through the same SQLite transaction boundary. File
+artifacts are immutable candidates; `session_writer_heads` selects the
+authoritative candidate and advances a per-session commit sequence only after
+the transaction validates the active token and exact writer generation.
+Generic session create/replace/delete and credential-free resume paths reject
+managed sessions.
+
+Fresh roots use a registration-before-write transaction. The catalog may
+insert a new inert session row or validate an exact prior reservation, but it
+creates the root chat/membership, writer head, and initial lease in the same
+`BEGIN IMMEDIATE` transaction. Conflicts roll the reservation back. Exact
+operation replay returns sanitized current state and never returns the
+plaintext lease token again. Initial messages and manifest files are immutable
+generation candidates; they are not created until the admitted fence is
+available. Session materialization uses `ON CONFLICT DO UPDATE` so catalog
+foreign-key identity is preserved.
+
+Fork, checkpoint-restore, config-restart, and recovery starts use the same
+registration-before-write boundary through transactional related admission.
+Branch relations create a derived chat; successor relations advance the
+existing active chat under revision and current-head CAS. In either topology,
+the inert session reservation, structural membership, writer head generation
+1, and first hash-only lease commit together before host startup. Failed chat
+or lineage checks roll the reservation back, and exact replay never reissues a
+lost plaintext credential.
+
+`CatalogManagedSessionRuntime.startRoot(...)`, `startRelated(...)`,
+`restoreCheckpoint(...)`, and `resume(...)` share one guard-before-bootstrap
+path. The guard verifies
+authority and installs expiry and renewal watchdogs before execution-host
+startup; the host receives the credential only through trusted in-process
+composition. Public results contain chat/session IDs and revision/expiry only.
+
+Managed checkpoint restore separates planning from mutation. A read-only
+preparation step validates the source checkpoint and derives the exact
+messages, checkpoint metadata, and worktree plan. The runtime then admits the
+`checkpoint_restore` branch atomically and installs its lease guard. Only while
+that guard is resident may it open a worktree restore transaction, apply the
+checkpoint, and start the replacement host. Checkpoint refs and the worktree
+transaction commit after successful guarded startup; startup or apply failure
+stops the guard without releasing uncertain authority and rolls the worktree
+back. The restore target must equal the replacement session workspace. Generic
+Core restore remains blocked in managed composition.
+
+`ClineCore.create({ backendMode: "local", chatLifecycle: ... })` is the explicit
+managed-local composition root. It constructs or validates a
+`CoreSessionService`, derives the exact database directory and tenant through
+`catalogStorageIdentity()`, eagerly initializes `SqliteChatCatalogService`,
+then builds the local port, coordinator, writer verifier, host, and managed
+runtime in that order. Managed mode rejects `auto`, hub, remote, file-backed,
+cross-database, and cross-tenant configurations before runtime startup; the
+legacy file fallback remains available only to unmanaged local sessions.
+
+Confirmed local lifecycle mutations use the optional host-owned
+`chatLifecycle.confirm` bridge. Core sends the host UI only the action,
+aggregate kind/ID, and observed revision. Invocation identity and the random
+256-bit credential remain internal. Approval mints a short-lived grant bound to
+the hidden invocation and exact aggregate revision; decline or a missing bridge
+fails before grant issuance. The local authority consumes the resulting issued
+context once. Hosts must connect this callback only to an explicit human
+interaction, never to model output or request metadata.
+
+`ClineCore.chatLifecycle` is a stable sanitized facade. Unmanaged Core
+instances expose the same methods but return `unsupported_capability`, so app
+code does not interpret a missing facade as permission to fall back to generic
+lifecycle calls. Managed Core rejects generic `start` and guarded-session
+`stop` and `send`, plus generic checkpoint `restore` because it can start a
+replacement session internally; stable operation and session IDs are required. Managed turns
+run only under the resident lease guard. After the host has durably advanced
+the fenced session row, Core records chat activity from that authoritative
+timestamp and updates the guard's chat revision before the next mutation.
+Queued turns preserve the host's no-immediate-result behavior. Start
+preparation, bootstrap retention, telemetry, stop cleanup, and Core disposal
+preserve the existing Core ordering. Managed disposal quiesces and releases
+guards before the host and owned SQLite connections close. CLI and connector
+composition must remain disabled until every lifecycle caller converges;
+partial cutover is forbidden.
+
+Lost live-lease recovery is also part of the sanitized facade. The coordinator
+reads the current active lease, asks the host for a `revoke_lease` confirmation
+bound to that lease revision, revokes with a deterministic operation step, and
+acquires a replacement generation before installing the new guard and starting
+the host. The stale token immediately fails the durable writer-generation
+fence, while the caller receives only the replacement revision and expiry.
+
+Binding lookup, bind, and reset are part of that same facade in managed-local
+composition. Lookup hides bindings whose retained workspace evidence is
+outside the Core scope. Bind requires a resident guarded session and uses
+stable operation identity plus expected binding revision. Reset is not client
+detachment: it quiesces the host, stops lease renewal, CAS-unbinds the observed
+binding, and releases the exact writer lease through deterministic saga step
+IDs. A failed saga retains its original reset operation identity for retry;
+ordinary connector shutdown must preserve the binding and use managed stop
+instead of reset.
+
+Archive, activate, rename, and purge also cross only the sanitized facade.
+Ordinary archive rejects a running member. Explicit stop-and-archive obtains
+human confirmation before quiescing resident sessions, then commits lifecycle
+and optional binding clear in one catalog transaction. Rename is a
+non-destructive human mutation with stable invocation identity and chat
+revision CAS; it records `manual` title provenance without changing activity
+ordering. Purge requires an archived, quiescent chat and one-time confirmation,
+writes tombstones before cleanup, and keeps the catalog in deleting/error state
+until strict idempotent cleanup succeeds. The cleanup adapter checks claim
+cancellation before every destructive effect, deletes checkpoint refs
+strictly, verifies filesystem removal, and returns only a content-bound receipt.
+Hub v1 exposes matching strict schemas and dispatch, but production capability
+remains disabled until authenticated workspace scope owns the managed runtime.
+
+The first Hub-scope security slice is intentionally internal and
+unadvertised. `HubWorkspaceCapabilityAuthority` issues CSPRNG 256-bit,
+digest-only, short-lived, one-time workspace capabilities; consuming one
+creates an immutable server identity containing connection, principal, tenant,
+canonical workspace, epoch, transport, and authentication time. Workspace
+revocation advances the epoch before invalidating pending grants and active
+identities. `HubServerTransport.openConnection(...)` accepts only an identity
+issued by its private authority, revalidates that identity for every command,
+and releases it when the handle closes. Direct/contextless transport dispatch
+rejects every `chat_catalog.*` command even when a catalog host is configured.
+Core also verifies that host-issued catalog authority exactly matches the
+authenticated identity; registration metadata cannot substitute any field.
+Every browser socket now receives an explicit per-connection transport handle.
+`HubServerTransport` reserves public client IDs to that handle, rejects
+cross-handle registration/update/unregister and command spoofing, scopes event
+subscriptions to the same owner, and removes clients, subscriptions, and
+session participation on close. The browser's duplicate-ID map is only an
+additional perimeter check.
+
+Workspace selection is separated from capability minting by
+`HubWorkspaceCapabilityRegistry`. Trusted in-process enrollment accepts an
+existing directory, resolves symlinks to its canonical real path, binds it to
+tenant and principal, and returns a random 256-bit opaque ID. Registry list and
+mint surfaces contain no path; mint resolves only an opaque ID under the
+already-authenticated tenant/principal. Unknown and cross-owner IDs share one
+generic error. Unregister removes enrollment before advancing the authority
+epoch, invalidating pending grants and active identities. M0 registry state is
+process-local by design, so restart invalidates IDs and requires trusted
+re-enrollment rather than reviving stale path-derived authority.
+
+Trusted in-process hosts may list opaque registrations and issue one-time
+credentials. A dedicated WebSocket subprotocol consumes the credential before
+upgrade, never downgrades an invalid presented credential to daemon-token or
+Origin authentication, binds the resulting identity to the socket transport,
+rejects replay, and closes the affected socket after epoch revocation. There is
+no HTTP mint route.
+
+`NodeHubClient` requests a fresh workspace capability before every physical
+socket through an injected provider. Concurrent connection attempts share one
+acquisition, an explicit close cancels a pending acquisition before any socket
+opens, provider failures are sanitized, and neither the credential nor the
+daemon token is cached or combined in the workspace subprotocol. The
+in-process adapter mints only by the registry's opaque workspace ID.
+
+Trusted in-process hosts may also request catalog confirmation for an active
+workspace connection. Core derives the opaque workspace registration from the
+unforgeable identity, normalizes the exact operation target, and gives the
+human callback a frozen pathless prompt with no invocation ID or credential.
+Prompts are bounded and abort on timeout, close, epoch revoke, or shutdown.
+Callback failures are sanitized; Core rechecks the same identity after the
+callback and after asynchronous host authorization immediately before catalog
+entry. Confirmation credentials are one-time, digest-only at rest, bounded,
+never connection-ID reusable, and revoked connection-wide before socket close.
+
+Authenticated workspace runtimes now have a process-local ownership kernel.
+`HubWorkspaceManagedCorePool` derives its unambiguously encoded key only from
+the private authority's tenant, principal, canonical workspace, workspace
+epoch, authority class, immutable audience, policy epoch, and full connection
+policy digest. Concurrent socket requests for the same scope single-flight one
+factory result, while same-class audiences never share a Core. The pool
+rechecks authority after asynchronous construction, aborts and bounds
+factory/retirement/disposal waits, disposes a late result after revocation,
+replaces an old epoch, and retires workspace runtimes on revoke, unregister, or
+server shutdown. Configuring this factory without workspace authority fails
+startup. A managed server admits only exact client bookkeeping and the strict
+projection/lifecycle/runtime wires below. It rejects raw `chat_catalog.*`
+before catalog/Core entry and rejects all legacy runtime, schedule, drive,
+status, settings, global client-list, and other command routes. Bound and
+direct legacy event subscriptions remain disabled; managed clients receive
+only workspace- and audience-bound sanitized projections.
+
+Hub lifecycle v1 defines an exhaustive strict request and result registry for
+14 commands: root/related/checkpoint start, resume, lost-lease recovery, turn,
+binding lookup/bind/reset, archive/activate/rename/purge, and stop. Callers
+select only opaque host profiles and optional workspace-relative working
+directories. Start profiles are admission-only and reject prompts; managed
+turns start only through `chat_lifecycle.run_turn` after resident ownership is
+registered. The wire rejects paths, credentials, authority claims, unknown
+fields, traversal-shaped session IDs, malformed results, and protocol drift.
+The server resolves requested working directories with `realpath`, rejects
+symlink escapes, and removes the relative hint before adapter invocation.
+Session artifact sinks independently enforce one-segment IDs, canonical
+containment, and no directory symlink. Chat projections omit the
+canonical workspace key; turn results contain bounded sanitized summaries,
+not messages or tool calls; empty turn/binding results use explicit `null`.
+Every successful admission also returns a strict descriptive authority with
+profile ID/revision, authority class, policy epoch, and canonical allowed-mode
+ceiling. It returns neither credentials nor connection/execution-policy
+digests.
+The authenticated handler freezes normalized input, supplies the trusted
+adapter with the server identity and connection abort signal, rechecks
+authority after every await, and validates output before transmission.
+Arbitrary adapter errors and catalog error details are not reflected to the
+client. The trusted adapter still owns profile resolution, connector
+provenance, and the final cancellation fence immediately before mutation.
+
+Managed event v1 exposes one strict `chat.changed` projection. Its payload is
+limited to event/aggregate revisions, occurrence time, optional path-safe
+session scope, and an optional sanitized pathless chat snapshot. It admits no
+prompt, transcript, assistant body, reasoning, tool call, credential, actor,
+client, or workspace-path field. Subscription setup requires a successfully
+registered client owned by the same authenticated transport. Core constructs
+the workspace runtime, validates every adapter emission, reapplies the optional
+session filter, and suppresses malformed or post-revocation output. Listener
+cleanup remains bound to connection close. Generic wildcard Hub events remain
+disabled on managed servers.
+
+Catalog schema v5 adds immutable audience ownership to chats, bindings,
+retained purge state, and event delivery scope. A copied pre-v5 database
+upgrades in two transactions: phase one freezes strict writer-fenced profile
+evidence, records the legacy event high-water, quarantines rows, and revokes
+legacy writers; phase two maps only exact frozen evidence. Missing, malformed,
+or ambiguous evidence remains non-runnable `audience_unassigned`. Historical
+unscoped events are audit-only. A later explicit human assignment is append-only
+and emits the first scoped event without reactivating the writer lease.
+
+CA-0 defines the separate reconciliation contract and CA-1 implements its
+still-unadvertised server authority. `chat_projection.v1` contains only bounded
+`list` and `get`: every result carries an opaque snapshot identity and
+authoritative catalog sequence. The server materializes one sanitized SQLite
+cut and binds continuation cursors to the same audience, query, page size,
+snapshot, and authenticated connection. The client additionally permits at
+most one request to consume a continuation cursor. Aggregate output is byte
+bounded. Included session and binding summaries carry authoritative total
+counts, so a bounded subset is never mistaken for complete lineage. Projection
+schemas contain no workspace path, authority selector, credential, lease state,
+transcript, prompt, provider configuration, or raw catalog mutation surface.
+
+The additive reconciled lifecycle envelope carries `catalogSequence` and a
+listener-relative `previousDeliveredSequence`. Its fenced subscription starts
+after the projection cut and reports ready only with the accepted cursor and
+processed-through sequence. The server reads only the authenticated audience's
+event-time projections, advances a separate scanned cursor across foreign,
+legacy, and otherwise hidden global rows, chains only successfully delivered
+events, rejects cursors ahead of the durable head, and withholds ready if
+delivery is not admitted. Client code applies each event before committing
+its checkpoint; a malformed event, failed application, broken chain, invalid
+ready acknowledgement, or unavailable replay releases the stream and fails
+closed. Applied projection state is published to facade observers only after the
+same event's checkpoint advances. `NodeHubClient` can carry a lifecycle cursor
+provider and readiness acknowledgement, re-evaluating the latest checkpoint on
+every physical subscription. The current daemon deliberately does not
+advertise or select the implemented route while the one production release
+gate remains off.
+
+Hub runtime v1 adds 12 strict operations for a session already admitted by
+managed lifecycle: abort, durable reclaim, approval/capability response,
+pending-prompt reads/mutations, sanitized messages/checkpoints/usage/compaction
+reads, and trusted manual compaction. Runtime events use one strict sequenced
+projection. The server validates every result/event before transmission,
+omits paths and provider payloads, and closes a slow socket when a high-priority
+reply or runtime event cannot enter the byte-bounded outbound queue. For
+assistant deltas, `sessionSequence` is an inclusive end and an optional start
+declares at most 256 contiguous source events. Only the WebSocket delivery layer
+creates multi-event ranges. It merges only the globally newest adjacent queued
+entry for the same subscription/session/run/kind, edits it in place, preserves
+endpoint metadata, and never crosses a semantic event or reply. Reaching a
+text/range limit starts a new singleton.
+
+Each resident managed session also owns an opaque process-local stream epoch
+and a byte/count-bounded journal of deep-frozen sanitized singleton events.
+The epoch survives durable writer rekey and changes on unregister/recreate,
+adapter restart, or safe sequence rollover. A fresh strict subscription
+installs its listener and returns an atomic ready cursor, including sequence
+zero for a quiet session. On one genuine same-connection forward gap, the
+strict client releases the old transport fence, presents its last accepted
+`(streamId, sessionSequence)` cursor, and accepts only the exact contiguous
+retained suffix. The source's ready cutoff may arrive after newer contiguous
+live output; it is accepted only on the requested stream and between the
+requested and already delivered cursors, inclusive. Replay admission failure,
+stale epoch, eviction, discontinuity, a cutoff outside that interval, timeout,
+cancellation, or a second gap is terminal; provider execution and persistence
+reconstruction are forbidden. Runtime journal metadata capacity is reserved
+before a durable lifecycle start/resume path, so exhaustion fails before Core
+creates resident state or a writer lease.
+
+Strict runtime subscriptions are session-scoped. Global managed subscriptions
+carry lifecycle events only and cannot silently degrade into a partial runtime
+feed after reconnect. The central WebSocket resource policy defaults to 256
+active or in-flight subscriptions per physical connection. Both the socket
+adapter and Hub connection transport enforce the cap before source creation;
+identical fenced retries remain idempotent. The socket adapter converges one
+bounded desired set through a coalescing reconciliation runner. Physical
+sources retain exact admission-generation identity, callbacks verify that
+identity before delivery, and ingress changes across asynchronous setup restart
+from physical cleanup before another source is admitted.
+
+A physical reconnect is not authorized to replay automatically. Node reports
+`session_reclaim_required` immediately on physical loss, before autonomous
+retry, and exposes the exact registered physical connection generation.
+`ManagedSessionController` then retains the last accepted cursor, replays one
+stable reclaim operation across uncertain replies, validates an exact
+one-generation advance, and admits the new cursor subscription against that
+exact connection generation. Both reclaim-command send and subscription
+admission compare the generation synchronously. A queued frame from a retired
+socket is ignored, so neither a later reconnect nor old physical output can
+cross the authority fence.
+
+The reclaim result includes only sanitized authority metadata plus
+`ownerTransferred`. If a durable rekey committed but its target disappeared, a
+new physical connection may replay the same operation only to observe the
+committed generation with `ownerTransferred: false`. That receipt never moves
+the process-local owner. The controller creates a new operation against the
+observed generation and completes another durable rekey before subscribing.
+All connects, commands, retries, and readiness waits share a bounded recovery
+deadline. Dispose sends the exact operation through
+`chat_runtime.session.reclaim.cancel` on the captured generation without
+closing the shared Hub client. Cancellation aborts renewable/startup/drain
+waits before the durable callback; after durable work starts, the successor is
+installed and its connection owner is orphaned instead of rolling authority
+back. The current owner retains its exact reclaim intent independently of the
+bounded response-replay cache, so receipt eviction cannot erase post-commit
+cancellation authority. Journal entries—including sanitized orphan terminal
+events—may survive these in-process rekeys, while live fanout remains current-
+owner-only.
+
+Managed callback authority is closed-world and profile-owned. The first
+supported name is `tool_executor.askQuestion`, granted only by the interactive
+production profile revision 2 / policy epoch 2. The factory includes the
+immutable manifest in the managed execution-policy digest, injects the
+corresponding in-process executor, and registers the same manifest with the
+resident runtime owner. The broker emits only exact bounded
+`{ question, options }` requests and accepts only exact `{ answer }` results.
+It never emits `AgentToolContext`, workspace metadata, or functions. Responses
+must match connection, session, run, request, capability, and recorded expiry,
+and are consumed once; timeout, abort, disconnect, owner transition, stop, run
+end, or disposal cancels pending work with a fixed safe failure.
+
+Resident writer authority is also a callback fence. The catalog-managed lease
+guard exposes one trusted in-process abort signal through `ClineCore`; the
+managed adapter binds it to the resident owner, preserves it across durable
+rekey, and removes the listener on unregister or disposal. Renewal or
+writer-fence loss marks the active run aborting and cancels callbacks before the
+Core run settles. Managed stop first prepares the adapter—fencing the run and
+cancelling callbacks—before awaiting Core stop, avoiding a callback-timeout
+deadlock.
+
+The physical WebSocket path preserves subscription-before-command ordering per
+socket: a command waits for earlier subscribe/unsubscribe setup, while commands
+remain mutually concurrent so capability responses and aborts can resolve an
+active turn. Strict runtime subscriptions also carry a fresh opaque transport
+fence captured by their exact server listener and echoed outside the event
+envelope. Node routes fenced frames only to the matching live listener and
+uses an acknowledgement watchdog for every physical fence, so stale queued or
+in-flight output cannot enter a replacement subscription and silent setup
+cannot hang indefinitely. Subscription setup that settles after socket close
+releases immediately. Loopback conformance covers one-time workspace
+capability, registration, profile start, callback event/response, terminal
+turn, stop cancellation, late-response rejection, and physical additive-range
+delivery without a manufactured gap, plus exact one-shot recovery from a
+physical delivery gap. Replacement-socket conformance additionally covers
+three fresh one-time capabilities and registrations, a lost committed reclaim
+reply, a second socket loss during reclaim, same-intent receipt reconciliation,
+a second durable rekey, cursor replay, and readiness in that order.
+
+The owner-authenticated selector-free control plane, fresh-per-socket provider,
+production profile registry, concrete managed-Core factory, lifecycle/runtime
+adapters, durable resident reclaim, and host-owned manual-compaction receipt
+state machine are composed but inert. Production confirmation delivery,
+manual-compaction authorization/races, production adoption of the controller,
+and all-caller cutover are still open. The one daemon release gate therefore
+remains hard off and managed capabilities stay unadvertised in production.
+
+The CA-0 caller seam is the separate Core-owned `ManagedHubChatClient`, not a
+mode on legacy `HubSessionClient`. Creation first probes the public pathless
+`/version` metadata and requires independent `chat_projection.v1`,
+`chat_lifecycle.v1`, and `chat_runtime.v1` support before invoking a workspace
+capability provider or constructing a socket transport. Its options accept no
+daemon token, workspace selector, audience selector, or authority-class
+selector. It hydrates one bounded projection cut, reaches reconciled lifecycle
+ready, then exposes semantic lifecycle operations and a separately bounded
+resident-session registry. Each admission reserves capacity atomically,
+creates one controller over the facade's shared runtime adapter, and withholds
+the session handle until the exact-generation runtime subscription is ready;
+its operation identity remains leased through that readiness boundary.
+Per-session disposal drains reclaim cancellation without closing the shared
+transport; repeated, concurrent, and global disposal share a drain barrier
+covering pre-controller admissions, starting controllers, and failure-launched
+reclaim cancellation before transport teardown. Unknown command outcomes retain
+only operation ID, strict command kind, and an intent digest in a bounded map
+that rejects new intent before send when full; terminal rejection clears the
+intent. Approval and capability responses retain exact session/run/request
+correlation and are one-shot. No facade method accepts or emits
+`chat_catalog.*`.
+
+`LocalRuntimeHost` registers a lifecycle epoch before its first startup await.
+Quiescence closes turn and persistence admission synchronously, waits for
+startup and active turns, drains the ordered write queue, shuts down agent,
+team/runtime, and plugin producers, then persists terminal state last. Any
+cleanup or terminal-persistence failure withholds the receipt. The managed
+runtime releases authority only after a receipt; otherwise it retains the lease
+until explicit recovery or expiry.
 
 ### 4. Settings Mutation Boundary
 
@@ -529,25 +815,6 @@ Design implications:
 - avoid mixing config discovery code into runtime/plugin code
 - avoid creating thin runtime wrapper files when a helper is fundamentally projecting watcher state
 
-Sandboxed plugin subprocesses are session-local but lazily recreatable. Core
-reclaims a sandbox after 30 minutes without an in-flight RPC call (configurable
-through `PluginSandboxOptions.idleTimeoutMs` or
-`CLINE_PLUGIN_IDLE_TIMEOUT_MS`), and the next plugin call starts and
-reinitializes it transparently. Pending requests are associated with the child
-generation that owns them so an old process exiting cannot reject work sent to
-its replacement. The bootstrap also exits when its parent IPC channel
-disconnects. The parent is the single authority for idle shutdown so competing
-deadlines cannot terminate a child while the parent is dispatching new work.
-
-Design implications:
-
-- sandbox process count scales with recently active sessions, not every session
-  observed since hub startup
-- eviction never interrupts an in-flight plugin call
-- in-process plugin state is ephemeral across idle eviction; durable plugin
-  state belongs in persistent storage
-- a sandbox must never outlive its owning hub process
-
 ## Architectural Constraints
 
 ### Keep `agents` Stateless
@@ -625,11 +892,9 @@ orchestrator used by core and hub layers.
    renews the run claim while execution is active, writes a markdown report
    per run, and transactionally updates status. File specs can constrain
    tool availability, config extension loading (`rules`, `skills`,
-   `plugins`), trigger source, and a notes directory that is injected into
-   the system prompt. The automation runtime adapters explicitly persist
-   `mode: "automation"` for every run and record the spec-defined trigger
-   source as `sessionHistoryOrigin.trigger` in session metadata. Event runs
-   include the normalized trigger event context in the prompt.
+   `plugins`), session source, and a notes directory that is injected into
+   the system prompt. Event runs include the normalized trigger event context
+   in the prompt.
 8. **Reports** (`cron/reports/cron-report-writer.ts`): writes
    `.cline/cron/reports/<run-id>.md` with run frontmatter plus
    `## Summary`, `## Usage`, `## Tool Calls`, and, for event runs,

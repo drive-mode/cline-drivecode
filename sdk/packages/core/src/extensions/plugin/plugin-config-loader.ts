@@ -14,10 +14,9 @@ import {
 import { filterDisabledPluginPaths } from "../../services/global-settings";
 import type { PluginLoadDiagnostics } from "./plugin-load-report";
 import { loadAgentPluginsFromPathsWithDiagnostics } from "./plugin-loader";
+import type { PluginSandboxOptions } from "./plugin-sandbox";
 import { loadSandboxedPlugins } from "./plugin-sandbox";
 import type { PluginTargeting } from "./plugin-targeting";
-
-export { getPluginDisplayName } from "@cline/shared/storage";
 
 type AgentPlugin = NonNullable<AgentConfig["extensions"]>[number];
 
@@ -38,7 +37,6 @@ export interface ResolveAgentPluginPathsOptions {
 	pluginPaths?: ReadonlyArray<string>;
 	workspacePath?: string;
 	cwd?: string;
-	includeDisabled?: boolean;
 }
 
 function isDirectory(path: string): boolean {
@@ -190,8 +188,7 @@ export function resolveAgentPluginPaths(
 		cwd,
 	);
 
-	const paths = [...configuredPaths, ...discoveredFromSearchPaths];
-	return options.includeDisabled ? dedupePaths(paths) : mergePluginPaths(paths);
+	return mergePluginPaths([...configuredPaths, ...discoveredFromSearchPaths]);
 }
 
 function resolveAgentPluginPathsBestEffort(
@@ -253,6 +250,7 @@ export interface ResolveAndLoadAgentPluginsOptions
 	automation?: PluginSetupContext["automation"];
 	logger?: PluginSetupContext["logger"];
 	telemetry?: PluginSetupContext["telemetry"];
+	resolveExtensionState?: PluginSandboxOptions["resolveExtensionState"];
 }
 
 export async function resolveAndLoadAgentPlugins(
@@ -264,6 +262,11 @@ export async function resolveAndLoadAgentPlugins(
 		shutdown?: () => Promise<void>;
 	} & PluginLoadDiagnostics
 > {
+	if (options.mode === "in_process" && options.resolveExtensionState) {
+		throw new TypeError(
+			"Host extension state requires the sandboxed plugin execution boundary",
+		);
+	}
 	const paths = resolveAgentPluginPaths(options);
 	if (paths.length === 0) {
 		return { extensions: [], failures: [], warnings: [], pluginPaths: [] };
@@ -307,6 +310,7 @@ export async function resolveAndLoadAgentPlugins(
 		user: options.user,
 		workspaceInfo: options.workspaceInfo,
 		logger: options.logger,
+		resolveExtensionState: options.resolveExtensionState,
 	});
 	return {
 		extensions: sandboxed.extensions ?? [],

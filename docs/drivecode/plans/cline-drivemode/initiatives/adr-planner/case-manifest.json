@@ -1,0 +1,63 @@
+{
+  "case_set_version": "m0.1",
+  "development_cases": [
+    {
+      "case_id": "DEV-01",
+      "path": "baseline/cases/DEV-01.md",
+      "sha256": "4bcfd219cf05228038eb77606e1fbb88f389ecb9e963ebd18371f10b18d56f08",
+      "status": "frozen_and_independently_labeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-02",
+      "path": "baseline/cases/DEV-02.md",
+      "sha256": "0cdd37ebfd835fb8a8224ebb94c11838e38528684f5af7c904de8d1bdc25d525",
+      "status": "frozen_and_independently_labeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-03",
+      "path": "baseline/cases/DEV-03.md",
+      "sha256": "a1aa29ba3b8c1be32bfaae6ab692b4f898ea5416623ac3fed9b1049e3852a0d7",
+      "status": "frozen_and_independently_labeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-04",
+      "path": "baseline/cases/DEV-04.md",
+      "sha256": "1705ec20472998d14a5bcac6fbecdd218d3e201ddd81667063a5ef287a0ca7c9",
+      "status": "frozen_and_independently_labeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-05",
+      "path": "cases/DEV-05.md",
+      "sha256": "3be015b64c1ac65381771b0f0aac6109eb4953b6c4a15249ed135e65beccdd1f",
+      "status": "frozen_unlabeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-06",
+      "path": "cases/DEV-06.md",
+      "sha256": "610ad45939bf602e6f06b5790f5953144ef60e0076a2bf5ee0ad32d16492f387",
+      "status": "frozen_unlabeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-07",
+      "path": "cases/DEV-07.md",
+      "sha256": "34d615b60e12d48dcbaa75f9b1ef400f523e46d8c2320e4c471e49dd6ce2ddd4",
+      "status": "frozen_unlabeled",
+      "source_refs": []
+    },
+    {
+      "case_id": "DEV-08",
+      "path": "cases/DEV-08.md",
+      "sha256": "a424a5efc476d2ad627fa39dd87d7f089ea7b6e271d48301c69142eb661bd695",
+      "status": "frozen_unlabeled",
+      "source_refs": []
+    }
+  ],
+  "held_out_profiles": ["HOLD-01", "HOLD-02", "HOLD-03", "HOLD-04"]
+}
+

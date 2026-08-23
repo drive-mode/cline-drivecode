@@ -1,10 +1,9 @@
 import type { ChatStartSessionRequest, RuntimeLoggerConfig } from "@cline/core";
 import {
-	CoreSessionService,
 	HubSessionClient,
+	isSessionNotFoundError,
 	Llms,
 	ProviderSettingsManager,
-	SqliteSessionStore,
 } from "@cline/core";
 import type { Thread } from "chat";
 import {
@@ -18,7 +17,6 @@ import { resolveSystemPrompt } from "../runtime/prompt";
 import { resolveCliSessionMetadata } from "../utils/enterprise";
 import { resolveWorkspaceRoot } from "../utils/helpers";
 import {
-	parseLocalRowMetadata,
 	parseRowMetadata,
 	readSessionMessageCount,
 	readSessionReplyText,
@@ -137,29 +135,6 @@ export function buildThreadStartRequest<TState extends ConnectorThreadState>(
 	};
 }
 
-/** Terminal hub statuses are not reusable for a new connector turn. */
-const TERMINAL_HUB_SESSION_STATUSES = new Set([
-	"completed",
-	"failed",
-	"aborted",
-	"cancelled",
-]);
-
-export function isReusableConnectorSession(
-	session: { sessionId?: string; status?: string } | undefined | null,
-): boolean {
-	if (!session?.sessionId?.trim()) {
-		return false;
-	}
-	const status = session.status?.trim().toLowerCase();
-	if (!status) {
-		// Older hubs omit status; treat presence as reusable and let send-time
-		// session_not_found recovery handle true zombies.
-		return true;
-	}
-	return !TERMINAL_HUB_SESSION_STATUSES.has(status);
-}
-
 export async function getOrCreateSessionId<
 	TState extends ConnectorThreadState,
 >(input: {
@@ -185,7 +160,7 @@ export async function getOrCreateSessionId<
 	const existing = threadState.sessionId?.trim();
 	if (existing) {
 		const existingSession = await input.client.getSession(existing);
-		if (isReusableConnectorSession(existingSession)) {
+		if (existingSession) {
 			await persistMergedThreadState(
 				input.thread,
 				input.bindingsPath,
@@ -227,15 +202,12 @@ export async function getOrCreateSessionId<
 			input.errorLabel,
 		);
 		input.logger.core.log(
-			existingSession
-				? "Connector thread session is terminal; starting a new session"
-				: "Connector thread session missing; starting a new session",
+			"Connector thread session missing; starting a new session",
 			{
 				severity: "warn",
 				transport: input.transport,
 				threadId: input.thread.id,
 				sessionId: existing,
-				...(existingSession?.status ? { status: existingSession.status } : {}),
 			},
 		);
 	}
@@ -362,20 +334,18 @@ export async function clearSession<TState extends ConnectorThreadState>(input: {
 	if (sessionId) {
 		try {
 			await input.client.stopRuntimeSession(sessionId);
-		} catch {}
-		try {
-			await input.client.deleteSession(sessionId, true);
-		} catch {}
+		} catch (error) {
+			if (!isSessionNotFoundError(error)) throw error;
+		}
+		await forgetThreadSession({
+			thread: input.thread,
+			bindingsPath: input.bindingsPath,
+			baseStartRequest: input.baseStartRequest,
+			errorLabel: input.errorLabel,
+			expectedSessionId: sessionId,
+		});
+		return;
 	}
-	await persistMergedThreadState(
-		input.thread,
-		input.bindingsPath,
-		{
-			...threadState,
-			sessionId: undefined,
-		},
-		input.errorLabel,
-	);
 }
 
 export async function stopConnectorSessions(input: {
@@ -390,37 +360,17 @@ export async function stopConnectorSessions(input: {
 			const { metadata, parentSessionId } = parseRowMetadata(row);
 			return !parentSessionId && input.rpcMatcher(metadata);
 		});
-		await Promise.allSettled(
-			filtered.map(async (row) => {
-				try {
-					await client.stopRuntimeSession(row.sessionId);
-				} catch {}
-				try {
-					await client.deleteSession(row.sessionId, true);
-				} catch {}
-			}),
+		const stopped = await Promise.allSettled(
+			filtered.map((row) => client.stopRuntimeSession(row.sessionId)),
 		);
-		return filtered.length;
+		return stopped.filter((result) => result.status === "fulfilled").length;
 	} catch {
-		// Fall back to local storage when the RPC server is unavailable.
+		// Without the runtime authority we cannot prove quiescence. Preserve
+		// history and report that no live session was stopped.
+		return 0;
 	} finally {
 		client.close();
 	}
-
-	const service = new CoreSessionService(new SqliteSessionStore());
-	const rows = await service.listSessions(5000);
-	const filtered = rows.filter((row) => {
-		if (row.parentSessionId?.trim()) {
-			return false;
-		}
-		return input.localMatcher(parseLocalRowMetadata(row));
-	});
-	await Promise.allSettled(
-		filtered.map(async (row) => {
-			await service.deleteSession(row.sessionId);
-		}),
-	);
-	return filtered.length;
 }
 
 export { readSessionMessageCount, readSessionReplyText };

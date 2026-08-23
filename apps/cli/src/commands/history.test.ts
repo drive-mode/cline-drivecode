@@ -72,7 +72,7 @@ describe("formatHistoryListLine", () => {
 		);
 
 		expect(line).toContain(
-			"12/31/2025 16:00 mock-provider:mock-model [completed] | $0.25 | hello world",
+			"12/31/2025 16:00 mock-provider:mock-model [Legacy/completed] | $0.25 | hello world",
 		);
 	});
 
@@ -99,7 +99,7 @@ describe("formatHistoryListLine", () => {
 		);
 
 		expect(line).toContain(
-			"12/31/2025 16:00 mock-provider:mock-model [completed] | $0.25 | hello world",
+			"12/31/2025 16:00 mock-provider:mock-model [Legacy/completed] | $0.25 | hello world",
 		);
 		expect(line).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/);
 	});
@@ -156,7 +156,9 @@ describe("formatHistoryListLine", () => {
 			}),
 		);
 
-		expect(line).toContain("openai-codex:gpt-5.4 [completed] | hello world");
+		expect(line).toContain(
+			"openai-codex:gpt-5.4 [Legacy/completed] | hello world",
+		);
 		expect(line).not.toContain("$0.25");
 	});
 

@@ -489,7 +489,9 @@ describe("plugin install command", () => {
 		expect(packageManifest.peerDependencies).toEqual({ bun: ">=1.0.0" });
 		expect(packageManifest.peerDependenciesMeta).toBeUndefined();
 		const npmLog = readFileSync(npmLogPath, "utf8");
-		expect(npmLog).toContain(`${join(".tmp")}/`);
+		expect(npmLog).toContain(
+			`${join(".cline", "plugin-install-transactions", ".staging")}/`,
+		);
 		expect(npmLog).toContain(
 			"package install --omit=dev --omit=peer --legacy-peer-deps --no-audit --no-fund --package-lock=false",
 		);
@@ -1022,6 +1024,10 @@ export default {
 	it("prints JSON output for official plugin installs", async () => {
 		const officialPluginsRepo = await createOfficialPluginsRepo({
 			"json-plugin": {
+				"package.json": JSON.stringify({
+					name: "@example/json-plugin",
+					cline: { plugins: [{ paths: ["./index.ts"] }] },
+				}),
 				"index.ts":
 					"export default { name: 'json-plugin', manifest: { capabilities: ['tools'] } };",
 			},
@@ -1037,6 +1043,13 @@ export default {
 				source: "json-plugin",
 				cwd: workspace,
 				officialPluginsRepo,
+				verification: {
+					pluginNames: ["json-plugin"],
+					capabilities: ["tools"],
+					commandNames: [],
+					toolNames: [],
+					skillNames: [],
+				},
 				json: true,
 				io: {
 					writeln: () => {},
@@ -1044,10 +1057,17 @@ export default {
 				},
 			});
 			expect(code).toBe(0);
-			const parsed = JSON.parse(stdout.join("")) as { installPath: string };
+			const parsed = JSON.parse(stdout.join("")) as {
+				installPath: string;
+				verification?: { status?: string; pluginNames?: string[] };
+			};
 			expect(parsed.installPath).toContain(
 				join(workspace, ".cline", "plugins", "_installed", "official"),
 			);
+			expect(parsed.verification).toMatchObject({
+				status: "verified",
+				pluginNames: ["json-plugin"],
+			});
 		} finally {
 			process.stdout.write = originalWrite;
 		}

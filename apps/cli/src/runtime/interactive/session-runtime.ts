@@ -15,7 +15,7 @@ import {
 	type ToolApprovalResult,
 	type UserInstructionConfigService,
 } from "@cline/core";
-import type { MessageWithMetadata } from "@cline/shared";
+import type { Message } from "@cline/shared";
 import { createCliCore } from "../../session/session";
 import { submitAndExitInTerminal } from "../../utils/approval";
 import type {
@@ -56,11 +56,11 @@ type AskQuestionRef = {
 	current: ((question: string, options: string[]) => Promise<string>) | null;
 };
 type CurrentMessagesRead =
-	| { messages: MessageWithMetadata[]; status: "read" }
-	| { messages: MessageWithMetadata[]; status: "recovered" }
-	| { messages: MessageWithMetadata[]; status: "stale" };
+	| { messages: Message[]; status: "read" }
+	| { messages: Message[]; status: "recovered" }
+	| { messages: Message[]; status: "stale" };
 type MissingSessionRecovery = {
-	messages: MessageWithMetadata[];
+	messages: Message[];
 };
 type ToolPolicyResolver = (
 	toolName: string,
@@ -210,7 +210,7 @@ export function createInteractiveSessionRuntime(input: {
 	};
 
 	const startFreshSession = async (
-		initial: MessageWithMetadata[] = [],
+		initial: Message[] = [],
 		sessionMetadata?: Record<string, unknown>,
 		initialCompactionState?: SessionCompactionState,
 		// Restarting an old session associate with this ID,
@@ -243,7 +243,7 @@ export function createInteractiveSessionRuntime(input: {
 
 	const startResumedSession = async (
 		resumeId: string,
-		initial: MessageWithMetadata[] | undefined,
+		initial: Message[] | undefined,
 	): Promise<void> => {
 		const generation = sessionStartGeneration;
 		const manager = await ensureSessionManager();
@@ -421,7 +421,7 @@ export function createInteractiveSessionRuntime(input: {
 	};
 
 	const restartWithMessages = async (
-		messages: MessageWithMetadata[],
+		messages: Message[],
 		sessionMetadata?: Record<string, unknown>,
 		initialCompactionState?: SessionCompactionState,
 		options?: { preserveSessionId?: boolean },
@@ -570,6 +570,7 @@ export function createInteractiveSessionRuntime(input: {
 	const updatePendingPrompt = async (input: {
 		promptId: string;
 		prompt?: string;
+		mode?: "act" | "plan" | "yolo";
 		delivery?: "queue" | "steer";
 	}): Promise<PendingPromptMutationResult> => {
 		if (!sessionManager) {
@@ -588,6 +589,60 @@ export function createInteractiveSessionRuntime(input: {
 			updated: result.updated,
 			removed: result.removed,
 		};
+	};
+
+	const listPendingPrompts = async () => {
+		await ensureReady();
+		if (!sessionManager || !activeSessionId) {
+			return [];
+		}
+		return await sessionManager.pendingPrompts.list({
+			sessionId: activeSessionId,
+		});
+	};
+
+	const removePendingPrompt = async (
+		promptId: string,
+	): Promise<PendingPromptMutationResult> => {
+		await ensureReady();
+		if (!sessionManager || !activeSessionId) {
+			throw startupError instanceof Error
+				? startupError
+				: new Error("interactive session manager is unavailable");
+		}
+		return await sessionManager.pendingPrompts.delete({
+			sessionId: activeSessionId,
+			promptId,
+		});
+	};
+
+	const getUsageSnapshot = async () => {
+		await ensureReady();
+		if (!sessionManager || !activeSessionId) {
+			return undefined;
+		}
+		return await sessionManager.getAccumulatedUsage(activeSessionId);
+	};
+
+	const getCompactionSnapshot = async () => {
+		await ensureReady();
+		const manager = sessionManager;
+		const sessionId = activeSessionId;
+		if (!manager || !sessionId) {
+			throw startupError instanceof Error
+				? startupError
+				: new Error("interactive session manager is unavailable");
+		}
+		return await manager.readSessionCompactionState(sessionId);
+	};
+
+	const listCurrentCheckpoints = async (): Promise<CheckpointEntry[]> => {
+		await ensureReady();
+		if (!sessionManager || !activeSessionId) {
+			return [];
+		}
+		const sessionRecord = await sessionManager.get(activeSessionId);
+		return sessionRecord ? readSessionCheckpointHistory(sessionRecord) : [];
 	};
 
 	const getAccumulatedUsage = async (
@@ -659,9 +714,7 @@ export function createInteractiveSessionRuntime(input: {
 		};
 	};
 
-	const resumeSession = async (
-		sessionId: string,
-	): Promise<MessageWithMetadata[]> => {
+	const resumeSession = async (sessionId: string): Promise<Message[]> => {
 		const manager = await ensureSessionManager();
 		const sessionRecord = await manager.get(sessionId);
 		if (!sessionRecord) {
@@ -756,7 +809,7 @@ export function createInteractiveSessionRuntime(input: {
 
 	const getCheckpointData = async (): Promise<
 		| {
-				messages: MessageWithMetadata[];
+				messages: Message[];
 				checkpointHistory: CheckpointEntry[];
 		  }
 		| undefined
@@ -779,9 +832,7 @@ export function createInteractiveSessionRuntime(input: {
 	const restoreCheckpoint = async (
 		runCount: number,
 		restoreWorkspace: boolean,
-	): Promise<
-		{ newSessionId: string; messages: MessageWithMetadata[] } | undefined
-	> => {
+	): Promise<{ newSessionId: string; messages: Message[] } | undefined> => {
 		const manager = sessionManager;
 		if (!manager || !activeSessionId) {
 			return undefined;
@@ -884,7 +935,12 @@ export function createInteractiveSessionRuntime(input: {
 	return {
 		ensureReady,
 		sendCurrentTurn,
+		listPendingPrompts,
 		updatePendingPrompt,
+		removePendingPrompt,
+		getUsageSnapshot,
+		getCompactionSnapshot,
+		listCurrentCheckpoints,
 		getAccumulatedUsage,
 		readCurrentMessages,
 		restartEmpty,

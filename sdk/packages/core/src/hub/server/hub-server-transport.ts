@@ -1,18 +1,24 @@
 import type {
 	HubClientRecord,
+	HubClientRegistration,
 	HubCommandEnvelope,
 	HubEventEnvelope,
 	HubReplyEnvelope,
 	ToolApprovalRequest,
 } from "@cline/shared";
-import { captureSdkError, createSessionId } from "@cline/shared";
+import {
+	captureSdkError,
+	createSessionId,
+	HUB_CHAT_LIFECYCLE_COMMANDS,
+	HUB_CHAT_PROJECTION_COMMANDS,
+	HUB_CHAT_RUNTIME_COMMANDS,
+} from "@cline/shared";
 import { CronService } from "../../cron/service/cron-service";
 import { HubScheduleCommandService } from "../../cron/service/schedule-command-service";
 import { HubScheduleService } from "../../cron/service/schedule-service";
 import { resolveResourcePolicy } from "../../resources/policy";
 import { LocalRuntimeHost } from "../../runtime/host/local-runtime-host";
 import type {
-	CommandExecutionRuntimeService,
 	PendingPromptsRuntimeService,
 	RuntimeHost,
 } from "../../runtime/host/runtime-host";
@@ -25,6 +31,10 @@ import {
 	type CoreSettingsType,
 } from "../../settings";
 import type { CoreSessionEvent } from "../../types/events";
+import type {
+	HubEventSubscriptionOptions,
+	HubSocketCommandTransport,
+} from "./command-transport";
 import {
 	handleApprovalRespond,
 	requestToolApproval as requestToolApprovalHandler,
@@ -37,6 +47,11 @@ import {
 	handleCapabilityRespond,
 	requestCapability as requestCapabilityHandler,
 } from "./handlers/capability-handlers";
+import { handleChatCatalogCommand } from "./handlers/chat-catalog-handlers";
+import { handleChatLifecycleCommand } from "./handlers/chat-lifecycle-handlers";
+import { subscribeChatManagedEvents } from "./handlers/chat-managed-event-handlers";
+import { handleChatProjectionCommand } from "./handlers/chat-projection-handlers";
+import { handleChatRuntimeCommand } from "./handlers/chat-runtime-handlers";
 import {
 	handleClientList,
 	handleClientRegister,
@@ -60,13 +75,11 @@ import { handleDriveForkTickCommand } from "./handlers/drive-fork-tick";
 import { handleDriveCommand } from "./handlers/drive-handlers";
 import { handleDriveHomeCommand } from "./handlers/drive-home-handlers";
 import { handleDrivePrivacyCommand } from "./handlers/drive-privacy-handlers";
-import { handleDriveProjectMapCommand } from "./handlers/drive-project-map-handlers";
 import { handleDriveRoomCommand } from "./handlers/drive-room-handlers";
 import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollups-handlers";
 import { handleDriveWaveCommand } from "./handlers/drive-wave-handlers";
 import {
 	handleRunAbort,
-	handleRunProceedWhileRunning,
 	handleSessionHook,
 	handleSessionInput,
 } from "./handlers/run-handlers";
@@ -98,12 +111,59 @@ import { logHubBoundaryError } from "./hub-server-logging";
 import type { HubWebSocketServerOptions } from "./hub-server-options";
 import type { HubSessionState } from "./hub-session-records";
 import type { NativeHubTransport } from "./native-transport";
+import {
+	type HubAuthenticatedConnection,
+	HubWorkspaceCapabilityAuthority,
+} from "./workspace-capability-authority";
+import type {
+	HubWorkspaceManagedConfirmationRequester,
+	HubWorkspaceManagedCorePool,
+} from "./workspace-managed-core-pool";
+
+const MANAGED_BOOTSTRAP_COMMANDS = new Set([
+	"client.register",
+	"client.update",
+	"client.unregister",
+]);
+const CHAT_LIFECYCLE_COMMANDS = new Set<string>(HUB_CHAT_LIFECYCLE_COMMANDS);
+const CHAT_PROJECTION_COMMANDS = new Set<string>(HUB_CHAT_PROJECTION_COMMANDS);
+const CHAT_RUNTIME_COMMANDS = new Set<string>(HUB_CHAT_RUNTIME_COMMANDS);
+
+function isWorkspaceAuthorityCommand(command: string): boolean {
+	return (
+		command.startsWith("chat_catalog.") ||
+		CHAT_LIFECYCLE_COMMANDS.has(command) ||
+		CHAT_PROJECTION_COMMANDS.has(command) ||
+		CHAT_RUNTIME_COMMANDS.has(command)
+	);
+}
+
+function sanitizeManagedBootstrapEnvelope(
+	envelope: HubCommandEnvelope,
+): HubCommandEnvelope {
+	if (envelope.command === "client.update") {
+		return { ...envelope, payload: {} };
+	}
+	if (envelope.command !== "client.register") return envelope;
+	const source = envelope.payload ?? {};
+	const payload: Record<string, unknown> = {};
+	for (const key of [
+		"clientId",
+		"clientType",
+		"displayName",
+		"actorKind",
+		"transport",
+		"protocolVersion",
+	] as const) {
+		if (source[key] !== undefined) payload[key] = source[key];
+	}
+	return { ...envelope, payload };
+}
 
 const SETTINGS_TYPES = new Set<CoreSettingsType>([
 	"skills",
 	"workflows",
 	"rules",
-	"plugins",
 	"tools",
 	"mcp",
 ]);
@@ -166,7 +226,7 @@ function parseSettingsToggleInput(payload: unknown): CoreSettingsToggleInput {
 		!SETTINGS_TYPES.has(type as CoreSettingsType)
 	) {
 		throw new Error(
-			"settings.toggle payload 'type' must be one of: skills, workflows, rules, plugins, tools, mcp.",
+			"settings.toggle payload 'type' must be one of: skills, workflows, rules, tools, mcp.",
 		);
 	}
 	return {
@@ -176,6 +236,27 @@ function parseSettingsToggleInput(payload: unknown): CoreSettingsToggleInput {
 		path: requireOptionalString(payload, "path"),
 		name: requireOptionalString(payload, "name"),
 		enabled: requireOptionalBoolean(payload, "enabled"),
+	};
+}
+
+interface OpenHubConnectionState {
+	readonly marker: object;
+	readonly authenticatedConnection?: HubAuthenticatedConnection;
+	readonly subscriptions: Set<() => void>;
+	pendingSubscriptions: number;
+	closed: boolean;
+}
+
+function connectionErrorReply(
+	envelope: HubCommandEnvelope,
+	code: string,
+	message: string,
+): HubReplyEnvelope {
+	return {
+		version: envelope.version,
+		requestId: envelope.requestId,
+		ok: false,
+		error: { code, message },
 	};
 }
 
@@ -196,21 +277,33 @@ export class HubServerTransport implements NativeHubTransport {
 		string,
 		string
 	>();
-	private readonly activeRpcTurnCountBySession = new Map<string, number>();
 	private readonly schedules: HubScheduleService;
 	private readonly scheduleCommands: HubScheduleCommandService;
 	private readonly settings: CoreSettingsService;
 	private readonly cronService?: CronService;
 	private readonly sessionHost: RuntimeHost &
-		Partial<PendingPromptsRuntimeService & CommandExecutionRuntimeService>;
+		Partial<PendingPromptsRuntimeService>;
 	private readonly hubId = createSessionId("hub_");
 	private readonly ctx: HubTransportContext;
 	private readonly detachStatusBroadcast: () => void;
+	private readonly openConnections = new Set<OpenHubConnectionState>();
+	private readonly clientConnectionOwners = new Map<
+		string,
+		OpenHubConnectionState
+	>();
+	private readonly maxActiveSubscriptionsPerConnection: number;
 
-	constructor(readonly options: HubWebSocketServerOptions) {
+	constructor(
+		readonly options: HubWebSocketServerOptions,
+		private readonly workspaceCapabilities = new HubWorkspaceCapabilityAuthority(),
+		private readonly workspaceManagedCores?: HubWorkspaceManagedCorePool,
+		private readonly requestManagedCatalogConfirmation?: HubWorkspaceManagedConfirmationRequester,
+	) {
 		const resourcePolicy = resolveResourcePolicy({
 			overrides: options.resourcePolicy,
 		}).profile;
+		this.maxActiveSubscriptionsPerConnection =
+			resourcePolicy.transport.websocket.maxActiveSubscriptions;
 		this.sessionHost =
 			options.sessionHost ??
 			new LocalRuntimeHost({
@@ -228,8 +321,8 @@ export class HubServerTransport implements NativeHubTransport {
 			suppressNextTerminalEventBySession:
 				this.suppressNextTerminalEventBySession,
 			pendingDriveToolInputs: new Map(),
-			activeRpcTurnCountBySession: this.activeRpcTurnCountBySession,
 			telemetry: options.telemetry,
+			chatCatalog: options.chatCatalog,
 			sessionHost: this.sessionHost,
 			publish: (event) => this.publish(event),
 			buildEvent: buildHubEvent,
@@ -330,6 +423,9 @@ export class HubServerTransport implements NativeHubTransport {
 	}
 
 	async stop(): Promise<void> {
+		for (const connection of [...this.openConnections]) {
+			this.closeConnection(connection);
+		}
 		this.detachStatusBroadcast();
 		for (const approvalId of this.pendingApprovals.keys()) {
 			resolvePendingApproval(this.ctx, approvalId, {
@@ -342,20 +438,276 @@ export class HubServerTransport implements NativeHubTransport {
 			() => true,
 			"Hub shutting down before capability request was resolved.",
 		);
-		await this.sessionHost.dispose("hub_server_stop");
-		await this.schedules.dispose();
-		if (this.cronService) {
-			try {
-				await this.cronService.dispose();
-			} catch (err) {
-				console.error("[hub] cron service stop failed", err);
-			}
+		const settled = await Promise.allSettled([
+			this.workspaceManagedCores?.dispose("hub_server_stop"),
+			this.sessionHost.dispose("hub_server_stop"),
+			this.schedules.dispose(),
+			this.cronService?.dispose(),
+		]);
+		const failures = settled.flatMap((result) =>
+			result.status === "rejected" ? [result.reason] : [],
+		);
+		if (failures.length > 0) {
+			throw new AggregateError(failures, "Hub transport shutdown failed");
 		}
 	}
 
 	async handleCommand(envelope: HubCommandEnvelope): Promise<HubReplyEnvelope> {
+		return this.handleCommandForConnection(envelope);
+	}
+
+	openConnection(
+		identity: HubAuthenticatedConnection,
+	): HubSocketCommandTransport {
+		this.workspaceCapabilities.assertActive(identity);
+		if (
+			[...this.openConnections].some(
+				(connection) => connection.authenticatedConnection === identity,
+			)
+		) {
+			throw new Error("Hub workspace connection is already open.");
+		}
+		return this.createConnection(identity);
+	}
+
+	openUnscopedConnection(): HubSocketCommandTransport {
+		return this.createConnection();
+	}
+
+	private createConnection(
+		authenticatedConnection?: HubAuthenticatedConnection,
+	): HubSocketCommandTransport {
+		const state: OpenHubConnectionState = {
+			marker: {},
+			...(authenticatedConnection ? { authenticatedConnection } : {}),
+			subscriptions: new Set(),
+			pendingSubscriptions: 0,
+			closed: false,
+		};
+		this.openConnections.add(state);
+		return Object.freeze({
+			command: (envelope: HubCommandEnvelope) =>
+				this.handleBoundCommand(state, envelope),
+			subscribe: (
+				clientId: string,
+				listener: (event: HubEventEnvelope) => void,
+				options?: HubEventSubscriptionOptions,
+			) => {
+				this.assertConnectionUsable(state);
+				if (this.clientConnectionOwners.get(clientId) !== state) {
+					throw new Error(
+						"Hub event subscription requires this connection's registered client identity.",
+					);
+				}
+				if (
+					state.subscriptions.size + state.pendingSubscriptions >=
+					this.maxActiveSubscriptionsPerConnection
+				) {
+					throw new Error("Hub active subscription bound was reached.");
+				}
+				const track = (unsubscribe: () => void): (() => void) => {
+					try {
+						this.assertConnectionUsable(state);
+					} catch (error) {
+						unsubscribe();
+						throw error;
+					}
+					let active = true;
+					const release = () => {
+						if (!active) return;
+						active = false;
+						state.subscriptions.delete(release);
+						unsubscribe();
+					};
+					state.subscriptions.add(release);
+					return release;
+				};
+				state.pendingSubscriptions += 1;
+				let pending = true;
+				const releasePending = () => {
+					if (!pending) return;
+					pending = false;
+					state.pendingSubscriptions -= 1;
+				};
+				const complete = (unsubscribe: () => void) => {
+					releasePending();
+					return track(unsubscribe);
+				};
+				try {
+					if (
+						!this.workspaceManagedCores ||
+						this.options.managedChatLifecycleEnabled !== true ||
+						!state.authenticatedConnection
+					) {
+						if (options?.runtimeCursor || options?.lifecycleCursor) {
+							throw new Error(
+								"Managed cursors require the managed event lane.",
+							);
+						}
+						return complete(
+							this.subscribe(clientId, listener, {
+								...(options?.sessionId ? { sessionId: options.sessionId } : {}),
+							}),
+						);
+					}
+					return subscribeChatManagedEvents(
+						state.authenticatedConnection,
+						this.workspaceCapabilities,
+						this.workspaceManagedCores,
+						options,
+						listener,
+					).then(complete, (error) => {
+						releasePending();
+						throw error;
+					});
+				} catch (error) {
+					releasePending();
+					throw error;
+				}
+			},
+			closeConnection: () => this.closeConnection(state),
+		});
+	}
+
+	private async handleBoundCommand(
+		state: OpenHubConnectionState,
+		envelope: HubCommandEnvelope,
+	): Promise<HubReplyEnvelope> {
 		try {
-			const reply = await this.dispatchCommand(envelope);
+			this.assertConnectionUsable(state);
+		} catch {
+			return connectionErrorReply(
+				envelope,
+				state.authenticatedConnection
+					? "workspace_connection_revoked"
+					: "hub_connection_closed",
+				"Hub connection is closed or revoked.",
+			);
+		}
+
+		const registration = (envelope.payload ??
+			{}) as unknown as HubClientRegistration;
+		const registrationClientId =
+			envelope.command === "client.register"
+				? registration.clientId?.trim() || envelope.clientId?.trim()
+				: undefined;
+		if (registrationClientId) {
+			const owner = this.clientConnectionOwners.get(registrationClientId);
+			if (
+				(owner && owner !== state) ||
+				(this.clients.has(registrationClientId) && !owner)
+			) {
+				return connectionErrorReply(
+					envelope,
+					"client_conflict",
+					"Client ID is already registered on another connection.",
+				);
+			}
+			this.clientConnectionOwners.set(registrationClientId, state);
+		} else if (envelope.clientId?.trim()) {
+			const clientId = envelope.clientId.trim();
+			if (this.clientConnectionOwners.get(clientId) !== state) {
+				return connectionErrorReply(
+					envelope,
+					"client_not_registered",
+					"Command requires this connection's registered client identity.",
+				);
+			}
+		}
+		if (isWorkspaceAuthorityCommand(envelope.command)) {
+			const clientId = envelope.clientId?.trim();
+			if (
+				!clientId ||
+				this.clientConnectionOwners.get(clientId) !== state ||
+				!this.clients.has(clientId)
+			) {
+				return connectionErrorReply(
+					envelope,
+					"client_not_registered",
+					"Workspace authority commands require this connection's registered client identity.",
+				);
+			}
+		}
+
+		const managedScopedConnection =
+			this.workspaceManagedCores !== undefined &&
+			this.options.managedChatLifecycleEnabled === true &&
+			state.authenticatedConnection !== undefined;
+		const dispatchEnvelope = managedScopedConnection
+			? sanitizeManagedBootstrapEnvelope(envelope)
+			: envelope;
+		const reply = await this.handleCommandForConnection(
+			dispatchEnvelope,
+			state.authenticatedConnection,
+		);
+		if (envelope.command === "client.register") {
+			if (!reply.ok) {
+				if (
+					registrationClientId &&
+					this.clientConnectionOwners.get(registrationClientId) === state
+				) {
+					this.clientConnectionOwners.delete(registrationClientId);
+				}
+			} else {
+				const registeredClientId =
+					registrationClientId ||
+					(typeof reply.payload?.clientId === "string"
+						? reply.payload.clientId.trim()
+						: "");
+				if (registeredClientId) {
+					this.clientConnectionOwners.set(registeredClientId, state);
+				}
+			}
+		} else if (envelope.command === "client.unregister" && reply.ok) {
+			const clientId = envelope.clientId?.trim();
+			if (clientId && this.clientConnectionOwners.get(clientId) === state) {
+				this.clientConnectionOwners.delete(clientId);
+			}
+		}
+		return reply;
+	}
+
+	private assertConnectionUsable(state: OpenHubConnectionState): void {
+		if (state.closed || !this.openConnections.has(state)) {
+			throw new Error("Hub connection is closed.");
+		}
+		if (state.authenticatedConnection) {
+			this.workspaceCapabilities.assertActive(state.authenticatedConnection);
+		}
+	}
+
+	private closeConnection(state: OpenHubConnectionState): void {
+		if (state.closed) return;
+		state.closed = true;
+		this.openConnections.delete(state);
+		for (const unsubscribe of [...state.subscriptions]) unsubscribe();
+		for (const [clientId, owner] of this.clientConnectionOwners) {
+			if (owner !== state) continue;
+			this.clientConnectionOwners.delete(clientId);
+			this.clients.delete(clientId);
+			this.listeners.delete(clientId);
+			this.detachClientFromSessions(clientId);
+			this.publish(
+				this.ctx.buildEvent("hub.client.disconnected", { clientId }),
+			);
+		}
+		if (state.authenticatedConnection) {
+			this.options.chatCatalog?.confirmationBroker.revokeClient(
+				state.authenticatedConnection.connectionId,
+			);
+			this.workspaceCapabilities.release(state.authenticatedConnection);
+		}
+	}
+
+	private async handleCommandForConnection(
+		envelope: HubCommandEnvelope,
+		authenticatedConnection?: HubAuthenticatedConnection,
+	): Promise<HubReplyEnvelope> {
+		try {
+			const reply = await this.dispatchCommand(
+				envelope,
+				authenticatedConnection,
+			);
 			this.captureFailedReply(envelope, reply);
 			return reply;
 		} catch (error) {
@@ -373,7 +725,111 @@ export class HubServerTransport implements NativeHubTransport {
 
 	private async dispatchCommand(
 		envelope: HubCommandEnvelope,
+		authenticatedConnection?: HubAuthenticatedConnection,
 	): Promise<HubReplyEnvelope> {
+		const isManagedLifecycleCommand = CHAT_LIFECYCLE_COMMANDS.has(
+			envelope.command,
+		);
+		const isManagedRuntimeCommand = CHAT_RUNTIME_COMMANDS.has(envelope.command);
+		const isManagedProjectionCommand = CHAT_PROJECTION_COMMANDS.has(
+			envelope.command,
+		);
+		if (
+			envelope.command.startsWith("chat_catalog.") &&
+			this.workspaceManagedCores &&
+			this.options.managedChatLifecycleEnabled === true &&
+			authenticatedConnection
+		) {
+			return connectionErrorReply(
+				envelope,
+				"unsupported_capability",
+				"Raw chat catalog commands are unavailable on managed workspace connections.",
+			);
+		}
+		if (
+			envelope.command.startsWith("chat_catalog.") &&
+			this.options.managedChatLifecycleEnabled !== true
+		) {
+			return connectionErrorReply(
+				envelope,
+				"unsupported_capability",
+				"Managed chat commands are disabled.",
+			);
+		}
+		if (
+			this.workspaceManagedCores &&
+			this.options.managedChatLifecycleEnabled === true &&
+			authenticatedConnection &&
+			!MANAGED_BOOTSTRAP_COMMANDS.has(envelope.command) &&
+			!envelope.command.startsWith("chat_catalog.") &&
+			!isManagedLifecycleCommand &&
+			!isManagedProjectionCommand &&
+			!isManagedRuntimeCommand
+		) {
+			return connectionErrorReply(
+				envelope,
+				"unsupported_capability",
+				"Managed workspace commands require a sanitized managed chat wire.",
+			);
+		}
+		if (isManagedLifecycleCommand) {
+			if (
+				this.options.managedChatLifecycleEnabled !== true ||
+				!authenticatedConnection ||
+				!this.workspaceManagedCores
+			) {
+				return connectionErrorReply(
+					envelope,
+					"unsupported_capability",
+					"Managed lifecycle commands require an authenticated workspace connection.",
+				);
+			}
+			return await handleChatLifecycleCommand(
+				envelope,
+				authenticatedConnection,
+				this.workspaceCapabilities,
+				this.workspaceManagedCores,
+				this.requestManagedCatalogConfirmation,
+			);
+		}
+		if (isManagedRuntimeCommand) {
+			if (
+				this.options.managedChatLifecycleEnabled !== true ||
+				!authenticatedConnection ||
+				!this.workspaceManagedCores
+			) {
+				return connectionErrorReply(
+					envelope,
+					"unsupported_capability",
+					"Managed runtime commands require an authenticated workspace connection.",
+				);
+			}
+			return await handleChatRuntimeCommand(
+				envelope,
+				authenticatedConnection,
+				this.workspaceCapabilities,
+				this.workspaceManagedCores,
+			);
+		}
+		if (isManagedProjectionCommand) {
+			if (
+				this.options.managedChatLifecycleEnabled !== true ||
+				!authenticatedConnection ||
+				!this.workspaceManagedCores
+			) {
+				return connectionErrorReply(
+					envelope,
+					"unsupported_capability",
+					"Managed projection commands require an authenticated workspace connection.",
+				);
+			}
+			return await handleChatProjectionCommand(
+				envelope,
+				authenticatedConnection,
+				this.workspaceCapabilities,
+				this.workspaceManagedCores,
+			);
+		}
 		switch (envelope.command) {
 			case "client.register":
 				return handleClientRegister(this.ctx, envelope);
@@ -386,6 +842,47 @@ export class HubServerTransport implements NativeHubTransport {
 				});
 			case "client.list":
 				return handleClientList(this.ctx, envelope);
+			case "chat_catalog.list":
+			case "chat_catalog.get":
+			case "chat_catalog.adopt_root":
+			case "chat_catalog.record_branch":
+			case "chat_catalog.attach_successor":
+			case "chat_catalog.record_activity":
+			case "chat_catalog.rename":
+			case "chat_catalog.archive":
+			case "chat_catalog.activate":
+			case "chat_catalog.bind":
+			case "chat_catalog.unbind":
+			case "chat_catalog.lease.get":
+			case "chat_catalog.lease.verify":
+			case "chat_catalog.lease.acquire":
+			case "chat_catalog.lease.renew":
+			case "chat_catalog.lease.release":
+			case "chat_catalog.lease.revoke":
+			case "chat_catalog.purge":
+				if (!authenticatedConnection) {
+					return {
+						version: envelope.version,
+						requestId: envelope.requestId,
+						ok: false,
+						error: {
+							code: "unsupported_capability",
+							message:
+								"Chat catalog commands require an authenticated workspace connection.",
+						},
+					};
+				}
+				return await handleChatCatalogCommand(
+					this.ctx,
+					envelope,
+					authenticatedConnection,
+					(identity) =>
+						Object.freeze({
+							signal: this.workspaceCapabilities.signal(identity),
+							assertActive: () =>
+								this.workspaceCapabilities.assertActive(identity),
+						}),
+				);
 			case "session.create":
 				return await handleSessionCreate(
 					this.ctx,
@@ -433,8 +930,6 @@ export class HubServerTransport implements NativeHubTransport {
 				return await handleSessionInput(this.ctx, envelope);
 			case "run.abort":
 				return await handleRunAbort(this.ctx, envelope);
-			case "run.proceed_while_running":
-				return await handleRunProceedWhileRunning(this.ctx, envelope);
 			case "capability.request":
 				return await handleCapabilityRequest(this.ctx, envelope);
 			case "approval.respond":
@@ -456,16 +951,9 @@ export class HubServerTransport implements NativeHubTransport {
 			case "connector.channels":
 			case "connector.configure":
 			case "connector.delete_config":
-			case "connector.start":
-			case "connector.stop":
-			case "connector.supervised":
 				return await handleConnectorCommand(this.ctx, envelope);
 
 			case "drive.room.get":
-			case "drive.presenter.grant":
-			case "drive.presenter.transfer":
-			case "drive.presenter.revoke":
-			case "drive.presenter.status":
 			case "drive.spotlight.set":
 			case "drive.participant.mute.set":
 			case "drive.participant.deafen.set":
@@ -515,8 +1003,6 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_bank_record_failure":
 			case "drive_bank_accept_sdlc_freeze":
 				return await handleDriveBankCommand(this.ctx, envelope);
-			case "drive_project_map_get":
-				return await handleDriveProjectMapCommand(envelope);
 			case "drive_session_rollups":
 				return await handleDriveSessionRollupsCommand(this.ctx, envelope);
 			case "drive_agent_home_get":

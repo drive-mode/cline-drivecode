@@ -1,0 +1,118 @@
+{
+  "summary": "Plan a static, CDN-hosted personal portfolio around an easy-to-edit content workflow and reliable publishing procedure.",
+  "concerns": [
+    {
+      "id": "editing-workflow",
+      "concern": "Choose how the sole maintainer will edit pages and assets.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["The goal is easy edits.", "There is one maintainer.", "The site uses pre-rendered pages and assets."],
+      "unknowns": ["Which source format, site generator, or editing approach the maintainer prefers."],
+      "rationale": "The editing approach directly determines whether routine portfolio updates remain easy."
+    },
+    {
+      "id": "publishing-workflow",
+      "concern": "Define the deployment and verification procedure for publishing the static site to the CDN.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "now",
+      "artifact_route": "runbook",
+      "lifecycle_gate": "implementation",
+      "criticality": "critical",
+      "prerequisites": ["editing-workflow"],
+      "evidence": ["The site is deployed through a CDN.", "The goal is reliable publishing.", "There is one maintainer."],
+      "unknowns": ["How deployments are initiated.", "What checks confirm a published change is live and correct.", "How a failed publication is handled."],
+      "rationale": "A documented, repeatable publication path is needed to make deployment reliable for the only maintainer."
+    },
+    {
+      "id": "content-asset-organization",
+      "concern": "Establish a simple structure for pages and portfolio assets that supports routine edits.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "preplan",
+      "criticality": "standard",
+      "prerequisites": ["editing-workflow"],
+      "evidence": ["The portfolio consists of pre-rendered pages and assets.", "The goal is easy edits."],
+      "unknowns": ["The expected number and types of pages and assets.", "Whether asset optimization is required."],
+      "rationale": "Clear organization reduces the effort and likelihood of mistakes when changing content."
+    },
+    {
+      "id": "contact-link-validation",
+      "concern": "Confirm that the mailto contact link uses the intended contact address.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "release",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": ["Contact is a `mailto` link."],
+      "unknowns": ["The intended recipient address and any desired subject or body fields."],
+      "rationale": "The specified contact mechanism must direct visitors to the correct destination."
+    },
+    {
+      "id": "account-database-analytics-scope",
+      "concern": "Keep accounts, database features, and analytics out of scope.",
+      "applicability": "applicable",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["There are no accounts.", "There is no database.", "There is no analytics."],
+      "unknowns": [],
+      "rationale": "Adding any of these would materially change the architecture and maintenance burden."
+    },
+    {
+      "id": "pilot-program",
+      "concern": "A pilot program is not established as necessary for this personal static portfolio.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": ["The brief describes a static personal portfolio with one maintainer."],
+      "unknowns": [],
+      "rationale": "The brief does not identify pilot users, staged adoption, or a pilot objective."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What editing approach should the maintainer use for pages and assets?",
+      "changes": ["editing-workflow", "content-asset-organization", "publishing-workflow"]
+    },
+    {
+      "question": "How will the maintainer publish changes to the CDN and verify that publication succeeded?",
+      "changes": ["publishing-workflow"]
+    },
+    {
+      "question": "What email address and optional mailto fields should the contact link use?",
+      "changes": ["contact-link-validation"]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "not_applicable",
+    "release": "blocked",
+    "operate": "blocked",
+    "blockers": ["editing-workflow", "publishing-workflow", "contact-link-validation"]
+  },
+  "unsupported_inferences_to_avoid": [
+    "The site requires user authentication or authorization.",
+    "The site requires a database or other persistent application backend.",
+    "The site should collect analytics or visitor tracking data.",
+    "The site requires a CMS, CI system, or a particular static-site generator.",
+    "The site needs a pilot program, multiple maintainers, or enterprise governance."
+  ]
+}

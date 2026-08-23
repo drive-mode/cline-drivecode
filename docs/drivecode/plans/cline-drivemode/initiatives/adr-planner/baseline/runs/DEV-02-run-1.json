@@ -1,0 +1,172 @@
+{
+  "summary": "The initial milestone is a brownfield, project-local ADR/pre-planning plugin for cline-drivecode, but implementation planning is blocked by the unresolved hh-template source and must align with existing trusted plugin discovery paths.",
+  "concerns": [
+    {
+      "id": "template-source-resolution",
+      "concern": "Resolve the hh-template source required to install the plugin project-locally.",
+      "applicability": "applicable",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "plan",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [],
+      "evidence": [
+        "The plugin must be installed project-locally by hh-template.",
+        "The template source cannot currently be resolved."
+      ],
+      "unknowns": [
+        "Where the authoritative hh-template source is located.",
+        "How hh-template installs project-local plugins."
+      ],
+      "rationale": "The required installation mechanism cannot be planned or implemented until its source and behavior are known."
+    },
+    {
+      "id": "plugin-discovery-compatibility",
+      "concern": "Decide how the plugin will be represented so Cline discovers it through package manifests and workspace .cline/plugins.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [
+        "template-source-resolution"
+      ],
+      "evidence": [
+        "Existing Cline plugin discovery uses package manifests and workspace .cline/plugins."
+      ],
+      "unknowns": [
+        "The required manifest fields and workspace layout for this plugin.",
+        "Whether hh-template already supports the required discovery layout."
+      ],
+      "rationale": "The plugin must use a discovery mechanism recognized by the existing Cline environment."
+    },
+    {
+      "id": "trusted-installation-path",
+      "concern": "Ensure the installation design does not depend on remote runtime plugin installation.",
+      "applicability": "applicable",
+      "resolution": "external_constraint",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [],
+      "evidence": [
+        "The repository rejects remote runtime plugin install as a managed-session trust path."
+      ],
+      "unknowns": [
+        "Whether any proposed dependency or update mechanism would require remote runtime installation."
+      ],
+      "rationale": "A design relying on the rejected trust path would not be deployable in the managed session."
+    },
+    {
+      "id": "plugin-scope-definition",
+      "concern": "Define the ADR/pre-planning plugin's intended behavior and milestone boundaries.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": [
+        "Add an ADR/pre-planning plugin to cline-drivecode.",
+        "No production user data is in scope for the initial milestone."
+      ],
+      "unknowns": [
+        "The plugin's concrete inputs, outputs, and user workflow.",
+        "The acceptance criteria for the initial milestone."
+      ],
+      "rationale": "Without a bounded behavior definition, implementation tasks and validation cannot be determined."
+    },
+    {
+      "id": "local-installation-validation",
+      "concern": "Validate that a project-local installation produced by hh-template is discovered by Cline in the workspace.",
+      "applicability": "applicable",
+      "resolution": "experiment",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [
+        "template-source-resolution",
+        "plugin-discovery-compatibility",
+        "trusted-installation-path"
+      ],
+      "evidence": [
+        "The plugin must be installed project-locally by hh-template.",
+        "Existing Cline plugin discovery uses package manifests and workspace .cline/plugins."
+      ],
+      "unknowns": [
+        "Whether the generated installation is discovered without manual intervention."
+      ],
+      "rationale": "A small integration check can establish that the required installation and discovery paths work together."
+    },
+    {
+      "id": "production-user-data-controls",
+      "concern": "Production user-data handling is not required for the initial milestone.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": [
+        "No production user data is in scope for the initial milestone."
+      ],
+      "unknowns": [],
+      "rationale": "Adding production user-data controls would exceed the stated initial-milestone scope."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What is the authoritative location and installation behavior of hh-template?",
+      "changes": [
+        "template-source-resolution",
+        "plugin-discovery-compatibility",
+        "local-installation-validation"
+      ]
+    },
+    {
+      "question": "What package-manifest and .cline/plugins structure does cline-drivecode require for a project-local plugin?",
+      "changes": [
+        "plugin-discovery-compatibility",
+        "local-installation-validation"
+      ]
+    },
+    {
+      "question": "What ADR/pre-planning workflow, inputs, outputs, and acceptance criteria are required for the initial milestone?",
+      "changes": [
+        "plugin-scope-definition"
+      ]
+    },
+    {
+      "question": "Will the plugin require any dependency acquisition or update path that could be interpreted as remote runtime installation?",
+      "changes": [
+        "trusted-installation-path",
+        "local-installation-validation"
+      ]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "not_applicable",
+    "release": "not_applicable",
+    "operate": "not_applicable",
+    "blockers": [
+      "template-source-resolution",
+      "trusted-installation-path",
+      "plugin-scope-definition"
+    ]
+  },
+  "unsupported_inferences_to_avoid": [
+    "That hh-template is stored in a particular repository, package registry, or filesystem location.",
+    "That remote installation is permitted for development, testing, or release.",
+    "That the initial milestone needs production user-data storage, processing, retention, or privacy controls.",
+    "That a pilot, production release, or operational support process is in scope.",
+    "That the plugin's detailed behavior, interface, or acceptance criteria are already defined."
+  ]
+}

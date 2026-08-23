@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
@@ -16,16 +17,13 @@ import {
 } from "@cline/shared";
 import { setHomeDirIfUnset } from "@cline/shared/storage";
 import { isOAuthProvider } from "../../auth/provider-auth-registry";
+import { readManagedProfileAuthority } from "../../chat-catalog/managed-profile-authority";
 import {
 	createCompactionStateAwarePrepareTurn,
 	createContextCompactionPrepareTurn,
 } from "../../extensions/context/compaction";
 import type { ToolExecutors } from "../../extensions/tools";
-import {
-	DefaultToolNames,
-	RunCommandExecutionController,
-} from "../../extensions/tools";
-import { cleanupStaleDetachedCommandLogs } from "../../extensions/tools/executors/bash";
+import { DefaultToolNames } from "../../extensions/tools";
 import type { TeamEvent } from "../../extensions/tools/team";
 import type { HookEventPayload } from "../../hooks";
 import { resolveResourcePolicy } from "../../resources/policy";
@@ -64,8 +62,8 @@ import {
 	readGitWorkspaceState,
 	withSessionGitMetadata,
 } from "../../services/workspace/workspace-manifest";
-import { withSessionHistoryOriginMetadata } from "../../session/history-origin";
 import {
+	createSessionCompactionState,
 	projectSessionCompactionState,
 	type SessionCompactionState,
 } from "../../session/models/session-compaction";
@@ -73,6 +71,10 @@ import {
 	type SessionManifest,
 	SessionManifestSchema,
 } from "../../session/models/session-manifest";
+import {
+	type SessionManualCompactionBeginResult,
+	SessionManualCompactionOperationConflictError,
+} from "../../session/models/session-manual-compaction-operation";
 import type { SessionRow } from "../../session/models/session-row";
 import type { RootSessionArtifacts } from "../../session/services/session-service";
 import { createCoreSessionSnapshot } from "../../session/session-snapshot";
@@ -85,6 +87,7 @@ import {
 	shouldAutoContinueTeamRuns,
 	waitForTeamRunUpdates,
 } from "../../session/team";
+import { isSessionWriterFenceRejectedError } from "../../session/writer-fence";
 import {
 	isNonTerminalSessionStatus,
 	SessionSource,
@@ -133,7 +136,13 @@ import type {
 	SendSessionInput,
 	SessionAccumulatedUsage,
 	SessionConnectionUpdate,
+	SessionManualCompactionInput,
+	SessionManualCompactionResult,
+	SessionQuiescenceReceipt,
 	SessionUsageSummary,
+	SessionWriterLease,
+	SessionWriterLeaseTransitionInput,
+	SessionWriterLeaseTransitionResult,
 	StartSessionInput,
 	StartSessionResult,
 } from "./runtime-host";
@@ -146,31 +155,52 @@ import {
 } from "./runtime-host-support";
 
 const MAX_SCAN_LIMIT = 5000;
+const FALLBACK_MANUAL_COMPACTION_MAX_INPUT_TOKENS = 64_000;
+const MAX_MANUAL_COMPACTION_RECEIPTS = 1024;
 
-// Detached-log retention timers are process-local and intentionally unref'd.
-// Recover once for every process that owns a LocalRuntimeHost so embedders get
-// the same restart cleanup guarantee as the Hub daemon. A failed scan is
-// cleared so a later host construction can retry it.
-let detachedCommandLogRecovery: Promise<void> | undefined;
+type LocalSessionLifecyclePhase =
+	| "starting"
+	| "active"
+	| "transitioning_writer"
+	| "writer_blocked"
+	| "quiescing"
+	| "quiesced";
 
-function recoverDetachedCommandLogsOnce(
-	logger?: BasicLogger,
-	telemetry?: ITelemetryService,
-): void {
-	if (detachedCommandLogRecovery) return;
-	detachedCommandLogRecovery = cleanupStaleDetachedCommandLogs()
-		.then(() => undefined)
-		.catch((error) => {
-			detachedCommandLogRecovery = undefined;
-			logger?.error?.("Detached command log recovery failed", { error });
-			captureSdkError(telemetry, {
-				component: "core",
-				operation: "command.detached_log_recovery",
-				error,
-				severity: "warn",
-				handled: true,
-			});
-		});
+interface LocalSessionLifecycle {
+	epoch: number;
+	phase: LocalSessionLifecyclePhase;
+	acceptingOperations: boolean;
+	acceptingWrites: boolean;
+	startupSettled: Promise<void>;
+	settleStartup: () => void;
+	writeTail: Promise<void>;
+	activeOperations: Set<Promise<void>>;
+	producerOperations: Set<Promise<void>>;
+	producerFailed: boolean;
+	producerFailure?: unknown;
+	writeFailed: boolean;
+	writeFailure?: unknown;
+	writerTransitionPromise?: Promise<unknown>;
+	writerTransitionOperationId?: string;
+	writerTransitionExpectedLease?: SessionWriterLease;
+	writerTransitionDurableStarted?: boolean;
+	lastWriterTransition?: {
+		operationId: string;
+		expectedLease: SessionWriterLease;
+		replacementLease: SessionWriterLease;
+		value: unknown;
+	};
+	manualCompactions: Map<string, LocalManualCompactionRecord>;
+	activeManualCompaction?: LocalManualCompactionRecord;
+	quiescencePromise?: Promise<SessionQuiescenceReceipt>;
+	receipt?: SessionQuiescenceReceipt;
+}
+
+interface LocalManualCompactionRecord {
+	readonly operationId: string;
+	readonly intentDigest: string;
+	readonly controller: AbortController;
+	readonly promise: Promise<SessionManualCompactionResult>;
 }
 
 function asFiniteUsageNumber(value: unknown): number | undefined {
@@ -235,6 +265,40 @@ function isIncomingCompactionStateStale(
 	return Date.parse(incoming.updated_at) < Date.parse(current.updated_at);
 }
 
+function manualCompactionIntentDigest(input: {
+	reason?: string;
+	config: CoreSessionConfig;
+	sessionMetadata?: Readonly<Record<string, unknown>>;
+}): string {
+	const summarizer = input.config.compaction?.summarizer;
+	const executionPolicyDigest = readManagedProfileAuthority(
+		input.sessionMetadata,
+	)?.executionPolicyDigest;
+	return createHash("sha256")
+		.update("cline-managed-manual-compaction-intent-v1\n")
+		.update(
+			JSON.stringify({
+				reason: input.reason ?? null,
+				executionPolicyDigest: executionPolicyDigest ?? null,
+				providerId: input.config.providerId,
+				modelId: input.config.modelId,
+				enabled: input.config.compaction?.enabled === true,
+				strategy: input.config.compaction?.strategy ?? null,
+				preserveRecentTokens:
+					input.config.compaction?.preserveRecentTokens ?? null,
+				summarizer: summarizer
+					? {
+							providerId: summarizer.providerId,
+							modelId: summarizer.modelId,
+							maxOutputTokens: summarizer.maxOutputTokens ?? null,
+						}
+					: null,
+				clientCallbackAllowed: false,
+			}),
+		)
+		.digest("hex");
+}
+
 export interface LocalRuntimeHostOptions {
 	distinctId?: string;
 	sessionService: SessionBackend;
@@ -254,6 +318,71 @@ export interface LocalRuntimeHostOptions {
 	fetch?: typeof fetch;
 	/** Resolved immutable policy for host-owned admission and team runtime limits. */
 	resourcePolicy?: ResourcePolicyProfile;
+	/** Validates ephemeral writer credentials before every transcript write. */
+	writerLeaseVerifier?: (
+		input: SessionWriterLease & { sessionId: string },
+	) => Promise<void> | void;
+}
+
+class SessionWriterLeaseFenceError extends Error {
+	constructor(
+		readonly sessionId: string,
+		readonly cause: unknown,
+	) {
+		super(
+			`Writer lease fence rejected transcript persistence for ${sessionId}`,
+		);
+		this.name = "SessionWriterLeaseFenceError";
+	}
+}
+
+class SessionWriterTransitionStoppedError extends Error {
+	constructor(readonly sessionId: string) {
+		super(`session ${sessionId} began terminal quiescence before writer rekey`);
+		this.name = "SessionWriterTransitionStoppedError";
+	}
+}
+
+function isSameWriterLease(
+	left: SessionWriterLease | undefined,
+	right: SessionWriterLease,
+): boolean {
+	return (
+		left?.leaseToken === right.leaseToken &&
+		left.revision === right.revision &&
+		left.writerGeneration === right.writerGeneration &&
+		left.expiresAt === right.expiresAt
+	);
+}
+
+function awaitBeforeDurableTransition<T>(
+	promise: Promise<T>,
+	signal: AbortSignal | undefined,
+): Promise<T> {
+	if (!signal) return promise;
+	signal.throwIfAborted();
+	return new Promise<T>((resolve, reject) => {
+		let settled = false;
+		const finish = (callback: () => void): void => {
+			if (settled) return;
+			settled = true;
+			signal.removeEventListener("abort", onAbort);
+			callback();
+		};
+		const onAbort = (): void =>
+			finish(() =>
+				reject(
+					signal.reason instanceof Error
+						? signal.reason
+						: new Error("writer transition was cancelled"),
+				),
+			);
+		signal.addEventListener("abort", onAbort, { once: true });
+		promise.then(
+			(value) => finish(() => resolve(value)),
+			(error) => finish(() => reject(error)),
+		);
+	});
 }
 
 export class LocalRuntimeHost implements RuntimeHost {
@@ -270,8 +399,11 @@ export class LocalRuntimeHost implements RuntimeHost {
 	private readonly defaultTelemetry?: ITelemetryService;
 	private readonly defaultLogger?: BasicLogger;
 	private readonly defaultFetch?: typeof fetch;
+	private readonly writerLeaseVerifier?: LocalRuntimeHostOptions["writerLeaseVerifier"];
 	private readonly events = new RuntimeHostEventBus();
 	private readonly sessions = new Map<string, ActiveSession>();
+	private readonly lifecycles = new Map<string, LocalSessionLifecycle>();
+	private lifecycleEpoch = 0;
 	// Serializes manifest read-modify-writes per session; see mutateSessionManifest.
 	private readonly manifestMutationQueues = new Map<string, Promise<void>>();
 	private readonly usageBySession = new Map<string, SessionAccumulatedUsage>();
@@ -283,8 +415,6 @@ export class LocalRuntimeHost implements RuntimeHost {
 	private readonly pendingPromptsController: PendingPromptsController;
 	private readonly eventBridge: AgentEventBridge;
 	private readonly sessionVersioning = new SessionVersioningService();
-	private readonly runCommandExecutionController =
-		new RunCommandExecutionController();
 
 	constructor(options: LocalRuntimeHostOptions) {
 		const homeDir = homedir();
@@ -317,7 +447,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 		this.defaultLogger = options.logger;
 		this.defaultTelemetry?.setDistinctId(distinctId);
 		this.defaultFetch = options.fetch;
-		recoverDetachedCommandLogsOnce(this.defaultLogger, this.defaultTelemetry);
+		this.writerLeaseVerifier = options.writerLeaseVerifier;
 
 		this.pendingPromptsController = new PendingPromptsController(
 			{
@@ -344,35 +474,8 @@ export class LocalRuntimeHost implements RuntimeHost {
 			aggregateUsageBySession: this.aggregateUsageBySession,
 			emit: (event) => this.emit(event),
 			persistMessages: (sid, messages, systemPrompt) => {
-				// Fire-and-forget: an unobserved rejection here would surface as
-				// an unhandledRejection, which is fatal in the hub daemon.
-				void this.invoke<void>(
-					"persistSessionMessages",
-					sid,
-					messages,
-					systemPrompt,
-				).catch((error) => {
-					const session = this.sessions.get(sid);
-					const logger = session?.config.logger ?? this.defaultLogger;
-					logger?.error?.(
-						"Failed to persist session messages from agent event",
-						{
-							sessionId: sid,
-							error,
-						},
-					);
-					captureSdkError(session?.config.telemetry ?? this.defaultTelemetry, {
-						component: "core",
-						operation: "session.persist_messages_on_agent_event",
-						error,
-						severity: "warn",
-						handled: true,
-						context: {
-							sessionId: sid,
-							providerId: session?.config.providerId,
-							modelId: session?.config.modelId,
-						},
-					});
+				this.trackSessionProducer(sid, async () => {
+					await this.persistSessionMessages(sid, messages, systemPrompt);
 				});
 			},
 			enqueuePendingPrompt: (sid, entry) =>
@@ -411,38 +514,233 @@ export class LocalRuntimeHost implements RuntimeHost {
 		};
 	}
 
+	private beginSessionLifecycle(sessionId: string): LocalSessionLifecycle {
+		const existing = this.lifecycles.get(sessionId);
+		if (existing && existing.phase !== "quiesced") {
+			throw new Error(`session ${sessionId} already has an active lifecycle`);
+		}
+		let settleStartup: () => void = () => undefined;
+		const startupSettled = new Promise<void>((resolve) => {
+			settleStartup = resolve;
+		});
+		const lifecycle: LocalSessionLifecycle = {
+			epoch: ++this.lifecycleEpoch,
+			phase: "starting",
+			acceptingOperations: true,
+			acceptingWrites: true,
+			startupSettled,
+			settleStartup,
+			writeTail: Promise.resolve(),
+			activeOperations: new Set(),
+			producerOperations: new Set(),
+			producerFailed: false,
+			writeFailed: false,
+			manualCompactions: new Map(),
+		};
+		this.lifecycles.set(sessionId, lifecycle);
+		return lifecycle;
+	}
+
+	private enqueueSessionWriterMutation<T>(
+		sessionId: string,
+		action: () => Promise<T>,
+		options: {
+			allowDuringQuiescence?: boolean;
+			recoversPriorFailure?: boolean;
+		} = {},
+	): Promise<T> {
+		const lifecycle = this.lifecycles.get(sessionId);
+		if (!lifecycle) return action();
+		if (!lifecycle.acceptingWrites && !options.allowDuringQuiescence) {
+			return Promise.reject(
+				new SessionWriterLeaseFenceError(
+					sessionId,
+					new Error("session persistence admission is closed"),
+				),
+			);
+		}
+		const run = lifecycle.writeTail.catch(() => undefined).then(action);
+		void run.catch((error) => {
+			if (!lifecycle.writeFailed) {
+				lifecycle.writeFailed = true;
+				lifecycle.writeFailure = error;
+			}
+		});
+		if (options.recoversPriorFailure) {
+			void run.then(
+				() => {
+					lifecycle.writeFailed = false;
+					lifecycle.writeFailure = undefined;
+				},
+				() => undefined,
+			);
+		}
+		lifecycle.writeTail = run.then(
+			() => undefined,
+			() => undefined,
+		);
+		return run;
+	}
+
+	private async drainSessionWriterMutations(
+		lifecycle: LocalSessionLifecycle,
+	): Promise<void> {
+		for (;;) {
+			const tail = lifecycle.writeTail;
+			await tail;
+			if (tail === lifecycle.writeTail) {
+				if (lifecycle.writeFailed) {
+					throw (
+						lifecycle.writeFailure ??
+						new Error("session writer failed without a rejection reason")
+					);
+				}
+				return;
+			}
+		}
+	}
+
+	private async drainSessionActivity(
+		lifecycle: LocalSessionLifecycle,
+	): Promise<void> {
+		for (;;) {
+			const active = [...lifecycle.activeOperations];
+			const producers = [...lifecycle.producerOperations];
+			if (active.length === 0 && producers.length === 0) break;
+			await Promise.allSettled(active);
+			const producerResults = await Promise.allSettled(producers);
+			const rejectedProducer = producerResults.find(
+				(result) => result.status === "rejected",
+			);
+			if (rejectedProducer?.status === "rejected") {
+				throw (
+					rejectedProducer.reason ??
+					new Error("session producer failed without a rejection reason")
+				);
+			}
+		}
+		if (lifecycle.producerFailed) {
+			throw (
+				lifecycle.producerFailure ??
+				new Error("session producer failed without a rejection reason")
+			);
+		}
+	}
+
+	private trackSessionProducer(
+		sessionId: string,
+		action: () => Promise<void>,
+	): void {
+		const lifecycle = this.lifecycles.get(sessionId);
+		if (
+			lifecycle &&
+			!lifecycle.acceptingOperations &&
+			lifecycle.activeOperations.size === 0 &&
+			lifecycle.producerOperations.size === 0
+		) {
+			return;
+		}
+		let resolveProducer: () => void = () => undefined;
+		let rejectProducer: (reason: unknown) => void = () => undefined;
+		const producer = new Promise<void>((resolve, reject) => {
+			resolveProducer = resolve;
+			rejectProducer = reject;
+		});
+		lifecycle?.producerOperations.add(producer);
+		try {
+			void action().then(resolveProducer, rejectProducer);
+		} catch (error) {
+			rejectProducer(error);
+		}
+		void producer
+			.catch(async (error) => {
+				if (lifecycle && !lifecycle.producerFailed) {
+					lifecycle.producerFailed = true;
+					lifecycle.producerFailure = error;
+				}
+				await this.abort(sessionId, error).catch(() => undefined);
+			})
+			.finally(() => {
+				lifecycle?.producerOperations.delete(producer);
+			});
+	}
+
 	// ── Public API ──────────────────────────────────────────────────────
 
 	async startSession(input: StartSessionInput): Promise<StartSessionResult> {
 		const requestedSessionId = input.config.sessionId?.trim() ?? "";
 		const sessionId = requestedSessionId || createSessionId();
-		const isReadOnlyResumeStart =
-			requestedSessionId.length > 0 &&
-			(input.initialMessages?.length ?? 0) > 0 &&
-			!input.prompt?.trim();
-		const hasRequestedWorkspace = Boolean(
-			input.config.cwd?.trim() || input.config.workspaceRoot?.trim(),
-		);
-		const existingResumeManifest =
-			isReadOnlyResumeStart && !hasRequestedWorkspace
-				? await this.invokeOptionalValue<SessionManifest>(
-						"readSessionManifest",
-						sessionId,
-					)
-				: undefined;
-		const config = existingResumeManifest
-			? {
-					...input.config,
-					cwd: existingResumeManifest.cwd,
-					workspaceRoot: existingResumeManifest.workspace_root,
+		const lifecycle = this.beginSessionLifecycle(sessionId);
+		let completed = false;
+		try {
+			const isCatalogManaged =
+				requestedSessionId.length > 0
+					? await this.invoke<boolean>("isSessionCatalogManaged", sessionId)
+					: false;
+			if (isCatalogManaged && !input.writerLease) {
+				throw new SessionWriterLeaseFenceError(
+					sessionId,
+					new Error("catalog-managed session start requires writer authority"),
+				);
+			}
+			if (input.writerLease) {
+				await this.verifyWriterLease(sessionId, input.writerLease);
+				try {
+					await this.invoke<number>(
+						"recoverSessionManualCompactionOperations",
+						{
+							sessionId,
+							writerFence: input.writerLease,
+						},
+					);
+				} catch (error) {
+					if (isSessionWriterFenceRejectedError(error)) {
+						throw new SessionWriterLeaseFenceError(sessionId, error);
+					}
+					throw error;
 				}
-			: await resolveStartSessionWorkspace(input.config);
-		return await this.startResolvedSession(
-			{ ...input, config },
-			sessionId,
-			requestedSessionId.length > 0,
-			existingResumeManifest,
-		);
+			}
+			const isReadOnlyResumeStart =
+				requestedSessionId.length > 0 &&
+				(input.initialMessages?.length ?? 0) > 0 &&
+				!input.prompt?.trim();
+			const hasRequestedWorkspace = Boolean(
+				input.config.cwd?.trim() || input.config.workspaceRoot?.trim(),
+			);
+			const existingResumeManifest =
+				isReadOnlyResumeStart && !hasRequestedWorkspace
+					? await this.invokeOptionalValue<SessionManifest>(
+							"readSessionManifest",
+							sessionId,
+						)
+					: undefined;
+			const config = existingResumeManifest
+				? {
+						...input.config,
+						cwd: existingResumeManifest.cwd,
+						workspaceRoot: existingResumeManifest.workspace_root,
+					}
+				: await resolveStartSessionWorkspace(input.config);
+			const result = await this.startResolvedSession(
+				{ ...input, config },
+				sessionId,
+				requestedSessionId.length > 0,
+				existingResumeManifest,
+			);
+			if (lifecycle.phase === "quiescing") {
+				throw new Error(`session ${sessionId} was quiesced during startup`);
+			}
+			lifecycle.phase = this.sessions.has(sessionId) ? "active" : "quiesced";
+			completed = true;
+			return result;
+		} finally {
+			lifecycle.settleStartup();
+			if (!completed && lifecycle.phase !== "quiescing") {
+				lifecycle.phase = "quiesced";
+				lifecycle.acceptingOperations = false;
+				lifecycle.acceptingWrites = false;
+			}
+		}
 	}
 
 	private async startResolvedSession(
@@ -580,15 +878,19 @@ export class LocalRuntimeHost implements RuntimeHost {
 					);
 					return;
 				}
-				void this.eventBridge.handlePluginEvent(
-					sessionId,
-					event,
-					pluginEventFallbackAutomation,
-					pluginEventFallbackTelemetry,
-				);
+				this.trackSessionProducer(sessionId, async () => {
+					await this.eventBridge.handlePluginEvent(
+						sessionId,
+						event,
+						pluginEventFallbackAutomation,
+						pluginEventFallbackTelemetry,
+					);
+				});
 			},
 			onTeamEvent: (event: TeamEvent) => {
-				void this.eventBridge.handleTeamEvent(sessionId, event);
+				this.trackSessionProducer(sessionId, async () => {
+					await this.eventBridge.handleTeamEvent(sessionId, event);
+				});
 				bootstrap.config.onTeamEvent?.(event);
 			},
 			createSpawnTool: () =>
@@ -621,24 +923,17 @@ export class LocalRuntimeHost implements RuntimeHost {
 				await this.persistSessionMetadata(sessionId, () => metadata);
 			},
 		});
-		const initialSessionMetadata = withSessionHistoryOriginMetadata(
-			withSessionGitMetadata(
-				{
-					...(resumedArtifacts?.manifest.metadata ?? {}),
-					...(startInput.sessionMetadata ?? {}),
-				},
-				bootstrap.gitState,
-			),
+		const initialSessionMetadata = withSessionGitMetadata(
 			{
-				mode: startInput.mode,
-				version: bootstrap.config.extensionContext?.client?.version,
+				...(resumedArtifacts?.manifest.metadata ?? {}),
+				...(startInput.sessionMetadata ?? {}),
 			},
+			bootstrap.gitState,
 		);
 		if (!resumedArtifacts) manifest.metadata = initialSessionMetadata;
-		const runtime = await this.runtimeBuilder.build({
-			...bootstrap.runtimeBuilderInput,
-			runCommandExecutionController: this.runCommandExecutionController,
-		});
+		const runtime = await this.runtimeBuilder.build(
+			bootstrap.runtimeBuilderInput,
+		);
 		const configWithProvider = bootstrap.config;
 		const providerConfig = bootstrap.providerConfig;
 		if (runtime.teamRuntime && !configWithProvider.teamName?.trim()) {
@@ -716,6 +1011,10 @@ export class LocalRuntimeHost implements RuntimeHost {
 						);
 					}
 				} catch (error) {
+					if (error instanceof SessionWriterLeaseFenceError) {
+						void this.abort(sessionId, error).catch(() => undefined);
+						throw error;
+					}
 					configWithProvider.logger?.error?.(
 						"Failed to persist session compaction state",
 						{ sessionId: activeSession.sessionId, error },
@@ -757,7 +1056,6 @@ export class LocalRuntimeHost implements RuntimeHost {
 			execution: configWithProvider.execution,
 			prepareTurn,
 			tools,
-			modelTools: runtime.modelTools,
 			hooks: bootstrap.hooks,
 			extensions,
 			hookErrorMode: configWithProvider.hookErrorMode,
@@ -818,13 +1116,16 @@ export class LocalRuntimeHost implements RuntimeHost {
 				if (!liveSession) return;
 				const messages = liveSession.agent.getMessages();
 				try {
-					await this.invoke<void>(
-						"persistSessionMessages",
+					await this.persistSessionMessages(
 						sessionId,
 						messages,
 						configWithProvider.systemPrompt,
 					);
 				} catch (error) {
+					if (error instanceof SessionWriterLeaseFenceError) {
+						void this.abort(sessionId, error).catch(() => undefined);
+						throw error;
+					}
 					configWithProvider.logger?.error?.(
 						"Failed to persist session messages after assistant response",
 						{ sessionId, error },
@@ -901,6 +1202,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 			interactive: input.interactive === true,
 			persistedMessages: initialMessages,
 			compactionState: initialCompactionState,
+			...(input.writerLease ? { writerLease: { ...input.writerLease } } : {}),
 			activeTeamRunIds: new Set<string>(),
 			pendingTeamRunUpdates: [],
 			teamRunWaiters: [],
@@ -929,45 +1231,34 @@ export class LocalRuntimeHost implements RuntimeHost {
 			);
 			active.compactionState = undefined;
 		}
+		if (active.writerLease) {
+			await this.verifyWriterLease(active.sessionId, active.writerLease);
+		}
 		this.sessions.set(sessionId, active);
 		if (resumedArtifacts) {
 			await this.refreshActiveSessionGitMetadata(active, bootstrap.gitState);
 		}
-		// Sessions seeded with history (mode-switch restarts, forks, missing-
-		// session recovery) must be durable immediately. Lazy persistence
-		// otherwise keeps the seed memory-only until the first completed turn,
-		// so losing the resident session before then (hub restart/crash) would
-		// rebuild it from an empty disk file and silently wipe the
-		// conversation. Brand-new empty sessions stay lazy.
+		this.emitStatus(sessionId, "running");
 		if (initialMessages.length > 0 && !resumedArtifacts) {
-			try {
-				await this.ensureSessionPersisted(active);
-				await this.invoke<void>(
-					"persistSessionMessages",
-					sessionId,
-					initialMessages,
-					active.config.systemPrompt,
+			await this.ensureSessionPersisted(active);
+			await this.persistSessionMessages(
+				active.sessionId,
+				initialMessages,
+				active.config.systemPrompt,
+			);
+			if (active.compactionState) {
+				const result = await this.persistActiveSessionCompactionState(
+					active,
+					active.compactionState,
 				);
-			} catch (error) {
-				active.config.logger?.error?.(
-					"Failed to persist seeded session messages at start",
-					{ sessionId, error },
-				);
-				captureSdkError(active.config.telemetry, {
-					component: "core",
-					operation: "session.persist_seeded_messages",
-					error,
-					severity: "warn",
-					handled: true,
-					context: {
-						sessionId,
-						providerId: active.config.providerId,
-						modelId: active.config.modelId,
-					},
-				});
+				if (!result.updated) {
+					active.compactionState = undefined;
+				}
+			}
+			if (!startInput.prompt?.trim()) {
+				await this.updateStatus(active, "completed", 0);
 			}
 		}
-		this.emitStatus(sessionId, "running");
 
 		let result: AgentResult | undefined;
 		try {
@@ -985,7 +1276,10 @@ export class LocalRuntimeHost implements RuntimeHost {
 			}
 		} catch (error) {
 			if (active.interactive && active.aborting) {
-				result = await this.completeAbortedInteractiveTurn(active);
+				result = await this.completeAbortedInteractiveTurn(
+					active,
+					this.lifecycles.get(active.sessionId)?.phase !== "quiescing",
+				);
 			} else {
 				captureSdkError(active.config.telemetry, {
 					component: "core",
@@ -1056,74 +1350,93 @@ export class LocalRuntimeHost implements RuntimeHost {
 	}
 
 	async runTurn(input: SendSessionInput): Promise<AgentResult | undefined> {
-		const session = this.getSessionOrThrow(input.sessionId);
-		const canStartRun = session.agent.canStartRun();
-		const delivery =
-			input.delivery ??
-			(session.interactive && !canStartRun ? ("queue" as const) : undefined);
-		session.config.telemetry?.capture({
-			event: "session.input_sent",
-			properties: {
-				sessionId: input.sessionId,
-				promptLength: input.prompt.length,
-				userImageCount: input.userImages?.length ?? 0,
-				userFileCount: input.userFiles?.length ?? 0,
-				delivery: delivery ?? "immediate",
-			},
-		});
-		if (delivery === "queue" || delivery === "steer") {
-			this.pendingPromptsController.enqueue(input.sessionId, {
-				prompt: input.prompt,
-				mode: input.mode,
-				delivery,
-				userImages: input.userImages,
-				userFiles: input.userFiles,
-			});
-			return undefined;
+		const lifecycle = this.lifecycles.get(input.sessionId);
+		if (lifecycle && !lifecycle.acceptingOperations) {
+			throw new Error(`session ${input.sessionId} is quiescing`);
 		}
+		if (lifecycle?.activeManualCompaction) {
+			throw new Error(
+				`session ${input.sessionId} is running manual compaction`,
+			);
+		}
+		let settleOperation: () => void = () => undefined;
+		const operation = new Promise<void>((resolve) => {
+			settleOperation = resolve;
+		});
+		lifecycle?.activeOperations.add(operation);
 		try {
-			const result = await this.executeTurn(session, {
-				prompt: input.prompt,
-				mode: input.mode,
-				userImages: input.userImages,
-				userFiles: input.userFiles,
-			});
-			if (!session.interactive) {
-				await this.finalizeSingleRun(session, result.finishReason);
-			} else {
-				await this.completeInteractiveTurn(session, result.finishReason);
-			}
-			// Drain after "aborted" finishes too: both internal stops (loop
-			// detector / mistake limit) and user-initiated aborts keep the
-			// queue intact, so without a drain here the user-queued prompts
-			// would be stranded forever. "error" finishes deliberately do NOT
-			// drain — auto-running queued prompts into a failing provider
-			// would consume them; they stay queued and drain on the next
-			// enqueue/update or successful turn.
-			if (result.finishReason !== "error") {
-				queueMicrotask(() => {
-					void this.pendingPromptsController.drain(input.sessionId);
-				});
-			}
-			return result;
-		} catch (error) {
-			if (session.interactive && session.aborting) {
-				return await this.completeAbortedInteractiveTurn(session);
-			}
-			captureSdkError(session.config.telemetry, {
-				component: "core",
-				operation: "session.submit",
-				error,
-				severity: "error",
-				handled: false,
-				context: {
-					sessionId: session.sessionId,
-					providerId: session.config.providerId,
-					modelId: session.config.modelId,
+			const session = this.getSessionOrThrow(input.sessionId);
+			const canStartRun = session.agent.canStartRun();
+			const delivery =
+				input.delivery ??
+				(session.interactive && !canStartRun ? ("queue" as const) : undefined);
+			session.config.telemetry?.capture({
+				event: "session.input_sent",
+				properties: {
+					sessionId: input.sessionId,
+					promptLength: input.prompt.length,
+					userImageCount: input.userImages?.length ?? 0,
+					userFileCount: input.userFiles?.length ?? 0,
+					delivery: delivery ?? "immediate",
 				},
 			});
-			await this.failSession(session);
-			throw error;
+			if (delivery === "queue" || delivery === "steer") {
+				this.pendingPromptsController.enqueue(input.sessionId, {
+					prompt: input.prompt,
+					mode: input.mode,
+					delivery,
+					userImages: input.userImages,
+					userFiles: input.userFiles,
+				});
+				return undefined;
+			}
+			try {
+				const result = await this.executeTurn(session, {
+					prompt: input.prompt,
+					mode: input.mode,
+					userImages: input.userImages,
+					userFiles: input.userFiles,
+				});
+				if (!session.interactive) {
+					await this.finalizeSingleRun(session, result.finishReason);
+				} else {
+					await this.completeInteractiveTurn(session, result.finishReason);
+				}
+				if (
+					result.finishReason === "error" ||
+					result.finishReason === "aborted"
+				) {
+					return result;
+				}
+				this.trackSessionProducer(input.sessionId, async () => {
+					await this.pendingPromptsController.drain(input.sessionId);
+				});
+				return result;
+			} catch (error) {
+				if (session.interactive && session.aborting) {
+					return await this.completeAbortedInteractiveTurn(
+						session,
+						this.lifecycles.get(session.sessionId)?.phase !== "quiescing",
+					);
+				}
+				captureSdkError(session.config.telemetry, {
+					component: "core",
+					operation: "session.submit",
+					error,
+					severity: "error",
+					handled: false,
+					context: {
+						sessionId: session.sessionId,
+						providerId: session.config.providerId,
+						modelId: session.config.modelId,
+					},
+				});
+				await this.failSession(session);
+				throw error;
+			}
+		} finally {
+			settleOperation();
+			lifecycle?.activeOperations.delete(operation);
 		}
 	}
 
@@ -1144,32 +1457,18 @@ export class LocalRuntimeHost implements RuntimeHost {
 			event: "session.aborted",
 			properties: { sessionId },
 		});
-		// Aborting a user-initiated turn leaves pendingPrompts untouched:
-		// clearing here would silently destroy prompts the user already typed
-		// and queued — they drain once the abort completes. Aborting a
-		// queue-initiated turn (drainingPendingPrompts) is the opposite
-		// gesture: the user is cancelling the queued work itself, so drop the
-		// remainder — otherwise every Escape would consume one queued prompt
-		// and start a fresh provider call, and the session could never be
-		// brought to a full stop.
 		session.aborting = true;
-		if (session.drainingPendingPrompts) {
-			this.pendingPromptsController.discardQueue(session);
-		}
+		this.pendingPromptsController.clearAborted(session);
 		session.agent.abort(reason);
 	}
 
-	async proceedWhileRunning(
-		sessionId: string,
-		toolCallId?: string,
-	): Promise<number> {
-		return this.runCommandExecutionController.proceedWhileRunning(
-			sessionId,
-			toolCallId,
-		);
-	}
-
 	async stopSession(sessionId: string): Promise<void> {
+		const manualCompaction =
+			this.lifecycles.get(sessionId)?.activeManualCompaction;
+		if (manualCompaction) {
+			manualCompaction.controller.abort(new Error("session_stop"));
+			await manualCompaction.promise.catch(() => undefined);
+		}
 		const session = this.sessions.get(sessionId);
 		if (!session) return;
 		session.config.telemetry?.capture({
@@ -1198,6 +1497,280 @@ export class LocalRuntimeHost implements RuntimeHost {
 			shutdownReason: "session_stop",
 			endReason: "stopped",
 		});
+	}
+
+	async transitionSessionWriterLease<T>(
+		sessionId: string,
+		input: SessionWriterLeaseTransitionInput,
+		transition: () => Promise<SessionWriterLeaseTransitionResult<T>>,
+	): Promise<T> {
+		const target = sessionId.trim();
+		const operationId = input.operationId.trim();
+		const expectedLease = { ...input.expectedLease };
+		if (!target) throw new Error("session id is required");
+		if (
+			!operationId ||
+			!expectedLease.leaseToken.trim() ||
+			!Number.isSafeInteger(expectedLease.revision) ||
+			expectedLease.revision < 1 ||
+			!Number.isSafeInteger(expectedLease.writerGeneration) ||
+			expectedLease.writerGeneration < 1 ||
+			!Number.isFinite(Date.parse(expectedLease.expiresAt))
+		) {
+			throw new Error(
+				"writer transition requires a stable operation and lease",
+			);
+		}
+		const lifecycle = this.lifecycles.get(target);
+		const resident = this.sessions.get(target);
+		if (!lifecycle || !resident) throw new SessionNotFoundError(target);
+		input.signal?.throwIfAborted();
+		if (lifecycle.writerTransitionPromise) {
+			if (
+				lifecycle.writerTransitionOperationId === operationId &&
+				lifecycle.writerTransitionExpectedLease &&
+				isSameWriterLease(
+					lifecycle.writerTransitionExpectedLease,
+					expectedLease,
+				)
+			) {
+				return (await lifecycle.writerTransitionPromise) as T;
+			}
+			throw new Error(`session ${target} already has a writer transition`);
+		}
+		if (
+			lifecycle.lastWriterTransition?.operationId === operationId &&
+			isSameWriterLease(
+				lifecycle.lastWriterTransition.expectedLease,
+				expectedLease,
+			) &&
+			isSameWriterLease(
+				resident.writerLease,
+				lifecycle.lastWriterTransition.replacementLease,
+			)
+		) {
+			return lifecycle.lastWriterTransition.value as T;
+		}
+		if (lifecycle.phase !== "active") {
+			throw new Error(
+				`session ${target} cannot transition writer authority from ${lifecycle.phase}`,
+			);
+		}
+		if (!isSameWriterLease(resident.writerLease, expectedLease)) {
+			throw new SessionWriterLeaseFenceError(
+				target,
+				new Error("resident writer authority does not match transition fence"),
+			);
+		}
+
+		lifecycle.phase = "transitioning_writer";
+		lifecycle.acceptingOperations = false;
+		lifecycle.acceptingWrites = false;
+		lifecycle.writerTransitionOperationId = operationId;
+		lifecycle.writerTransitionExpectedLease = expectedLease;
+		lifecycle.writerTransitionDurableStarted = false;
+		const lifecycleEpoch = lifecycle.epoch;
+		const writerTransition = (async () => {
+			// Defensive invariant: public transition admission requires `active`, and
+			// startup settles synchronously before that phase becomes observable. Keep
+			// the await so forced/internal lifecycle states still fail closed.
+			await awaitBeforeDurableTransition(
+				lifecycle.startupSettled,
+				input.signal,
+			);
+			await awaitBeforeDurableTransition(
+				this.verifyWriterLease(target, expectedLease),
+				input.signal,
+			);
+			await awaitBeforeDurableTransition(
+				this.drainSessionActivity(lifecycle),
+				input.signal,
+			);
+			await awaitBeforeDurableTransition(
+				this.drainSessionWriterMutations(lifecycle),
+				input.signal,
+			);
+			if (lifecycle.phase === "quiescing") {
+				throw new SessionWriterTransitionStoppedError(target);
+			}
+			if (
+				this.lifecycles.get(target) !== lifecycle ||
+				lifecycle.epoch !== lifecycleEpoch ||
+				this.sessions.get(target) !== resident ||
+				!isSameWriterLease(resident.writerLease, expectedLease)
+			) {
+				throw new SessionWriterLeaseFenceError(
+					target,
+					new Error("resident writer authority changed before durable rekey"),
+				);
+			}
+
+			input.signal?.throwIfAborted();
+			lifecycle.writerTransitionDurableStarted = true;
+			const result = await transition();
+			if (
+				!result.lease.leaseToken.trim() ||
+				result.lease.leaseToken === expectedLease.leaseToken ||
+				result.lease.writerGeneration !== expectedLease.writerGeneration + 1 ||
+				result.lease.revision <= expectedLease.revision ||
+				!Number.isFinite(Date.parse(result.lease.expiresAt))
+			) {
+				throw new SessionWriterLeaseFenceError(
+					target,
+					new Error("replacement writer authority is not a strict successor"),
+				);
+			}
+			await this.verifyWriterLease(target, result.lease);
+			// A same-generation renewal admitted before the barrier may finish while
+			// the durable rekey callback is waiting. Drain it before the direct swap
+			// so no stale credential can overwrite the replacement afterward.
+			await this.drainSessionWriterMutations(lifecycle);
+
+			if (
+				this.lifecycles.get(target) !== lifecycle ||
+				lifecycle.epoch !== lifecycleEpoch ||
+				this.sessions.get(target) !== resident ||
+				!isSameWriterLease(resident.writerLease, expectedLease)
+			) {
+				throw new SessionWriterLeaseFenceError(
+					target,
+					new Error("resident writer authority changed during transition"),
+				);
+			}
+			resident.writerLease = { ...result.lease };
+			await result.afterInstall?.();
+			lifecycle.lastWriterTransition = {
+				operationId,
+				expectedLease,
+				replacementLease: { ...result.lease },
+				value: result.value,
+			};
+
+			const completionPhase = lifecycle.phase as LocalSessionLifecyclePhase;
+			if (completionPhase === "transitioning_writer") {
+				lifecycle.phase = "active";
+				lifecycle.acceptingWrites = true;
+				lifecycle.acceptingOperations = true;
+			} else if (completionPhase !== "quiescing") {
+				throw new Error(
+					`session ${target} left writer transition in ${completionPhase}`,
+				);
+			}
+			return result.value;
+		})();
+		lifecycle.writerTransitionPromise = writerTransition;
+		try {
+			return await writerTransition;
+		} catch (error) {
+			if (
+				input.signal?.aborted &&
+				lifecycle.writerTransitionDurableStarted === false &&
+				lifecycle.phase === "transitioning_writer" &&
+				this.lifecycles.get(target) === lifecycle &&
+				this.sessions.get(target) === resident &&
+				isSameWriterLease(resident.writerLease, expectedLease)
+			) {
+				lifecycle.phase = "active";
+				lifecycle.acceptingOperations = true;
+				lifecycle.acceptingWrites = true;
+			} else if (lifecycle.phase === "transitioning_writer") {
+				lifecycle.phase = "writer_blocked";
+				lifecycle.acceptingOperations = false;
+				lifecycle.acceptingWrites = false;
+			}
+			throw error;
+		} finally {
+			if (lifecycle.writerTransitionPromise === writerTransition) {
+				lifecycle.writerTransitionPromise = undefined;
+				lifecycle.writerTransitionOperationId = undefined;
+				lifecycle.writerTransitionExpectedLease = undefined;
+				lifecycle.writerTransitionDurableStarted = undefined;
+			}
+		}
+	}
+
+	async quiesceSession(
+		sessionId: string,
+		reason = "session_quiesce",
+	): Promise<SessionQuiescenceReceipt> {
+		const target = sessionId.trim();
+		if (!target) throw new Error("session id is required");
+		const lifecycle = this.lifecycles.get(target);
+		if (!lifecycle) {
+			return {
+				sessionId: target,
+				lifecycleEpoch: 0,
+				quiescedAt: nowIso(),
+				persistenceDrained: true,
+			};
+		}
+		if (lifecycle.receipt) return lifecycle.receipt;
+		if (lifecycle.quiescencePromise) return lifecycle.quiescencePromise;
+		const writerTransition = lifecycle.writerTransitionPromise;
+
+		lifecycle.phase = "quiescing";
+		lifecycle.acceptingOperations = false;
+		lifecycle.acceptingWrites = false;
+		const resident = this.sessions.get(target);
+		if (resident) {
+			lifecycle.activeManualCompaction?.controller.abort(new Error(reason));
+			resident.aborting = true;
+			this.pendingPromptsController.clearAborted(resident);
+			resident.agent.abort(new Error(reason));
+		}
+
+		lifecycle.quiescencePromise = (async () => {
+			if (writerTransition) {
+				try {
+					await writerTransition;
+				} catch (error) {
+					if (!(error instanceof SessionWriterTransitionStoppedError)) {
+						throw error;
+					}
+				}
+			}
+			await lifecycle.startupSettled;
+			const active = this.sessions.get(target);
+			if (active && !active.aborting) {
+				active.aborting = true;
+				this.pendingPromptsController.clearAborted(active);
+				active.agent.abort(new Error(reason));
+			}
+			await this.drainSessionActivity(lifecycle);
+			await this.drainSessionWriterMutations(lifecycle);
+
+			const session = this.sessions.get(target);
+			let terminalStatus: SessionStatus | undefined;
+			if (session) {
+				if (isNonTerminalSessionStatus(session.status)) {
+					terminalStatus = "cancelled";
+					await this.shutdownSession(session, {
+						status: terminalStatus,
+						exitCode: 0,
+						shutdownReason: reason,
+						endReason: "quiesced",
+						allowDuringQuiescence: true,
+						skipMetadataRefresh: true,
+						requireCleanShutdown: true,
+					});
+				} else {
+					terminalStatus = session.status;
+					await this.releaseSessionRuntime(session, reason);
+				}
+			}
+			await this.drainSessionWriterMutations(lifecycle);
+			lifecycle.phase = "quiesced";
+			const receipt: SessionQuiescenceReceipt = {
+				sessionId: target,
+				lifecycleEpoch: lifecycle.epoch,
+				quiescedAt: nowIso(),
+				persistenceDrained: true,
+				...(terminalStatus ? { terminalStatus } : {}),
+			};
+			lifecycle.receipt = receipt;
+			return receipt;
+		})();
+		return lifecycle.quiescencePromise;
 	}
 
 	async dispose(reason = "session_manager_dispose"): Promise<void> {
@@ -1355,7 +1928,14 @@ export class LocalRuntimeHost implements RuntimeHost {
 		if (isIncomingCompactionStateStale(state, current)) {
 			return { updated: false };
 		}
-		await this.invoke<void>("persistSessionCompactionState", target, state);
+		try {
+			await this.invoke<void>("persistSessionCompactionState", target, state);
+		} catch (error) {
+			if (isSessionWriterFenceRejectedError(error)) {
+				throw new SessionWriterLeaseFenceError(target, error);
+			}
+			throw error;
+		}
 		return { updated: true };
 	}
 
@@ -1378,6 +1958,280 @@ export class LocalRuntimeHost implements RuntimeHost {
 			"readSessionCompactionState",
 			target,
 		);
+	}
+
+	async runSessionManualCompaction(
+		input: SessionManualCompactionInput,
+	): Promise<SessionManualCompactionResult> {
+		const sessionId = input.sessionId.trim();
+		const operationId = input.operationId.trim();
+		const reason = input.reason?.trim() || undefined;
+		if (!sessionId || !operationId) {
+			throw new Error("manual compaction requires session and operation ids");
+		}
+		const lifecycle = this.lifecycles.get(sessionId);
+		const session = this.sessions.get(sessionId);
+		if (!lifecycle || !session) throw new SessionNotFoundError(sessionId);
+		const intentDigest = manualCompactionIntentDigest({
+			reason,
+			config: session.config,
+			sessionMetadata: session.sessionMetadata,
+		});
+
+		const replay = lifecycle.manualCompactions.get(operationId);
+		if (replay) {
+			if (replay.intentDigest !== intentDigest) {
+				throw new SessionManualCompactionOperationConflictError(
+					"manual compaction operation was reused with changed intent",
+				);
+			}
+			return await replay.promise;
+		}
+		if (
+			lifecycle.phase !== "active" ||
+			!lifecycle.acceptingOperations ||
+			!lifecycle.acceptingWrites
+		) {
+			throw new Error(
+				`session ${sessionId} cannot compact from ${lifecycle.phase}`,
+			);
+		}
+		if (
+			lifecycle.activeManualCompaction ||
+			lifecycle.activeOperations.size > 0 ||
+			lifecycle.producerOperations.size > 0 ||
+			!session.agent.canStartRun()
+		) {
+			throw new Error(`session ${sessionId} is busy`);
+		}
+		if (session.config.compaction?.enabled !== true) {
+			throw new Error("manual compaction is disabled by the session profile");
+		}
+		if (!session.writerLease) {
+			throw new Error("manual compaction requires managed writer authority");
+		}
+		const writerLease = session.writerLease;
+		const controller = new AbortController();
+		const abortForCaller = () => controller.abort(input.signal?.reason);
+		if (input.signal?.aborted) {
+			abortForCaller();
+		} else {
+			input.signal?.addEventListener("abort", abortForCaller, { once: true });
+		}
+		let settleOperation: () => void = () => undefined;
+		const operation = new Promise<void>((resolve) => {
+			settleOperation = resolve;
+		});
+		lifecycle.activeOperations.add(operation);
+
+		let record!: LocalManualCompactionRecord;
+		const promise = (async (): Promise<SessionManualCompactionResult> => {
+			let durableStarted = false;
+			let durableTerminal = false;
+			try {
+				controller.signal.throwIfAborted();
+				await this.drainSessionWriterMutations(lifecycle);
+				controller.signal.throwIfAborted();
+				if (
+					this.lifecycles.get(sessionId) !== lifecycle ||
+					this.sessions.get(sessionId) !== session ||
+					lifecycle.phase !== "active" ||
+					!lifecycle.acceptingWrites
+				) {
+					throw new Error("session authority changed before manual compaction");
+				}
+				await this.verifyWriterLease(sessionId, writerLease);
+				const begin = await this.enqueueSessionWriterMutation(
+					sessionId,
+					async () =>
+						await this.invoke<SessionManualCompactionBeginResult>(
+							"beginSessionManualCompactionOperation",
+							{
+								sessionId,
+								operationId,
+								intentDigest,
+								writerFence: writerLease,
+							},
+						),
+				);
+				if (begin.disposition === "replay") return begin.result;
+				if (begin.disposition === "in_progress") {
+					throw new Error("manual compaction operation is already running");
+				}
+				if (begin.disposition === "failed") {
+					throw new Error("manual compaction operation previously failed");
+				}
+				if (begin.disposition === "indeterminate") {
+					throw new Error("manual compaction outcome is indeterminate");
+				}
+				durableStarted = true;
+				input.onStarted?.();
+
+				const sourceMessages = await this.readSessionMessages(sessionId);
+				controller.signal.throwIfAborted();
+				if (sourceMessages.length === 0) {
+					await this.finishManualCompactionWithoutState({
+						session,
+						operationId,
+						intentDigest,
+						status: "skipped",
+					});
+					durableTerminal = true;
+					return { operationId, sessionId, outcome: "skipped" };
+				}
+				const compact = createContextCompactionPrepareTurn(
+					{
+						providerConfig: session.config.providerConfig,
+						providerId: session.config.providerId,
+						modelId: session.config.modelId,
+						compaction: {
+							...session.config.compaction,
+							enabled: true,
+						},
+						logger: session.config.logger,
+						telemetry: session.config.telemetry,
+						sessionId,
+					},
+					{ mode: "manual" },
+				);
+				if (!compact) {
+					throw new Error("manual compaction is unavailable");
+				}
+				const configuredModel =
+					session.config.knownModels?.[session.config.modelId];
+				const modelInfo = configuredModel
+					? {
+							...configuredModel,
+							id: configuredModel.id ?? session.config.modelId,
+						}
+					: {
+							id: session.config.modelId,
+							maxInputTokens: FALLBACK_MANUAL_COMPACTION_MAX_INPUT_TOKENS,
+						};
+				const result = await compact({
+					agentId: session.agent.getAgentId(),
+					conversationId: session.agent.getConversationId() || sessionId,
+					parentAgentId: null,
+					iteration: 0,
+					messages: sourceMessages,
+					apiMessages: sourceMessages,
+					abortSignal: controller.signal,
+					systemPrompt: session.config.systemPrompt ?? "",
+					tools: session.runtime.tools,
+					model: {
+						id: session.config.modelId,
+						provider: session.config.providerId,
+						info: modelInfo,
+					},
+				});
+				controller.signal.throwIfAborted();
+				if (!result?.messages) {
+					await this.finishManualCompactionWithoutState({
+						session,
+						operationId,
+						intentDigest,
+						status: "skipped",
+					});
+					durableTerminal = true;
+					return { operationId, sessionId, outcome: "skipped" };
+				}
+				const state = createSessionCompactionState({
+					sourceMessages,
+					compactedMessages: result.messages,
+					conversationId: sessionId,
+					systemPrompt: result.systemPrompt,
+				});
+				if (
+					this.lifecycles.get(sessionId) !== lifecycle ||
+					this.sessions.get(sessionId) !== session ||
+					lifecycle.phase !== "active" ||
+					!lifecycle.acceptingWrites
+				) {
+					throw new Error("session authority changed during manual compaction");
+				}
+				const persisted = await this.persistActiveSessionCompactionState(
+					session,
+					state,
+					sourceMessages,
+					{ operationId, intentDigest },
+				);
+				if (!persisted.updated) {
+					throw new Error("manual compaction state became stale before commit");
+				}
+				durableTerminal = true;
+				return { operationId, sessionId, outcome: "compacted", state };
+			} catch (error) {
+				if (durableStarted && !durableTerminal) {
+					try {
+						await this.finishManualCompactionWithoutState({
+							session,
+							operationId,
+							intentDigest,
+							status: "failed",
+							allowDuringQuiescence: true,
+						});
+						durableTerminal = true;
+						input.onFailed?.();
+					} catch (receiptError) {
+						session.config.logger?.debug?.(
+							"Failed to persist manual compaction failure receipt",
+							{ sessionId, operationId, error: receiptError },
+						);
+					}
+				}
+				throw error;
+			}
+		})().finally(() => {
+			input.signal?.removeEventListener("abort", abortForCaller);
+			settleOperation();
+			lifecycle.activeOperations.delete(operation);
+			if (lifecycle.activeManualCompaction === record) {
+				lifecycle.activeManualCompaction = undefined;
+			}
+			while (
+				lifecycle.manualCompactions.size > MAX_MANUAL_COMPACTION_RECEIPTS
+			) {
+				const oldest = lifecycle.manualCompactions.keys().next().value;
+				if (oldest === undefined || oldest === operationId) break;
+				lifecycle.manualCompactions.delete(oldest);
+			}
+		});
+		record = { operationId, intentDigest, controller, promise };
+		lifecycle.activeManualCompaction = record;
+		lifecycle.manualCompactions.set(operationId, record);
+		return await promise;
+	}
+
+	private async finishManualCompactionWithoutState(input: {
+		session: ActiveSession;
+		operationId: string;
+		intentDigest: string;
+		status: "skipped" | "failed";
+		allowDuringQuiescence?: boolean;
+	}): Promise<void> {
+		const writerFence = input.session.writerLease;
+		if (!writerFence) {
+			throw new Error("manual compaction lost managed writer authority");
+		}
+		try {
+			await this.enqueueSessionWriterMutation(
+				input.session.sessionId,
+				async () =>
+					await this.invoke("finishSessionManualCompactionOperation", {
+						sessionId: input.session.sessionId,
+						operationId: input.operationId,
+						intentDigest: input.intentDigest,
+						status: input.status,
+						writerFence,
+					}),
+				{ allowDuringQuiescence: input.allowDuringQuiescence },
+			);
+		} catch (error) {
+			if (isSessionWriterFenceRejectedError(error)) {
+				throw new SessionWriterLeaseFenceError(input.session.sessionId, error);
+			}
+			throw error;
+		}
 	}
 
 	private isCompactionStateForSession(
@@ -1434,6 +2288,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 		session: ActiveSession,
 		state: SessionCompactionState,
 		sourceMessages?: readonly LlmsProviders.Message[],
+		manualOperation?: { operationId: string; intentDigest: string },
 	): Promise<{ updated: boolean }> {
 		if (
 			!(await this.canPersistCompactionState(
@@ -1447,34 +2302,66 @@ export class LocalRuntimeHost implements RuntimeHost {
 			return { updated: false };
 		}
 		return await this.enqueueCompactionStateWrite(session, async () => {
-			const currentState = session.compactionState;
-			const currentStateStillProjects =
-				currentState !== undefined &&
-				projectSessionCompactionState(
-					currentState,
-					sourceMessages ?? session.agent.getMessages(),
-				) !== undefined;
-			// The count-based stale guard exists to stop an old write from
-			// clobbering a newer one, which only makes sense while the stored
-			// state is still valid. An unprojectable state (e.g. invalidated by
-			// message-identity churn on resume, or a hash-format change) must
-			// not permanently block its replacement, so fall back to comparing
-			// timestamps and let the newer state win.
-			if (
-				currentState &&
-				(currentStateStillProjects
-					? isIncomingCompactionStateStale(state, currentState)
-					: Date.parse(state.updated_at) < Date.parse(currentState.updated_at))
-			) {
-				return { updated: false };
+			if (session.writerLease) {
+				await this.verifyWriterLease(session.sessionId, session.writerLease);
 			}
-			await this.invoke<void>(
-				"persistSessionCompactionState",
+			return await this.enqueueSessionWriterMutation(
 				session.sessionId,
-				state,
+				async () => {
+					const currentState = session.compactionState;
+					const currentStateStillProjects =
+						currentState !== undefined &&
+						projectSessionCompactionState(
+							currentState,
+							sourceMessages ?? session.agent.getMessages(),
+						) !== undefined;
+					// The count-based stale guard exists to stop an old write from
+					// clobbering a newer one, which only makes sense while the stored
+					// state is still valid. An unprojectable state (e.g. invalidated by
+					// message-identity churn on resume, or a hash-format change) must
+					// not permanently block its replacement, so fall back to comparing
+					// timestamps and let the newer state win.
+					if (
+						currentState &&
+						(currentStateStillProjects
+							? isIncomingCompactionStateStale(state, currentState)
+							: Date.parse(state.updated_at) <
+								Date.parse(currentState.updated_at))
+					) {
+						return { updated: false };
+					}
+					try {
+						if (manualOperation) {
+							if (!session.writerLease) {
+								throw new Error(
+									"manual compaction lost managed writer authority",
+								);
+							}
+							await this.invoke("persistSessionManualCompactionState", {
+								sessionId: session.sessionId,
+								operationId: manualOperation.operationId,
+								intentDigest: manualOperation.intentDigest,
+								state,
+								writerFence: session.writerLease,
+							});
+						} else {
+							await this.invoke<void>(
+								"persistSessionCompactionState",
+								session.sessionId,
+								state,
+								...(session.writerLease ? [session.writerLease] : []),
+							);
+						}
+					} catch (error) {
+						if (isSessionWriterFenceRejectedError(error)) {
+							throw new SessionWriterLeaseFenceError(session.sessionId, error);
+						}
+						throw error;
+					}
+					session.compactionState = state;
+					return { updated: true };
+				},
 			);
-			session.compactionState = state;
-			return { updated: true };
 		});
 	}
 
@@ -1500,7 +2387,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 
 	async readLiveSessionMessages(
 		sessionId: string,
-	): Promise<LlmsProviders.MessageWithMetadata[]> {
+	): Promise<LlmsProviders.Message[]> {
 		const target = sessionId.trim();
 		if (!target) return [];
 		// Resident sessions are authoritative: disk persistence lags at
@@ -1520,7 +2407,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 
 	async readSessionMessages(
 		sessionId: string,
-	): Promise<LlmsProviders.MessageWithMetadata[]> {
+	): Promise<LlmsProviders.Message[]> {
 		const target = sessionId.trim();
 		if (!target) return [];
 		const row = await this.getRow(target);
@@ -1556,6 +2443,40 @@ export class LocalRuntimeHost implements RuntimeHost {
 
 	async updateSessionModel(sessionId: string, modelId: string): Promise<void> {
 		await this.updateSessionConnection(sessionId, { modelId });
+	}
+
+	async updateSessionWriterLease(
+		sessionId: string,
+		lease: SessionWriterLease,
+	): Promise<void> {
+		await this.verifyWriterLease(sessionId, lease);
+		await this.enqueueSessionWriterMutation(
+			sessionId,
+			async () => {
+				const session = this.getSessionOrThrow(sessionId);
+				const lifecycle = this.lifecycles.get(sessionId);
+				if (lifecycle?.phase === "writer_blocked") {
+					throw new SessionWriterLeaseFenceError(
+						sessionId,
+						new Error("writer authority transition is blocked"),
+					);
+				}
+				if (
+					!session.writerLease ||
+					lease.writerGeneration !== session.writerLease.writerGeneration ||
+					lease.revision < session.writerLease.revision
+				) {
+					throw new SessionWriterLeaseFenceError(
+						sessionId,
+						new Error(
+							"lease renewal cannot replace or roll back writer generation",
+						),
+					);
+				}
+				session.writerLease = { ...lease };
+			},
+			{ allowDuringQuiescence: true },
+		);
 	}
 
 	async updateSessionConnection(
@@ -1642,27 +2563,35 @@ export class LocalRuntimeHost implements RuntimeHost {
 	private async mutateSessionManifest(
 		session: ActiveSession,
 		mutate: (manifest: SessionManifest) => void,
+		allowDuringQuiescence = false,
 	): Promise<SessionManifest | undefined> {
 		const artifacts = session.artifacts;
 		if (!artifacts) return undefined;
 		const sessionId = session.sessionId;
 		const tail =
 			this.manifestMutationQueues.get(sessionId) ?? Promise.resolve();
-		const next = tail.then(async () => {
-			const latest =
-				(await this.invokeOptionalValue<SessionManifest>(
-					"readSessionManifest",
-					sessionId,
-				)) ?? artifacts.manifest;
-			mutate(latest);
-			artifacts.manifest = latest;
-			await this.invoke<void>(
-				"writeSessionManifest",
-				artifacts.manifestPath,
-				latest,
-			);
-			return latest;
-		});
+		const next = tail.then(() =>
+			this.enqueueSessionWriterMutation(
+				sessionId,
+				async () => {
+					const latest =
+						(await this.invokeOptionalValue<SessionManifest>(
+							"readSessionManifest",
+							sessionId,
+						)) ?? artifacts.manifest;
+					mutate(latest);
+					artifacts.manifest = latest;
+					await this.invoke<void>(
+						"writeSessionManifest",
+						artifacts.manifestPath,
+						latest,
+						...(session.writerLease ? [session.writerLease] : []),
+					);
+					return latest;
+				},
+				{ allowDuringQuiescence },
+			),
+		);
 		const queued = next.then(
 			() => undefined,
 			() => undefined,
@@ -1713,26 +2642,6 @@ export class LocalRuntimeHost implements RuntimeHost {
 			session.pendingPrompt = prompt;
 		}
 		await this.ensureSessionPersisted(session);
-		// A seeded session (fork, checkpoint restore, missing-session
-		// recovery) materializes at start, before any prompt exists, so its
-		// row is created promptless. Backfill it with the first user prompt,
-		// which restores the behavior rows had when materialization happened
-		// here: the persistence service derives the title from this prompt
-		// when the session is untitled, and leaves any user-set title alone.
-		if (!session.pendingPrompt) {
-			session.pendingPrompt = prompt;
-			try {
-				await this.invokeOptionalValue("updateSession", {
-					sessionId: session.sessionId,
-					prompt,
-				});
-			} catch (error) {
-				session.config.logger?.log?.(
-					"Failed to backfill seeded session prompt",
-					{ severity: "warn", sessionId: session.sessionId, error },
-				);
-			}
-		}
 		await this.refreshActiveSessionGitMetadata(session);
 		await this.syncOAuthCredentials(session);
 		await this.markTurnRunning(session);
@@ -1796,46 +2705,13 @@ export class LocalRuntimeHost implements RuntimeHost {
 
 	private async completeAbortedInteractiveTurn(
 		session: ActiveSession,
+		persistIdleStatus = true,
 	): Promise<AgentResult> {
 		const endedAt = new Date();
 		const messages = session.agent.getMessages();
 		const usage = createInitialAccumulatedUsage();
 		session.persistedMessages = messages;
 		session.started = session.started || messages.length > 0;
-		// Flush the transcript now: persistence otherwise lags at
-		// assistant-message/turn boundaries, so without this an aborted turn
-		// (including the user's prompt) exists only in memory. If the session
-		// later has to be rebuilt from disk (hub restart, session eviction),
-		// the recovery would silently drop the aborted exchange — or, for a
-		// session seeded with in-memory history, the entire conversation.
-		if (messages.length > 0) {
-			try {
-				await this.ensureSessionPersisted(session);
-				await this.invoke<void>(
-					"persistSessionMessages",
-					session.sessionId,
-					messages,
-					session.config.systemPrompt,
-				);
-			} catch (error) {
-				session.config.logger?.error?.(
-					"Failed to persist session messages after abort",
-					{ sessionId: session.sessionId, error },
-				);
-				captureSdkError(session.config.telemetry, {
-					component: "core",
-					operation: "session.persist_messages_after_abort",
-					error,
-					severity: "warn",
-					handled: true,
-					context: {
-						sessionId: session.sessionId,
-						providerId: session.config.providerId,
-						modelId: session.config.modelId,
-					},
-				});
-			}
-		}
 		this.eventBridge.dispatchAgentEvent(session.sessionId, session.config, {
 			type: "done",
 			reason: "aborted",
@@ -1843,14 +2719,11 @@ export class LocalRuntimeHost implements RuntimeHost {
 			iterations: 0,
 			usage,
 		});
-		await this.completeInteractiveTurn(session, "aborted");
-		// The abort is fully settled (aborting flag reset above), so prompts
-		// the user queued behind the stopped turn can run now. This mirrors
-		// the drain in runTurn() for turns that resolve with an "aborted"
-		// finish; this path handles turns that end by throwing instead.
-		queueMicrotask(() => {
-			void this.pendingPromptsController.drain(session.sessionId);
-		});
+		if (persistIdleStatus) {
+			await this.completeInteractiveTurn(session, "aborted");
+		} else {
+			session.lastInteractiveTurnFinishReason = "aborted";
+		}
 		return {
 			text: "",
 			usage,
@@ -1943,8 +2816,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 				usage: accumulatedUsage,
 				aggregateUsage,
 			}));
-			await this.invoke<void>(
-				"persistSessionMessages",
+			await this.persistSessionMessages(
 				session.sessionId,
 				persistedMessages,
 				session.config.systemPrompt,
@@ -1952,6 +2824,9 @@ export class LocalRuntimeHost implements RuntimeHost {
 			this.observeTaskCompletionTool(session, result);
 			return result;
 		} catch (error) {
+			if (error instanceof SessionWriterLeaseFenceError) {
+				await this.abort(session.sessionId, error);
+			}
 			captureSdkError(session.config.telemetry, {
 				component: "core",
 				operation: "session.turn",
@@ -1964,19 +2839,11 @@ export class LocalRuntimeHost implements RuntimeHost {
 					modelId: session.config.modelId,
 				},
 			});
-			try {
-				await this.invoke<void>(
-					"persistSessionMessages",
+			if (!(error instanceof SessionWriterLeaseFenceError)) {
+				await this.persistSessionMessages(
 					session.sessionId,
 					session.agent.getMessages(),
 					session.config.systemPrompt,
-				);
-			} catch (persistError) {
-				// Never let a failed transcript flush mask the error that
-				// actually killed the turn; that one is what callers must see.
-				session.config.logger?.error?.(
-					"Failed to persist session messages after turn error",
-					{ sessionId: session.sessionId, error: persistError },
 				);
 			}
 			throw error;
@@ -2081,32 +2948,28 @@ export class LocalRuntimeHost implements RuntimeHost {
 	private async ensureSessionPersisted(session: ActiveSession): Promise<void> {
 		if (session.artifacts) return;
 		const workspacePath = resolveWorkspacePath(session.config);
-		session.artifacts = (await this.invoke("createRootSessionWithArtifacts", {
-			sessionId: session.sessionId,
-			source: session.source,
-			pid: process.pid,
-			interactive: session.interactive,
-			provider: session.config.providerId,
-			model: session.config.modelId,
-			cwd: session.config.cwd,
-			workspaceRoot: workspacePath,
-			teamName: session.config.teamName,
-			enableTools: session.config.enableTools,
-			enableSpawn: session.config.enableSpawnAgent,
-			enableTeams: session.config.enableAgentTeams,
-			prompt: session.pendingPrompt,
-			metadata: session.sessionMetadata,
-			startedAt: session.startedAt,
-		})) as RootSessionArtifacts;
-		if (session.compactionState) {
-			const result = await this.persistActiveSessionCompactionState(
-				session,
-				session.compactionState,
-			);
-			if (!result.updated) {
-				session.compactionState = undefined;
-			}
-		}
+		session.artifacts = await this.enqueueSessionWriterMutation(
+			session.sessionId,
+			async () =>
+				(await this.invoke("createRootSessionWithArtifacts", {
+					sessionId: session.sessionId,
+					source: session.source,
+					pid: process.pid,
+					interactive: session.interactive,
+					provider: session.config.providerId,
+					model: session.config.modelId,
+					cwd: session.config.cwd,
+					workspaceRoot: workspacePath,
+					teamName: session.config.teamName,
+					enableTools: session.config.enableTools,
+					enableSpawn: session.config.enableSpawnAgent,
+					enableTeams: session.config.enableAgentTeams,
+					prompt: session.pendingPrompt,
+					metadata: session.sessionMetadata,
+					startedAt: session.startedAt,
+					...(session.writerLease ? { writerFence: session.writerLease } : {}),
+				})) as RootSessionArtifacts,
+		);
 	}
 
 	private async markTurnRunning(session: ActiveSession): Promise<void> {
@@ -2173,12 +3036,14 @@ export class LocalRuntimeHost implements RuntimeHost {
 		if (!session?.artifacts) {
 			return;
 		}
-		const result = await this.invokeOptionalValue<{ updated?: boolean }>(
-			"updateSession",
-			{
-				sessionId,
-				metadata,
-			},
+		const result = await this.enqueueSessionWriterMutation(
+			sessionId,
+			async () =>
+				await this.invokeOptionalValue<{ updated?: boolean }>("updateSession", {
+					sessionId,
+					metadata,
+					...(session?.writerLease ? { writerFence: session.writerLease } : {}),
+				}),
 		);
 		if (result?.updated === false) {
 			return;
@@ -2218,6 +3083,9 @@ export class LocalRuntimeHost implements RuntimeHost {
 			exitCode: number | null;
 			shutdownReason: string;
 			endReason: string;
+			allowDuringQuiescence?: boolean;
+			skipMetadataRefresh?: boolean;
+			requireCleanShutdown?: boolean;
 		},
 	): Promise<void> {
 		// Fallback `task.completed` emission for completed sessions that
@@ -2236,18 +3104,6 @@ export class LocalRuntimeHost implements RuntimeHost {
 			});
 		}
 		notifyTeamRunWaiters(session);
-
-		// Drain an in-flight run before tearing anything down. `stopSession` aborts
-		// first for exactly this reason; callers that arrive here another way — hub
-		// `dispose()` on a restart, most notably — otherwise hit two failures at
-		// once: the runtime refuses to shut down while a run is in progress, and the
-		// plugin sandbox is SIGTERMed with tool calls still pending, so those calls
-		// reject with "plugin-sandbox process exited". A connector turn awaiting the
-		// run sees whichever surfaced first instead of an answer.
-		if (!session.aborting && !session.agent.canStartRun()) {
-			session.aborting = true;
-			session.agent.abort(new Error(input.shutdownReason));
-		}
 
 		const cleanupErrors: unknown[] = [];
 		const recordCleanupError = (stage: string, error: unknown) => {
@@ -2275,18 +3131,19 @@ export class LocalRuntimeHost implements RuntimeHost {
 			});
 		};
 
-		if (session.artifacts) {
-			await this.refreshActiveSessionGitMetadata(session);
+		if (session.artifacts && !input.skipMetadataRefresh) {
 			try {
-				await this.updateStatus(session, input.status, input.exitCode);
+				await this.refreshActiveSessionGitMetadata(session);
 			} catch (error) {
-				recordCleanupError("update_status", error);
+				recordCleanupError("refresh_metadata", error);
 			}
 		}
-		try {
-			await session.agent.shutdown(input.shutdownReason);
-		} catch (error) {
-			recordCleanupError("agent_shutdown", error);
+		if (session.artifacts || input.allowDuringQuiescence) {
+			try {
+				await session.agent.shutdown(input.shutdownReason);
+			} catch (error) {
+				recordCleanupError("agent_shutdown", error);
+			}
 		}
 		try {
 			await Promise.resolve(session.runtime.shutdown(input.shutdownReason));
@@ -2298,6 +3155,22 @@ export class LocalRuntimeHost implements RuntimeHost {
 		} catch (error) {
 			recordCleanupError("plugin_sandbox_shutdown", error);
 		}
+		const lifecycle = this.lifecycles.get(session.sessionId);
+		if (lifecycle) {
+			await this.drainSessionWriterMutations(lifecycle);
+		}
+		if (session.artifacts) {
+			try {
+				await this.updateStatus(
+					session,
+					input.status,
+					input.exitCode,
+					input.allowDuringQuiescence === true,
+				);
+			} catch (error) {
+				recordCleanupError("update_status", error);
+			}
+		}
 		this.sessions.delete(session.sessionId);
 		this.emit({
 			type: "ended",
@@ -2307,7 +3180,10 @@ export class LocalRuntimeHost implements RuntimeHost {
 				ts: Date.now(),
 			},
 		});
-		if (cleanupErrors.length > 0 && input.status === "failed") {
+		if (
+			cleanupErrors.length > 0 &&
+			(input.status === "failed" || input.requireCleanShutdown)
+		) {
 			throw cleanupErrors[0];
 		}
 	}
@@ -2341,19 +3217,6 @@ export class LocalRuntimeHost implements RuntimeHost {
 			});
 		};
 
-		// Drain an in-flight run before tearing anything down, the same way
-		// stopSession does for its non-interactive path.
-		//
-		// Without this, releasing a session that is mid-run fails twice over: the
-		// runtime refuses to shut down ("a run is in progress") and that error is
-		// rethrown below, and the plugin sandbox is SIGTERMed while tool calls are
-		// still pending, so those calls reject with "plugin-sandbox process exited".
-		// A connector turn awaiting the run sees whichever surfaced first instead of
-		// an answer — which is what a hub restart looked like from Slack.
-		if (!session.aborting && !session.agent.canStartRun()) {
-			session.aborting = true;
-			session.agent.abort(new Error(reason));
-		}
 		try {
 			await session.agent.shutdown(reason);
 		} catch (error) {
@@ -2379,13 +3242,20 @@ export class LocalRuntimeHost implements RuntimeHost {
 		session: ActiveSession,
 		status: SessionStatus,
 		exitCode?: number | null,
+		allowDuringQuiescence = false,
 	): Promise<void> {
 		if (!session.artifacts) return;
-		const result = await this.invoke<{ updated: boolean; endedAt?: string }>(
-			"updateSessionStatus",
+		const result = await this.enqueueSessionWriterMutation(
 			session.sessionId,
-			status,
-			exitCode,
+			async () =>
+				await this.invoke<{ updated: boolean; endedAt?: string }>(
+					"updateSessionStatus",
+					session.sessionId,
+					status,
+					exitCode,
+					...(session.writerLease ? [session.writerLease] : []),
+				),
+			{ allowDuringQuiescence },
 		);
 		if (!result.updated) return;
 		const latestManifest = await this.mutateSessionManifest(
@@ -2400,6 +3270,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 					manifest.exit_code = typeof exitCode === "number" ? exitCode : null;
 				}
 			},
+			allowDuringQuiescence,
 		);
 		if (!latestManifest) return;
 		session.status = status;
@@ -2628,6 +3499,53 @@ export class LocalRuntimeHost implements RuntimeHost {
 	}
 
 	// ── Session service invocation ──────────────────────────────────────
+
+	private async persistSessionMessages(
+		sessionId: string,
+		messages: unknown[],
+		systemPrompt?: string,
+	): Promise<void> {
+		const writerLease = this.sessions.get(sessionId)?.writerLease;
+		if (writerLease) {
+			await this.verifyWriterLease(sessionId, writerLease);
+		}
+		try {
+			await this.enqueueSessionWriterMutation(
+				sessionId,
+				async () =>
+					await this.invoke<void>(
+						"persistSessionMessages",
+						sessionId,
+						messages,
+						systemPrompt,
+						...(writerLease ? [writerLease] : []),
+					),
+				{ recoversPriorFailure: true },
+			);
+		} catch (error) {
+			if (isSessionWriterFenceRejectedError(error)) {
+				throw new SessionWriterLeaseFenceError(sessionId, error);
+			}
+			throw error;
+		}
+	}
+
+	private async verifyWriterLease(
+		sessionId: string,
+		writerLease: SessionWriterLease,
+	): Promise<void> {
+		if (!this.writerLeaseVerifier) {
+			throw new SessionWriterLeaseFenceError(
+				sessionId,
+				new Error("writer lease verifier is unavailable"),
+			);
+		}
+		try {
+			await this.writerLeaseVerifier({ sessionId, ...writerLease });
+		} catch (error) {
+			throw new SessionWriterLeaseFenceError(sessionId, error);
+		}
+	}
 
 	private invoke<T>(method: string, ...args: unknown[]): Promise<T> {
 		return invokeBackend<T>(this.sessionService, method, ...args);

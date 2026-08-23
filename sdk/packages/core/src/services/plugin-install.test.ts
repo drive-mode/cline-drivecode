@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
 	discoverPluginModulePaths,
 	resolvePluginConfigSearchPaths,
@@ -274,5 +274,205 @@ export default {
 
 		expect(second.installPath).toBe(first.installPath);
 		expect(existsSync(second.entryPaths[0] ?? "")).toBe(true);
+	});
+
+	it("verifies a staged plugin contract before committing the install", async () => {
+		const source = join(root, "verified-plugin");
+		await mkdir(join(source, "skills", "decision-planning"), {
+			recursive: true,
+		});
+		await writeFile(
+			join(source, "package.json"),
+			JSON.stringify({
+				name: "@example/verified-plugin",
+				cline: { plugins: [{ paths: ["./index.ts"] }] },
+			}),
+			"utf8",
+		);
+		await writeFile(
+			join(source, "index.ts"),
+			`
+export default {
+  name: "verified-plugin",
+  manifest: { capabilities: ["commands", "skills", "tools"] },
+  setup(api) {
+    api.registerCommand({ name: "verify-plan", handler: () => "ok" })
+    api.registerTool({
+      name: "inspect-decisions",
+      description: "Inspect decisions",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => ({ ok: true }),
+    })
+  },
+}
+`,
+			"utf8",
+		);
+		await writeFile(
+			join(source, "skills", "decision-planning", "SKILL.md"),
+			"# Decision planning\n",
+			"utf8",
+		);
+
+		const result = await installPlugin({
+			source,
+			verification: {
+				packageName: "@example/verified-plugin",
+				pluginNames: ["verified-plugin"],
+				capabilities: ["commands", "skills", "tools"],
+				commandNames: ["verify-plan"],
+				toolNames: ["inspect-decisions"],
+				skillNames: ["decision-planning"],
+			},
+		});
+
+		expect(result.verification).toEqual({
+			status: "verified",
+			stagedContentSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+			packageName: "@example/verified-plugin",
+			pluginNames: ["verified-plugin"],
+			capabilities: ["commands", "skills", "tools"],
+			commandNames: ["verify-plan"],
+			toolNames: ["inspect-decisions"],
+			skillNames: ["decision-planning"],
+		});
+		expect(existsSync(result.entryPaths[0] ?? "")).toBe(true);
+	});
+
+	it("preserves the current install when staged verification fails", async () => {
+		const source = join(root, "verified-replacement");
+		await mkdir(source, { recursive: true });
+		writeFileSync(
+			join(source, "package.json"),
+			JSON.stringify({
+				name: "@example/verified-replacement",
+				cline: { plugins: [{ paths: ["./index.ts"] }] },
+			}),
+			"utf8",
+		);
+		writeFileSync(
+			join(source, "index.ts"),
+			"export default { name: 'stable-plugin', manifest: { capabilities: ['tools'] } };",
+			"utf8",
+		);
+		const first = await installPlugin({ source });
+		const installedEntry = first.entryPaths[0] ?? "";
+		const stableBytes = readFileSync(installedEntry, "utf8");
+
+		writeFileSync(
+			join(source, "index.ts"),
+			"export default { name: 'broken-plugin', manifest: { capabilities: ['tools'] }, setup() { throw new Error('setup exploded') } };",
+			"utf8",
+		);
+		await expect(
+			installPlugin({ source, force: true, verification: {} }),
+		).rejects.toThrow(/setup exploded/);
+		expect(readFileSync(installedEntry, "utf8")).toBe(stableBytes);
+
+		writeFileSync(
+			join(source, "index.ts"),
+			"export default { name: 'unexpected-plugin', manifest: { capabilities: ['tools'] } };",
+			"utf8",
+		);
+		await expect(
+			installPlugin({
+				source,
+				force: true,
+				verification: { pluginNames: ["stable-plugin"] },
+			}),
+		).rejects.toThrow(/expected plugin names \[stable-plugin\]/);
+
+		expect(readFileSync(installedEntry, "utf8")).toBe(stableBytes);
+		expect(discoverPluginModulePaths(dirname(first.installPath))).toContain(
+			installedEntry,
+		);
+	});
+
+	it("rejects escaping manifest entries instead of falling back to discovery", async () => {
+		const source = join(root, "escaping-plugin");
+		await mkdir(source, { recursive: true });
+		await writeFile(
+			join(source, "package.json"),
+			JSON.stringify({
+				name: "@example/escaping-plugin",
+				cline: { plugins: [{ paths: ["../../outside.ts"] }] },
+			}),
+			"utf8",
+		);
+		await writeFile(
+			join(source, "index.ts"),
+			"export default { name: 'fallback-plugin', manifest: { capabilities: ['tools'] } };",
+			"utf8",
+		);
+
+		await expect(installPlugin({ source, verification: {} })).rejects.toThrow(
+			/declared entry escapes the package root/,
+		);
+		expect(
+			discoverPluginModulePaths(join(home, ".cline", "plugins", "_installed")),
+		).toEqual([]);
+	});
+
+	it("rejects a staged package that mutates during verification", async () => {
+		const source = join(root, "mutating-plugin");
+		await mkdir(source, { recursive: true });
+		await writeFile(
+			join(source, "package.json"),
+			JSON.stringify({
+				name: "@example/mutating-plugin",
+				cline: { plugins: [{ paths: ["./index.ts"] }] },
+			}),
+			"utf8",
+		);
+		await writeFile(
+			join(source, "index.ts"),
+			`
+import { writeFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
+export default {
+  name: "mutating-plugin",
+  manifest: { capabilities: ["tools"] },
+  setup() {
+    writeFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "{}")
+  },
+}
+`,
+			"utf8",
+		);
+
+		await expect(installPlugin({ source, verification: {} })).rejects.toThrow(
+			/content changed during verification/,
+		);
+	});
+
+	it("rejects contributions registered without their declared capability", async () => {
+		const source = join(root, "undeclared-provider-plugin");
+		await mkdir(source, { recursive: true });
+		await writeFile(
+			join(source, "package.json"),
+			JSON.stringify({
+				name: "@example/undeclared-provider-plugin",
+				cline: { plugins: [{ paths: ["./index.ts"] }] },
+			}),
+			"utf8",
+		);
+		await writeFile(
+			join(source, "index.ts"),
+			`
+export default {
+  name: "undeclared-provider-plugin",
+  manifest: { capabilities: ["tools"] },
+  setup(api) {
+    api.registerProvider({ name: "hidden-provider" })
+  },
+}
+`,
+			"utf8",
+		);
+
+		await expect(installPlugin({ source, verification: {} })).rejects.toThrow(
+			/registered providers contributions without declaring the capability/,
+		);
 	});
 });

@@ -3,7 +3,7 @@ import type {
 	HubEventEnvelope,
 	HubReplyEnvelope,
 } from "@cline/shared";
-import type { HubCommandTransport } from "./command-transport";
+import type { HubSocketCommandTransport } from "./command-transport";
 
 export interface NativeHubTransport {
 	handleCommand(envelope: HubCommandEnvelope): Promise<HubReplyEnvelope>;
@@ -14,7 +14,7 @@ export interface NativeHubTransport {
 	): () => void;
 }
 
-export class NativeHubTransportAdapter implements HubCommandTransport {
+export class NativeHubTransportAdapter implements HubSocketCommandTransport {
 	constructor(private readonly transport: NativeHubTransport) {}
 
 	command(envelope: HubCommandEnvelope): Promise<HubReplyEnvelope> {
@@ -27,5 +27,9 @@ export class NativeHubTransportAdapter implements HubCommandTransport {
 		options?: { sessionId?: string },
 	): () => void {
 		return this.transport.subscribe(clientId, listener, options);
+	}
+
+	closeConnection(): void {
+		// Native/unscoped attachment has no authority object to release.
 	}
 }

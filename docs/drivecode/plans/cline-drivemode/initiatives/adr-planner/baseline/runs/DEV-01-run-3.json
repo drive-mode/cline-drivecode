@@ -1,0 +1,215 @@
+{
+  "summary": "A greenfield multi-tenant B2B SaaS is planned for external design-partner pilots, but key data, isolation, operational, and pilot-readiness decisions remain unspecified.",
+  "concerns": [
+    {
+      "id": "tenant-isolation",
+      "concern": "Define how customer tenants are isolated in PostgreSQL and application access controls.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "adr",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": [],
+      "evidence": ["The product is multi-tenant.", "PostgreSQL is specified.", "Tenancy isolation is unspecified."],
+      "unknowns": ["Required isolation model and enforcement approach."],
+      "rationale": "This determines core data modeling, authorization design, and the safety of storing customer operational data."
+    },
+    {
+      "id": "data-regions",
+      "concern": "Decide the regions in which customer operational data will be stored and processed.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["The service stores customer operational data.", "Regions are unspecified."],
+      "unknowns": ["Pilot customer region needs and any location requirements."],
+      "rationale": "Region choices can constrain hosting, data architecture, and pilot eligibility."
+    },
+    {
+      "id": "data-retention",
+      "concern": "Define retention and deletion expectations for customer operational data.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["The service stores customer operational data.", "Retention is unspecified."],
+      "unknowns": ["Retention period, deletion expectations, and treatment of subscription-related records."],
+      "rationale": "Retention affects schema design, background jobs, backups, and customer-facing commitments."
+    },
+    {
+      "id": "service-objectives",
+      "concern": "Set proportional availability, response-time, and recovery expectations for the pilot.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "next",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "pilot",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["External design partners will pilot the product.", "Service objectives are unspecified."],
+      "unknowns": ["Pilot availability, support, recovery, and performance expectations."],
+      "rationale": "The target service level determines the amount of reliability work needed before pilot use."
+    },
+    {
+      "id": "roles-and-admin-boundaries",
+      "concern": "Define team roles, permissions, and the admin console's permitted actions.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "now",
+      "artifact_route": "requirement",
+      "lifecycle_gate": "preplan",
+      "criticality": "critical",
+      "prerequisites": ["tenant-isolation"],
+      "evidence": ["The product includes team accounts and roles.", "The product includes an admin console."],
+      "unknowns": ["Role set, permission boundaries, and whether administrators can access tenant operational data."],
+      "rationale": "Authorization boundaries shape the application model and directly affect customer-data access."
+    },
+    {
+      "id": "stripe-subscription-flow",
+      "concern": "Define subscription states, entitlement behavior, and Stripe webhook handling.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "next",
+      "artifact_route": "adr",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": [],
+      "evidence": ["Stripe subscriptions are specified.", "Inbound webhooks are specified."],
+      "unknowns": ["Plans, trial behavior, cancellation behavior, entitlement mapping, and authoritative billing events."],
+      "rationale": "Billing state and webhook behavior determine what customers can access and how payment changes are reconciled."
+    },
+    {
+      "id": "webhook-job-reliability",
+      "concern": "Design idempotent processing, retry behavior, and failure visibility for webhooks and asynchronous jobs.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "implementation",
+      "criticality": "major",
+      "prerequisites": ["stripe-subscription-flow"],
+      "evidence": ["The system has inbound webhooks and asynchronous jobs."],
+      "unknowns": ["Webhook providers beyond Stripe, job runner choice, retry limits, and failure-handling expectations."],
+      "rationale": "Duplicate deliveries and failed jobs can create incorrect subscription state or incomplete customer-data processing."
+    },
+    {
+      "id": "pilot-scope-success",
+      "concern": "Define pilot scope, design-partner access, feedback loop, and success criteria.",
+      "applicability": "applicable",
+      "resolution": "decision",
+      "urgency": "next",
+      "artifact_route": "plan",
+      "lifecycle_gate": "pilot",
+      "criticality": "major",
+      "prerequisites": ["roles-and-admin-boundaries", "service-objectives"],
+      "evidence": ["External design partners will pilot the product."],
+      "unknowns": ["Number of partners, intended workflows, onboarding approach, pilot duration, and success criteria."],
+      "rationale": "The pilot should validate a bounded product outcome rather than expose an undefined production surface."
+    },
+    {
+      "id": "operational-observability",
+      "concern": "Provide enough logging, monitoring, and alerting to diagnose browser, webhook, job, and database failures during the pilot.",
+      "applicability": "applicable",
+      "resolution": "task",
+      "urgency": "next",
+      "artifact_route": "runbook",
+      "lifecycle_gate": "pilot",
+      "criticality": "major",
+      "prerequisites": ["service-objectives", "webhook-job-reliability"],
+      "evidence": ["The product includes a browser app, inbound webhooks, asynchronous jobs, and PostgreSQL.", "External design partners will pilot it."],
+      "unknowns": ["Who will support the pilot and what failure signals require action."],
+      "rationale": "A small engineering team needs actionable visibility to support pilot users and recover from asynchronous failures."
+    },
+    {
+      "id": "template-baseline",
+      "concern": "Review the generated hh-template baseline for its included authentication, tenancy, billing, job, and deployment assumptions.",
+      "applicability": "applicable",
+      "resolution": "experiment",
+      "urgency": "now",
+      "artifact_route": "plan",
+      "lifecycle_gate": "preplan",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": ["The SaaS is generated from `hh-template`."],
+      "unknowns": ["What `hh-template` includes, configures, or constrains."],
+      "rationale": "Existing template assumptions may accelerate or conflict with the required architecture."
+    },
+    {
+      "id": "enterprise-readiness-process",
+      "concern": "Enterprise-scale compliance certification and process are not established as pilot prerequisites.",
+      "applicability": "not_applicable",
+      "resolution": "not_applicable",
+      "urgency": "not_applicable",
+      "artifact_route": "none",
+      "lifecycle_gate": "not_applicable",
+      "criticality": "standard",
+      "prerequisites": [],
+      "evidence": ["The case describes a three-engineer team and external design-partner pilots only."],
+      "unknowns": ["Whether any pilot partner requires specific compliance certification."],
+      "rationale": "Adding enterprise process without a stated customer or regulatory requirement would exceed the case."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What tenancy isolation model and tenant-scoped access guarantees are required?",
+      "changes": ["tenant-isolation", "roles-and-admin-boundaries"]
+    },
+    {
+      "question": "Which regions must store and process pilot customer data?",
+      "changes": ["data-regions"]
+    },
+    {
+      "question": "What retention and deletion expectations apply to customer operational data?",
+      "changes": ["data-retention"]
+    },
+    {
+      "question": "What service, support, recovery, and performance expectations apply during the pilot?",
+      "changes": ["service-objectives", "operational-observability"]
+    },
+    {
+      "question": "Which roles exist, and what tenant-data access may the admin console have?",
+      "changes": ["roles-and-admin-boundaries"]
+    },
+    {
+      "question": "What subscription states and entitlement rules should Stripe events control?",
+      "changes": ["stripe-subscription-flow", "webhook-job-reliability"]
+    },
+    {
+      "question": "What workflows, partners, success criteria, and duration define the design-partner pilot?",
+      "changes": ["pilot-scope-success", "service-objectives"]
+    },
+    {
+      "question": "What functionality and infrastructure assumptions does hh-template already provide?",
+      "changes": ["template-baseline"]
+    }
+  ],
+  "readiness": {
+    "preplan": "blocked",
+    "implementation": "blocked",
+    "pilot": "blocked",
+    "release": "blocked",
+    "operate": "blocked",
+    "blockers": [
+      "tenant-isolation",
+      "data-regions",
+      "data-retention",
+      "roles-and-admin-boundaries",
+      "template-baseline"
+    ]
+  },
+  "unsupported_inferences_to_avoid": [
+    "That a particular cloud provider, region, deployment model, or job queue has been selected.",
+    "That the product must meet a named compliance framework or certification.",
+    "That Stripe is the only webhook source.",
+    "That external design partners require production-grade service objectives or contractual SLAs.",
+    "That the admin console requires unrestricted access to all tenant data.",
+    "That a specific tenancy model, authentication provider, pricing model, or retention duration is required."
+  ]
+}

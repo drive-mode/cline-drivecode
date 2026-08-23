@@ -28,8 +28,20 @@ export function mergeHistoryStatusRows(
 			endedAt: row.endedAt,
 			exitCode: row.exitCode,
 			updatedAt: row.updatedAt,
+			metadata: row.metadata?.chatCatalog
+				? {
+						...(current.metadata ?? {}),
+						chatCatalog: row.metadata.chatCatalog,
+					}
+				: current.metadata,
 		};
 	});
+}
+
+export function formatChatCatalogBadge(row: SessionHistoryRecord): string {
+	const projection = row.metadata?.chatCatalog;
+	if (!projection || projection.projection === "legacy") return "Legacy";
+	return projection.catalogState === "archived" ? "Archived" : "Active";
 }
 
 function formatHistoryTitle(
@@ -96,13 +108,16 @@ export function formatHistoryListLine(row: SessionHistoryRecord): string {
 	const provider = truncateStr(row.provider?.trim() || "unknown", 20);
 	const model = truncateStr(row.model?.trim() || "", 28);
 
+	const catalogActivityAt = row.metadata?.chatCatalog;
 	const checkpointCreatedAt = row.metadata?.checkpoint?.latest?.createdAt;
 	const timestamp =
-		typeof checkpointCreatedAt === "number" &&
-		Number.isFinite(checkpointCreatedAt)
-			? checkpointCreatedAt
-			: new Date(row.startedAt).getTime();
+		catalogActivityAt?.projection === "catalog"
+			? new Date(catalogActivityAt.lastActivityAt).getTime()
+			: typeof checkpointCreatedAt === "number" &&
+					Number.isFinite(checkpointCreatedAt)
+				? checkpointCreatedAt
+				: new Date(row.startedAt).getTime();
 	const date = formatUtcDate(new Date(timestamp));
 	const costSegment = cost ? ` | ${cost}` : "";
-	return `${date} ${provider}:${model} [${formatSessionStatusLabel(row.status)}]${costSegment} | ${title}`;
+	return `${date} ${provider}:${model} [${formatChatCatalogBadge(row)}/${formatSessionStatusLabel(row.status)}]${costSegment} | ${title}`;
 }

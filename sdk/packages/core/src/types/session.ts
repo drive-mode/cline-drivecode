@@ -1,11 +1,24 @@
 import type * as LlmsProviders from "@cline/llms";
 import type { AgentFinishReason } from "@cline/shared";
-import type { SessionAccumulatedUsage } from "../runtime/host/runtime-host";
+import type {
+	SessionAccumulatedUsage,
+	SessionWriterLease,
+} from "../runtime/host/runtime-host";
 import type { BuiltRuntime } from "../runtime/orchestration/session-runtime";
 import type { SessionRuntime } from "../runtime/orchestration/session-runtime-orchestrator";
 import type { SessionCompactionState } from "../session/models/session-compaction";
+import type {
+	SessionManualCompactionDurableBeginResult,
+	SessionManualCompactionOperationReceipt,
+	SessionManualCompactionReceiptResult,
+} from "../session/models/session-manual-compaction-operation";
 import type { SessionRow } from "../session/models/session-row";
 import type { RootSessionArtifacts } from "../session/services/session-service";
+import type {
+	SessionManagedArtifactHead,
+	SessionManagedArtifactKind,
+	SessionWriterFenceCredential,
+} from "../session/writer-fence";
 import type { SessionSource, SessionStatus } from "./common";
 import type { CoreAgentMode, CoreSessionConfig } from "./config";
 
@@ -29,6 +42,8 @@ export type ActiveSession = {
 	persistedMessages?: LlmsProviders.MessageWithMetadata[];
 	compactionState?: SessionCompactionState;
 	compactionStateWriteQueue?: Promise<void>;
+	/** Ephemeral catalog credential; never serialized with session state. */
+	writerLease?: SessionWriterLease;
 	activeTeamRunIds: Set<string>;
 	pendingTeamRunUpdates: TeamRunUpdate[];
 	teamRunWaiters: Array<() => void>;
@@ -88,6 +103,7 @@ export type PreparedTurnInput = {
 
 export interface PersistedSessionUpdateInput {
 	sessionId: string;
+	writerFence?: SessionWriterFenceCredential;
 	expectedStatusLock?: number;
 	status?: SessionStatus;
 	endedAt?: string | null;
@@ -104,7 +120,10 @@ export interface PersistedSessionUpdateInput {
 
 export interface SessionPersistenceAdapter {
 	ensureSessionsDir(): string;
-	upsertSession(row: SessionRow): Promise<void>;
+	upsertSession(
+		row: SessionRow,
+		writerFence?: SessionWriterFenceCredential,
+	): Promise<void>;
 	getSession(sessionId: string): Promise<SessionRow | undefined>;
 	listSessions(options: {
 		limit: number;
@@ -114,6 +133,35 @@ export interface SessionPersistenceAdapter {
 	updateSession(
 		input: PersistedSessionUpdateInput,
 	): Promise<{ updated: boolean; statusLock: number }>;
+	isCatalogManaged(sessionId: string): Promise<boolean>;
+	getCatalogManagedArtifactHead(
+		sessionId: string,
+	): Promise<SessionManagedArtifactHead | undefined>;
+	commitCatalogManagedArtifact(input: {
+		sessionId: string;
+		kind: SessionManagedArtifactKind;
+		path?: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManagedArtifactHead>;
+	beginCatalogManagedManualCompaction(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionDurableBeginResult>;
+	recoverCatalogManagedManualCompactions(input: {
+		sessionId: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<number>;
+	commitCatalogManagedManualCompaction(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		status: "completed" | "skipped" | "failed";
+		result?: SessionManualCompactionReceiptResult;
+		compactionPath?: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionOperationReceipt>;
 	deleteSession(sessionId: string, cascade: boolean): Promise<boolean>;
 	enqueueSpawnRequest(input: {
 		rootSessionId: string;

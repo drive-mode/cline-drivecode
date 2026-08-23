@@ -8,9 +8,73 @@ import type { ClientContext, UserContext } from "./context";
 export interface AgentExtensionCommand {
 	name: string;
 	description?: string;
+	/** Host-assigned extension identity. Plugin-provided values are overwritten. */
+	extensionId?: string;
 	handler?: (
 		input: string,
+		context?: AgentExtensionCommandInvocationContext,
 	) => Promise<AgentExtensionCommandResult> | AgentExtensionCommandResult;
+}
+
+export type AgentExtensionInvocationActorKind =
+	| "human"
+	| "model"
+	| "automation"
+	| "replay"
+	| "programmatic";
+
+export interface AgentExtensionCommandInvocationContext {
+	/** Unique host-created id for this command delivery. */
+	invocationId: string;
+	/** ISO-8601 host time. This is audit metadata and not canonical plugin output. */
+	invokedAt: string;
+	workspaceRoot: string;
+	task: {
+		/** Stable core session id. Missing ids cannot authorize state mutation. */
+		sessionId?: string;
+		conversationId?: string;
+	};
+	actor: {
+		kind: AgentExtensionInvocationActorKind;
+		id?: string;
+		label?: string;
+	};
+	source: {
+		kind: "interactive" | "connector" | "sdk";
+		transport?: string;
+		threadId?: string;
+		channelId?: string;
+	};
+	/** Fresh host snapshot for this command's registered extension, when scoped. */
+	extensionState?: AgentExtensionStateSnapshot;
+}
+
+export interface AgentExtensionStateMutationRequest {
+	operation: "replace" | "clear";
+	key: string;
+	/** Required for replace and forbidden for clear. Must be bounded JSON. */
+	value?: unknown;
+}
+
+export interface AgentExtensionStateEntry {
+	value: unknown;
+	revision: number;
+	provenance: {
+		invocationId: string;
+		actorKind: AgentExtensionInvocationActorKind;
+		actorId?: string;
+		sourceKind: AgentExtensionCommandInvocationContext["source"]["kind"];
+		transport?: string;
+		threadId?: string;
+	};
+}
+
+export interface AgentExtensionStateSnapshot {
+	workspaceRoot: string;
+	sessionId: string;
+	extensionId: string;
+	revision: number;
+	entries: Record<string, AgentExtensionStateEntry>;
 }
 
 export type AgentExtensionCommandResult =
@@ -18,6 +82,11 @@ export type AgentExtensionCommandResult =
 	| {
 			reply?: string;
 			submitPrompt?: string;
+			/**
+			 * A request, not a mutation. Only a host with attributable human and
+			 * session context may validate and apply it for the registered extension.
+			 */
+			stateMutation?: AgentExtensionStateMutationRequest;
 	  };
 
 export interface AgentExtensionRule {
@@ -278,6 +347,11 @@ export interface ContributionRegistryOptions<
 	extensions?: TExtension[];
 	/** Workspace context forwarded to each extension's `setup(api, ctx)` call. */
 	setupContext?: PluginSetupContext;
+	/**
+	 * Optional host-owned installation identity resolver. Plugin command fields
+	 * never control this persistence namespace.
+	 */
+	resolveExtensionId?: (extension: TExtension, order: number) => string;
 }
 
 export interface ContributionRegistryInitializeOptions {
@@ -451,12 +525,17 @@ export class ContributionRegistry<
 	private phase: "resolve" | "validate" | "setup" | "activate" | "run" =
 		"resolve";
 	private readonly setupContext: PluginSetupContext;
+	private readonly resolveExtensionId?: (
+		extension: TExtension,
+		order: number,
+	) => string;
 
 	constructor(
 		options: ContributionRegistryOptions<TExtension, TTool, TMessage> = {},
 	) {
 		this.extensions = options.extensions ?? [];
 		this.setupContext = options.setupContext ?? {};
+		this.resolveExtensionId = options.resolveExtensionId;
 	}
 
 	resolve(): void {
@@ -498,6 +577,9 @@ export class ContributionRegistry<
 			const { extension } = entry;
 			if (extension.disabled) continue;
 			const extensionName = asExtensionName(extension, entry.order);
+			const extensionId =
+				this.resolveExtensionId?.(extension, entry.order).trim() ||
+				extensionName;
 			const pending: AgentExtensionRegistry<TTool, TMessage> = {
 				tools: [],
 				commands: [],
@@ -509,7 +591,13 @@ export class ContributionRegistry<
 			};
 			const api: AgentExtensionApi<TTool, TMessage> = {
 				registerTool: (tool) => pending.tools.push(tool),
-				registerCommand: (command) => pending.commands.push(command),
+				registerCommand: (command) =>
+					pending.commands.push({
+						...command,
+						// Extension ownership is host-derived. Never preserve a value supplied
+						// by plugin code because it is also the persistence namespace.
+						extensionId,
+					}),
 				registerRule: (rule) => {
 					if (!entry.manifest.capabilities.has("rules")) {
 						throw new Error(

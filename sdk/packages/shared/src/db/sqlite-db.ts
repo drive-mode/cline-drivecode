@@ -129,6 +129,7 @@ function wrapNodeDb(db: {
 export function loadSqliteDb(filePath: string): SqliteDb {
 	mkdirSync(dirname(filePath), { recursive: true });
 	const require = createRequire(import.meta.url);
+	let db: SqliteDb;
 
 	if (typeof (globalThis as { Bun?: unknown }).Bun !== "undefined") {
 		const { Database } = require("bun:sqlite") as {
@@ -141,7 +142,9 @@ export function loadSqliteDb(filePath: string): SqliteDb {
 				close?: () => void;
 			};
 		};
-		return wrapBunDb(new Database(filePath, { create: true }));
+		db = wrapBunDb(new Database(filePath, { create: true }));
+		db.exec("PRAGMA foreign_keys = ON;");
+		return db;
 	}
 
 	// Suppress "ExperimentalWarning: SQLite is an experimental feature"
@@ -171,7 +174,9 @@ export function loadSqliteDb(filePath: string): SqliteDb {
 				close?: () => void;
 			};
 		};
-		return wrapNodeDb(new DatabaseSync(filePath));
+		db = wrapNodeDb(new DatabaseSync(filePath));
+		db.exec("PRAGMA foreign_keys = ON;");
+		return db;
 	} finally {
 		process.emitWarning = originalEmit;
 	}
@@ -179,6 +184,7 @@ export function loadSqliteDb(filePath: string): SqliteDb {
 
 export interface SessionSchemaOptions {
 	includeLegacyMigrations?: boolean;
+	tenantId?: string;
 }
 
 const SCHEMA_STATEMENTS = [
@@ -221,6 +227,42 @@ const SCHEMA_STATEMENTS = [
 		created_at TEXT NOT NULL,
 		consumed_at TEXT
 	);`,
+	`CREATE TABLE IF NOT EXISTS session_writer_heads (
+		session_id TEXT PRIMARY KEY,
+		commit_sequence INTEGER NOT NULL DEFAULT 0 CHECK (commit_sequence >= 0),
+		lease_revision INTEGER NOT NULL DEFAULT 0 CHECK (lease_revision >= 0),
+		writer_generation INTEGER NOT NULL DEFAULT 0 CHECK (writer_generation >= 0),
+		messages_path TEXT,
+		compaction_path TEXT,
+		manifest_path TEXT,
+		managed_at TEXT NOT NULL,
+		updated_at TEXT NOT NULL,
+		FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+	);`,
+	`CREATE TABLE IF NOT EXISTS session_manual_compaction_operations (
+		session_id TEXT NOT NULL,
+		writer_generation INTEGER NOT NULL CHECK (writer_generation >= 1),
+		operation_kind TEXT NOT NULL DEFAULT 'manual_compaction' CHECK (operation_kind = 'manual_compaction'),
+		operation_id TEXT NOT NULL,
+		intent_digest TEXT NOT NULL CHECK (length(intent_digest) = 64),
+		status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'skipped', 'failed', 'indeterminate')),
+		result_json TEXT,
+		compaction_path TEXT,
+		started_at TEXT NOT NULL,
+		updated_at TEXT NOT NULL,
+		PRIMARY KEY (session_id, operation_kind, operation_id),
+		UNIQUE (
+			session_id, writer_generation, operation_kind, operation_id, intent_digest
+		),
+		CHECK (
+			(status = 'completed' AND result_json IS NOT NULL AND compaction_path IS NOT NULL) OR
+			(status = 'skipped' AND result_json IS NOT NULL AND compaction_path IS NULL) OR
+			(status IN ('running', 'failed', 'indeterminate') AND result_json IS NULL AND compaction_path IS NULL)
+		),
+		FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+	);`,
+	`CREATE INDEX IF NOT EXISTS idx_session_manual_compaction_status
+	ON session_manual_compaction_operations(session_id, status, writer_generation);`,
 	`CREATE TABLE IF NOT EXISTS schedules (
 		schedule_id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
@@ -345,14 +387,136 @@ function getColumnNames(db: SqliteDb, table: string): Set<string> {
 	);
 }
 
+const MAX_TENANT_ID_LENGTH = 512;
+
+export class SqliteTenantOwnershipError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "SqliteTenantOwnershipError";
+	}
+}
+
+export function normalizeDatabaseTenantId(tenantId = "local"): string {
+	const normalized = tenantId.trim();
+	if (
+		!normalized ||
+		normalized.length > MAX_TENANT_ID_LENGTH ||
+		Array.from(normalized).some((character) => character.charCodeAt(0) <= 0x1f)
+	) {
+		throw new SqliteTenantOwnershipError("database tenant id is invalid");
+	}
+	return normalized;
+}
+
+function readDatabaseTenant(db: SqliteDb): string | undefined {
+	const table = db
+		.prepare(
+			`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'database_tenant'`,
+		)
+		.get();
+	if (!table) return undefined;
+	const row = db
+		.prepare(`SELECT singleton, tenant_id FROM database_tenant`)
+		.all();
+	if (row.length !== 1 || Number(row[0]?.singleton) !== 1) {
+		throw new SqliteTenantOwnershipError(
+			"database tenant ownership metadata is malformed",
+		);
+	}
+	return normalizeDatabaseTenantId(String(row[0]?.tenant_id ?? ""));
+}
+
+/**
+ * Assigns an empty database to one tenant, or migrates any unmarked historical
+ * database to local ownership. This must run before every mutable schema
+ * migration. Nonlocal tenants may provision only an empty explicit database.
+ */
+export function ensureDatabaseTenant(db: SqliteDb, tenantId = "local"): void {
+	const requestedTenantId = normalizeDatabaseTenantId(tenantId);
+	db.exec("PRAGMA busy_timeout = 5000;");
+	const existingTenantId = readDatabaseTenant(db);
+	if (existingTenantId !== undefined) {
+		if (existingTenantId !== requestedTenantId) {
+			throw new SqliteTenantOwnershipError(
+				"database is assigned to another tenant",
+			);
+		}
+		return;
+	}
+
+	db.exec("BEGIN IMMEDIATE;");
+	try {
+		const racedTenantId = readDatabaseTenant(db);
+		if (racedTenantId !== undefined) {
+			if (racedTenantId !== requestedTenantId) {
+				throw new SqliteTenantOwnershipError(
+					"database is assigned to another tenant",
+				);
+			}
+			db.exec("COMMIT;");
+			return;
+		}
+		const existingTables = db
+			.prepare(
+				`SELECT name FROM sqlite_master
+				 WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
+			)
+			.all();
+		if (requestedTenantId !== "local" && existingTables.length > 0) {
+			throw new SqliteTenantOwnershipError(
+				"nonlocal tenant provisioning requires an empty database",
+			);
+		}
+		db.exec(`CREATE TABLE database_tenant (
+			singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+			tenant_id TEXT NOT NULL
+		);`);
+		db.prepare(
+			`INSERT INTO database_tenant (singleton, tenant_id) VALUES (1, ?)`,
+		).run(requestedTenantId);
+		db.exec("COMMIT;");
+	} catch (error) {
+		db.exec("ROLLBACK;");
+		throw error;
+	}
+}
+
 export function ensureSessionSchema(
 	db: SqliteDb,
 	options: SessionSchemaOptions = {},
 ): void {
+	ensureDatabaseTenant(db, options.tenantId ?? "local");
 	db.exec("PRAGMA journal_mode = WAL;");
 	db.exec("PRAGMA busy_timeout = 5000;");
 	for (const stmt of SCHEMA_STATEMENTS) {
 		db.exec(stmt);
+	}
+
+	// The first gate-off manual-compaction checkpoint allowed more than one
+	// running row. Install the invariant transactionally and treat every
+	// pre-index running row as process-loss work. Re-check inside the write
+	// transaction so a second opener cannot invalidate work admitted after a
+	// concurrent migrator already installed the index.
+	db.exec("BEGIN IMMEDIATE;");
+	try {
+		const runningIndex = db
+			.prepare(
+				`SELECT name FROM sqlite_master
+				 WHERE type = 'index' AND name = 'idx_session_manual_compaction_one_running'`,
+			)
+			.get();
+		if (!runningIndex) {
+			db.exec(`UPDATE session_manual_compaction_operations
+				SET status = 'indeterminate', updated_at = CURRENT_TIMESTAMP
+				WHERE status = 'running';`);
+			db.exec(`CREATE UNIQUE INDEX idx_session_manual_compaction_one_running
+				ON session_manual_compaction_operations(session_id, operation_kind)
+				WHERE status = 'running';`);
+		}
+		db.exec("COMMIT;");
+	} catch (error) {
+		db.exec("ROLLBACK;");
+		throw error;
 	}
 
 	if (!options.includeLegacyMigrations) return;

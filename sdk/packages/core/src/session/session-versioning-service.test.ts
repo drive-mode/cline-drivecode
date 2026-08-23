@@ -101,6 +101,35 @@ describe("createCoreSessionSnapshot", () => {
 });
 
 describe("SessionVersioningService", () => {
+	it("prepares a restore plan without starting a session or mutating the workspace", async () => {
+		const getSession = vi.fn(async () => makeSession());
+		const readMessages = vi.fn(async () => messages);
+		const prepared =
+			await new SessionVersioningService().prepareCheckpointRestore({
+				sessionId: "source-session",
+				checkpointRunCount: 2,
+				restore: {
+					messages: true,
+					workspace: true,
+					omitCheckpointMessageFromSession: true,
+				},
+				getSession,
+				readMessages,
+			});
+
+		expect(prepared.context.plan.checkpoint).toMatchObject({
+			ref: "bbbb",
+			runCount: 2,
+		});
+		expect(prepared.context.initialMessages).toEqual([
+			{ role: "user", content: "first" },
+			{ role: "assistant", content: "first response" },
+		]);
+		expect(prepared.context.restoreWorkspace).toBe(true);
+		expect(getSession).toHaveBeenCalledOnce();
+		expect(readMessages).toHaveBeenCalledOnce();
+	});
+
 	it("plans and materializes checkpoint restore through shared semantics", async () => {
 		const sourceSession = makeSession();
 		const restoredSession = makeSession({

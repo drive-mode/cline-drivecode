@@ -1,9 +1,20 @@
 export type OutboundPriority = "high" | "normal" | "low";
 
+export interface OutboundAdditiveMerge {
+	/** Only the newest queued entry with the same key may be merged. */
+	key: string;
+	/** Return one replacement payload, or undefined when these sends cannot merge. */
+	merge(previousData: string, incomingData: string): string | undefined;
+}
+
 export interface OutboundMessageOptions {
 	priority?: OutboundPriority;
 	/** Queued messages with the same key may be replaced after the soft watermark. */
 	replaceableKey?: string;
+	/** Adjacent additive messages may be combined in place after the soft watermark. */
+	additiveMerge?: OutboundAdditiveMerge;
+	/** Close immediately if this non-replayable message cannot be queued. */
+	closeOnDrop?: boolean;
 }
 
 export interface BoundedOutboundChannelOptions {
@@ -55,7 +66,9 @@ type QueueEntry = {
 	data: string;
 	bytes: number;
 	priority: OutboundPriority;
+	enqueueOrder: number;
 	replaceableKey?: string;
+	additiveMergeKey?: string;
 };
 
 const PRIORITIES: readonly OutboundPriority[] = ["high", "normal", "low"];
@@ -94,6 +107,7 @@ export class BoundedOutboundChannel {
 	private congestionTimer: ReturnType<typeof setTimeout> | undefined;
 	private terminateTimer: ReturnType<typeof setTimeout> | undefined;
 	private closing = false;
+	private nextEnqueueOrder = 0;
 
 	constructor(
 		private readonly socket: OutboundChannelSocket,
@@ -129,9 +143,61 @@ export class BoundedOutboundChannel {
 			this.counters.coalescedBytes += existing.bytes;
 		}
 
+		const additiveMerge = options.additiveMerge;
+		const additiveCandidate =
+			additiveMerge && !options.replaceableKey
+				? this.newestQueuedEntry()
+				: undefined;
+		if (
+			additiveMerge &&
+			additiveCandidate &&
+			!additiveCandidate.replaceableKey &&
+			additiveCandidate.priority === priority &&
+			additiveCandidate.additiveMergeKey === additiveMerge.key &&
+			this.counters.queuedBytes + bytes > this.options.softWatermarkBytes
+		) {
+			let mergedData: string | undefined;
+			try {
+				mergedData = additiveMerge.merge(additiveCandidate.data, data);
+			} catch {
+				mergedData = undefined;
+			}
+			if (mergedData !== undefined) {
+				const mergedBytes = utf8ByteLength(mergedData);
+				if (mergedBytes <= this.options.hardWatermarkBytes) {
+					while (
+						this.counters.queuedBytes - additiveCandidate.bytes + mergedBytes >
+							this.options.hardWatermarkBytes &&
+						this.dropReplaceableCandidate(priority)
+					) {}
+					if (
+						this.counters.queuedBytes - additiveCandidate.bytes + mergedBytes <=
+						this.options.hardWatermarkBytes
+					) {
+						const previousBytes = additiveCandidate.bytes;
+						additiveCandidate.data = mergedData;
+						additiveCandidate.bytes = mergedBytes;
+						this.counters.enqueuedMessages += 1;
+						this.counters.enqueuedBytes += bytes;
+						this.counters.coalescedMessages += 1;
+						this.counters.coalescedBytes += Math.max(
+							0,
+							previousBytes + bytes - mergedBytes,
+						);
+						this.counters.queuedBytes += mergedBytes - previousBytes;
+						this.counters.peakQueuedBytes = Math.max(
+							this.counters.peakQueuedBytes,
+							this.counters.queuedBytes,
+						);
+						return true;
+					}
+				}
+			}
+		}
+
 		if (bytes > this.options.hardWatermarkBytes) {
 			this.recordDrop(bytes);
-			this.beginHardPressure();
+			this.handleHardPressure(options.closeOnDrop === true);
 			return false;
 		}
 		while (
@@ -140,7 +206,7 @@ export class BoundedOutboundChannel {
 		) {}
 		if (this.counters.queuedBytes + bytes > this.options.hardWatermarkBytes) {
 			this.recordDrop(bytes);
-			this.beginHardPressure();
+			this.handleHardPressure(options.closeOnDrop === true);
 			return false;
 		}
 
@@ -148,7 +214,9 @@ export class BoundedOutboundChannel {
 			data,
 			bytes,
 			priority,
+			enqueueOrder: ++this.nextEnqueueOrder,
 			replaceableKey: options.replaceableKey,
+			additiveMergeKey: options.additiveMerge?.key,
 		};
 		this.queues[priority].push(entry);
 		if (entry.replaceableKey) this.replaceable.set(entry.replaceableKey, entry);
@@ -250,6 +318,20 @@ export class BoundedOutboundChannel {
 		this.counters.queuedBytes -= entry.bytes;
 	}
 
+	private newestQueuedEntry(): QueueEntry | undefined {
+		let newest: QueueEntry | undefined;
+		for (const priority of PRIORITIES) {
+			const candidate = this.queues[priority].at(-1);
+			if (
+				candidate &&
+				(!newest || candidate.enqueueOrder > newest.enqueueOrder)
+			) {
+				newest = candidate;
+			}
+		}
+		return newest;
+	}
+
 	private dropReplaceableCandidate(
 		incomingPriority: OutboundPriority,
 	): boolean {
@@ -284,6 +366,15 @@ export class BoundedOutboundChannel {
 			if (this.counters.queuedBytes < this.options.softWatermarkBytes) return;
 			this.requestClose(this.options.closeCode, this.options.closeReason);
 		}, this.options.congestionGraceMs);
+	}
+
+	private handleHardPressure(closeOnDrop: boolean): void {
+		if (!closeOnDrop) {
+			this.beginHardPressure();
+			return;
+		}
+		this.counters.hardPressureEvents += 1;
+		this.requestClose(this.options.closeCode, this.options.closeReason);
 	}
 
 	private clearCongestionIfRecovered(): void {

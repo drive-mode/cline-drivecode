@@ -3,8 +3,8 @@
 **ADR** = Architecture Decision Record (industry-standard naming; same artifact family as cursor-drive and harrison-site).
 
 **Status board.** [ADR-0000-status-board.md](ADR-0000-status-board.md) — Accepted / Recommended / Proposed / Open, clusters, and **decision coverage gaps** in one place.  
-**Coverage inventory.** [decision-coverage.md](decision-coverage.md) — binding clauses, domain tags, and domain matrix for ADR-0001…0029 + DEC-\* + Architecture D1–D10.
-**Acceptance.** 2026-07-29 human `accept all`: ADR-0000…0013 + DEC bundle. ADR-0014 Accepted on `main` the same day. **2026-08-08 cleanup:** ADR-0023 reconciled; ADR-0023 / 0027 / 0028 / 0029 Accepted; path H + DEC-mobile on the board.
+**Coverage inventory.** [decision-coverage.md](decision-coverage.md) — binding clauses, domain tags, and domain matrix for current ADRs + DEC-\* + Architecture D1–D10.
+**Acceptance.** 2026-07-29 human `accept all`: ADR-0000…0013 + DEC bundle. ADR-0014 Accepted on `main` the same day. **2026-08-08 cleanup:** ADR-0023 reconciled; ADR-0023 / 0027 / 0028 / 0029 Accepted; path H + DEC-mobile on the board. ADR-0045's gate-off implementation and physical fault evidence are complete, but its explicit owner acceptance, caller adoption, and trusted connector-launcher cutover remain open; the production gate is still off.
 
 **Hygiene (unpoisoned context).** Prefer **rewrite-in-place** so each ADR’s
 Context/Decision reads as current tip truth. Do not leave a false Finding beside
@@ -53,12 +53,20 @@ See ADR-0000 § Change control.
 | [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary | **Proposed** | [driveplan-agent-runtime](../initiatives/driveplan-agent-runtime/) |
 | [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** (blocked on D1) | — |
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | [DRV-LEAVE-END](../features/DRV-LEAVE-END.md) |
-| [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | [DRV-GATES](../features/DRV-GATES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md) |
-| [ADR-0037](ADR-0037-invocation-scoped-sensing.md) | Desktop sensing is invocation-scoped, or it does not happen | **Proposed** (amends ADR-0036) | [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-EVENTS](../features/DRV-EVENTS.md) |
+| [ADR-0036](ADR-0036-adr-planner-plugin-boundary.md) | ADR Planner plugin ownership and installation boundary | **Accepted** | [adr-planner](../initiatives/adr-planner/) |
+| [ADR-0037](ADR-0037-adr-planner-package-contract.md) | ADR Planner production package and invocation contract | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
+| [ADR-0038](ADR-0038-adr-planner-evidence-trust-boundary.md) | ADR Planner repository-evidence trust boundary | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
+| [ADR-0039](ADR-0039-adr-planner-concern-catalog-and-rule-authority.md) | ADR Planner concern catalog and rule authority | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
+| [ADR-0040](ADR-0040-adr-planner-host-attested-workflow-authority.md) | ADR Planner host-attested workflow authority | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
+| [ADR-0041](ADR-0041-cross-session-chat-catalog-authority.md) | Cross-session chat catalog authority | **Proposed** | [cross-session-chat-management](../initiatives/cross-session-chat-management/) |
+| [ADR-0042](ADR-0042-managed-session-reconnect-authority.md) | Durable managed-session reconnect authority | **Accepted** | [cross-session-chat-management](../initiatives/cross-session-chat-management/) |
+| [ADR-0043](ADR-0043-trusted-managed-manual-compaction.md) | Trusted managed manual compaction authority | **Proposed** | [cross-session-chat-management](../initiatives/cross-session-chat-management/) |
+| [ADR-0044](ADR-0044-adr-planner-install-attestation.md) | ADR Planner reproducible install and upgrade attestation | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
+| [ADR-0045](ADR-0045-fresh-process-managed-session-reattach.md) | Fresh-process managed-session reattach | **Proposed** — gate-off implementation complete; owner acceptance pending | [cross-session-chat-management](../initiatives/cross-session-chat-management/) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 
-Product requirements: [../prd/prd-driveagent-portfolio.md](../prd/prd-driveagent-portfolio.md), [../prd/prd-pip-partner.md](../prd/prd-pip-partner.md), [../prd/prd-drive-as-cline-mode.md](../prd/prd-drive-as-cline-mode.md), [../prd/prd-task-bank-drive-loop.md](../prd/prd-task-bank-drive-loop.md), [../prd/prd-task-satisfaction-observability.md](../prd/prd-task-satisfaction-observability.md).
+Product requirements: [../prd/prd-driveagent-portfolio.md](../prd/prd-driveagent-portfolio.md), [../prd/prd-pip-partner.md](../prd/prd-pip-partner.md), [../prd/prd-drive-as-cline-mode.md](../prd/prd-drive-as-cline-mode.md), [../prd/prd-task-bank-drive-loop.md](../prd/prd-task-bank-drive-loop.md), [../prd/prd-task-satisfaction-observability.md](../prd/prd-task-satisfaction-observability.md), [../prd/prd-adr-planner.md](../prd/prd-adr-planner.md).
 Success metrics: [../prd/prd-success-metrics.md](../prd/prd-success-metrics.md) (phase/CI). Session satisfaction: [PRD 10](../prd/prd-task-satisfaction-observability.md).
 
 Example home: [../examples/driveagent-pair-partner/](../examples/driveagent-pair-partner/).

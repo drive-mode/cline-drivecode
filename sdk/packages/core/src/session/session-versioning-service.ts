@@ -37,11 +37,11 @@ export class SessionVersioningError extends Error {
 
 export interface SessionCheckpointRestoreContext {
 	sourceSession: SessionRecord;
-	sourceMessages?: LlmsProviders.MessageWithMetadata[];
+	sourceMessages?: LlmsProviders.Message[];
 	sourceSnapshot: CoreSessionSnapshot;
 	plan: CheckpointRestorePlan;
 	restoredCheckpointMetadata?: CheckpointMetadata;
-	initialMessages: LlmsProviders.MessageWithMetadata[];
+	initialMessages: LlmsProviders.Message[];
 	restoreMessages: boolean;
 	restoreWorkspace: boolean;
 	checkpointRunCount: number;
@@ -50,10 +50,23 @@ export interface SessionCheckpointRestoreContext {
 export interface SessionCheckpointRestoreResult<TStartResult = unknown> {
 	sessionId?: string;
 	startResult?: TStartResult;
-	messages?: LlmsProviders.MessageWithMetadata[];
+	messages?: LlmsProviders.Message[];
 	checkpoint: CheckpointEntry;
 	sourceSnapshot: CoreSessionSnapshot;
 	restoredSnapshot?: CoreSessionSnapshot;
+}
+
+export interface SessionCheckpointPreparationInput {
+	sessionId: string;
+	checkpointRunCount: number;
+	cwd?: string;
+	restore?: RestoreSessionInput["restore"];
+	getSession(sessionId: string): Promise<SessionRecord | undefined>;
+	readMessages(sessionId: string): Promise<LlmsProviders.Message[]>;
+}
+
+export interface PreparedSessionCheckpointRestore {
+	context: SessionCheckpointRestoreContext;
 }
 
 export interface SessionCheckpointRestoreInput<
@@ -67,7 +80,7 @@ export interface SessionCheckpointRestoreInput<
 	restore?: RestoreSessionInput["restore"];
 	start?: TRestoreStartInput;
 	getSession(sessionId: string): Promise<SessionRecord | undefined>;
-	readMessages(sessionId: string): Promise<LlmsProviders.MessageWithMetadata[]>;
+	readMessages(sessionId: string): Promise<LlmsProviders.Message[]>;
 	buildStartInput?: (
 		context: SessionCheckpointRestoreContext,
 		start: TRestoreStartInput,
@@ -131,20 +144,22 @@ function validateRestoreOptions(input: {
 }
 
 export class SessionVersioningService {
-	async restoreCheckpoint<TRestoreStartInput, TStartInput, TStartResult>(
-		input: SessionCheckpointRestoreInput<
-			TRestoreStartInput,
-			TStartInput,
-			TStartResult
-		>,
-	): Promise<SessionCheckpointRestoreResult<TStartResult>> {
+	/**
+	 * Read-only checkpoint preparation. This validates the source and derives the
+	 * exact message/workspace plan without mutating the worktree or starting a
+	 * replacement session. Trusted lifecycle authorities can therefore admit and
+	 * guard a writer before any restore side effect occurs.
+	 */
+	async prepareCheckpointRestore(
+		input: SessionCheckpointPreparationInput,
+	): Promise<PreparedSessionCheckpointRestore> {
 		const restoreMessages = input.restore?.messages !== false;
 		const restoreWorkspace = input.restore?.workspace !== false;
 		const sourceSessionId = validateRestoreOptions({
 			sessionId: input.sessionId,
 			restoreMessages,
 			restoreWorkspace,
-			requiresStart: input.start === undefined,
+			requiresStart: false,
 			checkpointRunCount: input.checkpointRunCount,
 		});
 
@@ -176,8 +191,66 @@ export class SessionVersioningService {
 			session: sourceSession,
 			messages: sourceMessages,
 		});
-		let restoredCheckpointMetadata: CheckpointMetadata | undefined;
-		let initialMessages: LlmsProviders.MessageWithMetadata[] = [];
+		const restoredCheckpointMetadata = restoreMessages
+			? createRestoredCheckpointMetadata(
+					sourceSession,
+					input.checkpointRunCount,
+				)
+			: undefined;
+		const initialMessages = restoreMessages
+			? input.restore?.omitCheckpointMessageFromSession
+				? trimMessagesBeforeUserRun(
+						sourceMessages ?? [],
+						input.checkpointRunCount,
+					)
+				: (plan.messages ?? [])
+			: [];
+
+		return {
+			context: {
+				sourceSession,
+				sourceMessages,
+				sourceSnapshot,
+				plan,
+				restoredCheckpointMetadata,
+				initialMessages,
+				restoreMessages,
+				restoreWorkspace,
+				checkpointRunCount: input.checkpointRunCount,
+			},
+		};
+	}
+
+	async restoreCheckpoint<TRestoreStartInput, TStartInput, TStartResult>(
+		input: SessionCheckpointRestoreInput<
+			TRestoreStartInput,
+			TStartInput,
+			TStartResult
+		>,
+	): Promise<SessionCheckpointRestoreResult<TStartResult>> {
+		const restoreMessages = input.restore?.messages !== false;
+		const restoreWorkspace = input.restore?.workspace !== false;
+		validateRestoreOptions({
+			sessionId: input.sessionId,
+			restoreMessages,
+			restoreWorkspace,
+			requiresStart: input.start === undefined,
+			checkpointRunCount: input.checkpointRunCount,
+		});
+		const { context } = await this.prepareCheckpointRestore({
+			sessionId: input.sessionId,
+			checkpointRunCount: input.checkpointRunCount,
+			...(input.cwd === undefined ? {} : { cwd: input.cwd }),
+			...(input.restore === undefined ? {} : { restore: input.restore }),
+			getSession: input.getSession,
+			readMessages: input.readMessages,
+		});
+		const {
+			sourceSnapshot,
+			plan,
+			restoredCheckpointMetadata,
+			initialMessages,
+		} = context;
 		let startInput: TStartInput | undefined;
 		let messageRestoreOperations:
 			| {
@@ -206,27 +279,6 @@ export class SessionVersioningService {
 				startSession,
 				getStartedSessionId,
 				cleanupStartedSession,
-			};
-			restoredCheckpointMetadata = createRestoredCheckpointMetadata(
-				sourceSession,
-				input.checkpointRunCount,
-			);
-			initialMessages = input.restore?.omitCheckpointMessageFromSession
-				? trimMessagesBeforeUserRun(
-						sourceMessages ?? [],
-						input.checkpointRunCount,
-					)
-				: (plan.messages ?? []);
-			const context: SessionCheckpointRestoreContext = {
-				sourceSession,
-				sourceMessages,
-				sourceSnapshot,
-				plan,
-				restoredCheckpointMetadata,
-				initialMessages,
-				restoreMessages,
-				restoreWorkspace,
-				checkpointRunCount: input.checkpointRunCount,
 			};
 			startInput = input.buildStartInput
 				? await input.buildStartInput(context, input.start)

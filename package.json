@@ -13,7 +13,8 @@
         "apps/examples/*",
         "apps/examples/vscode/src/webview",
         "sdk/examples",
-        "sdk/examples/plugins/*"
+        "sdk/examples/plugins/*",
+        "plugins/*"
     ],
     "scripts": {
         "prepare": "husky",
@@ -28,25 +29,21 @@
         "preflight": "bun apps/cli/src/commands/preflight.ts",
         "check:links": "bun sdk/scripts/check-links.ts",
         "check:drivecode-docs": "bun sdk/scripts/check-drivecode-structure.ts && bun sdk/scripts/check-drivecode-done.ts",
-        "check:runtime-config": "bun sdk/scripts/check-runtime-config.ts",
-        "check:vitest-aliases": "bun sdk/scripts/check-vitest-aliases.ts",
         "test:drivecode-docs": "bun test sdk/scripts/check-drivecode-structure.test.ts sdk/scripts/check-drivecode-done.test.ts",
         "types": "bun --parallel -F '*' typecheck",
-        "test": "bun --parallel -F './sdk/packages/**' -F @cline/cli -F @cline/cline-hub -F @cline/vscode test",
-        "test:unit": "bash -lc 'set -euo pipefail; bun -F @cline/agents test & p1=$!; bun -F @cline/llms test & p2=$!; bun -F @cline/core test:unit & p3=$!; bun -F @cline/cli test:unit & p4=$!; bun -F @cline/cline-hub test & p5=$!; bun -F @cline/vscode test & p6=$!; wait $p1; wait $p2; wait $p3; wait $p4; wait $p5; wait $p6'",
+        "test": "bun --parallel -F './sdk/packages/**' -F './plugins/**' -F @cline/cli -F @cline/cline-hub test",
+        "test:unit": "bash -lc 'set -euo pipefail; bun -F @cline/agents test & p1=$!; bun -F @cline/llms test & p2=$!; bun -F @cline/core test:unit & p3=$!; bun -F @cline/cli test:unit & p4=$!; bun -F @cline/cline-hub test & p5=$!; bun -F @cline/adr-planner test & p6=$!; wait $p1; wait $p2; wait $p3; wait $p4; wait $p5; wait $p6'",
         "test:e2e": "bun -F @cline/core test:e2e && bun -F @cline/cli test:e2e",
         "test:e2e:interactive": "bun -F @cline/cli test:e2e:interactive",
         "verify:routines": "zsh -lc 'cd sdk/packages/core && bunx vitest run src/cron/schedule-service.test.ts --config vitest.config.ts'",
         "verify:workos-device-auth": "bun sdk/scripts/verify-workos-device-auth.ts",
         "biome": "bunx --bun @biomejs/biome",
-        "format": "bun biome format sdk/ apps/cli/ apps/cline-hub/ apps/examples/",
-        "lint": "bun run check:runtime-config && bun biome lint sdk/ apps/cli/ apps/cline-hub/ apps/examples/",
-        "fix": "bun biome check --write --unsafe --diagnostic-level=error sdk/ apps/cli/ apps/cline-hub/ apps/examples/",
-        "check": "bun run check:runtime-config && bun run check:vitest-aliases && bun biome check --diagnostic-level=error sdk/ apps/cli/ apps/cline-hub/ apps/examples/ && bun run build:sdk && bun run -F @cline/cli build && bun -F @cline/cline-hub build:webview && bun --parallel -F './sdk/packages/**' -F @cline/cli -F @cline/cline-hub typecheck && bun sdk/scripts/check-publish.ts",
+        "format": "bun biome format sdk/ apps/cli/ apps/cline-hub/ apps/examples/ plugins/",
+        "lint": "bun biome lint sdk/ apps/cli/ apps/cline-hub/ apps/examples/ plugins/",
+        "fix": "bun biome check --write --unsafe --diagnostic-level=error sdk/ apps/cli/ apps/cline-hub/ apps/examples/ plugins/",
+        "check": "bun biome check --diagnostic-level=error sdk/ apps/cli/ apps/cline-hub/ apps/examples/ plugins/ && bun run build:sdk && bun run -F @cline/cli build && bun -F @cline/cline-hub build:webview && bun --parallel -F './sdk/packages/**' -F './plugins/**' -F @cline/cli -F @cline/cline-hub typecheck && bun sdk/scripts/check-publish.ts",
         "version": "bun run types && bun sdk/scripts/version.ts",
-        "release": "bun sdk/scripts/release.ts",
-        "build:drive-kernel": "bun sdk/scripts/build-drive-kernel-bundle.ts",
-        "check:drive-kernel": "bun sdk/scripts/check-drive-kernel-bundle.ts"
+        "release": "bun sdk/scripts/release.ts"
     },
     "lint-staged": {
         "sdk/**": [
@@ -55,6 +52,10 @@
         ],
         "apps/{cli,cline-hub,examples}/**": [
             "sh -c 'bun run types'",
+            "bun biome check --no-errors-on-unmatched --files-ignore-unknown=true"
+        ],
+        "plugins/**": [
+            "sh -c 'bun -F @cline/adr-planner typecheck'",
             "bun biome check --no-errors-on-unmatched --files-ignore-unknown=true"
         ]
     },
@@ -80,6 +81,7 @@
     "overrides": {
         "axios": "1.18.0",
         "fast-uri": ">=3.1.4",
+        "@ai-sdk/provider-utils": ">=4.0.0",
         "undici@>=6.0.0 <7.0.0": "6.28.0",
         "@opentui/core": "0.4.3",
         "@opentui/react": "0.4.3",
@@ -102,7 +104,6 @@
     ],
     "packageManager": "bun@1.3.13",
     "patchedDependencies": {
-        "@opentui-ui/dialog@0.1.2": "patches/@opentui-ui%2Fdialog@0.1.2.patch",
-        "ollama-ai-provider-v2@4.0.1": "patches/ollama-ai-provider-v2@4.0.1.patch"
+        "@opentui-ui/dialog@0.1.2": "patches/@opentui-ui%2Fdialog@0.1.2.patch"
     }
 }

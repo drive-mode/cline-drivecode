@@ -18,8 +18,11 @@ export {
 	asBool,
 	asOptionalString,
 	asString,
+	ensureDatabaseTenant,
 	ensureSessionSchema,
 	loadSqliteDb,
+	normalizeDatabaseTenantId,
 	nowIso,
+	SqliteTenantOwnershipError,
 	toBoolInt,
 } from "./sqlite-db";
