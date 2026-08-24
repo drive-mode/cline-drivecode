@@ -24,11 +24,15 @@ the wire projection, **Presenter** as a temporary exclusive title, and
 planner → [#35](https://github.com/drive-mode/cline-drivecode/pull/35)
 catalog → [#36](https://github.com/drive-mode/cline-drivecode/pull/36)
 CLI → [#38](https://github.com/drive-mode/cline-drivecode/pull/38)
-kernel D1b. `@cline/drive` is the SoT fold; MCP consumes generated
-`@drive-mode/drive-kernel` ([ADR-0056](plans/cline-drivemode/adr/ADR-0056-d1b-kernel-protocol-superset.md)).
+kernel D1b. `@cline/drive` is the SoT fold; MCP is **decided** to consume
+generated `@drive-mode/drive-kernel`
+([ADR-0056](plans/cline-drivemode/adr/ADR-0056-d1b-kernel-protocol-superset.md))
+but `drivemode-mcp` `main` still `file:`-depends on `collaboration-harness`.
 Hub is the Cline-line writer if both Hub and MCP are live
 ([ADR-0057](plans/cline-drivemode/adr/ADR-0057-room-state-authority.md)).
-`collaboration-harness` is archived. In-tree `apps/drive-ios` is deleted.
+Harness docs are archived; GitHub archive waits on that MCP consume.
+In-tree `apps/drive-ios` is deleted. Pickup order:
+[NEXT-STEPS.md](plans/cline-drivemode/leadership/NEXT-STEPS.md).
 
 The native App Store candidate is the standalone
 [`drive-ios`](https://github.com/drive-mode/drive-ios) repository. There is no
@@ -143,6 +147,7 @@ validation commands, and continuation checklist live in
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
 - `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the Cline-product systems analysis (context, interfaces, NFRs, as-is/to-be) — **§13.0 is current as-is**.
 - `docs/drivecode/plans/cline-drivemode/leadership/ISA-DRIVE-MODE-FAMILY.md` is the family-wide information system analysis (all repos, FDD, DFD-0, DFD-1).
+- `docs/drivecode/plans/cline-drivemode/leadership/NEXT-STEPS.md` is the pickup plan after that ISA (three tracks; GP4 hard join). Does not replace the claims registry or portfolio-now.
 
 ### Drivecode SDK plan
 

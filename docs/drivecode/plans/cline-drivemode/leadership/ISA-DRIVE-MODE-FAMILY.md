@@ -7,7 +7,7 @@
 **Diagram grade.** Parse-validated Mermaid (same gate as `@cline/drive` `validateMermaidSource`).
 **Cline-product companion.** [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) remains the Cline-only deep dive. This file is the family view.
 
-Companion docs: [HANDOFF.md](../../../HANDOFF.md), [architecture.md](../../../reference/architecture.md), [ADR-0013](../adr/ADR-0013-state-partition.md), [ADR-0056](../adr/ADR-0056-d1b-kernel-protocol-superset.md), [ADR-0057](../adr/ADR-0057-room-state-authority.md), [repo-ownership](../initiatives/repo-ownership/README.md), [portfolio-now](../initiatives/portfolio-now/README.md), [06-sdk-leverage.md](../../drivecode-sdk/delivery/06-sdk-leverage.md).
+Companion docs: [HANDOFF.md](../../../HANDOFF.md), [NEXT-STEPS.md](NEXT-STEPS.md), [architecture.md](../../../reference/architecture.md), [ADR-0013](../adr/ADR-0013-state-partition.md), [ADR-0056](../adr/ADR-0056-d1b-kernel-protocol-superset.md), [ADR-0057](../adr/ADR-0057-room-state-authority.md), [repo-ownership](../initiatives/repo-ownership/README.md), [portfolio-now](../initiatives/portfolio-now/README.md), [06-sdk-leverage.md](../../drivecode-sdk/delivery/06-sdk-leverage.md).
 
 ---
 
@@ -715,6 +715,8 @@ Dependency-honest; no calendars.
 6. **Site is not the wire**, but F7 currently under-represents the family (no iOS, pre-move Cline URL). A site PR is copy, not architecture — still a family defect.
 7. Cline-only product gaps (GATES UI, recruit Add, CLI parity, STT) remain owned by [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md). Do not copy that backlog here.
 
+Operational expansion: [NEXT-STEPS.md](NEXT-STEPS.md) (three tracks; GP4 is the hard join). Do not treat the text tree below as a task board.
+
 ```text
 F6 consume (MCP → drive-kernel)
   → iOS title fold matches Hub leave/end
@@ -760,6 +762,7 @@ Full Cline workflow coverage remains [MATRIX-workflow-coverage.md](MATRIX-workfl
 | Version | Change |
 |---|---|
 | 2026-08-24 | Initial family ISA: FDD, DFD-0, DFD-1, two-profile overlay, drift findings, golden-path recommendations |
+| 2026-08-24 | Point §19 at [NEXT-STEPS.md](NEXT-STEPS.md); HANDOFF kernel-consume claim qualified as decided-not-as-is |
 
 When MCP consumes `drive-kernel` or iOS pairs with Hub, update §16.1 and tick §17. Do not fork a third analysis; amend this file for family scope and [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) for Cline-only scope.
 
