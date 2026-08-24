@@ -1,0 +1,132 @@
+{
+  "version": "m0.1-provisional",
+  "status": "proposed concern map; benchmark-owner acceptance pending",
+  "cases": {
+    "DEV-01": {
+      "proposed_concerns": [
+        "tenancy",
+        "identity-authorization",
+        "data-lifecycle",
+        "async-delivery",
+        "billing-entitlement",
+        "security-baseline",
+        "recovery",
+        "operability-slo",
+        "pilot-governance"
+      ],
+      "runs": {
+        "1": {
+          "canonical": ["tenancy", "identity-authorization", "data-lifecycle", "async-delivery", "billing-entitlement", "security-baseline", "operability-slo", "pilot-governance"],
+          "omitted": ["recovery"],
+          "extras": [],
+          "not_applicable_controls": ["scale-capacity-planning"]
+        },
+        "2": {
+          "canonical": ["tenancy", "identity-authorization", "data-lifecycle", "async-delivery", "billing-entitlement", "operability-slo", "pilot-governance"],
+          "omitted": ["security-baseline", "recovery"],
+          "extras": ["template-baseline"],
+          "not_applicable_controls": []
+        },
+        "3": {
+          "canonical": ["tenancy", "identity-authorization", "data-lifecycle", "async-delivery", "billing-entitlement", "operability-slo", "pilot-governance"],
+          "omitted": ["security-baseline", "recovery"],
+          "extras": ["template-baseline"],
+          "not_applicable_controls": ["enterprise-readiness-process"]
+        }
+      }
+    },
+    "DEV-02": {
+      "proposed_concerns": [
+        "template-source",
+        "plugin-discovery",
+        "project-local-trust-boundary",
+        "capability-permissions",
+        "versioning",
+        "generation-upgrade-acceptance",
+        "production-data-not-applicable"
+      ],
+      "runs": {
+        "1": {
+          "canonical": ["template-source", "plugin-discovery", "project-local-trust-boundary", "generation-upgrade-acceptance", "production-data-not-applicable"],
+          "omitted": ["capability-permissions", "versioning"],
+          "extras": ["plugin-scope-definition"]
+        },
+        "2": {
+          "canonical": ["template-source", "plugin-discovery", "project-local-trust-boundary", "generation-upgrade-acceptance", "production-data-not-applicable"],
+          "omitted": ["capability-permissions", "versioning"],
+          "extras": ["plugin-scope", "local-installation-contract"]
+        },
+        "3": {
+          "canonical": ["template-source", "plugin-discovery", "project-local-trust-boundary", "generation-upgrade-acceptance", "production-data-not-applicable"],
+          "omitted": ["capability-permissions", "versioning"],
+          "extras": ["adr-plugin-scope"]
+        }
+      }
+    },
+    "DEV-03": {
+      "proposed_concerns": [
+        "editing",
+        "build-publish",
+        "rollback",
+        "public-quality",
+        "dynamic-backend-not-applicable"
+      ],
+      "runs": {
+        "1": {
+          "canonical": ["editing", "build-publish", "rollback", "public-quality", "dynamic-backend-not-applicable"],
+          "omitted": [],
+          "extras": [],
+          "not_applicable_controls": ["pilot-program"],
+          "scope_splits": ["publishing-workflow -> build-publish + rollback"]
+        },
+        "2": {
+          "canonical": ["editing", "build-publish", "rollback", "public-quality", "dynamic-backend-not-applicable"],
+          "omitted": [],
+          "extras": [],
+          "scope_splits": ["publishing-workflow + maintainer-operating-notes -> build-publish + rollback"]
+        },
+        "3": {
+          "canonical": ["editing", "build-publish", "rollback", "public-quality", "dynamic-backend-not-applicable"],
+          "omitted": [],
+          "extras": [],
+          "scope_splits": ["cdn-publishing-constraints + publishing-workflow -> build-publish + rollback"]
+        }
+      }
+    },
+    "DEV-04": {
+      "proposed_concerns": [
+        "accountable-governance",
+        "legal-applicability",
+        "clinical-intended-use",
+        "clinical-failsafe",
+        "model-validation",
+        "privacy-data-lifecycle",
+        "security",
+        "vendor-processing",
+        "sms",
+        "incident-change-control",
+        "release-stop"
+      ],
+      "runs": {
+        "1": {
+          "canonical": ["accountable-governance", "legal-applicability", "clinical-intended-use", "clinical-failsafe", "model-validation", "privacy-data-lifecycle", "vendor-processing", "sms", "incident-change-control", "release-stop"],
+          "omitted": ["security"],
+          "extras": [],
+          "scope_splits": ["clinical-urgency-safety -> clinical-intended-use + clinical-failsafe + model-validation"]
+        },
+        "2": {
+          "canonical": ["accountable-governance", "legal-applicability", "clinical-intended-use", "clinical-failsafe", "model-validation", "privacy-data-lifecycle", "security", "vendor-processing", "sms", "release-stop"],
+          "omitted": ["incident-change-control"],
+          "extras": [],
+          "scope_splits": ["llm-urgency-safety -> clinical-intended-use + clinical-failsafe + model-validation"]
+        },
+        "3": {
+          "canonical": ["accountable-governance", "legal-applicability", "clinical-intended-use", "clinical-failsafe", "model-validation", "privacy-data-lifecycle", "sms", "release-stop"],
+          "omitted": ["security", "vendor-processing", "incident-change-control"],
+          "extras": [],
+          "scope_splits": ["llm-urgency-safety -> clinical-intended-use + clinical-failsafe + model-validation"]
+        }
+      }
+    }
+  }
+}

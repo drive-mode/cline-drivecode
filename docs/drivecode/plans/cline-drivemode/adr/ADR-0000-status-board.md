@@ -36,6 +36,8 @@
 
 **2026-08-08.** ADR cleanup wave: reconcile ADR-0023; Accept ADR-0023 / 0027 / 0028 / 0029 (H1–H4 shipped, H5 open); fold path H onto main board; rename hotpath slices **H1–H5**; change control → **current truth singular**; chronology → [decision-changelog.md](decision-changelog.md); clause inventory → [decision-coverage.md](decision-coverage.md). Coverage-hole drafts: ADR-0030…0035 + DEC-multi-device-parity + DEC-codebase-map-firewall (**Proposed**).
 
+**2026-08-14.** Human direction accepted [ADR-0046](ADR-0046-adr-planner-plugin-boundary.md): ADR Planner is owned by `cline-drivecode`, ships as a bounded Cline package plugin with a bundled skill, and is installed project-locally from a pin owned by `qh2-template`.
+
 ## Clusters (read together)
 
 | Cluster | Records | One-line |
@@ -89,6 +91,16 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | none | Wire snapshot/delta + one factual catch-up line |
 | [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | none | DO/SKIP/UNDO over `predict.*` events; tier from revertibility, capped by tool policy; answers research 16 Q3. [PRD 11](../prd/prd-magic-hotkey.md) |
 | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) | Desktop sensing is invocation-scoped, or it does not happen | **Proposed** | none | Amends ADR-0036 decisions 1 and 12. Sensing only inside a hotkey-bracketed window, closed fact list, non-empty denylist; REDO stays a stack op. Accept gated on the privacy machinery, not on sensing |
+| [ADR-0046](ADR-0046-adr-planner-plugin-boundary.md) | ADR Planner plugin ownership and installation boundary | **Accepted** | partial | Milestone 0 benchmark active; private M1–M4 proofs verified; production hardening and template pin follow |
+| [ADR-0047](ADR-0047-adr-planner-package-contract.md) | ADR Planner production package and invocation contract | **Proposed** | partial | Private `plugins/adr-planner` scaffold and install proof exist; coordinate and registry authority await owner acceptance |
+| [ADR-0048](ADR-0048-adr-planner-evidence-trust-boundary.md) | ADR Planner repository-evidence trust boundary | **Proposed** | partial | Private M2 proof passes adversarial privacy, real-repository, and installed sandbox checks; owner acceptance pending |
+| [ADR-0049](ADR-0049-adr-planner-concern-catalog-and-rule-authority.md) | ADR Planner concern catalog and rule authority | **Proposed** | partial | Private M3 proof passes rule, authority, graph, determinism, real-repository, and installed-package checks; owner acceptance pending |
+| [ADR-0050](ADR-0050-adr-planner-host-attested-workflow-authority.md) | ADR Planner host-attested workflow authority | **Proposed** | partial | Private host-mediated command/tool lifecycle, CAS/replay, installation identity, and installed smoke pass; production trust hardening remains open |
+| [ADR-0051](ADR-0051-cross-session-chat-catalog-authority.md) | Cross-session chat catalog authority | **Proposed** | advanced partial | Catalog/lifecycle authority, managed Hub workspace scope, profile continuity, durable reconnect/controller orchestration, CA-1 target authorization/projection/replay, CA-2 installation-bound admission/fresh-process reattach, and the CA-3 invocation-scoped confirmation-authority kernel are implemented behind the hard-off gate; broader operation replay, connector launcher delivery, ADR-0014-conformant Drive and caller convergence, compatibility isolation, owner-responder product wiring, and compaction closure remain |
+| [ADR-0052](ADR-0052-managed-session-reconnect-authority.md) | Durable managed-session reconnect authority | **Accepted** | complete | Exact-generation durable token rekey, guard reservation, host barrier, shared owner CAS/orphan state, replay, and strict gated reclaim conformance pass; ADR-0055 reuses this transition for the gate-off fresh-caller path |
+| [ADR-0053](ADR-0053-trusted-managed-manual-compaction.md) | Trusted managed manual compaction authority | **Proposed** | advanced partial | Durable running/terminal/indeterminate receipts, atomic sidecar-head completion, exact-sidecar replay, no-agent-restore persistence, and replay-safe events are implemented behind the hard-off gate; production authorization and the full race/review matrix remain open |
+| [ADR-0054](ADR-0054-adr-planner-install-attestation.md) | ADR Planner reproducible install and upgrade attestation | **Proposed** | partial | Exact dependency/archive, stable runtime-only candidate/receipt, and real local-source generated install/reinstall smoke pass; structural receipt verification, immutable-candidate conformance, and atomic post-load rollback remain open |
+| [ADR-0055](ADR-0055-fresh-process-managed-session-reattach.md) | Fresh-process managed-session reattach | **Proposed** | complete (gate-off) | Target-authorized continuity, installation-bound connector audiences, exact lost-reply reclaim reconciliation, bounded hydration/replay, ready-before-handle, and physical daemon-restart/new-stream proof pass; explicit owner acceptance and production caller adoption remain |
 
 ## Leadership decisions
 
@@ -139,6 +151,14 @@ Where product / platform work is advancing **without** a binding ADR (or with on
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) **Proposed** | One factual line + wire snapshot |
 | Operator next-action layer | [ADR-0036](ADR-0036-next-action-triad.md) **Proposed** | Closes the 21-operator-experience gap; answers 16 Q3 with labels |
 | Desktop signal source + consent surface | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) **Proposed** | Amends ADR-0036 1/12; the "own decision and own consent surface" decision 12 demanded |
+| ADR Planner production package | [ADR-0047](ADR-0047-adr-planner-package-contract.md) **Proposed** | Production workspace, coordinate, commands, tools, and host compatibility |
+| ADR Planner repository evidence | [ADR-0048](ADR-0048-adr-planner-evidence-trust-boundary.md) **Proposed** | Bounded Git-visible evidence and open-world project profiling |
+| ADR Planner catalog/rule authority | [ADR-0049](ADR-0049-adr-planner-concern-catalog-and-rule-authority.md) **Proposed** | Versioned concern policy, constrained rules, routing, and prerequisite ordering |
+| ADR Planner host-attested workflow authority | [ADR-0050](ADR-0050-adr-planner-host-attested-workflow-authority.md) **Proposed** | Explicit command facts, persistent session scope, empty-input compilation, readiness obligations, and trust hardening |
+| Cross-session chat catalog authority | [ADR-0051](ADR-0051-cross-session-chat-catalog-authority.md) **Proposed** | Core-owned lifecycle, fenced runtime delivery, target-audience enforcement, bounded projection/replay, replacement-socket orchestration, and the gate-off ADR-0055 fresh-process kernel exist; broader operation replay, ADR-0014 Drive convergence, caller cutover, and compatibility isolation remain gated |
+| Managed-session reconnect authority | [ADR-0052](ADR-0052-managed-session-reconnect-authority.md) **Accepted** | Durable lease rekey, nonterminal host write barrier, replay, and one runtime/lifecycle transition coordinator |
+| Trusted managed manual compaction | [ADR-0053](ADR-0053-trusted-managed-manual-compaction.md) **Proposed** | Server-owned compactor, per-session exclusive host transaction, durable atomic replay receipt, and sanitized terminal result |
+| ADR Planner install attestation | [ADR-0054](ADR-0054-adr-planner-install-attestation.md) **Proposed** | Immutable source, installed-content identity, host compatibility, and atomic verified replacement |
 
 ### Proposed ADRs — accept when shipped, not sooner
 
@@ -155,7 +175,12 @@ Where product / platform work is advancing **without** a binding ADR (or with on
 | **0033** | Managed cards refuse bank archive from Kanban Done |
 | **0034** | After delivery D1; unified seat role writes only |
 | **0035** | Catch-up line on leave/return + snapshot gap path |
-| **0036** | Triad on tip **and** a kept-rate being measured — not when the hint renders |
+| **0037** | Owner accepts package path/coordinate; local install and bundled-skill fixture passes |
+| **0038** | Owner accepts evidence boundary; adversarial privacy and installed-package M2 proofs pass |
+| **0039** | Owner accepts catalog/rule authority; M3 rule, graph, determinism, and authority proofs pass |
+| **0040** | Owner reviews private proof and trust limits; connector identity, consent, receipts, retention, and sandbox hardening are resolved |
+| **0041** | Owner selects legacy adoption/workspace/retention, interactive cross-audience, and Drive policies; target isolation, bounded projection/replay, fresh-process reattach, local+hub lifecycle conformance, reset/resume safety, and all-caller proofs pass |
+| **0045** | Owner accepts the surviving-daemon/fresh-caller distinction; target-authorized continuity, unchanged ADR-0052 rekey reuse, bounded hydration/replay, and physical fault matrix pass |
 
 ## Still Open (product gaps)
 

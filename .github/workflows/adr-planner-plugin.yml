@@ -1,0 +1,84 @@
+name: adr-planner-plugin
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "plugins/adr-planner/**"
+            - "sdk/packages/core/**"
+            - "sdk/packages/sdk/**"
+            - "sdk/packages/shared/**"
+            - "apps/cli/**"
+            - "package.json"
+            - "bun.lock"
+            - ".github/workflows/adr-planner-plugin.yml"
+            - ".github/actions/setup-bun-workspace/**"
+    pull_request:
+        paths:
+            - "plugins/adr-planner/**"
+            - "sdk/packages/core/**"
+            - "sdk/packages/sdk/**"
+            - "sdk/packages/shared/**"
+            - "apps/cli/**"
+            - "package.json"
+            - "bun.lock"
+            - ".github/workflows/adr-planner-plugin.yml"
+            - ".github/actions/setup-bun-workspace/**"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: adr-planner-plugin-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+            - name: Setup Bun workspace
+              uses: ./.github/actions/setup-bun-workspace
+              with:
+                  bun-version: "1.3.13"
+
+            - name: Build host SDK
+              run: bun run build:sdk
+
+            - name: Typecheck
+              run: bun -F @cline/adr-planner typecheck
+
+            - name: Test
+              run: bun -F @cline/adr-planner test
+
+            - name: Smoke project-local install
+              env:
+                  CLINE_NPM_COMMAND: bun
+              run: |
+                  fixture="$(mktemp -d)"
+                  candidate="$(mktemp -d)"
+                  bun plugins/adr-planner/scripts/prepare-smoke-fixture.ts "$fixture"
+                  (
+                    cd plugins/adr-planner
+                    bun pm pack --destination "$candidate"
+                  )
+                  archive="$(find "$candidate" -maxdepth 1 -type f -name '*.tgz' -print)"
+                  test -n "$archive"
+                  test "${archive#*$'\n'}" = "$archive"
+                  mkdir -p "$candidate/unpacked"
+                  tar -xzf "$archive" -C "$candidate/unpacked"
+                  test ! -e "$candidate/unpacked/package/test"
+                  test ! -e "$candidate/unpacked/package/scripts"
+                  bun --conditions=development apps/cli/src/index.ts plugin install "$candidate/unpacked/package" --cwd "$fixture" --json
+                  CLINE_BUILD_ENV=production bun --conditions=development plugins/adr-planner/scripts/smoke-installed.ts "$fixture"
+
+            - name: Lint and format
+              run: bun biome check --diagnostic-level=error plugins/adr-planner
+
+            - name: Verify package archive
+              run: bun plugins/adr-planner/scripts/verify-package.ts

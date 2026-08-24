@@ -2,7 +2,7 @@
 
 **Companion.** Chronology: [decision-changelog.md](decision-changelog.md). Status board: [ADR-0000](ADR-0000-status-board.md).
 
-**Purpose.** Atomic binding-clause inventory of ADR-0001…0029, leadership DEC-\*, and Architecture D1–D10 — grounded in Decision sections and [ADR-0000](ADR-0000-status-board.md) Impl.  
+**Purpose.** Atomic binding-clause inventory of Accepted ADRs, leadership DEC-\*, and Architecture D1–D10, with Proposed records tracked as paper coverage, grounded in Decision sections and [ADR-0000](ADR-0000-status-board.md) Impl.
 **Sources.** `adr/ADR-*.md`, `decisions/DEC-*.md`, [foundation/01-architecture.md](../foundation/01-architecture.md).  
 **ADR-0000.** Exists as the living **status board** (legend, Impl column, clusters, coverage gaps, Still Open). Body detail for 0000 is not inventoried here.  
 **Coverage quality.** Covered = tip matches decision end-to-end · Partial = Accepted (or Recommended) with Impl gap · Paper = Proposed · Deferred = explicitly off path · Hole = topic needs a decision and none exists (final section only).
@@ -481,7 +481,7 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ## ADR-0021 · Drive credential onboarding
 
-1. **Status / Impl.** Proposed · **none**
+1. **Status / Impl.** Proposed · **partial** (private implementation proof; not owner acceptance)
 2. **Decision.** Credentials stay in Cline provider settings; device-code “Sign in with Cline” primary, BYOK secondary; forward `onPrompt` (code + URL only); honest Drive readiness gate; three secret-hygiene fixes prerequisite.
 3. **Binding clauses**
    - Drive never stores, proxies, or reads a key; consumes readiness boolean only (ADR-0010).
@@ -637,6 +637,447 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 
 ---
 
+## ADR-0046 · ADR Planner plugin ownership and installation boundary
+
+1. **Status / Impl.** Accepted · **partial** (Milestone 0 active; private M1 package proof verified)
+2. **Decision.** `cline-drivecode` owns a bounded Cline package plugin with a bundled pre-plan/plan skill; `hh-template` owns a pinned project-local install and upgrade integration.
+3. **Binding clauses**
+   - The monorepo root is not the plugin install unit; Milestone 1 adds a production plugin package role.
+   - Skill owns model-guided orchestration; deterministic TypeScript owns schemas, normalization, graph checks, route checks, and readiness.
+   - Pre-plan and plan are explicit invocations, not background MVP hooks.
+   - Managed planning runs never fetch or update the plugin from the network.
+   - Accepted ADR substance requires human confirmation and ADR-0000 change control.
+   - Public development labels may live here; held-out briefs and gold remain outside package/build context.
+   - Cline owns sandboxed materialization/discovery; generated repositories do not maintain a forked planner source by default.
+4. **Non-goals / rejected.** Claude-only implementation · standalone repository for first release · root git install · runtime auto-update · second planning daemon/runtime.
+5. **Open.** ADR-0047 acceptance and package coordinate; canonical `hh-template` source recovery; standing second benchmark reviewer.
+6. **Domain tags.** `planning`, `distribution`, `authority`, `adlc`
+7. **Coverage quality.** Decision
+
+---
+
+## ADR-0047 · ADR Planner production package and invocation contract
+
+1. **Status / Impl.** Proposed · **partial** (private implementation proof; not publication authority)
+2. **Decision.** Add a top-level production plugin workspace at `plugins/adr-planner`, propose `@cline/adr-planner`, and expose explicit namespaced workflow commands plus pure deterministic tools.
+3. **Binding clauses if accepted**
+   - `plugins/*` is a production workspace role covered by root and CI quality gates; SDK examples and packages are not used as substitutes.
+   - Package bundles `skills/adr-planner/SKILL.md` and declares only commands/tools in M1.
+   - `/adr-preplan` and `/adr-plan` submit prompts; no background planning hooks or rules.
+   - Validation/readiness tools consume structured data and cannot read secrets, mutate ADR acceptance, fetch the network, or install/update packages in M1.
+   - Template uses exact project-local install and forced reinstall pins; managed runs never fetch the plugin.
+   - Proposed registry coordinate remains private/unreferenced by templates until namespace authority is proven; git-root install is not a fallback.
+   - First release supports CLI/SDK/Kanban/SDK-backed Hub, not VS Code or JetBrains until host conformance exists.
+   - Development evaluator assets stay outside runtime package contents; held-out assets remain outside the repository/build context.
+   - Mutable project configuration/artifacts live outside the replaceable install root; held-out runs use fresh workspaces and sessions with no inherited memory or gold write path.
+4. **Non-goals / rejected.** SDK example/package placement · root file plugin · monorepo git install · template-vendored source · automatic hooks.
+5. **Open.** Owner acceptance; `@cline` registry authority; managed installed-byte commit policy; future IDE-host compatibility.
+6. **Domain tags.** `planning`, `plugins`, `distribution`, `authority`, `packaging`
+7. **Coverage quality.** Proposed; package path, explicit command/tool surface,
+   sandbox discovery, bundled skill, private archive, and atomic replacement
+   are implementation-proven. Publication and template integration remain open.
+
+---
+
+## ADR-0048 · ADR Planner repository-evidence trust boundary
+
+1. **Status / Impl.** Proposed · **none**
+2. **Decision.** Explicit M2 collection uses the host workspace root and Git's
+   tracked/unignored index, then applies a stricter package-owned metadata
+   allowlist before bounded reads and controlled signal extraction.
+3. **Binding clauses if accepted**
+   - Collection is explicit only; no setup, hook, rule, or background scan.
+   - Missing workspace context, Git/index failure, global limit, or cancellation
+     fails closed with no partial evidence claim.
+   - No arbitrary path input; secret-shaped files, symlinks, escapes,
+     non-regular files, and oversized candidates are denied.
+   - Raw source, manifest values, package/dependency names, scripts, Git stderr,
+     absolute paths, transcript content, and evaluator material never enter
+     output, logs, or telemetry.
+   - I/O adapters emit fixed provenance-bearing signals; pure profiling maps
+     only direct structural signals, preserves dependency implications as
+     unsupported, and retains `unknown`.
+   - The model-facing profile tool accepts no caller evidence or assertions;
+     host-attested human authority is deferred.
+   - M2 remains local/read-only and adds no persistence, network, ADR/risk
+     acceptance, or readiness authority.
+4. **Non-goals / rejected.** Recursive custom-ignore scanner · arbitrary-path
+   read tool · model-prose evidence as authority · broad docs/workflow parsing ·
+   non-Git fallback without a separate tested policy.
+5. **Open.** Owner acceptance; benchmark evidence for expanding parser scope;
+   future host-provided narrow evidence-reader capability.
+6. **Domain tags.** `planning`, `privacy`, `repository`, `evidence`, `authority`
+7. **Coverage quality.** Proposed; collector, controlled signals, profiler,
+   adversarial limits/privacy tests, real-repository exercise, and installed
+   sandbox invocation are implementation-proven.
+
+---
+
+## ADR-0049 · ADR Planner concern catalog and rule authority
+
+1. **Status / Impl.** Proposed · **partial** (private implementation proof; not catalog-policy acceptance)
+2. **Decision.** Evaluate a versioned package-owned, source-backed concern
+   catalog with a constrained three-valued rule language over controlled
+   open-world facts, then derive routing, ADR candidates, urgency, and stable
+   prerequisite order in deterministic policy code.
+3. **Binding clauses if accepted**
+   - Missing facts remain unknown; detector absence never becomes false.
+   - Catalog entries separate applicability from classification and cite a
+     package-owned source registry.
+   - The public tool accepts no caller facts, evidence, catalog, rules,
+     classifications, routes, significance assertions, or readiness verdicts.
+   - Only applicable concerns routed to ADR with permitted durable-significance
+     reasons become ADR candidates; non-ADR concerns remain in the inventory.
+   - Invalid sources, ids, routes, prerequisites, conflicts, or cycles fail
+     closed with no partial authoritative plan.
+   - Active prerequisites precede dependents; earlier urgency propagates to
+     prerequisites; code-unit tie-breakers make ordering reproducible.
+   - M3 performs no writes, acceptance, network access, or passing readiness
+     calculation.
+4. **Non-goals / rejected.** Model-authored catalog policy · JavaScript rule
+   execution · closed-world negatives · every concern as ADR · nucleus as
+   complete production checklist.
+5. **Open.** Owner acceptance; precision review before catalog expansion;
+   governed overlay/override contract; host-attested M4 facts.
+6. **Domain tags.** `planning`, `architecture`, `authority`, `evidence`, `governance`
+7. **Coverage quality.** Proposed; schemas, 12-concern nucleus, strong Kleene
+   evaluator, routing/ADR filter, graph validation, urgency propagation,
+   deterministic order, adversarial tests, real-repository exercise, and fresh
+   installed-package smoke are implementation-proven.
+
+---
+
+## ADR-0050 · ADR Planner host-attested workflow authority
+
+1. **Status / Impl.** Proposed · **partial** (private host-mediated proof verified; production hardening open)
+2. **Decision.** Use host-owned, task-scoped extension state and attributable
+   command context before enabling controlled human facts or host-composed output.
+3. **Binding clauses if accepted**
+   - Natural-language briefs and ordinary chat replies remain prompt context;
+     they cannot become structured facts or authority.
+   - `/adr-attest` accepts only registered Boolean `key=true|false`
+     assignments plus explicit `status` and `clear`; invalid batches are
+     atomic and bounded.
+   - Host context provides workspace/task scope and human actor provenance to
+     commands; runtime wrappers inject fresh host state into tools.
+   - `/adr-preplan` and `/adr-plan` explicitly select mode and gate;
+     direct tool payloads cannot override session facts or selection.
+   - The compiler recollects M2 evidence, merges repository and attested facts
+     without source precedence, and blocks contradictions without a partial
+     authoritative artifact.
+   - Material questions are decisive and bounded; experiments, routed outputs,
+     readiness obligations, and next actions are catalog-derived and
+     dependency ordered.
+   - Canonical JSON and Markdown contain no time, raw brief, arbitrary command
+     text, accepted ADR, waiver, risk acceptance, or deployment authorization.
+   - Host state is persisted and isolated by workspace path, core session,
+     content-bound plugin installation, and key; it is not an independently
+     queryable model tool.
+   - Writes use compare-and-swap and invocation replay binding. State-enabled
+     in-process plugin loading fails closed.
+   - Installed plugin code is trusted policy. SQLite is not a sandbox against
+     malicious same-user plugins, and serialized authority labels are not proof.
+4. **Non-goals / rejected.** Prose-to-fact extraction · model-authored facts or
+   gate · plugin-local hidden store · automatic ADR/risk acceptance · planning
+   artifact writes · readiness pass from attestation alone.
+5. **Open.** Owner acceptance; authenticated connector principals; declarative
+   consent or confirmation UI; signed result receipts; retention/deletion;
+   workspace identity; plugin migration; accepted-decision and
+   implementation-evidence channels; M5 brownfield history.
+6. **Domain tags.** `planning`, `authority`, `workflow`, `evidence`, `readiness`
+7. **Coverage quality.** Partial; parser/compiler, command/tool sharing, CLI
+   session isolation, CAS/replay, caller overwrite, installed smoke, and
+   fail-closed readiness are proven. Connector identity, cross-boundary result
+   verification, retention, and malicious same-user isolation remain open.
+
+---
+
+## ADR-0051 · Cross-session chat catalog authority
+
+1. **Status / Impl.** Proposed · **advanced partial** (catalog/lifecycle
+   authority, managed Hub scope, writer-fenced local runtime, profile
+   continuity, durable reconnect and compaction receipts, bounded runtime
+   delivery, exact additive sequence ranges, stale-subscription fencing, and
+   one profile-gated callback with physical WebSocket/cancellation proof exist
+   behind the hard-off gate; CA-1 target authorization/projection/replay and
+   the CA-2 admission/fresh-process and CA-3 invocation-scoped confirmation-
+   authority kernels also exist; production owner-responder wiring, caller
+   convergence, and broader operation replay remain open)
+2. **Decision.** Introduce a core-owned durable chat catalog that separates
+   organizational active/archive lifecycle from execution session status and
+   surface binding.
+3. **Binding clauses if accepted**
+   - A chat is a durable continuity object; sessions are attached
+     execution/transcript units.
+   - Core owns `chats`, `chat_sessions`, `chat_bindings`, `chat_events`, and
+     `session_leases` under one local/hub-conformant port.
+   - Lifecycle, execution status, and binding are independent axes; no status,
+     age, or missing process implies archive.
+   - Every mutation uses expected revision, invocation replay protection, and
+     host-observed actor/source provenance.
+   - Managed callers submit neither approval state nor credentials. One exact
+     command-scoped responder checks the Core target, retains authority
+     correlation server-side, presents only frozen target display data to the
+     owner, and carries its lifetime into the final mutation fence.
+   - Plain `/new` stops and unbinds but neither archives nor deletes; an
+     explicit combined stop-and-archive operation is allowed.
+   - Archived resume explicitly activates and acquires the single writer lease.
+   - Fork, checkpoint restore, and recovery write structural lineage.
+   - Purge is distinct from archive and uses a retryable deleting tombstone so
+     leftover artifacts cannot resurrect a chat.
+   - Plugins receive bounded read projections only; model tool input cannot
+     directly mutate lifecycle, bindings, leases, or purge state.
+   - Runtime delta compression is delivery-layer-only, adjacent, in-place,
+     bounded, same-subscription/session/run, and represented by an exact
+     inclusive sequence range; every strict physical subscription is fenced.
+   - Every resident runtime event is journaled as one immutable sanitized
+     singleton before live fanout. Fresh readiness captures a sequence-zero-
+     capable cursor; one same-connection forward gap may replay one exact
+     bounded suffix. A delayed ready cutoff is valid only within the requested-
+     through-delivered cursor interval on the same stream.
+   - Strict runtime subscriptions are session-scoped; global managed
+     subscriptions are lifecycle-only. Journal metadata is reserved before
+     durable lifecycle admission, and the resource policy bounds active plus
+     pending source subscriptions per connection before source creation.
+   - Every managed chat/event carries immutable server-derived opaque audience
+     scope, stable across profile revision/epoch and distinct from broad
+     authority class; connector audiences bind installed instances. Every read,
+     event, mutation, binding, continuity, recovery, and runtime route authorizes
+     that target before existence disclosure. Production caller sockets deny
+     raw `chat_catalog.*`.
+   - Pre-audience rows migrate only from exact immutable profile stamps;
+     ambiguous rows are non-runnable and historical unscoped events remain
+     audit-only until explicit owner assignment establishes a scoped cut.
+   - History hydration uses a bounded read-only projection with snapshot
+     sequence; lifecycle reconnect uses durable event sequence, exact
+     authorized replay, fenced ready, or authoritative snapshot replacement.
+   - Fresh-process reattach distinguishes nonresident, live-owned, and orphaned
+     resident state; Drive room links convey no authority and managed workers
+     require a closed server-owned coordinator path.
+4. **Non-goals / rejected.** Free-form metadata authority · archive inferred
+   from status/age · history formatter as writer · plugin-local catalog ·
+   connector JSON as co-authority · archive as privacy deletion · M0 semantic
+   memory or transcript rewriting.
+5. **Open.** Legacy adoption policy; cross-clone/hosted workspace identity;
+   retention/purge defaults; production owner-responder product wiring; production adoption
+   of the replacement-socket controller; production manual-compaction
+   authorization; explicit ADR-0055 owner acceptance; non-admission operation
+   replay classification; ADR-0014-conformant Drive coordinator/worker policy;
+   unscoped compatibility target isolation; interactive/connector
+   callback/runtime caller convergence; M3 handoff and M4 context-swapping
+   policy.
+6. **Domain tags.** `chat`, `session`, `lifecycle`, `authority`, `storage`,
+   `connectors`, `privacy`
+7. **Coverage quality.** SQLite/local/Hub authority and managed-runtime suites
+   cover the behind-gate kernel. Callback cancellation, exact sequence ranges,
+   Unicode additive merge, semantic barriers, stale-fence rejection, and a
+   fresh-capability physical WebSocket pass focused proof. The hardened
+   recovery boundary additionally proves session-only runtime scope, delayed-
+   ready interval acceptance, pre-admission journal reservations, bounded
+   coalescing of subscription churn, exact physical-source generations, and
+   stale-source event rejection. Shared typecheck/build plus **54 files/503
+   tests**, Core typecheck/smoke/build plus the consolidated **10 files/218
+   tests**, focused Browser **23/23**, targeted Biome/document checks, and
+   **3/3** Mermaid validation pass; the final independent runtime-authority
+   review returned **Ship** with no P0/P1. A later caller-architecture review
+   identified target-audience, lifecycle reconciliation, fresh-process
+   reattach, and Drive planning gaps. CA-1 closes target authority and lifecycle
+   reconciliation; CA-2 now closes the admission/fresh-process kernel with
+   installation-bound audiences, strict continuity/hydration, exact initial
+   lost-reply reconciliation, a physical fresh-facade WebSocket, and actual
+   Hub restart/new-stream proof. CA-3 now closes the gate-off confirmation
+   authority with target-only prompts, invocation/final-mutation fencing,
+   shared direct/managed bounds, physical failure paths, stale-revision denial,
+   authoritative archived-resume target resolution, and exact replay proof in
+   **5 files / 104 tests**. The evidence ledger records one unrelated flaky
+   crash-fixture test in the latest default full-Core run. ADR-0052 is accepted
+   and complete; ADR-0053 is advanced partial; ADR-0055 awaits owner acceptance.
+   The daemon release gate remains hard off pending owner-responder wiring,
+   caller adoption, broader operation replay, Drive, compaction closure, and
+   all-caller conformance.
+   The final independent CA-3 P0/P1 correctness and security re-review returned
+   **PASS**.
+
+---
+
+## ADR-0052 · Durable managed-session reconnect authority
+
+1. **Status / Impl.** Accepted · **complete** (durable rekey, token-free
+   writer-generation projection, guard reservation, host barrier, shared owner
+   transition/orphan state, replay, and strict gated reclaim command)
+2. **Decision.** Reconnect may transfer a resident managed session only by
+   rekeying the existing durable writer lease behind a drained host barrier,
+   then synchronously transferring one shared runtime/lifecycle owner.
+3. **Binding clauses if accepted**
+   - Process-local map replacement, session-ID adoption, and stop-then-resume
+     do not satisfy REL-034.
+   - The resident guard's private token proves one SQLite rekey that rotates the
+     token, increments lease revision and writer generation, updates the writer
+     head, and records audit/replay evidence.
+   - Lease tokens and connection IDs never cross the host boundary.
+   - An exclusive guard transition serializes renew, stop, and reclaim.
+   - A nonterminal host barrier drains active operations, background producers,
+     and persistent writers before the credential changes.
+   - Prior connection inactivity and no-active-run are required before and
+     after the durable CAS.
+   - Runtime and lifecycle operations consult one owner coordinator.
+   - Lost replies replay one identical operation intent; managed
+     authority/daemon process restart falls back to ordinary expiry/resume or
+     confirmed lost-lease recovery.
+   - Fresh caller-process loss while the daemon/resident host survives is
+     outside this accepted scope. ADR-0055 separately defines and implements
+     the gate-off read-only continuity discovery that invokes this unchanged
+     rekey; formal owner acceptance remains open.
+   - A new physical connection may reconcile that receipt only while the owner
+     is orphaned at the exact committed generation. The non-owning result forces
+     a new operation and another durable rekey before cursor subscription.
+   - Exact-operation cancellation from the target connection aborts only
+     pre-durable waits; a committed successor is preserved and orphan-fenced.
+     The current owner retains exact cancellation intent independently of the
+     bounded response-replay cache.
+   - The strict reclaim and cancellation commands land only with the mutation,
+     coordinator, and adversarial conformance suite.
+4. **Non-goals / rejected.** Map-only takeover · implicit principal/session
+   adoption · a second durable connection-delegation authority · raw connection
+   IDs in catalog output · stop/resume masquerading as direct atomic reclaim.
+5. **Open.** Chat-wide stop-and-archive owner enumeration remains outside this
+   ADR and fail-closed. ADR-0055 fresh-process discovery is a separate Proposed
+   decision with a complete gate-off implementation, not part of this completed
+   transition. Production callers have not adopted the controller; broader
+   PC-4 release/caller cutover is still gated.
+6. **Domain tags.** `chat`, `session`, `authority`, `reconnect`, `lifecycle`,
+   `runtime`, `storage`
+7. **Coverage quality.** The replacement-socket checkpoint passes Shared **54
+   files/503 tests**, focused Core **9 files/236 tests**, both package
+   typechecks/builds, and a real three-socket one-time-capability WebSocket.
+   Adversarial regressions cover immediate loss notification, exact command and
+   subscription generations, retired-socket frame rejection, and cancellation
+   before/after durable commit and after forced receipt eviction. Earlier
+   durable-authority full regressions
+   remain recorded above. Final independent re-review found no actionable P1/P2;
+   controller **5/5**, real-adapter physical WebSocket **14/14**, and host
+   **84/84** follow-ups close its narrower proof observations. Daemon
+   managed-chat release remains disabled.
+
+---
+
+## ADR-0053 · Trusted managed manual compaction authority
+
+1. **Status / Impl.** Proposed · **advanced partial** (host-owned action,
+   durable receipt state machine, atomic completed commit, exact-sidecar replay,
+   and strict replay-safe dispatch exist behind the hard-off gate)
+2. **Decision.** A managed client may request manual compaction only through a
+   per-session exclusive resident-host transaction whose provider, strategy,
+   transcript, and writer authority are server-owned.
+3. **Binding clauses if accepted**
+   - The wire accepts no transcript, summary, sidecar, provider config,
+     callback, path, or writer credential.
+   - Turn and compaction admission are mutually exclusive; stop and rekey drain
+     or cancel the tracked compaction operation.
+   - Canonical messages are never replaced; the host persists a sidecar through
+     the internal writer-fenced path and never calls compatibility
+     `agent.restore` orchestration.
+   - Running and terminal receipts bind session, writer generation, operation,
+     intent, and server policy identity.
+   - Sidecar-head selection and completed receipt share one SQLite transaction;
+     process-loss running work becomes indeterminate rather than auto-retried.
+   - Results/events expose only completed/skipped status and sanitized summary;
+     arbitrary errors never cross the wire.
+   - Production policy continuity includes compaction permission and strategy.
+4. **Non-goals / rejected.** Adapter read/compact/update orchestration ·
+   synthetic `/compact` turn · client compactor callback · caller-authored
+   compaction state · global compaction mutex.
+5. **Open.** Production profile authorization, the full
+   stop/rekey/renew/process-loss race suite.
+6. **Domain tags.** `chat`, `session`, `authority`, `runtime`, `compaction`,
+   `storage`, `replay`, `privacy`
+7. **Coverage quality.** First strict host/adapter/wire regressions exist behind
+   the hard-off release gate; acceptance evidence is intentionally incomplete.
+
+---
+
+## ADR-0054 · ADR Planner reproducible install and upgrade attestation
+
+1. **Status / Impl.** Proposed · **partial** (exact direct runtime dependency
+   and stable runtime-only template candidate/receipt slice implemented)
+2. **Decision.** Treat immutable source, installed-content identity, host
+   compatibility, and atomic verified replacement as separate release claims.
+3. **Binding clauses if accepted**
+   - Direct runtime and optional-runtime dependencies are exact; host-provided
+     `@cline/*` packages remain optional peers.
+   - Git-source beta installs only the declared package runtime roots from one
+     stable ignored project path, never a temporary clone or monorepo source
+     directory.
+   - Template receipts contain stable source/content/contract identities, not
+     absolute paths, timestamps, or planning authority.
+   - Installer output and entry paths are structurally parsed and containment
+     checked before a receipt is committed.
+   - Fresh-generation conformance loads the exact candidate through production
+     discovery and verifies commands, tools, skill, privacy, and fail-closed
+     behavior.
+   - Upgrade retains the prior verified install and receipt until staged
+     dependency, load, schema, and smoke checks pass; any failure restores both.
+4. **Non-goals / rejected.** Commit managed install output · source manifest
+   hash as installed-byte proof · mutable runtime ranges · temporary clone path
+   as Cline local-source identity · post-smoke success without rollback.
+5. **Open.** Owner acceptance; structural installed-package verifier; host
+   compatibility contract; real generated-repository conformance; staged
+   post-load rollback; publication coordinate and immutable remote default.
+6. **Domain tags.** `planning`, `distribution`, `supply-chain`, `authority`,
+   `upgrade`, `template`
+7. **Coverage quality.** Partial; exact dependency checks, byte-stable 32-entry
+   package archive/digest, stable runtime-only template candidate, normalized
+   content digest, stubbed same-pin/second-ref-refusal tests, and real
+   local-source generated-repository install/reinstall sandbox smoke pass.
+
+---
+
+## ADR-0055 · Fresh-process managed-session reattach
+
+1. **Status / Impl.** Proposed · **complete (gate-off)** (the decision
+   kernel and technical acceptance matrix are implemented; explicit owner
+   acceptance and production caller adoption remain open)
+2. **Decision.** When a fresh caller process finds an orphaned resident session
+   in a surviving daemon, permit one audience-authorized read-only continuity
+   lookup and then reuse the unchanged ADR-0052 durable rekey. Daemon-process
+   loss remains expiry/resume or confirmed recovery.
+3. **Binding clauses if accepted**
+   - Continuity returns only `not_resident`, `owned_elsewhere`, or `orphaned`.
+   - Target authorization precedes existence disclosure; only orphaned returns
+     sanitized writer generation and bounded runtime baseline.
+   - Binding-capable connector classes mint only through a trusted
+     installed-instance issuer; each installation receives a stable opaque
+     audience and mismatched binding coordinates reject.
+   - Lookup is observation, not authority. Reclaim still performs every
+     ADR-0052 guard, host-barrier, durable rekey, replay, and orphan-fence step.
+   - Live owners return busy; daemon restart invalidates the resident epoch;
+     cached cursors/generations and process/connection IDs are never authority.
+   - Bounded state hydration plus exact replay or explicit authoritative
+     replacement reaches fenced ready before any session operation.
+   - The production route stays unadvertised until ADR acceptance and the
+     broader all-caller release gate; gate-on conformance fixtures advertise
+     the projection/lifecycle/runtime trio atomically.
+4. **Non-goals / rejected.** Session-ID resume takeover · persisted lease
+   credential · owner connection disclosure · automatic connector revocation ·
+   treating daemon restart as surviving residency.
+5. **Open.** Explicit owner acceptance; production caller adoption; optional
+   future authoritative state replacement after replay eviction. The current
+   bounded policy fails closed and orphan-fences transferred authority.
+6. **Domain tags.** `chat`, `session`, `authority`, `reconnect`, `process`,
+   `runtime`, `connectors`
+7. **Coverage quality.** Strict Shared continuity/hydration schemas,
+   installation-derived audience plus known-ID isolation, resident adapter
+   classification/rekey/hydration, exact initial-reclaim lost-reply retry,
+   stale-cache rejection, facade ready-before-handle, and
+   eviction/cancellation failure pass. A real two-socket WebSocket drops a
+   committed reclaim reply and replays its receipt; a real Hub server
+   close/start proves nonresident resume, a new stream epoch, and rejection of
+   the prior cursor. Existing catalog proof covers lease expiry and
+   owner-confirmed recovery. Production `managedChatLifecycleEnabled` remains
+   `false`.
+
+---
+
 ## DEC-agent-source-of-truth
 
 1. **Status / Impl.** Accepted (leadership; 2026-07-29 accept-all) · Impl not columned — treat as Partial with ADR-0001
@@ -751,12 +1192,15 @@ Status: **Accepted (architecture)** per ADR-0000 board. Hotpath slices are **H1�
 | **economics** | ADR-0022, DEC-mobile-consumer-owner, ADR-0016 | Meter placement/advisory vs enforce (Paper/Open); freemium failure ops (hole) |
 | **spawn** | ADR-0023, ADR-0003, ADR-0012, ADR-0014, ADR-0025, ADR-0027 | Live `capPreset` on `call_seat` (D1); consult vs delegate product; spawn UI behind E2 |
 | **web-runtime** | ADR-0024, ADR-0029 H4–H5, DEC-mobile, ADR-0016 | Conformance-passing browser host (Paper); hosted signaling |
-| **authority** | ADR-0025, ADR-0026, ADR-0018, ADR-0023, ADR-0027 | Finding 1 rows; receipt identity; deny-by-default product posture details |
+| **authority** | ADR-0025, ADR-0026, ADR-0018, ADR-0023, ADR-0027, ADR-0051, ADR-0052, ADR-0055 | Caller cutover, owner-responder product wiring, Drive coordinator policy, compatibility isolation, and ADR-0055 owner acceptance |
+| **chat/session** | ADR-0014, ADR-0051, ADR-0052, ADR-0053, ADR-0055 | ADR-0051/0043 acceptance; legacy adoption, caller convergence, and compaction policy |
+| **runtime/reconnect** | ADR-0051, ADR-0052, ADR-0055 | Broader operation replay, production controller adoption, connector delivery, and all-caller conformance |
 | **roles** | ADR-0027, ADR-0023 | Vocabulary convergence (hole/follow-on); typed third tier blocked on D1 |
 | **adlc** | ADR-0028, ADR-0015 | Plane-naming ADR; first-use on-ramps blocked on 0021 Paper |
 | **hotpath** | ADR-0029 (amends ADR-0013) | H5 only |
 | **brand** | DEC-drive-mark-official, DEC-open-product-forks (violet edge), DEC-mobile (“Cline Drive”) | Mask layers for eyes; install string vs mark are separate |
 | **product-forks** | DEC-open-product-forks, DEC-agent-source-of-truth, DEC-package-location, DEC-mobile, ADR-0007, ADR-0016 | Catch-up copy; one-shot fork; TextChannels; multi-device parity contract (hole) |
+| **planning** | ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0054, ADR-0028, ADR-0026 | M0 owner adjudication and release policy acceptance; M1–M4 private proofs exist; ADR-0050 hardening, ADR-0054 installed-runtime/atomic-upgrade completion, publication, and artifact persistence remain open |
 
 ---
 
