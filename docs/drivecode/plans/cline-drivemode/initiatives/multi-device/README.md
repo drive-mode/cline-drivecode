@@ -14,7 +14,7 @@ hub web, PWA/phone browser, CLI/TUI, and later Android — not an iOS-only fork.
 |---|---|---|
 | `hub` | Hub webview (desktop / wide) | `apps/cline-hub` |
 | `pwa` | Phone browser / Add to Home Screen | drive-web + hosted-preview (planned) |
-| `ios` | Native SwiftUI app | standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) is the product source; in-tree [`apps/drive-ios`](../../../../../../apps/drive-ios/) is a legacy fixture; [live-client plan](../ios-native-client/) defines the least-authority Cline gateway |
+| `ios` | Native SwiftUI app | standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) is the only iOS tree; [live-client plan](../ios-native-client/) defines the least-authority Cline gateway |
 | `tui` | CLI OpenTUI | `apps/cli` |
 | `android` | Native later | **YAGNI** until ios + pwa prove retention |
 

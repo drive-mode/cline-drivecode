@@ -257,6 +257,13 @@ export function assembleHandoffPacket(
 			case "control.title_granted":
 			case "control.title_revoked":
 			case "control.title_transferred":
+			case "control.interrupt_ack":
+			case "control.invite":
+			case "control.session_created":
+			case "control.session_scheduled":
+			case "control.session_started":
+			case "control.session_ended":
+			case "work.generic":
 			case "conversation.message":
 			case "conversation.narration":
 			case "presence.speaking":

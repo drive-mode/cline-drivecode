@@ -2,6 +2,7 @@
 
 **Status:** Proposed (2026-08-08)  
 **Owner:** Drivecode SE lead  
+**Naming:** DrivePlan / DriveTask own satisfaction; **DriveKanban** is the execution workbench — not “the Kanban board is the plan.”  
 **Constrained by:** [ADR-0008](ADR-0008-task-bank.md),
 [ADR-0018](ADR-0018-agent-runtime-contract.md),
 [ADR-0019](ADR-0019-driveplan-kanban-interop-wire.md),

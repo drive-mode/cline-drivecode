@@ -363,16 +363,17 @@ X0 must replace the destination names below with pinned available values and
 prove them in CI:
 
 ```bash
+# in the standalone drive-ios repository
 xcodebuild -version
-xcodebuild -project apps/drive-ios/Drive.xcodeproj -scheme Drive -showdestinations
-xcodebuild -project apps/drive-ios/Drive.xcodeproj -scheme Drive -destination 'platform=iOS Simulator,name=<pinned simulator>' build
-xcodebuild -project apps/drive-ios/Drive.xcodeproj -scheme Drive -destination 'platform=iOS Simulator,name=<pinned simulator>' test
+xcodebuild -scheme Drive -showdestinations
+xcodebuild -scheme Drive -destination 'platform=iOS Simulator,name=<pinned simulator>' build
+xcodebuild -scheme Drive -destination 'platform=iOS Simulator,name=<pinned simulator>' test
 ```
 
 If `DriveKit` is extracted:
 
 ```bash
-swift test --package-path apps/drive-ios/Packages/DriveKit
+swift test --package-path Packages/DriveKit
 ```
 
 Repository contract/docs gates:

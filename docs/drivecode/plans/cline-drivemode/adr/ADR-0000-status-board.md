@@ -86,7 +86,7 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0030](ADR-0030-plane-naming.md) | Plane naming for agent-facing code | **Proposed** | none | room/show/status (+ stage/visual); ban Engine ownership nouns; docs-first |
 | [ADR-0031](ADR-0031-visual-layout.md) | Client visual layout; producers viewport-blind | **Proposed** | none | `visual/layout`; ResizeObserver host frame; pairs with H4 |
 | [ADR-0032](ADR-0032-path-h-ops.md) | Path H hosted writer operations | **Proposed** | none | Auth/tenancy/residency/freemium failure; unblocks honest H5 |
-| [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary (DrivePlan owns truth) | **Proposed** | none | Kanban = workbench; bank/gates/receipts = Drive |
+| [ADR-0033](ADR-0033-managed-execution-boundary.md) | Managed execution boundary (DrivePlan owns truth) | **Proposed** | none | DriveKanban = workbench; bank/gates/receipts = Drive. Naming-only cleanup; still Proposed until leadership accepts |
 | [ADR-0034](ADR-0034-role-vocabulary.md) | Converge role vocabularies | **Proposed** | none | Blocked on delivery D1 (`capPreset` on `call_seat`) |
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | none | Wire snapshot/delta + one factual catch-up line |
 | [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | none | DO/SKIP/UNDO over `predict.*` events; tier from revertibility, capped by tool policy; answers research 16 Q3. [PRD 11](../prd/prd-magic-hotkey.md) |
@@ -101,6 +101,8 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [ADR-0053](ADR-0053-trusted-managed-manual-compaction.md) | Trusted managed manual compaction authority | **Proposed** | advanced partial | Durable running/terminal/indeterminate receipts, atomic sidecar-head completion, exact-sidecar replay, no-agent-restore persistence, and replay-safe events are implemented behind the hard-off gate; production authorization and the full race/review matrix remain open |
 | [ADR-0054](ADR-0054-adr-planner-install-attestation.md) | ADR Planner reproducible install and upgrade attestation | **Proposed** | partial | Exact dependency/archive, stable runtime-only candidate/receipt, and real local-source generated install/reinstall smoke pass; structural receipt verification, immutable-candidate conformance, and atomic post-load rollback remain open |
 | [ADR-0055](ADR-0055-fresh-process-managed-session-reattach.md) | Fresh-process managed-session reattach | **Proposed** | complete (gate-off) | Target-authorized continuity, installation-bound connector audiences, exact lost-reply reclaim reconciliation, bounded hydration/replay, ready-before-handle, and physical daemon-restart/new-stream proof pass; explicit owner acceptance and production caller adoption remain |
+| [ADR-0056](ADR-0056-d1b-kernel-protocol-superset.md) | D1b kernel protocol superset | **Accepted** | partial | Invite, interrupt_ack, session lifecycle, `work.generic`, and `profilesByParticipantId` join `@cline/drive`; MCP maps `work.plan`/`work.test`; `packId` stays on the generic hatch |
+| [ADR-0057](ADR-0057-room-state-authority.md) | Room-state authority (Hub vs MCP) | **Accepted** | partial | Hub is Cline-line writer; MCP writer is no-Hub profile; Hub wins if both live |
 
 ## Leadership decisions
 
@@ -113,6 +115,7 @@ Files stay separate (different change rates). Do not invent a second workflow ru
 | [DEC-drive-mark-official](../decisions/DEC-drive-mark-official.md) | Official Drive mark + motion axes | **Accepted** |
 | [DEC-multi-device-parity](../decisions/DEC-multi-device-parity.md) | Shared semantics across hub/pwa/ios/tui | **Proposed** |
 | [DEC-codebase-map-firewall](../decisions/DEC-codebase-map-firewall.md) | Codebase-map explain-only; no portfolio/Status writes | **Proposed** |
+| [DEC-licence-visibility](../decisions/DEC-licence-visibility.md) | Licence × visibility pairings (repo-ownership step 7) | **Open** (inventory only; no moves) |
 
 ## Architecture D1–D10
 

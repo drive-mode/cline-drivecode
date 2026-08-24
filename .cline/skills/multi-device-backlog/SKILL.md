@@ -17,7 +17,7 @@ product** — jobs and contracts are. iOS wireframes / SwiftUI are one chrome.
 ## When to load
 
 - Adding or changing Open / Home / Call / Approval / Settings / Spotlight
-- Shipping anything under `apps/drive-ios`, drive-web `?app=1`, hub call shell, CLI call
+- Shipping anything under standalone `drive-ios`, drive-web `?app=1`, hub call shell, CLI call
 - User asks for backlog, feature list, parity, or “does X work on phone?”
 - After a PR that only touches one device’s consumer UX
 

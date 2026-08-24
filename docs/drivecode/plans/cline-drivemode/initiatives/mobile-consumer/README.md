@@ -91,7 +91,7 @@ Wireframe: [mobile-drive-app.html](../../../../design/wireframes/mobile-drive-ap
 **Modern light / iOS:** [mobile-drive-ios.html](../../../../design/wireframes/mobile-drive-ios.html) — **2026 frontier shell**: full-bleed Spotlight, liquid-glass chrome, light-first brand (toggle dark); Open / Home / Call / Approval / Settings. Assets: [mobile-drive-ios-light.png](../../../../assets/hub/mobile-drive-ios-light.png), [mobile-drive-ios-dark.png](../../../../assets/hub/mobile-drive-ios-dark.png).  
 **Presenter demo:** [mobile-drive-ios-demo.html](../../../../design/wireframes/mobile-drive-ios-demo.html) — single-phone autoplay / click-through of the full consumer loop.  
 **Branding / styling locks:** [MOBILE-BRAND-STYLING.md](../../../../design/brand/MOBILE-BRAND-STYLING.md) — light-first token sheet; liquid glass + Spotlight plane locks; retire amber Live; iOS wireframe is visual SoT.  
-**Native SwiftUI (on-device):** [`apps/drive-ios`](../../../../../../apps/drive-ios/) — Open / Home / Call / Approval / Settings fixtures.  
+**Native SwiftUI (on-device):** standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) — the only iOS tree.  
 **Cross-device backlog:** [multi-device](../multi-device/) + skill `multi-device-backlog`.  
 **Capability / UX gaps → fill plan:** [GAPS.md](GAPS.md) — demo vs inventory vs product; voice / interrupt / PWA / hosted packs.  
 **Features users want:** [FEATURES.md](FEATURES.md) — jobs (glance / decide / speak / join / return); Tier 1–4 priority; interaction architecture.  
@@ -189,10 +189,9 @@ Preview honesty when entitlement or balance is missing.
 **Goal.** Store presence and on-device iteration when PWA is not enough — or when
 owners want a native SwiftUI client for development (this fork).
 
-**Changes.** [`apps/drive-ios`](../../../../../../apps/drive-ios/) SwiftUI shell
-(Open / Home / Call / Approval / Settings). Capacitor/RN remains an alternate
-thin wrap around drive-web if preferred later. Track parity via
-[multi-device](../multi-device/).
+**Changes.** Standalone [`drive-ios`](https://github.com/drive-mode/drive-ios)
+SwiftUI client. Capacitor/RN remains an alternate thin wrap around drive-web if
+preferred later. Track parity via [multi-device](../multi-device/).
 
 **Gate.** On-device smoke of Tier 1 jobs; MATRIX rows for ios move `wip`→`done`
 as hub adapters land. Android stays YAGNI until ios+pwa Tier 1 green.
@@ -204,7 +203,8 @@ as hub adapters land. Android stays YAGNI until ios+pwa Tier 1 green.
 - Pixel screen share as the agent stage
 - Building a second protocol or second agent registry
 - Shipping native **instead of** PWA proof as the only path (PWA remains MC3;
-  SwiftUI `apps/drive-ios` is for on-device iteration + store-later, tracked in
+  SwiftUI [`drive-ios`](https://github.com/drive-mode/drive-ios) is for on-device
+  iteration + store-later, tracked in
   [multi-device](../multi-device/))
 
 ## Relationship to ux-quality / drive-web

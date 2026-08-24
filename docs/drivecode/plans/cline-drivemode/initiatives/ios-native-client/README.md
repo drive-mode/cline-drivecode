@@ -9,11 +9,9 @@
 
 ## Outcome
 
-Turn the existing SwiftUI fixture in
-[`apps/drive-ios`](../../../../../../apps/drive-ios/) into a secure, live
-client of the Drive room owned by Cline/Hub. Cursor, Claude, Codex, JCode, and
-Loco participation belongs to a separate proposed host/subagent integration
-track; this initiative does not claim those adapters already ship.
+Turn the standalone [`drive-ios`](https://github.com/drive-mode/drive-ios)
+preview into a secure, live client of the Drive room owned by Cline/Hub.
+The in-tree `apps/drive-ios` fixture has been deleted — do not recreate it.
 
 The first useful release is deliberately narrow:
 
@@ -107,7 +105,7 @@ _Provenance: accepted single-writer and topology decisions in
 [ADR-0016](../../adr/ADR-0016-distribution-and-positioning.md), and
 [ADR-0029](../../adr/ADR-0029-room-hotpath-redesign.md), plus the current
 fixture-only SwiftUI source in
-[`apps/drive-ios`](../../../../../../apps/drive-ios/). Dashed Loco edges are
+[`drive-ios`](https://github.com/drive-mode/drive-ios). Dashed Loco edges are
 proposed by the separate
 [Loco DriveCode port plan](https://github.com/harrison-quant-h2/loco/blob/main/docs/plans/04-cline-drivecode-port.md);
 they are not current DriveCode evidence._

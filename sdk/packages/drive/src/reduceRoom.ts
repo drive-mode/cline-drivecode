@@ -162,6 +162,15 @@ function cardFromWorkEvent(event: DriveEvent): StageCard | null {
 				workEventId: event.id,
 				updatedAt: event.at,
 			};
+		case "work.generic":
+			return {
+				id: `card_${event.id}`,
+				category: "other",
+				title: event.title,
+				summary: event.summary ?? event.kind,
+				workEventId: event.id,
+				updatedAt: event.at,
+			};
 		default:
 			return null;
 	}
@@ -186,6 +195,7 @@ export function createEmptyRoomSnapshot(input: {
 		addressSet: { mode: "everyone" },
 		muteByParticipantId: {},
 		raisedHandByParticipantId: {},
+		profilesByParticipantId: {},
 		appliedEventIds: [],
 	};
 }
@@ -456,11 +466,19 @@ export function reduceRoom(
 			};
 		case "control.address":
 			return { ...base, addressSet: event.addressSet };
+		case "control.interrupt_ack":
+		case "control.invite":
+		case "control.session_created":
+		case "control.session_scheduled":
+		case "control.session_started":
+		case "control.session_ended":
+			return base;
 		case "work.edit":
 		case "work.command":
 		case "work.test_result":
 		case "work.plan_step":
-		case "work.decision": {
+		case "work.decision":
+		case "work.generic": {
 			const card = cardFromWorkEvent(event);
 			if (!card) {
 				return base;

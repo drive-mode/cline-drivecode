@@ -227,6 +227,12 @@ describe("DriveEvent schemas", () => {
 				case "control.title_granted":
 				case "control.title_revoked":
 				case "control.title_transferred":
+				case "control.interrupt_ack":
+				case "control.invite":
+				case "control.session_created":
+				case "control.session_scheduled":
+				case "control.session_started":
+				case "control.session_ended":
 					return "control";
 				case "conversation.message":
 				case "conversation.narration":
@@ -236,6 +242,7 @@ describe("DriveEvent schemas", () => {
 				case "work.test_result":
 				case "work.plan_step":
 				case "work.decision":
+				case "work.generic":
 					return "work";
 				case "presence.speaking":
 				case "presence.typing":

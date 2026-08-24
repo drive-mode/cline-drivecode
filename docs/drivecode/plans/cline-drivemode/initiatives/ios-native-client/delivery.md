@@ -102,9 +102,9 @@ evidence gates; correct fixture-only parity claims.
 
 **Gate**
 
-- Headless unsigned Simulator build succeeds.
-- Unit and UI smoke tests run from the command line.
-- CI watches `apps/drive-ios/**`.
+- Headless unsigned Simulator build succeeds in [`drive-ios`](https://github.com/drive-mode/drive-ios).
+- Unit and UI smoke tests run from the command line there.
+- CI lives in the `drive-ios` repository, not this monorepo.
 - The PR records exact Xcode, Swift, simulator, and destination versions.
 
 ## X1 · Swift 6 concurrency baseline

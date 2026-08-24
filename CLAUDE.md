@@ -91,7 +91,6 @@ apps/kanban/      # kanban — multi-agent task board (has its own AGENTS.md/CLA
 apps/drivecode-demo/  # @cline/drivecode-demo — demo adapters + fixtures, edge-wired only
 apps/vscode-rollout/  # A/B rollout stitching for the extension
 apps/examples/    # runnable SDK examples incl. desktop-app (Tauri + Next.js + Bun sidecar)
-apps/drive-ios/   # LEGACY fixture — the real iOS app is the drive-ios repo
 docs/             # Mintlify product docs (docs.json) + docs/drivecode/ (the Drive nest)
 evals/            # benchmarks, cline-bench, smoke tests
 sdk/scripts/      # repo scripts: clean, version, release, check-links, check-drivecode-*
@@ -293,8 +292,8 @@ Ubuntu-only, so a required `Test (windows-latest, …)` stays Pending forever).
 - Labels are overrides, not the primary router. `ci/*` forces a suite; `area/*`
   is reviewer sugar. `ci/drive` is read directly by `drive-ci`.
 - Other suites: `sdk-test.yml`, `ext-vscode-*`, `kanban-test.yml`,
-  `docs-link-check.yml`, `drive-ios.yml` (builds `apps/drive-ios`, the legacy
-  fixture), plus the publish workflows.
+  `docs-link-check.yml`, plus the publish workflows. Native iOS CI lives in
+  [`drive-ios`](https://github.com/drive-mode/drive-ios), not this monorepo.
 - Publish workflows mint a `build_id` (`product@version+<shortsha>.run<run_id>`)
   before long work so cancelled runs still leave a trail. Full detail in
   `docs/drivecode/CI.md`.
@@ -360,10 +359,8 @@ Pre-commit (husky) runs **gitleaks** on staged changes and `lint-staged` in
 
 - **`bun run build:sdk` after every SDK edit.** Repeated here because it is the
   single most common wasted hour.
-- **`apps/drive-ios/` is a legacy fixture.** The native App Store candidate is
-  the standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) repo.
-  `drive-ios.yml` still builds the in-tree fixture; don't mistake a green run
-  there for iOS product coverage.
+- **Native iOS is the standalone [`drive-ios`](https://github.com/drive-mode/drive-ios) repo.**
+  Do not recreate `apps/drive-ios` in this monorepo.
 - **Remote vs. docs.** `git remote` points at `drive-mode/cline-drivecode`, and
   recent handoffs reference PRs there, but `README.md`, the site, and
   `AGENTS.md`'s "Learned Workspace Facts" still say `hhalperin/cline-drivecode`.

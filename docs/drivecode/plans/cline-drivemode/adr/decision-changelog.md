@@ -31,6 +31,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-11 — ADR-0036 next-action triad + PRD 11 + research 29 (Proposed); closes the 21-operator-experience gap and answers research 16 open question 3.
 - 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
 - 2026-08-14 — ADR-0046 Accepted; ADR Planner Milestone 0 benchmark and governance artifacts opened.
+- 2026-08-23 — DEC-licence-visibility Open: repo-ownership step 7 inventory; no visibility or SPDX moves.
 
 ---
 
@@ -43,6 +44,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-03 — Indexed ADR-0025…0027; authority twins Accepted.
 - 2026-08-04 — Indexed ADR-0028 (Proposed).
 - 2026-08-08 — Cleanup: Accept 0023/0027/0028/0029; path H + DEC-mobile; clusters; coverage gaps; Architecture D3 wording; H1–H5 id hygiene; current-truth singular; chronology extracted here.
+- 2026-08-23 — Indexed DEC-licence-visibility (Open; inventory only).
 
 ## ADR-0001 · `.driveagent/` is the agent home
 
@@ -549,3 +551,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## DEC-codebase-map-firewall
 
 - 2026-08-08 — Proposed (codebase-map explain-only; no portfolio/Status writes).
+
+## DEC-licence-visibility
+
+- 2026-08-23 — Open. Inventory of public/private and licence metadata mismatches; no moves until an owner picks a row.
