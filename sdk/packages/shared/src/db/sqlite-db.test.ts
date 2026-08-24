@@ -134,6 +134,31 @@ describe("ensureSessionSchema", () => {
 					.map((column) => String(column.name));
 				expect(columns).toContain("transcript_path");
 				expect(columns).toContain("messages_path");
+				expect(
+					db
+						.prepare(
+							`SELECT name FROM sqlite_master
+						 WHERE type = 'table' AND name = 'session_writer_heads'`,
+						)
+						.get(),
+				).toMatchObject({ name: "session_writer_heads" });
+				expect(
+					db
+						.prepare(
+							`SELECT name FROM sqlite_master
+							 WHERE type = 'table' AND name = 'session_manual_compaction_operations'`,
+						)
+						.get(),
+				).toMatchObject({ name: "session_manual_compaction_operations" });
+				const receiptColumns = db
+					.prepare("PRAGMA table_info(session_manual_compaction_operations);")
+					.all() as Array<{ name: string; pk: number }>;
+				expect(
+					receiptColumns
+						.filter((column) => column.pk > 0)
+						.sort((left, right) => left.pk - right.pk)
+						.map((column) => column.name),
+				).toEqual(["session_id", "operation_kind", "operation_id"]);
 
 				const row = db
 					.prepare(
@@ -146,10 +171,65 @@ describe("ensureSessionSchema", () => {
 					transcript_path: "",
 					messages_path: "/tmp/session-1.messages.json",
 				});
+
+				db.exec("DROP INDEX idx_session_manual_compaction_one_running;");
+				const insertRunning = db.prepare(
+					`INSERT INTO session_manual_compaction_operations (
+						session_id, writer_generation, operation_kind, operation_id,
+						intent_digest, status, started_at, updated_at
+					) VALUES (?, 1, 'manual_compaction', ?, ?, 'running', ?, ?)`,
+				);
+				insertRunning.run(
+					"session-1",
+					"old-running-1",
+					"a".repeat(64),
+					"2026-04-21T00:00:01.000Z",
+					"2026-04-21T00:00:01.000Z",
+				);
+				insertRunning.run(
+					"session-1",
+					"old-running-2",
+					"b".repeat(64),
+					"2026-04-21T00:00:02.000Z",
+					"2026-04-21T00:00:02.000Z",
+				);
+				ensureSessionSchema(db, { includeLegacyMigrations: true });
+				expect(
+					db
+						.prepare(
+							`SELECT COUNT(*) AS count
+							 FROM session_manual_compaction_operations
+							 WHERE status = 'running'`,
+						)
+						.get(),
+				).toMatchObject({ count: 0 });
+				expect(
+					db
+						.prepare(
+							`SELECT name FROM sqlite_master
+							 WHERE type = 'index' AND name = 'idx_session_manual_compaction_one_running'`,
+						)
+						.get(),
+				).toMatchObject({ name: "idx_session_manual_compaction_one_running" });
 				db.close?.();
 			} finally {
 				rmSync(dir, { recursive: true, force: true });
 			}
 		},
 	);
+});
+
+describe("loadSqliteDb", () => {
+	it("enables foreign-key enforcement on every opened connection", () => {
+		const dir = mkdtempSync(join(tmpdir(), "sqlite-foreign-keys-"));
+		try {
+			const db = loadSqliteDb(join(dir, "foreign-keys.db"));
+			expect(db.prepare("PRAGMA foreign_keys;").get()).toMatchObject({
+				foreign_keys: 1,
+			});
+			db.close?.();
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 });

@@ -1,12 +1,14 @@
 import {
 	existsSync,
+	lstatSync,
 	mkdirSync,
 	readdirSync,
+	realpathSync,
 	rmdirSync,
 	rmSync,
 	unlinkSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
 	parseSubSessionId,
 	parseTeamTaskSubSessionId,
@@ -29,6 +31,29 @@ export function unlinkIfExists(path: string | null | undefined): void {
 
 export interface SessionArtifactPaths {
 	messagesPath: string;
+}
+
+const SAFE_SESSION_ARTIFACT_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,511}$/;
+
+function assertSafeSessionArtifactId(sessionId: string): string {
+	if (
+		!SAFE_SESSION_ARTIFACT_ID.test(sessionId) ||
+		sessionId === "." ||
+		sessionId === ".."
+	) {
+		throw new Error("session id must be one path-safe artifact segment");
+	}
+	return sessionId;
+}
+
+function isContainedPath(root: string, candidate: string): boolean {
+	const relation = relative(root, candidate);
+	return (
+		relation === "" ||
+		(!isAbsolute(relation) &&
+			relation !== ".." &&
+			!relation.startsWith(`..${sep}`))
+	);
 }
 
 function childArtifactFileStem(sessionId: string): {
@@ -60,8 +85,37 @@ function childArtifactFileStem(sessionId: string): {
 export class SessionArtifacts {
 	constructor(private readonly ensureSessionsDir: () => string) {}
 
+	public assertContainedPath(
+		path: string,
+		options: { rejectFinalSymlink?: boolean } = {},
+	): string {
+		const root = resolve(this.ensureSessionsDir());
+		const candidate = resolve(path);
+		if (!isContainedPath(root, candidate)) {
+			throw new Error("session artifact path escaped the sessions directory");
+		}
+		const canonicalRoot = realpathSync(root);
+		let probe = candidate;
+		if (existsSync(probe) && lstatSync(probe).isSymbolicLink()) {
+			if (options.rejectFinalSymlink) {
+				throw new Error("session artifact directory cannot be a symbolic link");
+			}
+			probe = dirname(probe);
+		} else {
+			while (!existsSync(probe) && probe !== root) probe = dirname(probe);
+		}
+		const canonicalProbe = realpathSync(probe);
+		if (!isContainedPath(canonicalRoot, canonicalProbe)) {
+			throw new Error("session artifact path escaped through a symbolic link");
+		}
+		return candidate;
+	}
+
 	public sessionArtifactsDir(sessionId: string): string {
-		return join(this.ensureSessionsDir(), sessionId);
+		const safeId = assertSafeSessionArtifactId(sessionId);
+		return this.assertContainedPath(resolve(this.ensureSessionsDir(), safeId), {
+			rejectFinalSymlink: true,
+		});
 	}
 
 	public ensureSessionArtifactsDir(sessionId: string): string {
@@ -95,8 +149,8 @@ export class SessionArtifacts {
 
 	public removeSessionDirIfEmpty(sessionId: string): void {
 		let dir = this.sessionArtifactsDir(sessionId);
-		const sessionsDir = this.ensureSessionsDir();
-		while (dir.startsWith(sessionsDir) && dir !== sessionsDir) {
+		const sessionsDir = resolve(this.ensureSessionsDir());
+		while (isContainedPath(sessionsDir, dir) && dir !== sessionsDir) {
 			if (!existsSync(dir)) {
 				dir = dirname(dir);
 				continue;
@@ -119,11 +173,14 @@ export class SessionArtifacts {
 	}
 
 	public removeDir(dir: string): void {
-		if (!existsSync(dir)) {
+		const containedDir = this.assertContainedPath(dir, {
+			rejectFinalSymlink: true,
+		});
+		if (!existsSync(containedDir)) {
 			return;
 		}
 		try {
-			rmSync(dir, { recursive: true, force: true });
+			rmSync(containedDir, { recursive: true, force: true });
 		} catch {
 			// Best-effort cleanup.
 		}

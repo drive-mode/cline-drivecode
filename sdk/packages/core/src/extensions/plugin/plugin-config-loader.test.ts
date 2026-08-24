@@ -477,4 +477,15 @@ describe("plugin-config-loader", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+
+	it("rejects host extension state in in-process plugin mode", async () => {
+		await expect(
+			resolveAndLoadAgentPlugins({
+				mode: "in_process",
+				resolveExtensionState: () => undefined,
+			}),
+		).rejects.toThrow(
+			"Host extension state requires the sandboxed plugin execution boundary",
+		);
+	});
 });

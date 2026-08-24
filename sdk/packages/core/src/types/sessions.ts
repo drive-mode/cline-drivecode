@@ -1,4 +1,9 @@
-import type { SessionLineage, SessionRuntimeRecordShape } from "@cline/shared";
+import type {
+	ChatCatalogState,
+	ChatSessionRelationKind,
+	SessionLineage,
+	SessionRuntimeRecordShape,
+} from "@cline/shared";
 import type { SessionSource, SessionStatus } from "./common";
 
 export interface SessionUsageMetadata {
@@ -30,6 +35,22 @@ export interface SessionHistoryMetadata extends Record<string, unknown> {
 	aggregatedAgentsCost?: number;
 	usage?: SessionUsageMetadata;
 	aggregateUsage?: SessionUsageMetadata;
+	chatCatalog?:
+		| {
+				projection: "legacy";
+		  }
+		| {
+				projection: "catalog";
+				chatId: string;
+				catalogState: Exclude<ChatCatalogState, "deleting">;
+				headSessionId: string;
+				lastActivityAt: string;
+				revision: number;
+				sourceKind: string;
+				parentChatId?: string;
+				relationKind?: ChatSessionRelationKind;
+				parentSessionId?: string;
+		  };
 	checkpoint?: {
 		latest?: {
 			ref?: string;

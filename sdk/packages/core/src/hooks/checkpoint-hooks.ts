@@ -255,8 +255,13 @@ async function createWorktreeStashCommit(
 export async function deleteCheckpointRefs(
 	cwd: string | null | undefined,
 	sessionId: string,
+	options: {
+		signal?: AbortSignal;
+		strict?: boolean;
+	} = {},
 ): Promise<void> {
 	if (!cwd) return;
+	options.signal?.throwIfAborted();
 	const prefix = `refs/cline/checkpoints/${sessionId}/`;
 	try {
 		const { stdout } = await runGit(cwd, [
@@ -264,12 +269,32 @@ export async function deleteCheckpointRefs(
 			"--format=%(refname)",
 			prefix,
 		]);
+		options.signal?.throwIfAborted();
 		const refs = stdout.trim().split("\n").filter(Boolean);
-		await Promise.allSettled(
-			refs.map((ref) => runGit(cwd, ["update-ref", "-d", ref])),
-		);
-	} catch {
-		// Not a git repo or git not available - ignore.
+		if (options.strict) {
+			for (const ref of refs) {
+				options.signal?.throwIfAborted();
+				await runGit(cwd, ["update-ref", "-d", ref]);
+			}
+		} else {
+			await Promise.allSettled(
+				refs.map((ref) => runGit(cwd, ["update-ref", "-d", ref])),
+			);
+		}
+	} catch (error) {
+		options.signal?.throwIfAborted();
+		const stderr =
+			error && typeof error === "object" && "stderr" in error
+				? String(error.stderr)
+				: "";
+		const noRepository =
+			stderr.includes("not a git repository") ||
+			stderr.includes("cannot change to");
+		if (options.strict && !noRepository) {
+			throw error;
+		}
+		// A non-git cwd has no checkpoint namespace. Legacy cleanup remains
+		// best-effort; strict purge only suppresses this expected no-op.
 	}
 }
 
@@ -321,12 +346,8 @@ export function createCheckpointHooks(
 	let rootRunMessageStart: number | undefined;
 
 	const ensureGitRepository = async (): Promise<boolean> => {
-		// Only cache the positive answer: a cwd that is not a git repo can
-		// become one mid-session (the user runs `git init`), and this probe
-		// fires at most once per user turn, so re-checking is cheap. Once the
-		// repo is detected, checkpoints start applying from that turn onward.
-		if (repoSupported === true) {
-			return true;
+		if (repoSupported !== undefined) {
+			return repoSupported;
 		}
 		try {
 			const result = await runGit(options.cwd, [

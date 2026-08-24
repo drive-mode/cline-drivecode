@@ -17,8 +17,8 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [ux-quality](ux-quality/) | active (plan) | Web + mobile UX backlog over [drive-web](drive-web/), [hosted-preview](hosted-preview/), [00-vision](../foundation/00-vision.md) |
 | [mobile-consumer](mobile-consumer/) | active (plan) | Phone-first Drive app for less-technical users — PWA before native; hosted ADR fork explicit |
 | [multi-device](multi-device/) | active | Cross-device feature list + backlog (hub / PWA / iOS / TUI); skill `multi-device-backlog` |
-| [ios-native-client](ios-native-client/) | active (plan) | Secure live SwiftUI client, least-authority Mobile Drive Gateway, stacked delivery + production-work gates |
 | [drive-hotpath](drive-hotpath/) | active | Room wire hot path — fold checkpoint, delta publish, one stage clock ([ADR-0029](../adr/ADR-0029-room-hotpath-redesign.md)) |
-| [portfolio-now](portfolio-now/) | active | Canonical golden-path architecture implementation map; claims-registry-backed Now / Next / Later sequencing |
-| [drive-cloud-beta](drive-cloud-beta/) | active (decision-gated) | Hybrid control-plane implementation plan beneath `portfolio-now`; outbound local host, strict cloud projection, private beta gates |
-| [repo-ownership](repo-ownership/) | active (plan) | One concept, one owner — Cline Drive Mode line: ownership map, duplication chain, deduplication sequence (other hosts parked) |
+| [portfolio-now](portfolio-now/) | active (bootstrap) | Remaining **Now** work as a DrivePlan — dogfood via Status `?demoPlans=1` |
+| [adr-planner](adr-planner/) | active (M1–M4 private proofs) | Pre-plan and plan plugin, benchmark, and [ADR-0046](../adr/ADR-0046-adr-planner-plugin-boundary.md) |
+| [cross-session-chat-management](cross-session-chat-management/) | active (production convergence; gate off) | Core-owned chat lifecycle and [ADR-0051](../adr/ADR-0051-cross-session-chat-catalog-authority.md) |
+| [integrations-vcs](integrations-vcs/) | active (plan) | VCS + comms as adapters — git substrate, GitHub/GitLab/Entire.io/Cursor Origin capability matrix, Slack-first interrupts, [ADR-0021](../adr/ADR-0021-drive-credential-onboarding.md) credential reuse |

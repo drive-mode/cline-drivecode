@@ -21,9 +21,10 @@ export type HubCapabilityName =
 	| "schedule.list"
 	| "settings.get"
 	| "settings.set"
-	| "connector.start"
-	| "connector.stop"
-	| "connector.supervised";
+	| "chat_catalog.v1"
+	| "chat_projection.v1"
+	| "chat_lifecycle.v1"
+	| "chat_runtime.v1";
 
 export const HUB_CAPABILITIES: readonly HubCapabilityName[] = [
 	"client.register",
@@ -37,9 +38,6 @@ export const HUB_CAPABILITIES: readonly HubCapabilityName[] = [
 	"schedule.list",
 	"settings.get",
 	"settings.set",
-	"connector.start",
-	"connector.stop",
-	"connector.supervised",
 ];
 
 export interface HubProtocolMetadata {
@@ -402,7 +400,103 @@ export interface HubScheduleUpdateInput {
 	metadata?: Record<string, JsonValue | undefined>;
 }
 
+export const HUB_CHAT_CATALOG_COMMANDS = [
+	"chat_catalog.list",
+	"chat_catalog.get",
+	"chat_catalog.adopt_root",
+	"chat_catalog.record_branch",
+	"chat_catalog.attach_successor",
+	"chat_catalog.record_activity",
+	"chat_catalog.rename",
+	"chat_catalog.archive",
+	"chat_catalog.activate",
+	"chat_catalog.bind",
+	"chat_catalog.unbind",
+	"chat_catalog.lease.get",
+	"chat_catalog.lease.verify",
+	"chat_catalog.lease.acquire",
+	"chat_catalog.lease.renew",
+	"chat_catalog.lease.release",
+	"chat_catalog.lease.revoke",
+	"chat_catalog.purge",
+] as const;
+
+export type HubChatCatalogCommandName =
+	(typeof HUB_CHAT_CATALOG_COMMANDS)[number];
+
+export const HUB_CHAT_PROJECTION_COMMANDS = [
+	"chat_projection.list",
+	"chat_projection.get",
+] as const;
+
+export type HubChatProjectionCommandName =
+	(typeof HUB_CHAT_PROJECTION_COMMANDS)[number];
+
+export const HUB_CHAT_LIFECYCLE_COMMANDS = [
+	"chat_lifecycle.start_root",
+	"chat_lifecycle.start_related",
+	"chat_lifecycle.restore_checkpoint",
+	"chat_lifecycle.resume",
+	"chat_lifecycle.recover_lost_lease",
+	"chat_lifecycle.run_turn",
+	"chat_lifecycle.binding.get",
+	"chat_lifecycle.bind",
+	"chat_lifecycle.reset",
+	"chat_lifecycle.archive",
+	"chat_lifecycle.activate",
+	"chat_lifecycle.rename",
+	"chat_lifecycle.purge",
+	"chat_lifecycle.stop",
+] as const;
+
+export type HubChatLifecycleCommandName =
+	(typeof HUB_CHAT_LIFECYCLE_COMMANDS)[number];
+
+export const HUB_CHAT_RUNTIME_COMMANDS = [
+	"chat_runtime.abort",
+	"chat_runtime.session.continuity",
+	"chat_runtime.session.hydrate",
+	"chat_runtime.session.reclaim",
+	"chat_runtime.session.reclaim.cancel",
+	"chat_runtime.approval.respond",
+	"chat_runtime.pending_prompts.list",
+	"chat_runtime.pending_prompts.update",
+	"chat_runtime.pending_prompts.remove",
+	"chat_runtime.messages.list",
+	"chat_runtime.checkpoints.list",
+	"chat_runtime.usage.get",
+	"chat_runtime.compaction.get",
+	"chat_runtime.compaction.run",
+	"chat_runtime.capability.respond",
+] as const;
+
+export type HubChatRuntimeCommandName =
+	(typeof HUB_CHAT_RUNTIME_COMMANDS)[number];
+
+/** Cursor for one process-local managed runtime event authority. */
+export interface HubChatRuntimeCursor {
+	readonly streamId: string;
+	readonly sessionSequence: number;
+}
+
+/** Transport cursor for one audience-scoped managed lifecycle replay. */
+export interface HubChatLifecycleTransportCursor {
+	readonly afterSequence: number;
+}
+
+/** Fenced acknowledgement after the lifecycle source processes replay. */
+export interface HubChatLifecycleTransportReady {
+	readonly version: "v1";
+	readonly stream: "chat.changed";
+	readonly afterSequence: number;
+	readonly throughSequence: number;
+}
+
 export type HubCommandName =
+	| HubChatCatalogCommandName
+	| HubChatProjectionCommandName
+	| HubChatLifecycleCommandName
+	| HubChatRuntimeCommandName
 	| "client.register"
 	| "client.update"
 	| "client.unregister"
@@ -432,7 +526,6 @@ export type HubCommandName =
 	| "run.start"
 	| "session.send_input"
 	| "run.abort"
-	| "run.proceed_while_running"
 	| "approval.request"
 	| "approval.respond"
 	| "capability.request"
@@ -465,11 +558,12 @@ export type HubCommandName =
 	| "connector.start"
 	| "connector.stop"
 	| "connector.supervised"
-	| "drive.room.get"
+	| "run.proceed_while_running"
 	| "drive.presenter.grant"
 	| "drive.presenter.transfer"
 	| "drive.presenter.revoke"
 	| "drive.presenter.status"
+	| "drive.room.get"
 	| "drive.spotlight.set"
 	| "drive.participant.mute.set"
 	| "drive.participant.deafen.set"
@@ -510,7 +604,6 @@ export type HubCommandName =
 	| "drive_bank_activate_plan"
 	| "drive_bank_record_failure"
 	| "drive_bank_accept_sdlc_freeze"
-	| "drive_project_map_get"
 	| "drive_session_rollups"
 	| "drive_agent_home_get"
 	| "drive_agent_home_list"
@@ -551,6 +644,7 @@ export function getDefaultHubCommandTimeoutMs(
 	command: HubCommandName,
 ): number | null {
 	switch (command) {
+		case "chat_lifecycle.run_turn":
 		case "run.start":
 		case "session.send_input":
 			return null;
@@ -600,6 +694,7 @@ export type HubEventName =
 	| "session.forked"
 	| "session.pending_prompts"
 	| "session.pending_prompt_submitted"
+	| "chat.runtime"
 	| "run.started"
 	| "run.heartbeat"
 	| "run.aborted"
@@ -655,7 +750,8 @@ export type HubEventName =
 	| "hub.client.updated"
 	| "room.snapshot"
 	| "room.event"
-	| "status.updated";
+	| "status.updated"
+	| "chat.changed";
 
 export interface HubEventEnvelope {
 	version: HubProtocolVersion;
@@ -914,9 +1010,38 @@ export interface HubStateSnapshot {
 export type HubTransportFrame =
 	| { kind: "command"; envelope: HubCommandEnvelope }
 	| { kind: "reply"; envelope: HubReplyEnvelope }
-	| { kind: "stream.subscribe"; clientId: string; sessionId?: string }
-	| { kind: "stream.unsubscribe"; clientId: string; sessionId?: string }
-	| { kind: "event"; envelope: HubEventEnvelope };
+	| {
+			kind: "stream.subscribe";
+			clientId: string;
+			sessionId?: string;
+			subscriptionId?: string;
+			/** Present only when resuming one strict managed runtime stream. */
+			runtimeCursor?: HubChatRuntimeCursor;
+			/** Present only when reconciling one strict managed lifecycle stream. */
+			lifecycleCursor?: HubChatLifecycleTransportCursor;
+	  }
+	| {
+			kind: "stream.unsubscribe";
+			clientId: string;
+			sessionId?: string;
+			subscriptionId?: string;
+	  }
+	| {
+			kind: "event";
+			envelope: HubEventEnvelope;
+			/** Echoed transport fence for one explicitly fenced subscription. */
+			subscriptionId?: string;
+	  }
+	| {
+			kind: "stream.status";
+			clientId: string;
+			sessionId?: string;
+			subscriptionId: string;
+			status: "ready" | "rejected";
+			errorCode?: string;
+			runtimeCursor?: HubChatRuntimeCursor;
+			lifecycleReady?: HubChatLifecycleTransportReady;
+	  };
 
 export interface HubUINotifyPayload {
 	title: string;

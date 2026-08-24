@@ -9,7 +9,17 @@ import { join } from "node:path";
 import type { BasicLogger } from "@cline/shared";
 import { resolveSessionDataDir } from "@cline/shared/storage";
 import type { SessionMessagesArtifactUploader } from "../../types/session";
+import type {
+	SessionManualCompactionDurableBeginResult,
+	SessionManualCompactionOperationReceipt,
+	SessionManualCompactionReceiptResult,
+} from "../models/session-manual-compaction-operation";
 import type { SessionRow } from "../models/session-row";
+import {
+	type SessionManagedArtifactHead,
+	type SessionWriterFenceCredential,
+	SessionWriterFenceRejectedError,
+} from "../writer-fence";
 import type {
 	PersistedSessionUpdateInput,
 	SessionPersistenceAdapter,
@@ -111,7 +121,16 @@ class FileSessionPersistenceAdapter implements SessionPersistenceAdapter {
 		atomicWriteJson(this.spawnQueuePath(), queue);
 	}
 
-	async upsertSession(row: SessionRow): Promise<void> {
+	async upsertSession(
+		row: SessionRow,
+		writerFence?: SessionWriterFenceCredential,
+	): Promise<void> {
+		if (writerFence) {
+			throw new SessionWriterFenceRejectedError(
+				row.sessionId,
+				"file session backend cannot enforce catalog writer authority",
+			);
+		}
 		const index = this.readIndex();
 		index.sessions[row.sessionId] = row;
 		this.writeIndex(index);
@@ -142,6 +161,12 @@ class FileSessionPersistenceAdapter implements SessionPersistenceAdapter {
 	async updateSession(
 		input: PersistedSessionUpdateInput,
 	): Promise<{ updated: boolean; statusLock: number }> {
+		if (input.writerFence) {
+			throw new SessionWriterFenceRejectedError(
+				input.sessionId,
+				"file session backend cannot enforce catalog writer authority",
+			);
+		}
 		const index = this.readIndex();
 		const existing = index.sessions[input.sessionId];
 		if (!existing) {
@@ -208,6 +233,62 @@ class FileSessionPersistenceAdapter implements SessionPersistenceAdapter {
 		index.sessions[input.sessionId] = next;
 		this.writeIndex(index);
 		return { updated: true, statusLock: next.statusLock };
+	}
+
+	async isCatalogManaged(_sessionId: string): Promise<boolean> {
+		return false;
+	}
+
+	async getCatalogManagedArtifactHead(
+		_sessionId: string,
+	): Promise<SessionManagedArtifactHead | undefined> {
+		return undefined;
+	}
+
+	async commitCatalogManagedArtifact(input: {
+		sessionId: string;
+	}): Promise<SessionManagedArtifactHead> {
+		throw new SessionWriterFenceRejectedError(
+			input.sessionId,
+			"file session backend cannot enforce catalog writer authority",
+		);
+	}
+
+	async beginCatalogManagedManualCompaction(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionDurableBeginResult> {
+		throw new SessionWriterFenceRejectedError(
+			input.sessionId,
+			"file session backend cannot persist manual compaction receipts",
+		);
+	}
+
+	async recoverCatalogManagedManualCompactions(input: {
+		sessionId: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<number> {
+		throw new SessionWriterFenceRejectedError(
+			input.sessionId,
+			"file session backend cannot recover manual compaction receipts",
+		);
+	}
+
+	async commitCatalogManagedManualCompaction(input: {
+		sessionId: string;
+		operationId: string;
+		intentDigest: string;
+		status: "completed" | "skipped" | "failed";
+		result?: SessionManualCompactionReceiptResult;
+		compactionPath?: string;
+		writerFence: SessionWriterFenceCredential;
+	}): Promise<SessionManualCompactionOperationReceipt> {
+		throw new SessionWriterFenceRejectedError(
+			input.sessionId,
+			"file session backend cannot persist manual compaction receipts",
+		);
 	}
 
 	async deleteSession(sessionId: string, cascade: boolean): Promise<boolean> {

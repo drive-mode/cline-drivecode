@@ -24,6 +24,7 @@ export const RESOURCE_POLICY_ENV = {
 	websocketCloseGraceMs: "CLINE_RESOURCE_WS_CLOSE_GRACE_MS",
 	websocketMaxInboundPayloadBytes:
 		"CLINE_RESOURCE_WS_MAX_INBOUND_PAYLOAD_BYTES",
+	websocketMaxActiveSubscriptions: "CLINE_RESOURCE_WS_MAX_ACTIVE_SUBSCRIPTIONS",
 	streamingFlushIntervalMs: "CLINE_RESOURCE_STREAMING_FLUSH_INTERVAL_MS",
 	streamingMaxBatchBytes: "CLINE_RESOURCE_STREAMING_MAX_BATCH_BYTES",
 } as const;
@@ -45,6 +46,7 @@ export const RESOURCE_POLICY_HARD_LIMITS = {
 	websocketCongestionGraceMs: { min: 0, max: 300_000 },
 	websocketCloseGraceMs: { min: 0, max: 60_000 },
 	websocketMaxInboundPayloadBytes: { min: 1024, max: 256 * 1024 ** 2 },
+	websocketMaxActiveSubscriptions: { min: 1, max: 16_384 },
 	streamingFlushIntervalMs: { min: 1, max: 1_000 },
 	streamingMaxBatchBytes: { min: 1024, max: 16 * 1024 ** 2 },
 } as const;
@@ -80,7 +82,8 @@ export interface ResourcePolicySources {
 			| "hardWatermarkBytes"
 			| "congestionGraceMs"
 			| "closeGraceMs"
-			| "maxInboundPayloadBytes",
+			| "maxInboundPayloadBytes"
+			| "maxActiveSubscriptions",
 			ResourcePolicyValueSource
 		>;
 	};
@@ -334,6 +337,12 @@ export function resolveResourcePolicy(
 		1024 * 1024,
 		RESOURCE_POLICY_HARD_LIMITS.websocketMaxInboundPayloadBytes,
 	);
+	const websocketMaxActiveSubscriptions = chooseDefault(
+		explicit.transport?.websocket?.maxActiveSubscriptions,
+		RESOURCE_POLICY_ENV.websocketMaxActiveSubscriptions,
+		256,
+		RESOURCE_POLICY_HARD_LIMITS.websocketMaxActiveSubscriptions,
+	);
 	const streamingFlushIntervalMs = chooseDefault(
 		explicit.streaming?.flushIntervalMs,
 		RESOURCE_POLICY_ENV.streamingFlushIntervalMs,
@@ -377,6 +386,7 @@ export function resolveResourcePolicy(
 					congestionGraceMs: websocketCongestionGraceMs.value,
 					closeGraceMs: websocketCloseGraceMs.value,
 					maxInboundPayloadBytes: websocketMaxInboundPayloadBytes.value,
+					maxActiveSubscriptions: websocketMaxActiveSubscriptions.value,
 				},
 			},
 			streaming: {
@@ -418,6 +428,7 @@ export function resolveResourcePolicy(
 					congestionGraceMs: websocketCongestionGraceMs.source,
 					closeGraceMs: websocketCloseGraceMs.source,
 					maxInboundPayloadBytes: websocketMaxInboundPayloadBytes.source,
+					maxActiveSubscriptions: websocketMaxActiveSubscriptions.source,
 				},
 			},
 			streaming: {

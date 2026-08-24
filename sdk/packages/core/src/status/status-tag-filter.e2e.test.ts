@@ -40,6 +40,7 @@ import { StatusService, setStatusService } from "./index";
  */
 const HUB_PORT = Number(process.env.CLINE_TEST_HUB_PORT ?? 25971);
 const DASHBOARD_PORT = Number(process.env.CLINE_TEST_DASHBOARD_PORT ?? 8993);
+const CLIENT_ID = "status-tag-filter-e2e";
 /** Max rows any single assertion here needs; the schema caps `limit` at 200. */
 const PAGE_LIMIT = 200;
 /**
@@ -68,7 +69,7 @@ async function command(
 ): Promise<Record<string, unknown>> {
 	const reply = await connection.send({
 		version: "v1",
-		clientId: "status-tag-filter-e2e",
+		clientId: CLIENT_ID,
 		command: name as never,
 		payload,
 	});
@@ -189,6 +190,23 @@ beforeAll(async () => {
 	const url = new URL(server.url);
 	url.searchParams.set("authToken", server.authToken);
 	connection = await connectToHub(url.toString());
+	const registration = await connection.send({
+		version: "v1",
+		clientId: CLIENT_ID,
+		command: "client.register",
+		payload: {
+			clientId: CLIENT_ID,
+			clientType: "core-e2e",
+			displayName: "status tag filter e2e",
+			transport: "native",
+			actorKind: "client",
+		},
+	});
+	if (!registration.ok) {
+		throw new Error(
+			`client.register failed: ${registration.error?.code} ${registration.error?.message}`,
+		);
+	}
 });
 
 afterAll(async () => {

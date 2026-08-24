@@ -51,6 +51,7 @@ import { resolveWorkspacePath } from "./config";
 import { filterExtensionToolRegistrations } from "./global-settings";
 import { hasRuntimeHooks, mergeAgentExtensions } from "./session-data";
 import type { ProviderSettingsManager } from "./storage/provider-settings-manager";
+import { SqliteExtensionStateStore } from "./storage/sqlite-extension-state-store";
 import { InMemoryWorkspaceManager } from "./workspace/workspace-manager";
 import type { GitWorkspaceState } from "./workspace/workspace-manifest";
 import { buildWorkspaceMetadataWithInfo } from "./workspace/workspace-manifest";
@@ -336,8 +337,10 @@ export async function prepareLocalRuntimeBootstrap(
 	let loadedPlugins:
 		| Awaited<ReturnType<typeof resolveAndLoadAgentPlugins>>
 		| undefined;
+	let extensionStateStore: SqliteExtensionStateStore | undefined;
 	if (hasConfigExtension(configExtensions, "plugins")) {
 		try {
+			extensionStateStore = new SqliteExtensionStateStore();
 			loadedPlugins = await resolveAndLoadAgentPlugins({
 				pluginPaths: localConfig?.pluginPaths,
 				workspacePath,
@@ -352,6 +355,16 @@ export async function prepareLocalRuntimeBootstrap(
 				logger: extensionContext.logger,
 				telemetry: extensionContext.telemetry,
 				automation: extensionContext.automation,
+				resolveExtensionState: ({
+					workspaceRoot: stateWorkspaceRoot,
+					sessionId: stateSessionId,
+					extensionId,
+				}) =>
+					extensionStateStore?.snapshot({
+						workspaceRoot: stateWorkspaceRoot,
+						sessionId: stateSessionId,
+						extensionId,
+					}),
 			});
 			logPluginDiagnostics(
 				loadedPlugins.failures,
@@ -359,6 +372,8 @@ export async function prepareLocalRuntimeBootstrap(
 				localConfig?.logger,
 			);
 		} catch (error) {
+			extensionStateStore?.close();
+			extensionStateStore = undefined;
 			const message = error instanceof Error ? error.message : String(error);
 			localConfig?.logger?.log?.(
 				`plugin loading failed; continuing without plugins (${message})`,
@@ -441,7 +456,13 @@ export async function prepareLocalRuntimeBootstrap(
 		hooks,
 		toolPolicies,
 		requestToolApproval,
-		pluginSandboxShutdown: loadedPlugins?.shutdown,
+		pluginSandboxShutdown:
+			loadedPlugins?.shutdown || extensionStateStore
+				? async () => {
+						await loadedPlugins?.shutdown?.();
+						extensionStateStore?.close();
+					}
+				: undefined,
 		runtimeBuilderInput: {
 			config,
 			hooks,

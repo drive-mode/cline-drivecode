@@ -65,6 +65,64 @@ describe("runtime host resolution", () => {
 		vi.resetModules();
 	});
 
+	it("issues a one-time grant only after a sanitized host confirmation", async () => {
+		const { createLocalChatCatalogConfirmationIssuer } = await import("./host");
+		const confirm = vi.fn(async () => true);
+		const issuer = createLocalChatCatalogConfirmationIssuer({
+			confirm,
+			ttlMs: 60_000,
+			clock: () => new Date("2026-08-15T00:00:00.000Z"),
+			credentialFactory: () => "internal-one-time-credential",
+		});
+		const grant = await issuer.issue({
+			confirmation: "archive",
+			invocationId: "hidden-invocation",
+			aggregateKind: "chat",
+			aggregateId: "chat-1",
+			expectedRevision: 4,
+			effects: ["stop_running", "clear_bindings"],
+		});
+
+		expect(confirm).toHaveBeenCalledWith({
+			confirmation: "archive",
+			aggregateKind: "chat",
+			aggregateId: "chat-1",
+			expectedRevision: 4,
+			effects: ["stop_running", "clear_bindings"],
+		});
+		expect(JSON.stringify(confirm.mock.calls)).not.toContain("invocation");
+		expect(JSON.stringify(confirm.mock.calls)).not.toContain("credential");
+		expect(grant).toMatchObject({
+			credential: "internal-one-time-credential",
+			invocationId: "hidden-invocation",
+			issuedAt: "2026-08-15T00:00:00.000Z",
+			expiresAt: "2026-08-15T00:01:00.000Z",
+		});
+	});
+
+	it("does not issue a confirmation grant after host decline", async () => {
+		const { createLocalChatCatalogConfirmationIssuer } = await import("./host");
+		const credentialFactory = vi.fn(() => "must-not-be-issued");
+		const issuer = createLocalChatCatalogConfirmationIssuer({
+			confirm: async () => false,
+			credentialFactory,
+		});
+
+		await expect(
+			issuer.issue({
+				confirmation: "archive",
+				invocationId: "archive-op",
+				aggregateKind: "chat",
+				aggregateId: "chat-1",
+				expectedRevision: 2,
+			}),
+		).rejects.toMatchObject({
+			code: "invalid_input",
+			message: "managed lifecycle confirmation was declined",
+		});
+		expect(credentialFactory).not.toHaveBeenCalled();
+	});
+
 	it("falls back to file session storage when sqlite initialization fails", async () => {
 		sqliteInitMock.mockImplementation(() => {
 			throw new Error("sqlite unavailable");
@@ -73,6 +131,49 @@ describe("runtime host resolution", () => {
 
 		const backend = await resolveSessionBackend({ backendMode: "local" });
 		expect(backend.constructor.name).toBe("FileSessionService");
+	});
+
+	it("rejects managed lifecycle auto routing before hub discovery or prewarm", async () => {
+		const { createRuntimeHost } = await import("./host");
+
+		await expect(
+			createRuntimeHost({
+				backendMode: "auto",
+				chatLifecycle: { workspaceRoot: "/workspace/project" },
+			}),
+		).rejects.toMatchObject({ code: "unsupported_capability" });
+		expect(resolveCompatibleLocalHubUrlMock).not.toHaveBeenCalled();
+		expect(prewarmDetachedHubServerMock).not.toHaveBeenCalled();
+	});
+
+	it("rejects file persistence instead of falling back in managed local mode", async () => {
+		const { createRuntimeHost } = await import("./host");
+
+		await expect(
+			createRuntimeHost({
+				backendMode: "local",
+				chatLifecycle: { workspaceRoot: "/workspace/project" },
+				sessionService: new FileSessionService(),
+			}),
+		).rejects.toMatchObject({ code: "unsupported_capability" });
+	});
+
+	it("rejects an invalid managed confirmation lifetime before storage startup", async () => {
+		const { createRuntimeHost } = await import("./host");
+
+		await expect(
+			createRuntimeHost({
+				backendMode: "local",
+				chatLifecycle: {
+					workspaceRoot: "/workspace/project",
+					confirmationTtlMs: Number.MAX_SAFE_INTEGER,
+				},
+			}),
+		).rejects.toMatchObject({
+			code: "invalid_input",
+			message: "managed lifecycle confirmation TTL is invalid",
+		});
+		expect(sqliteInitMock).not.toHaveBeenCalled();
 	});
 
 	it("silently falls back to file session storage when node:sqlite is unavailable", async () => {
@@ -128,7 +229,7 @@ describe("runtime host resolution", () => {
 		});
 
 		expect(host).toBeInstanceOf(HubRuntimeHost);
-		expect(prewarmDetachedHubServerMock).not.toHaveBeenCalled();
+		expect(prewarmDetachedHubServerMock).toHaveBeenCalledWith(process.cwd());
 		expect(resolveCompatibleLocalHubUrlMock).toHaveBeenCalledWith({
 			endpoint: undefined,
 			strategy: "prefer-hub",
@@ -158,11 +259,6 @@ describe("runtime host resolution", () => {
 			endpoint: undefined,
 			strategy: "prefer-hub",
 		});
-		expect(
-			resolveCompatibleLocalHubUrlMock.mock.invocationCallOrder[0],
-		).toBeLessThan(
-			prewarmDetachedHubServerMock.mock.invocationCallOrder[0] ?? Infinity,
-		);
 		expect(ensureCompatibleLocalHubUrlMock).not.toHaveBeenCalled();
 		expect(logger.log).toHaveBeenCalledWith(
 			"Falling back to local runtime host",
@@ -211,7 +307,7 @@ describe("runtime host resolution", () => {
 		});
 
 		expect(host).toBeInstanceOf(HubRuntimeHost);
-		expect(prewarmDetachedHubServerMock).not.toHaveBeenCalled();
+		expect(prewarmDetachedHubServerMock).toHaveBeenCalledWith(process.cwd());
 		expect(ensureCompatibleLocalHubUrlMock).toHaveBeenCalledWith({
 			strategy: "require-hub",
 		});
