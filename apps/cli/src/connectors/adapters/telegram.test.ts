@@ -784,7 +784,7 @@ describe("telegram slash command delivery", () => {
 			},
 		});
 
-		expect(deleteSession).toHaveBeenCalledWith("session-1", true);
+		expect(deleteSession).not.toHaveBeenCalled();
 		expect(posts).toContainEqual({ raw: "Started a fresh session." });
 	});
 });

@@ -12,10 +12,13 @@ import { useDialogKeyboard } from "@opentui-ui/dialog/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { HistoryExportFormat } from "../../session/history-export";
 import { listSessions } from "../../session/session";
-import { mergeHistoryStatusRows } from "../../utils/history-format";
+import {
+	formatChatCatalogBadge,
+	mergeHistoryStatusRows,
+} from "../../utils/history-format";
 import { formatUsd } from "../../utils/output";
 import { shouldShowCliUsageCost } from "../../utils/usage-cost-display";
-import { useDialogPalette } from "../hooks/use-theme";
+import { palette } from "../palette";
 import {
 	buildHistoryFooterText,
 	HISTORY_EXPORT_OPTIONS,
@@ -24,6 +27,10 @@ import {
 } from "./history-export-picker";
 
 function hasForkMetadata(row: SessionHistoryRecord): boolean {
+	const catalog = row.metadata?.chatCatalog;
+	if (catalog?.projection === "catalog" && catalog.relationKind === "fork") {
+		return true;
+	}
 	const fork = row.metadata?.fork;
 	return typeof fork === "object" && fork !== null && !Array.isArray(fork);
 }
@@ -32,7 +39,9 @@ function formatTitle(row: SessionHistoryRecord, maxLen: number): string {
 	const raw = row.metadata?.title?.trim() || row.prompt?.trim() || "Untitled";
 	const forkTitle =
 		hasForkMetadata(row) && !raw.endsWith(" (fork)") ? `${raw} (fork)` : raw;
-	const normalized = formatDisplayUserInput(forkTitle);
+	const normalized = formatDisplayUserInput(
+		`[${formatChatCatalogBadge(row)}] ${forkTitle}`,
+	);
 	return truncateStr(normalized.replace(/\s+/g, " "), maxLen);
 }
 
@@ -98,7 +107,6 @@ function HistoryListContent({
 	refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS,
 	registerKeyHandler,
 }: HistoryListContentProps) {
-	const palette = useDialogPalette();
 	const { width } = useTerminalDimensions();
 	const [rows, setRows] = useState<SessionHistoryRecord[]>(
 		() => initialRows ?? [],
@@ -424,7 +432,12 @@ function HistoryListContent({
 					const cost = row.metadata?.totalCost;
 					const showCost = shouldShowCliUsageCost(row.provider);
 					const title = formatTitle(row, titleMaxLen);
-					const date = formatRelativeDate(row.startedAt);
+					const catalog = row.metadata?.chatCatalog;
+					const date = formatRelativeDate(
+						catalog?.projection === "catalog"
+							? catalog.lastActivityAt
+							: row.startedAt,
+					);
 
 					return (
 						<box

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { InteractiveTurnResult } from "../../tui/types";
 import type { ChatCommandHost } from "../../utils/chat-commands";
 import {
@@ -69,6 +70,16 @@ export async function runInteractiveChatCommand(input: {
 	const handled = await maybeHandleChatCommand(prompt, {
 		enabled: input.enabled,
 		host: input.host,
+		invocation: {
+			invocationId: randomUUID(),
+			invokedAt: new Date().toISOString(),
+			workspaceRoot: input.chatCommandState.workspaceRoot,
+			task: {
+				sessionId: input.sessionRuntime.getActiveSessionId() || undefined,
+			},
+			actor: { kind: "human" },
+			source: { kind: "interactive" },
+		},
 		getState: () => ({
 			...input.chatCommandState,
 			autoApproveTools: input.autoApproveAllRef.current,

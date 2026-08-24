@@ -1,5 +1,6 @@
 import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
+import type { AgentExtensionCommandInvocationContext } from "@cline/shared";
 import { resolveWorkspaceRoot } from "./helpers";
 
 export type ChatCommandState = {
@@ -34,6 +35,8 @@ export type ChatCommandContext = {
 	botUserName?: string;
 	requireBotMention?: boolean;
 	host?: ChatCommandHost;
+	/** Host-created provenance for this exact command delivery. */
+	invocation?: AgentExtensionCommandInvocationContext;
 	getState: () => Promise<ChatCommandState> | ChatCommandState;
 	setState: (next: ChatCommandState) => Promise<void> | void;
 	reply: (text: string) => Promise<void> | void;

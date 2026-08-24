@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import type {
@@ -6,8 +7,7 @@ import type {
 	HubSessionClient,
 	UserInstructionConfigService,
 } from "@cline/core";
-import { isUnusableSessionError } from "@cline/core";
-import type { GeneratedMedia } from "@cline/shared";
+import { isSessionNotFoundError } from "@cline/core";
 import type { SentMessage, Thread } from "chat";
 import type { CliLoggerAdapter } from "../logging/adapter";
 import { buildUserInputMessage, resolveSystemPrompt } from "../runtime/prompt";
@@ -126,7 +126,6 @@ async function postConnectorRuntimeReply<TState extends ConnectorThreadState>(
 	stream: AsyncIterable<string>,
 	postFinalReply?: (text: string) => Promise<void>,
 	resolveFallbackText?: () => Promise<string | undefined>,
-	hasNonTextReply?: () => boolean,
 ): Promise<void> {
 	if (transport !== "telegram" && !postFinalReply && !resolveFallbackText) {
 		await thread.post(stream);
@@ -136,9 +135,6 @@ async function postConnectorRuntimeReply<TState extends ConnectorThreadState>(
 	let text = "";
 	for await (const chunk of stream) {
 		text += chunk;
-	}
-	if (!text.trim() && hasNonTextReply?.()) {
-		return;
 	}
 	if (!text.trim()) {
 		text = (await resolveFallbackText?.())?.trim() || "";
@@ -154,67 +150,6 @@ async function postConnectorRuntimeReply<TState extends ConnectorThreadState>(
 		return;
 	}
 	await postConnectorText(thread, transport, text);
-}
-
-const CONNECTOR_MEDIA_EXTENSIONS: Readonly<Record<string, string>> = {
-	"image/png": "png",
-	"image/jpeg": "jpg",
-	"image/gif": "gif",
-	"image/webp": "webp",
-	"audio/mpeg": "mp3",
-	"audio/wav": "wav",
-	"audio/ogg": "ogg",
-	"video/mp4": "mp4",
-	"video/webm": "webm",
-};
-
-async function postConnectorGeneratedMedia<TState extends ConnectorThreadState>(
-	thread: Thread<TState>,
-	mediaItems: readonly GeneratedMedia[],
-): Promise<void> {
-	if (mediaItems.length === 0) {
-		return;
-	}
-
-	const files: Array<{ data: Buffer; filename: string; mimeType: string }> = [];
-	const references: string[] = [];
-	for (const [index, media] of mediaItems.entries()) {
-		const label = media.name?.trim() || `Generated ${media.modality}`;
-		switch (media.source.type) {
-			case "base64": {
-				const data = Buffer.from(media.source.data, "base64");
-				if (data.byteLength === 0) {
-					references.push(
-						`${label} (${media.mediaType}) could not be attached.`,
-					);
-					break;
-				}
-				const extension =
-					CONNECTOR_MEDIA_EXTENSIONS[media.mediaType.toLowerCase()] ?? "bin";
-				const suppliedName = media.name ? basename(media.name) : "";
-				files.push({
-					data,
-					filename: suppliedName || `generated-${index + 1}.${extension}`,
-					mimeType: media.mediaType,
-				});
-				break;
-			}
-			case "url":
-				references.push(`[${label}](${media.source.url})`);
-				break;
-			case "artifact":
-				references.push(`${label}: artifact ${media.source.artifactId}`);
-				break;
-		}
-	}
-
-	if (files.length === 0 && references.length === 0) {
-		return;
-	}
-	await thread.post({
-		markdown: references.length > 0 ? references.join("\n") : "Generated media",
-		...(files.length > 0 ? { files } : {}),
-	});
 }
 
 /**
@@ -617,6 +552,31 @@ export async function handleConnectorUserTurn<
 			botUserName: input.botUserName,
 			requireBotMention: !input.thread.isDM,
 			host: input.chatCommandHost,
+			invocation: {
+				invocationId: randomUUID(),
+				invokedAt: new Date().toISOString(),
+				workspaceRoot:
+					initialState.workspaceRoot || input.baseStartRequest.workspaceRoot,
+				task: {
+					sessionId: initialState.sessionId || undefined,
+					conversationId: input.thread.id,
+				},
+				actor: {
+					kind: "human",
+					...(initialState.participantKey
+						? { id: initialState.participantKey }
+						: {}),
+					...(initialState.participantLabel
+						? { label: initialState.participantLabel }
+						: {}),
+				},
+				source: {
+					kind: "connector",
+					transport: input.transport,
+					threadId: input.thread.id,
+					channelId: input.thread.channelId,
+				},
+			},
 			getState: async () => {
 				const current = await loadThreadState(
 					input.thread,
@@ -1028,7 +988,6 @@ export async function handleConnectorUserTurn<
 		const { prompt, userImages, userFiles } = await buildUserInputMessage(
 			runtimeInput,
 			input.userInstructionService,
-			{ mode: startRequest.mode },
 		);
 		try {
 			await input.client.sendRuntimeSession(
@@ -1042,12 +1001,10 @@ export async function handleConnectorUserTurn<
 				{ timeoutMs: null },
 			);
 		} catch (error) {
-			if (!isUnusableSessionError(error)) {
+			if (!isSessionNotFoundError(error)) {
 				throw error;
 			}
-			// The tracked turn points at a session that can no longer serve it —
-			// the hub does not know it, or its runtime is stuck on a run that never
-			// drained.
+			// The tracked turn points at a session the hub no longer knows about.
 			// Remove only the entry we attempted to steer, then route recovery
 			// through the normal per-thread queue. Concurrent messages that saw
 			// the same stale turn will line up behind this one instead of creating
@@ -1071,10 +1028,11 @@ export async function handleConnectorUserTurn<
 			);
 			return;
 		}
-		// No acknowledgement: the follow-up is handed to the running session and its
-		// effect shows up in the answer. Announcing it added a line to every thread
-		// and overstated what happens, since the prompt is queued for the session
-		// rather than injected into the loop already running.
+		await postConnectorText(
+			input.thread,
+			input.transport,
+			"Steering current task.",
+		);
 		return;
 	}
 
@@ -1118,7 +1076,6 @@ async function runConnectorRuntimeTurnWithRecovery<
 	const { prompt, userImages, userFiles } = await buildUserInputMessage(
 		runtimeInput,
 		input.userInstructionService,
-		{ mode: startRequest.mode },
 	);
 	const request: ChatRunTurnRequest = {
 		config: startRequest,
@@ -1176,7 +1133,7 @@ async function runConnectorRuntimeTurnWithRecovery<
 			});
 			break;
 		} catch (error) {
-			if (!allowStaleSessionRetry || !isUnusableSessionError(error)) {
+			if (!allowStaleSessionRetry || !isSessionNotFoundError(error)) {
 				throw error;
 			}
 			allowStaleSessionRetry = false;
@@ -1222,7 +1179,6 @@ async function runConnectorRuntimeTurn<
 		client: input.client,
 		sessionId,
 	});
-	const generatedMedia: GeneratedMedia[] = [];
 
 	const activeTurn: ActiveConnectorTurn = {
 		sessionId,
@@ -1272,9 +1228,6 @@ async function runConnectorRuntimeTurn<
 						formatConnectorApprovalPrompt(approval),
 					);
 				},
-				onMedia: (media) => {
-					generatedMedia.push(media);
-				},
 				onCompleted: async (result) => {
 					await input.onReplyCompleted?.({
 						sessionId,
@@ -1294,9 +1247,7 @@ async function runConnectorRuntimeTurn<
 			}),
 			postFinalReply,
 			resolveFallbackText,
-			() => generatedMedia.length > 0,
 		);
-		await postConnectorGeneratedMedia(input.thread, generatedMedia);
 	} finally {
 		input.pendingApprovals.delete(input.thread.id);
 		if (input.activeTurns?.get(turnKey) === activeTurn) {

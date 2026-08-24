@@ -6,12 +6,20 @@ const {
 	mockResolveSystemPrompt,
 	mockGetProviderCollection,
 	mockGetBooleanFlagEnabled,
+	mockListSessions,
+	mockStopRuntimeSession,
+	mockDeleteSession,
+	mockHubClose,
 } = vi.hoisted(() => ({
 	mockGetLastUsedProviderSettings: vi.fn(),
 	mockGetProviderSettings: vi.fn(),
 	mockResolveSystemPrompt: vi.fn(),
 	mockGetProviderCollection: vi.fn(),
 	mockGetBooleanFlagEnabled: vi.fn(),
+	mockListSessions: vi.fn(),
+	mockStopRuntimeSession: vi.fn(),
+	mockDeleteSession: vi.fn(),
+	mockHubClose: vi.fn(),
 }));
 
 vi.mock("@cline/core", async () => {
@@ -27,6 +35,12 @@ vi.mock("@cline/core", async () => {
 			getProviderSettings(providerId: string) {
 				return mockGetProviderSettings(providerId);
 			}
+		},
+		HubSessionClient: class {
+			listSessions = mockListSessions;
+			stopRuntimeSession = mockStopRuntimeSession;
+			deleteSession = mockDeleteSession;
+			close = mockHubClose;
 		},
 		CoreSessionService: class {},
 		SqliteSessionStore: class {},
@@ -64,7 +78,7 @@ vi.mock("../commands/auth", async () => {
 
 import {
 	buildConnectorStartRequest,
-	isReusableConnectorSession,
+	stopConnectorSessions,
 } from "./session-runtime";
 
 describe("buildConnectorStartRequest", () => {
@@ -165,31 +179,41 @@ describe("buildConnectorStartRequest", () => {
 	});
 });
 
-describe("isReusableConnectorSession", () => {
-	it("rejects missing and terminal sessions", () => {
-		expect(isReusableConnectorSession(undefined)).toBe(false);
-		expect(isReusableConnectorSession({ sessionId: "" })).toBe(false);
-		expect(
-			isReusableConnectorSession({ sessionId: "s1", status: "completed" }),
-		).toBe(false);
-		expect(
-			isReusableConnectorSession({ sessionId: "s1", status: "failed" }),
-		).toBe(false);
-		expect(
-			isReusableConnectorSession({ sessionId: "s1", status: "aborted" }),
-		).toBe(false);
-		expect(
-			isReusableConnectorSession({ sessionId: "s1", status: "cancelled" }),
-		).toBe(false);
+describe("stopConnectorSessions", () => {
+	afterEach(() => {
+		vi.clearAllMocks();
 	});
 
-	it("accepts live and status-omitted sessions", () => {
-		expect(
-			isReusableConnectorSession({ sessionId: "s1", status: "running" }),
-		).toBe(true);
-		expect(
-			isReusableConnectorSession({ sessionId: "s1", status: "idle" }),
-		).toBe(true);
-		expect(isReusableConnectorSession({ sessionId: "s1" })).toBe(true);
+	it("stops matching live sessions without deleting their history", async () => {
+		mockListSessions.mockResolvedValue([
+			{ sessionId: "session-1", metadata: { connector: "target" } },
+			{ sessionId: "session-2", metadata: { connector: "other" } },
+		]);
+		mockStopRuntimeSession.mockResolvedValue({ applied: true });
+
+		await expect(
+			stopConnectorSessions({
+				rpcAddress: "ws://test",
+				localMatcher: () => true,
+				rpcMatcher: (metadata) => metadata?.connector === "target",
+			}),
+		).resolves.toBe(1);
+		expect(mockStopRuntimeSession).toHaveBeenCalledWith("session-1");
+		expect(mockDeleteSession).not.toHaveBeenCalled();
+		expect(mockHubClose).toHaveBeenCalledOnce();
+	});
+
+	it("does not mutate local history when runtime authority is unavailable", async () => {
+		mockListSessions.mockRejectedValue(new Error("hub unavailable"));
+
+		await expect(
+			stopConnectorSessions({
+				rpcAddress: "ws://test",
+				localMatcher: () => true,
+				rpcMatcher: () => true,
+			}),
+		).resolves.toBe(0);
+		expect(mockStopRuntimeSession).not.toHaveBeenCalled();
+		expect(mockHubClose).toHaveBeenCalledOnce();
 	});
 });
