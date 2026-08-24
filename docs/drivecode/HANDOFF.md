@@ -141,7 +141,8 @@ validation commands, and continuation checklist live in
   native implementation source of truth; the in-tree fixture is gone. Presenter HTML:
   [`mobile-drive-ios-demo.html`](design/wireframes/mobile-drive-ios-demo.html).
 - `docs/drivecode/plans/cline-drivemode/leadership/LEADERSHIP-BRIEF.md` is the SE/PM planning wave that closes contradictions and names Phase 0 entry criteria.
-- `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the end-to-end systems analysis (context, interfaces, NFRs, as-is/to-be, delivery slices) — **§13.0 is current as-is**.
+- `docs/drivecode/plans/cline-drivemode/leadership/SYSTEMS-ANALYSIS.md` is the Cline-product systems analysis (context, interfaces, NFRs, as-is/to-be) — **§13.0 is current as-is**.
+- `docs/drivecode/plans/cline-drivemode/leadership/ISA-DRIVE-MODE-FAMILY.md` is the family-wide information system analysis (all repos, FDD, DFD-0, DFD-1).
 
 ### Drivecode SDK plan
 

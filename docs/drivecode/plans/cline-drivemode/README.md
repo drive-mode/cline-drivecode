@@ -8,7 +8,7 @@ Mode-first integration. [ADR-0007](adr/ADR-0007-drive-as-cline-mode.md), [PRD 8]
 
 Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 
-**Cold-start.** Nest [HANDOFF.md](../../HANDOFF.md). Current as-is: [SYSTEMS-ANALYSIS.md](leadership/SYSTEMS-ANALYSIS.md) §13.0. Satisfaction residuals: [REMAINING-task-satisfaction.md](delivery/REMAINING-task-satisfaction.md).
+**Cold-start.** Nest [HANDOFF.md](../../HANDOFF.md). Cline as-is: [SYSTEMS-ANALYSIS.md](leadership/SYSTEMS-ANALYSIS.md) §13.0. Family ISA (FDD, DFD-0/1): [ISA-DRIVE-MODE-FAMILY.md](leadership/ISA-DRIVE-MODE-FAMILY.md). Satisfaction residuals: [REMAINING-task-satisfaction.md](delivery/REMAINING-task-satisfaction.md).
 **Historical delivery handoff.** [HANDOFF.md](delivery/HANDOFF.md) (2026-07-25 — superseded).
 **PR 24 (U4 AI SDK 7) handoff.** [HANDOFF-pr24-u4.md](archive/HANDOFF-pr24-u4.md) — remaining work to land the AI SDK major.
 
@@ -60,7 +60,8 @@ Repo-level continuation brief. [HANDOFF.md](../../HANDOFF.md).
 | [BRIEF-task-satisfaction.md](leadership/BRIEF-task-satisfaction.md) | SE/PM brief for session satisfaction wave |
 | [adr/](adr/) | Architecture decision records for Driveagent home, graph, recruit, gated learn |
 | [LEADERSHIP-BRIEF.md](leadership/LEADERSHIP-BRIEF.md) | SE lead / PM brief for the planning wave (defaults, MoSCoW, risks) |
-| [SYSTEMS-ANALYSIS.md](leadership/SYSTEMS-ANALYSIS.md) | End-to-end systems analysis (context, flows, NFRs, as-is/to-be, recommendations) |
+| [SYSTEMS-ANALYSIS.md](leadership/SYSTEMS-ANALYSIS.md) | Cline-product systems analysis (context, flows, NFRs, as-is/to-be, recommendations) |
+| [ISA-DRIVE-MODE-FAMILY.md](leadership/ISA-DRIVE-MODE-FAMILY.md) | Family-wide ISA: all Drive Mode repos, FDD, DFD-0, DFD-1 |
 | [CHECKLIST-phase0-entry.md](leadership/CHECKLIST-phase0-entry.md) | Gate before schema freeze |
 | [MATRIX-workflow-coverage.md](leadership/MATRIX-workflow-coverage.md) | Workflow ↔ feature coverage matrix |
 | [decisions/](decisions/) | Leadership DECs (agent SoT, package location, product forks) |
