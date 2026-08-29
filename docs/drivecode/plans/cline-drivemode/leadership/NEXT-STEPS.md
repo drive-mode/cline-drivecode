@@ -2,7 +2,7 @@
 
 **Document type.** Pickup plan after the family ISA.
 **Audience.** SE leads, PMs, agents picking the next slice.
-**Status.** Living. Grounded 2026-08-24 in the ISA as-is.
+**Status.** Living. Grounded 2026-08-24 in the ISA as-is. Now slices A1–A3, B0, C1–C4 landed 2026-08-29; next Cline slice is **B1**.
 **Does not replace.** [claims-registry.yaml](../delivery/claims-registry.yaml) (Done SoT), [portfolio-now](../initiatives/portfolio-now/README.md) (golden-path sequencer), [repo-ownership](../initiatives/repo-ownership/README.md) (dedup order).
 **Companion.** [ISA-DRIVE-MODE-FAMILY.md](ISA-DRIVE-MODE-FAMILY.md) is the analysis. This file is what to do with it.
 
@@ -76,12 +76,12 @@ One PR per row. One repo per row. Stop when the acceptance line is true.
 
 | ID | Slice | Repo | Advances | Acceptance |
 |---|---|---|---|---|
-| **A1** | Replace `file:../../../collaboration-harness` with `@drive-mode/drive-kernel` | `drivemode-mcp` | `claim:drv-golden-path-contract` (GP0) | Writer typecheck + `bun test` against the generated bundle; map `work.plan`/`work.test` to kernel names; `packId` only on `work.generic`; `DriveLogEnvelope` not `LoggedEvent` |
+| **A1** | Replace `file:../../../collaboration-harness` with `@drive-mode/drive-kernel` | `drivemode-mcp` **landed** (`da78e3d` / #8) | `claim:drv-golden-path-contract` (GP0) | Writer typecheck + `bun test` against the generated bundle; map `work.plan`/`work.test` to kernel names; `packId` only on `work.generic`; `DriveLogEnvelope` not `LoggedEvent` |
 | **A1b** | GitHub-archive `collaboration-harness` | `collaboration-harness` | repo-ownership step 2 | No remaining `file:` consumer; README already says archived |
-| **A2** | Project `control.leave` and `control.end` into title cleanup | `drive-ios` | GP0 / later `claim:drv-presenter-native` | Unit test: leave/end drops a live Presenter without a trailing `title_revoked`; production still fail-closed |
-| **A3** | Debug writer URL from discovery / printed URL, not `:4600` | `drive-ios` | NFR-C2 | Preview still allows loopback; identity is the discovered URL |
+| **A2** | Project `control.leave` and `control.end` into title cleanup | `drive-ios` **landed** (#13) | GP0 / later `claim:drv-presenter-native` | Unit test: leave/end drops a live Presenter without a trailing `title_revoked`; production still fail-closed |
+| **A3** | Debug writer URL from discovery / printed URL, not `:4600` | `drive-ios` **landed** (#14) | NFR-C2 | Preview still allows loopback; identity is the discovered URL |
 
-A1 is the family-blocking slice. Until it lands, treat iOS Presenter behavior as the **harness** fold, not `@cline/drive`.
+A1 landed. iOS still polls the MCP writer (Profile B); Presenter exclusivity on the phone is the kernel fold the writer now consumes, not a second harness copy. Do not start GP4 until B3 (GP3) also lands.
 
 A1 mapping reminders (already decided, do not re-argue): [ADR-0056](../adr/ADR-0056-d1b-kernel-protocol-superset.md).
 
@@ -89,8 +89,8 @@ A1 mapping reminders (already decided, do not re-argue): [ADR-0056](../adr/ADR-0
 
 | ID | Slice | Claim | Acceptance |
 |---|---|---|---|
-| **B0** | Prove or wire `drive.presenter.*` on `hub-server-transport.ts` (ISA P-IF1) | — (defect on shipped Presenter) | A WS client can `grant`/`transfer`/`revoke`/`status`; keep `drive.spotlight.set` as the compatibility alias |
-| **B1** | Trusted host pairing | `claim:drv-host-trust` **planned** | Fresh client pairs, stores credential in platform secure storage, reconnects, cannot mutate another workspace |
+| **B0** | Prove or wire `drive.presenter.*` on `hub-server-transport.ts` (ISA P-IF1) | **landed** (#40) | A WS client can `grant`/`transfer`/`revoke`/`status`; keep `drive.spotlight.set` as the compatibility alias |
+| **B1** | Trusted host pairing | `claim:drv-host-trust` **planned** · **next** | Fresh client pairs, stores credential in platform secure storage, reconnects, cannot mutate another workspace |
 | **B2** | Opaque target registry | `claim:drv-target-resolution` **planned** | Host resolves repo/folder refs, reports posture, rejects stale grants, does not leak raw paths |
 | **B3** | Finish managed chat consumer contract | `claim:drv-managed-chat` **active_partial** | Create/list/send/cancel/resume against the catalog; typed events for output, approvals, failure, terminal state |
 
@@ -100,12 +100,12 @@ Catalog + CLI wiring landed (#35/#36). B3 is the **remote consumer contract**, n
 
 | ID | Slice | Repo | Why now |
 |---|---|---|---|
-| **C1** | Retarget Cline clone URL to `drive-mode/cline-drivecode`; decide whether iOS/MCP belong on the page | `site` | F7 currently lies about the Cline remote |
-| **C2** | `pack_set` MCP enum matches the five packs on disk | `drivemode-mcp` | Schema/service split (ISA P-IF2) |
-| **C3** | MCP `AGENTS.md` records ADR-0057 (Hub wins if both live) | `drivemode-mcp` | Dual “single writer” claims |
-| **C4** | HANDOFF “MCP consumes drive-kernel” / “harness is archived” | `cline-drivecode` | Aspirational today; make it true after A1 or qualify it now |
+| **C1** | Retarget Cline clone URL to `drive-mode/cline-drivecode`; decide whether iOS/MCP belong on the page | `site` **landed** (#3) | Cline URL is `drive-mode/cline-drivecode`; iOS row is Preview |
+| **C2** | `pack_set` MCP enum matches the five packs on disk | `drivemode-mcp` **landed** (#11) | Schema/service split (ISA P-IF2) |
+| **C3** | MCP `AGENTS.md` records ADR-0057 (Hub wins if both live) | `drivemode-mcp` **landed** (already on `main` before this pickup) | Dual “single writer” claims |
+| **C4** | HANDOFF “MCP consumes drive-kernel” / “harness is archived” | `cline-drivecode` **landed** (#39) | Qualified as as-is in the ISA PR |
 
-C4 can be a one-line HANDOFF qualifier in the same PR as this file. Do not wait for A1 to stop stating a false as-is.
+Honesty Now-row is closed except leftovers that are not this pickup (site #2 / mcp #7 identity markers, iOS #12 brand draft).
 
 ---
 
@@ -149,13 +149,13 @@ Cline-product residuals stay in [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) §9.4
 
 | If you are in… | First slice | Do not start |
 |---|---|---|
-| `drivemode-mcp` | **A1** (then C2, C3) | A Hub bridge, SQLite log, `@cline/*` imports |
-| `drive-ios` | **A2** (then A3) | GP4 managed chat; App Store; loopback in Release |
-| `cline-drivecode` | **B0** or **B1** | GP4, GP6, GP7, WebRTC, in-tree iOS |
-| `site` | **C1** | JS, forms, analytics, CSP changes |
-| `collaboration-harness` | Wait for A1, then **A1b** | New protocol features |
+| `drivemode-mcp` | **A1b** wait (archive harness); otherwise idle | A Hub bridge, SQLite log, `@cline/*` imports |
+| `drive-ios` | Idle until GP4 join (needs B3) | GP4 managed chat; App Store; loopback in Release |
+| `cline-drivecode` | **B1** trusted host | GP4, GP6, GP7, WebRTC, in-tree iOS |
+| `site` | Idle | JS, forms, analytics, CSP changes |
+| `collaboration-harness` | **A1b** GitHub-archive | New protocol features |
 
-Default if several Cline slices are free: **B0** (smallest, shipped-path defect) then **B1**.
+Default: **B1** on `cline-drivecode`. Hub/CLI `profilesByParticipantId` webview typecheck is pre-existing on `main` (failed on #38 and #40); do not treat it as a B1 blocker.
 
 ---
 
@@ -173,9 +173,9 @@ Default if several Cline slices are free: **B0** (smallest, shipped-path defect)
 
 | ID | Blocks | Default if silent |
 |---|---|---|
-| Q-F1 | B0 intent | Treat missing WS cases as a defect; wire them |
+| Q-F1 | ~~B0 intent~~ **resolved** (#40) | Missing WS cases were a defect; wired |
 | Q-F2 | Whether Profile B survives GP4 | Keep no-Hub writer; Hub wins if both live |
-| Q-F4 | C1 product set on the site | Retarget Cline URL; mention iOS only as preview, not shipped |
+| Q-F4 | ~~C1 product set~~ **resolved** (#3) | Cline URL retargeted; iOS is preview, not shipped |
 | DEC-licence-visibility | Publishing/visibility moves | No SPDX/visibility change until an owner picks a row |
 
 ---
@@ -185,5 +185,6 @@ Default if several Cline slices are free: **B0** (smallest, shipped-path defect)
 | Version | Change |
 |---|---|
 | 2026-08-24 | Initial pickup plan from family ISA; three tracks; GP4 hard join |
+| 2026-08-29 | Tick A1–A3, B0, C1–C4 as landed; next slice is B1 (`claim:drv-host-trust`) |
 
-When A1 lands, tick Track A, qualify HANDOFF as as-is, and point GP0’s remaining ACs at mobile conformance rather than kernel consume.
+When A1 lands, tick Track A, qualify HANDOFF as as-is, and point GP0’s remaining ACs at mobile conformance rather than kernel consume. **Done 2026-08-29** (mcp #8, ios #13/#14, cline #40/#39, site #3, mcp #11). Remaining GP0 ACs are mobile conformance, not kernel consume.
