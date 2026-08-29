@@ -7,7 +7,8 @@
 **Baseline.** Reconciled against `main` `8448d8d59` on 2026-08-19. The
 golden-path sequence is ordered by
 [portfolio-now](../initiatives/portfolio-now/); claim status in the registry
-remains authoritative.
+remains authoritative. Family ISA pickup order (fold vs host vs honesty tracks)
+is [NEXT-STEPS.md](../leadership/NEXT-STEPS.md) — a bridge, not a second board.
 
 **Status vocabulary.** `verified shipped` · `active partial` · `planned` · `decision-gated` · `candidate patch review` · `reference/historical` — defined in [PLAN-backlog-reconciliation.md](PLAN-backlog-reconciliation.md#status-vocabulary).
 

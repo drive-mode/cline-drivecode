@@ -1,6 +1,6 @@
 # Leadership brief · Drivecode planning wave
 
-> **Status note (2026-07-30).** ADR-0000…0014 + DEC bundle are **Accepted** (2026-07-29 `accept all`; ADR-0014 on main). The three “load-bearing forks” below are **closed**. Treat this brief as the planning-wave record; current as-is is [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) §13.0 and nest [HANDOFF.md](../../../HANDOFF.md).
+> **Status note (2026-07-30).** ADR-0000…0014 + DEC bundle are **Accepted** (2026-07-29 `accept all`; ADR-0014 on main). The three “load-bearing forks” below are **closed**. Treat this brief as the planning-wave record; Cline as-is is [SYSTEMS-ANALYSIS.md](SYSTEMS-ANALYSIS.md) §13.0; family ISA is [ISA-DRIVE-MODE-FAMILY.md](ISA-DRIVE-MODE-FAMILY.md); nest [HANDOFF.md](../../../HANDOFF.md).
 
 **Role lens.** Software engineering lead + product manager.
 **Purpose.** Close contradictions, force decisions, freeze Phase 0 entry, and leave implementers a single source of truth.

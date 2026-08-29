@@ -5,8 +5,9 @@
 **Status.** Living analysis — re-baselined against main post-#58 / #80.
 **Date.** 2026-07-30 (re-baseline). Prior scaffold-era draft: 2026-07-25.
 **Method.** Context → actors → functions → structure → data → interfaces → behavior → NFRs → failures → as-is/to-be → recommendations.
+**Family-wide companion.** [ISA-DRIVE-MODE-FAMILY.md](ISA-DRIVE-MODE-FAMILY.md) covers all Drive Mode repositories (FDD, DFD-0, DFD-1, Hub vs MCP profiles). This file stays the Cline-product deep dive.
 
-Companion docs: [HANDOFF.md](../../../HANDOFF.md), [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md), [06-sdk-leverage.md](../../drivecode-sdk/delivery/06-sdk-leverage.md), [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [01-architecture.md](../foundation/01-architecture.md), [ops/hub-drive-ops.md](../ops/hub-drive-ops.md), [05-workflows.md](../foundation/05-workflows.md), [../drivecode-sdk/02-architecture.md](../../drivecode-sdk/foundation/02-architecture.md).
+Companion docs: [HANDOFF.md](../../../HANDOFF.md), [ISA-DRIVE-MODE-FAMILY.md](ISA-DRIVE-MODE-FAMILY.md), [REMAINING-task-satisfaction.md](../delivery/REMAINING-task-satisfaction.md), [06-sdk-leverage.md](../../drivecode-sdk/delivery/06-sdk-leverage.md), [LEADERSHIP-BRIEF.md](LEADERSHIP-BRIEF.md), [01-architecture.md](../foundation/01-architecture.md), [ops/hub-drive-ops.md](../ops/hub-drive-ops.md), [05-workflows.md](../foundation/05-workflows.md), [../drivecode-sdk/02-architecture.md](../../drivecode-sdk/foundation/02-architecture.md).
 
 ---
 
@@ -553,4 +554,4 @@ Close the open freeze list in §9.4 enough that Drive tab feels authoritative en
 | 2026-07-30 | §13 living-diagram refresh; point at HANDOFF / architecture / hub-drive-ops / Cline diagram skills |
 | 2026-07-30 | Re-baseline post-#58 / #80: §1 maturity Medium–high; §13.0 current as-is; §9.3 landed APIs; §16/§17 updated |
 
-When implementation lands, update §13.0 as-is and tick §9.4 items as frozen. Do not fork a second analysis doc—amend this one.
+When implementation lands, update §13.0 as-is and tick §9.4 items as frozen. Amend this file for Cline-product scope. Amend [ISA-DRIVE-MODE-FAMILY.md](ISA-DRIVE-MODE-FAMILY.md) for family-wide scope. Do not duplicate the same findings in both.
