@@ -14,6 +14,8 @@ import type {
 	SessionThread,
 	UseSessionHistoryResult,
 } from "@/hooks/use-session-history";
+import { createDemoDriveSource } from "@/lib/drive/demo-world";
+import { DriveHubProvider } from "@/lib/drive/use-drive-hub";
 
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@/lib/desktop-client", () => ({ desktopClient: { invoke } }));
@@ -681,5 +683,146 @@ describe("AgentSidebar session organization", () => {
 		expect(
 			container.querySelector('[aria-label="Settings"]')?.textContent,
 		).toContain("Settings");
+	});
+
+	it("opens Drive from the sessions header and lists its sections", async () => {
+		const setView = vi.fn();
+		const onDriveSectionChange = vi.fn();
+
+		await act(async () => {
+			root.render(
+				<AccountProvider>
+					<SidebarProvider>
+						<AgentSidebar
+							activeSessionId={null}
+							onDriveSectionChange={onDriveSectionChange}
+							onHome={vi.fn()}
+							onNewThread={vi.fn()}
+							onSettingsSectionChange={vi.fn()}
+							sessionHistory={makeSessionHistory([], vi.fn())}
+							setView={setView}
+							settingsSection="General"
+							view="chat"
+						/>
+					</SidebarProvider>
+				</AccountProvider>,
+			);
+		});
+
+		const driveButton = container.querySelector('[aria-label="Drive"]');
+		expect(driveButton).not.toBeNull();
+		expect(driveButton?.querySelector("svg")).not.toBeNull();
+		expect(container.querySelector('[aria-label="Drive sections"]')).toBeNull();
+		await click(driveButton as Element);
+		expect(setView).toHaveBeenCalledWith("drive");
+
+		await act(async () => {
+			root.render(
+				<AccountProvider>
+					<SidebarProvider>
+						<AgentSidebar
+							activeSessionId={null}
+							driveSection="rooms"
+							onDriveSectionChange={onDriveSectionChange}
+							onHome={vi.fn()}
+							onNewThread={vi.fn()}
+							onSettingsSectionChange={vi.fn()}
+							sessionHistory={makeSessionHistory([], vi.fn())}
+							setView={setView}
+							settingsSection="General"
+							view="drive"
+						/>
+					</SidebarProvider>
+				</AccountProvider>,
+			);
+		});
+
+		const nav = container.querySelector('[aria-label="Drive sections"]');
+		expect(nav).not.toBeNull();
+		const labels = [...(nav?.querySelectorAll("button") ?? [])].map((button) =>
+			button.getAttribute("aria-label"),
+		);
+		expect(labels).toEqual([
+			"Lobby",
+			"Call",
+			"Rooms",
+			"Artifacts",
+			"Tasks",
+			"Status Hub",
+			"Analytics",
+			"Agents",
+			"Drive Settings",
+		]);
+		expect(
+			container
+				.querySelector('[aria-label="Rooms"]')
+				?.getAttribute("aria-current"),
+		).toBe("page");
+		expect(container.textContent).not.toContain("Demo");
+		await click(container.querySelector('[aria-label="Call"]') as Element);
+		expect(onDriveSectionChange).toHaveBeenCalledWith("call");
+	});
+
+	it("shows the Demo badge and the live call dot from the Drive provider", async () => {
+		const source = createDemoDriveSource({ autoTick: false });
+		await act(async () => {
+			root.render(
+				<AccountProvider>
+					<SidebarProvider>
+						<DriveHubProvider roomId="router-fix" source={source}>
+							<AgentSidebar
+								activeSessionId={null}
+								driveSection="call"
+								onDriveSectionChange={vi.fn()}
+								onHome={vi.fn()}
+								onNewThread={vi.fn()}
+								onSettingsSectionChange={vi.fn()}
+								sessionHistory={makeSessionHistory([], vi.fn())}
+								setView={vi.fn()}
+								settingsSection="General"
+								view="drive"
+							/>
+						</DriveHubProvider>
+					</SidebarProvider>
+				</AccountProvider>,
+			);
+		});
+
+		await vi.waitFor(() => {
+			expect(container.textContent).toContain("Demo");
+			expect(container.querySelector("[data-drive-live]")).not.toBeNull();
+		});
+		expect(
+			container.querySelector('[aria-label="Call (live)"]'),
+		).not.toBeNull();
+		source.dispose();
+	});
+
+	it("keeps a Drive entry reachable in the collapsed sidebar", async () => {
+		const setView = vi.fn();
+		await act(async () => {
+			root.render(
+				<AccountProvider>
+					<SidebarProvider defaultOpen={false}>
+						<AgentSidebar
+							activeSessionId={null}
+							onHome={vi.fn()}
+							onNewThread={vi.fn()}
+							onSettingsSectionChange={vi.fn()}
+							sessionHistory={makeSessionHistory([], vi.fn())}
+							setView={setView}
+							settingsSection="General"
+							view="chat"
+						/>
+					</SidebarProvider>
+				</AccountProvider>,
+			);
+		});
+
+		const driveButton = container.querySelector('[aria-label="Drive"]');
+		expect(driveButton).not.toBeNull();
+		expect(driveButton?.className).not.toContain("mx-auto");
+		await click(driveButton as Element);
+		expect(setView).toHaveBeenCalledWith("drive");
 	});
 });

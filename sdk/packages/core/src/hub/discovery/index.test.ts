@@ -9,6 +9,7 @@ import {
 	probeHubServer,
 	probeHubVersion,
 	readHubDiscovery,
+	readSupersededHubDiscovery,
 	resolveHubOwnerContext,
 	writeHubDiscovery,
 } from ".";
@@ -184,6 +185,47 @@ describe("hub discovery", () => {
 			],
 		});
 		expect(request).toHaveBeenCalledWith("http://127.0.0.1:25463/version");
+	});
+});
+
+describe("readSupersededHubDiscovery", () => {
+	it("reads the record the postinstall shield set aside", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-hub-superseded-"));
+		try {
+			const discoveryPath = join(dir, "production.json");
+			await writeFile(
+				`${discoveryPath}.superseded`,
+				JSON.stringify({
+					url: "ws://127.0.0.1:25463/hub",
+					authToken: "shielded-token",
+					pid: 50174,
+				}),
+			);
+			expect(readSupersededHubDiscovery(discoveryPath)).toEqual({
+				url: "ws://127.0.0.1:25463/hub",
+				authToken: "shielded-token",
+				pid: 50174,
+			});
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("returns undefined when nothing was set aside or the record has no url", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "cline-hub-superseded-"));
+		try {
+			const discoveryPath = join(dir, "production.json");
+			expect(readSupersededHubDiscovery(discoveryPath)).toBeUndefined();
+			await writeFile(
+				`${discoveryPath}.superseded`,
+				JSON.stringify({ pid: 1 }),
+			);
+			expect(readSupersededHubDiscovery(discoveryPath)).toBeUndefined();
+			await writeFile(`${discoveryPath}.superseded`, "not json");
+			expect(readSupersededHubDiscovery(discoveryPath)).toBeUndefined();
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
 

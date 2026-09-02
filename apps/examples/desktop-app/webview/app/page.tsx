@@ -58,7 +58,17 @@ import {
 	subscribeToDesktopActions,
 	watchDesktopTrayStatus,
 } from "@/lib/desktop-tray";
-import { syncDesktopWindowTitle } from "@/lib/desktop-window-title";
+import {
+	applyDesktopWindowTitle,
+	keepDocumentTitle,
+	syncDesktopWindowTitle,
+} from "@/lib/desktop-window-title";
+import { DriveHubRoot } from "@/lib/drive/drive-hub-root";
+import {
+	type DriveSection,
+	driveWindowTitle,
+	parseDriveSection,
+} from "@/lib/drive/drive-section";
 import { createLatestSuccessfulRequestGate } from "@/lib/latest-successful-request";
 import {
 	hasCompletedOnboarding,
@@ -136,6 +146,46 @@ const DiffView = dynamic(
 	{ loading: viewLoading, ssr: false },
 );
 
+const DriveView = dynamic(
+	() =>
+		import("@/components/views/drive/drive-view").then(
+			(module) => module.DriveView,
+		),
+	{ loading: viewLoading, ssr: false },
+);
+
+/**
+ * Demo bootstrap for Drive — parsed only here, at the composition root, and
+ * handed down as a prop. Views never read the query string or env themselves.
+ */
+function readDriveDemoBootstrap(): boolean {
+	if (process.env.NEXT_PUBLIC_CLINE_DRIVE_DEMO === "1") {
+		return true;
+	}
+	if (typeof window === "undefined") {
+		return false;
+	}
+	return new URLSearchParams(window.location.search).get("demo") === "drive";
+}
+
+/** `?view=drive&section=<id>[&room=<id>]` — deep link for headless captures. */
+function readDriveDeepLink(): {
+	section: DriveSection;
+	roomId: string | null;
+} | null {
+	if (typeof window === "undefined") {
+		return null;
+	}
+	const params = new URLSearchParams(window.location.search);
+	if (params.get("view") !== "drive") {
+		return null;
+	}
+	return {
+		section: parseDriveSection(params.get("section")),
+		roomId: params.get("room")?.trim() || null,
+	};
+}
+
 function makeThreadId(): string {
 	return `thread_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -170,7 +220,11 @@ export default function Home() {
 	const [onboardingInitialStep, setOnboardingInitialStep] =
 		useState<OnboardingStep>("welcome");
 	const { navigation, threads } = appState;
-	const { activeThreadId, settingsSection, view } = navigation.current;
+	const { activeThreadId, driveRoomId, driveSection, settingsSection, view } =
+		navigation.current;
+	// Starts false on both server and first client render (hydration-safe);
+	// the effect below reads the demo flag right after mount.
+	const [driveDemoWorld, setDriveDemoWorld] = useState(false);
 
 	const navigate = useCallback((destination: AppLocation) => {
 		dispatchApp({ type: "navigate", destination });
@@ -214,6 +268,32 @@ export default function Home() {
 	useEffect(() => {
 		void syncDesktopWindowTitle();
 	}, []);
+
+	useEffect(() => {
+		setDriveDemoWorld(readDriveDemoBootstrap());
+		const deepLink = readDriveDeepLink();
+		if (deepLink) {
+			dispatchApp({
+				type: "navigate-drive",
+				section: deepLink.section,
+				roomId: deepLink.roomId,
+			});
+		}
+	}, []);
+
+	// The window follows the Drive section while Drive is on screen.
+	useEffect(() => {
+		if (view !== "drive") {
+			return;
+		}
+		const title = driveWindowTitle(driveSection);
+		const release = keepDocumentTitle(title);
+		void applyDesktopWindowTitle(title);
+		return () => {
+			release();
+			void applyDesktopWindowTitle(null);
+		};
+	}, [driveSection, view]);
 
 	useEffect(() => watchDesktopTrayStatus(), []);
 	useEffect(() => watchDesktopNotifications(), []);
@@ -292,10 +372,27 @@ export default function Home() {
 	}, [activeThread, handleNewThread, navigateWith]);
 	const handleViewChange = useCallback(
 		(nextView: DesktopAppView) => {
+			if (nextView === "drive") {
+				dispatchApp({ type: "navigate-drive" });
+				return;
+			}
 			navigateWith({ view: nextView });
 		},
 		[navigateWith],
 	);
+	const handleDriveSectionChange = useCallback(
+		(section: DriveSection, roomId?: string) => {
+			dispatchApp({
+				type: "navigate-drive",
+				section,
+				...(roomId === undefined ? {} : { roomId }),
+			});
+		},
+		[],
+	);
+	const handleOpenDriveLobby = useCallback(() => {
+		dispatchApp({ type: "navigate-drive", section: "lobby" });
+	}, []);
 	const handleSettingsSectionChange = useCallback(
 		(section: SettingsSection) => {
 			navigateWith({ settingsSection: section, view: "settings" });
@@ -303,7 +400,8 @@ export default function Home() {
 		[navigateWith],
 	);
 	// Standard app shortcuts: Cmd/Ctrl+N for a new session, Cmd/Ctrl+, for
-	// settings — matching the tray menu actions.
+	// settings — matching the tray menu actions — and Cmd/Ctrl+D for the
+	// Drive lobby.
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (showOnboarding) {
@@ -318,11 +416,14 @@ export default function Home() {
 			} else if (event.key === ",") {
 				event.preventDefault();
 				handleViewChange("settings");
+			} else if (event.key === "d" || event.key === "D") {
+				event.preventDefault();
+				handleOpenDriveLobby();
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [handleNewThread, handleViewChange, showOnboarding]);
+	}, [handleNewThread, handleOpenDriveLobby, handleViewChange, showOnboarding]);
 	const handleThreadStarted = useCallback((threadId: string) => {
 		dispatchApp({ type: "thread-started", threadId });
 	}, []);
@@ -410,88 +511,100 @@ export default function Home() {
 	return (
 		<AccountProvider>
 			<SidebarProvider>
-				<div
-					aria-hidden={showOnboarding ? true : undefined}
-					className="flex h-screen w-full overflow-hidden bg-background text-foreground"
-					// The onboarding overlay is opaque and sits on top of the whole
-					// shell; hiding the shell keeps its aurora + animations from
-					// being composited every frame underneath while it still mounts
-					// and loads (providers, history, transport) in the background.
-					// `inert` additionally keeps the covered controls out of the
-					// keyboard tab order and assistive tech while it is hidden.
-					inert={showOnboarding ? true : undefined}
-					style={showOnboarding ? { visibility: "hidden" } : undefined}
-				>
-					<Sidebar
-						className="border-r border-sidebar-border"
-						collapsible="icon"
+				<DriveHubRoot demoWorld={driveDemoWorld} roomId={driveRoomId}>
+					<div
+						aria-hidden={showOnboarding ? true : undefined}
+						className="flex h-screen w-full overflow-hidden bg-background text-foreground"
+						// The onboarding overlay is opaque and sits on top of the whole
+						// shell; hiding the shell keeps its aurora + animations from
+						// being composited every frame underneath while it still mounts
+						// and loads (providers, history, transport) in the background.
+						// `inert` additionally keeps the covered controls out of the
+						// keyboard tab order and assistive tech while it is hidden.
+						inert={showOnboarding ? true : undefined}
+						style={showOnboarding ? { visibility: "hidden" } : undefined}
 					>
-						<AgentSidebar
-							activeSessionId={activeHistorySessionId}
-							onHome={handleHome}
-							onNavigateBack={handleNavigateBack}
-							onNavigateForward={handleNavigateForward}
-							onNewThread={handleNewThread}
-							onSettingsSectionChange={handleSettingsSectionChange}
-							sessionHistory={sessionHistory}
-							setView={handleViewChange}
-							settingsSection={settingsSection}
-							view={view}
-							canNavigateBack={navigation.back.length > 0}
-							canNavigateForward={navigation.forward.length > 0}
-						/>
-						<SidebarRail />
-					</Sidebar>
-					<SidebarInset className="min-h-0 min-w-0 overflow-hidden">
-						<SidebarTrigger className="absolute left-20 top-0 z-40 md:hidden" />
-						{view === "sessions" ? (
-							<SessionsView
+						<Sidebar
+							className="border-r border-sidebar-border"
+							collapsible="icon"
+						>
+							<AgentSidebar
 								activeSessionId={activeHistorySessionId}
-								history={sessionHistory}
+								driveDemoWorld={driveDemoWorld}
+								driveSection={driveSection}
+								onDriveSectionChange={handleDriveSectionChange}
+								onHome={handleHome}
+								onNavigateBack={handleNavigateBack}
+								onNavigateForward={handleNavigateForward}
+								onNewThread={handleNewThread}
+								onSettingsSectionChange={handleSettingsSectionChange}
+								sessionHistory={sessionHistory}
+								setView={handleViewChange}
+								settingsSection={settingsSection}
+								view={view}
+								canNavigateBack={navigation.back.length > 0}
+								canNavigateForward={navigation.forward.length > 0}
 							/>
-						) : activeThread ? (
-							<div
-								aria-hidden={view === "settings" ? true : undefined}
-								className="flex min-h-0 flex-1 flex-col"
-								inert={view === "settings" ? true : undefined}
-							>
-								<ChatThreadPane
-									key={activeThread.id}
-									historySession={activeThread.historySession}
-									initialPromptDraft={activeThread.initialPromptDraft}
-									knownWorkspacePaths={historyWorkspacePaths}
-									onInitialPromptDraftConsumed={
-										handleInitialPromptDraftConsumed
-									}
-									onUpdateSessionMetadata={handleUpdateSessionMetadata}
-									threadId={activeThread.id}
-									onDeleteSession={handleDeleteSession}
-									onNewThread={handleNewThread}
-									onOpenSession={handleOpenSession}
-									onOpenSessionById={handleOpenSessionById}
-									onOpenSetup={handleOpenSetup}
-									onOpenModelSettings={() =>
-										handleSettingsSectionChange("Models")
-									}
-									parentSession={activeParentSession}
-									onOpenVoiceInputSettings={() =>
-										handleSettingsSectionChange("Models")
-									}
-									onThreadStarted={handleThreadStarted}
+							<SidebarRail />
+						</Sidebar>
+						<SidebarInset className="min-h-0 min-w-0 overflow-hidden">
+							<SidebarTrigger className="absolute left-20 top-0 z-40 md:hidden" />
+							{view === "drive" ? (
+								<DriveView
+									demoWorld={driveDemoWorld}
+									onNavigateSection={handleDriveSectionChange}
+									roomId={driveRoomId}
+									section={driveSection}
 								/>
-							</div>
-						) : null}
-						{view === "settings" ? (
-							<div className="absolute inset-0 z-30 bg-background text-foreground">
-								<SettingsView
-									onNavigateSection={handleSettingsSectionChange}
-									onOpenSession={handleOpenSessionById}
-									section={settingsSection}
+							) : view === "sessions" ? (
+								<SessionsView
+									activeSessionId={activeHistorySessionId}
+									history={sessionHistory}
 								/>
-							</div>
-						) : null}
-					</SidebarInset>
-				</div>
+							) : activeThread ? (
+								<div
+									aria-hidden={view === "settings" ? true : undefined}
+									className="flex min-h-0 flex-1 flex-col"
+									inert={view === "settings" ? true : undefined}
+								>
+									<ChatThreadPane
+										key={activeThread.id}
+										historySession={activeThread.historySession}
+										initialPromptDraft={activeThread.initialPromptDraft}
+										knownWorkspacePaths={historyWorkspacePaths}
+										onInitialPromptDraftConsumed={
+											handleInitialPromptDraftConsumed
+										}
+										onUpdateSessionMetadata={handleUpdateSessionMetadata}
+										threadId={activeThread.id}
+										onDeleteSession={handleDeleteSession}
+										onNewThread={handleNewThread}
+										onOpenSession={handleOpenSession}
+										onOpenSessionById={handleOpenSessionById}
+										onOpenSetup={handleOpenSetup}
+										onOpenModelSettings={() =>
+											handleSettingsSectionChange("Models")
+										}
+										parentSession={activeParentSession}
+										onOpenVoiceInputSettings={() =>
+											handleSettingsSectionChange("Models")
+										}
+										onThreadStarted={handleThreadStarted}
+									/>
+								</div>
+							) : null}
+							{view === "settings" ? (
+								<div className="absolute inset-0 z-30 bg-background text-foreground">
+									<SettingsView
+										onNavigateSection={handleSettingsSectionChange}
+										onOpenSession={handleOpenSessionById}
+										section={settingsSection}
+									/>
+								</div>
+							) : null}
+						</SidebarInset>
+					</div>
+				</DriveHubRoot>
 			</SidebarProvider>
 			{showOnboarding ? (
 				<div className="fixed inset-0 z-50">

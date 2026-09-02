@@ -271,6 +271,7 @@ export type {
 } from "./extensions";
 export {
 	discoverPluginModulePaths,
+	getPluginDisplayName,
 	loadAgentPluginFromPath,
 	loadAgentPluginsFromPaths,
 	loadAgentPluginsFromPathsWithDiagnostics,
@@ -329,8 +330,10 @@ export {
 	createDisabledMcpToolPolicies,
 	createDisabledMcpToolPolicy,
 	createMcpTools,
+	DEFAULT_MCP_CONNECT_TIMEOUT_MS,
 	type DefaultMcpServerClientFactoryOptions,
 	getMcpServerOAuthState,
+	getMcpServerOAuthStatus,
 	hasMcpSettingsFile,
 	InMemoryMcpManager,
 	type LoadMcpSettingsOptions,
@@ -341,6 +344,7 @@ export {
 	type McpManagerOptions,
 	type McpServerClient,
 	type McpServerClientFactory,
+	type McpServerOAuthClientConfig,
 	type McpServerOAuthState,
 	type McpServerOAuthStatus,
 	type McpServerRegistration,
@@ -360,9 +364,12 @@ export {
 	type McpToolDescriptor,
 	type McpToolNameTransform,
 	type McpToolProvider,
+	parseMcpServerRegistration,
+	probeMcpServerConnection,
 	type RegisterMcpServersFromSettingsOptions,
 	registerMcpServersFromSettingsFile,
 	resolveDefaultMcpSettingsPath,
+	resolveMcpServerRegistration,
 	resolveMcpServerRegistrations,
 	type SetMcpServerDisabledOptions,
 	setMcpServerDisabled,
@@ -515,6 +522,7 @@ export type {
 } from "./runtime/host/runtime-host";
 export {
 	isSessionNotFoundError,
+	isUnusableSessionError,
 	SESSION_NOT_FOUND_ERROR_CODE,
 	SessionNotFoundError,
 	splitCoreSessionConfig,
@@ -541,10 +549,6 @@ export {
 	probeProcessStartToken,
 	probeProcessStartTokenAsync,
 } from "./runtime/process-start-token";
-export type {
-	SessionDisplayMessage,
-} from "./session/display-messages";
-export { projectSessionMessagesForDisplay } from "./session/display-messages";
 export {
 	formatRulesForSystemPrompt,
 	isRuleEnabled,
@@ -602,6 +606,7 @@ export {
 	filterExtensionToolRegistrations,
 	GlobalSettingsSchema,
 	isAutoUpdateEnabledGlobally,
+	isModelToolEnabledGlobally,
 	isPluginDisabledGlobally,
 	isTelemetryOptedOutGlobally,
 	isToolDisabledGlobally,
@@ -610,16 +615,20 @@ export {
 	readGlobalSettings,
 	readPlanActModeGlobally,
 	readToolAutoApproveGlobally,
+	readTuiThemeGlobally,
 	resolveDisabledPluginPaths,
 	resolveDisabledToolNames,
+	resolveModelToolSettings,
 	setAutoUpdateEnabledGlobally,
 	setCompactionModeGlobally,
 	setCompactionStrategyGlobally,
 	setDisabledPlugin,
 	setDisabledTools,
+	setModelToolEnabledGlobally,
 	setPlanActModeGlobally,
 	setTelemetryOptOutGlobally,
 	setToolAutoApproveGlobally,
+	setTuiThemeGlobally,
 	toggleDisabledTool,
 	writeGlobalSettings,
 } from "./services/global-settings";
@@ -650,7 +659,10 @@ export type {
 export {
 	buildMcpInstallTransport,
 	installMcpServer,
+	type McpUninstallOptions,
+	type McpUninstallResult,
 	parseMcpInstallArgs,
+	uninstallMcpServer,
 } from "./services/mcp-install";
 export type {
 	ParsedPluginSource,
@@ -716,6 +728,7 @@ export {
 } from "./services/providers/local-provider-registry";
 export {
 	addLocalProvider,
+	createConfiguredStreamingTranscriptionSession,
 	type DeleteLocalProviderRequest,
 	deleteLocalProvider,
 	ensureCustomProvidersLoaded,
@@ -729,6 +742,8 @@ export {
 	resolveLocalClineAuthToken,
 	saveLocalProviderOAuthCredentials,
 	saveLocalProviderSettings,
+	saveVoiceInputSettings,
+	transcribeConfiguredVoiceInput,
 	type UpdateLocalProviderRequest,
 	updateLocalProvider,
 } from "./services/providers/local-provider-service";
@@ -778,6 +793,7 @@ export {
 	captureAgentUnexpectedReasoningTokens,
 	captureAuthFailed,
 	captureAuthLoggedOut,
+	captureAuthRefreshSoftFailure,
 	captureAuthStarted,
 	captureAuthSucceeded,
 	captureCompactionExecuted,
@@ -860,6 +876,8 @@ export {
 	readSessionCheckpointHistory,
 	trimMessagesBeforeUserRun,
 } from "./session/checkpoint-restore";
+export type { SessionDisplayMessage } from "./session/display-messages";
+export { projectSessionMessagesForDisplay } from "./session/display-messages";
 export {
 	deriveSubsessionStatus,
 	makeSubSessionId,
@@ -1027,6 +1045,7 @@ export {
 	getCoreBuiltinToolCatalog,
 	getCoreDefaultEnabledToolIds,
 	getCoreHeadlessToolNames,
+	isSkillsToolAvailable,
 	MAX_COMMAND_OUTPUT_CHARS,
 	PATCH_MARKERS,
 	PatchActionType,
@@ -1057,6 +1076,7 @@ export {
 	DEFAULT_MODELS_CATALOG_URL,
 	getLiveModelsCatalog,
 	getProviderConfig,
+	isPrivateModelCatalogProvider,
 	OPENAI_COMPATIBLE_PROVIDERS,
 	resolveProviderConfig,
 } from "./services/llms/provider-defaults";
@@ -1127,6 +1147,7 @@ export {
 	TelemetryService,
 	type TelemetryServiceOptions,
 } from "./services/telemetry/TelemetryService";
+export { ensureChatWorkspace } from "./services/workspace/chat-workspace";
 export {
 	createSessionCompactionState,
 	parseSessionCompactionState,

@@ -101,6 +101,12 @@ export interface HubWebSocketServerOptions {
 	websocketDelivery?: BoundedOutboundChannelOptions;
 	resourcePolicy?: ResourcePolicyOverrides | ResourcePolicyProfile;
 	sessionHost?: RuntimeHost & Partial<PendingPromptsRuntimeService>;
+	/**
+	 * Invoked once when an authorized POST /shutdown is accepted, just before
+	 * the server begins its memoized close. The daemon uses this to route HTTP,
+	 * signals, and fatal errors through one shutdown coordinator.
+	 */
+	onShutdownRequested?: () => void | Promise<void>;
 	settingsService?: CoreSettingsService;
 	/**
 	 * Explicit ChatCatalog authority. When omitted, every chat_catalog.* command

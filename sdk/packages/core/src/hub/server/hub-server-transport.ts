@@ -75,6 +75,7 @@ import { handleDriveForkTickCommand } from "./handlers/drive-fork-tick";
 import { handleDriveCommand } from "./handlers/drive-handlers";
 import { handleDriveHomeCommand } from "./handlers/drive-home-handlers";
 import { handleDrivePrivacyCommand } from "./handlers/drive-privacy-handlers";
+import { handleDriveProjectMapCommand } from "./handlers/drive-project-map-handlers";
 import { handleDriveRoomCommand } from "./handlers/drive-room-handlers";
 import { handleDriveSessionRollupsCommand } from "./handlers/drive-session-rollups-handlers";
 import { handleDriveWaveCommand } from "./handlers/drive-wave-handlers";
@@ -996,6 +997,8 @@ export class HubServerTransport implements NativeHubTransport {
 			case "drive_catalog_get":
 			case "drive_catalog_put":
 				return handleDriveCatalogCommand(this.ctx, envelope);
+			case "drive_project_map_get":
+				return handleDriveProjectMapCommand(envelope);
 			case "drive_privacy_put":
 				return handleDrivePrivacyCommand(this.ctx, envelope);
 			case "drive_bank_get":

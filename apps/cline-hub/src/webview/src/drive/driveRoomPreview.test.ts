@@ -42,6 +42,7 @@ function roomSnapshot(overrides: Partial<RoomSnapshot> = {}): RoomSnapshot {
 		addressSet: { mode: "everyone" },
 		muteByParticipantId: {},
 		raisedHandByParticipantId: {},
+		profilesByParticipantId: {},
 		appliedEventIds: [],
 		...overrides,
 	};

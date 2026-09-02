@@ -299,6 +299,7 @@ export class UnifiedSessionPersistenceService {
 		prompt?: string | null;
 		metadata?: Record<string, unknown> | null;
 		title?: string | null;
+		preserveUpdatedAt?: boolean;
 	}): Promise<{ updated: boolean }> {
 		for (let attempt = 0; attempt < OCC_MAX_RETRIES; attempt++) {
 			const row = await this.adapter.getSession(input.sessionId);
@@ -333,6 +334,7 @@ export class UnifiedSessionPersistenceService {
 
 			const changed = await this.adapter.updateSession({
 				sessionId: input.sessionId,
+				preserveUpdatedAt: input.preserveUpdatedAt,
 				writerFence: input.writerFence,
 				prompt: input.prompt,
 				metadata: hasMetadataChange
