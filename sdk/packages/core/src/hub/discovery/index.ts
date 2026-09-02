@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import {
@@ -323,6 +323,34 @@ export function createInMemoryHubOwnerContext(
 	label = `hub-${Date.now().toString(36)}`,
 ): HubOwnerContext {
 	return resolveHubOwnerContext(label);
+}
+
+/**
+ * The npm postinstall shield sets the discovery record aside as
+ * `<discoveryPath>.superseded` while an older hub finishes serving its
+ * sessions. Doctor reads that set-aside record so it can still see the live
+ * daemon instead of classifying it as stale. Only the fields the record is
+ * guaranteed to carry are returned.
+ */
+export function readSupersededHubDiscovery(
+	discoveryPath: string,
+): { url: string; authToken?: string; pid?: number } | undefined {
+	try {
+		const parsed = JSON.parse(
+			readFileSync(`${discoveryPath}.superseded`, "utf8"),
+		) as Partial<HubServerDiscoveryRecord>;
+		if (typeof parsed.url !== "string" || !parsed.url) {
+			return undefined;
+		}
+		return {
+			url: parsed.url,
+			authToken:
+				typeof parsed.authToken === "string" ? parsed.authToken : undefined,
+			pid: typeof parsed.pid === "number" ? parsed.pid : undefined,
+		};
+	} catch {
+		return undefined;
+	}
 }
 
 export async function readHubDiscovery(

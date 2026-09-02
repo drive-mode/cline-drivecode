@@ -329,6 +329,7 @@ export {
 	createDisabledMcpToolPolicies,
 	createDisabledMcpToolPolicy,
 	createMcpTools,
+	DEFAULT_MCP_CONNECT_TIMEOUT_MS,
 	type DefaultMcpServerClientFactoryOptions,
 	getMcpServerOAuthState,
 	getMcpServerOAuthStatus,
@@ -342,6 +343,7 @@ export {
 	type McpManagerOptions,
 	type McpServerClient,
 	type McpServerClientFactory,
+	type McpServerOAuthClientConfig,
 	type McpServerOAuthState,
 	type McpServerOAuthStatus,
 	type McpServerRegistration,
@@ -610,8 +612,10 @@ export {
 	readGlobalSettings,
 	readPlanActModeGlobally,
 	readToolAutoApproveGlobally,
+	readTuiThemeGlobally,
 	resolveDisabledPluginPaths,
 	resolveDisabledToolNames,
+	resolveModelToolSettings,
 	setAutoUpdateEnabledGlobally,
 	setCompactionModeGlobally,
 	setCompactionStrategyGlobally,
@@ -621,6 +625,7 @@ export {
 	setPlanActModeGlobally,
 	setTelemetryOptOutGlobally,
 	setToolAutoApproveGlobally,
+	setTuiThemeGlobally,
 	toggleDisabledTool,
 	writeGlobalSettings,
 } from "./services/global-settings";
@@ -651,7 +656,10 @@ export type {
 export {
 	buildMcpInstallTransport,
 	installMcpServer,
+	type McpUninstallOptions,
+	type McpUninstallResult,
 	parseMcpInstallArgs,
+	uninstallMcpServer,
 } from "./services/mcp-install";
 export type {
 	ParsedPluginSource,

@@ -116,6 +116,13 @@ export interface PersistedSessionUpdateInput {
 	agentId?: string | null;
 	conversationId?: string | null;
 	setRunning?: boolean;
+	/**
+	 * Keep the row's updated_at as it is. Annotating a session (favorite,
+	 * title, metadata) is not session activity, and clients sort and label
+	 * rows by updated_at, so an annotation must not make an old session look
+	 * like it just ran.
+	 */
+	preserveUpdatedAt?: boolean;
 }
 
 export interface SessionPersistenceAdapter {

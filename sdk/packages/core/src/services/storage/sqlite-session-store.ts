@@ -878,8 +878,10 @@ export class SqliteSessionStore implements SessionStore {
 				fields.push("status_lock = ?");
 				params.push(statusLock);
 			}
-			fields.push("updated_at = ?");
-			params.push(nowIso());
+			if (!input.preserveUpdatedAt) {
+				fields.push("updated_at = ?");
+				params.push(nowIso());
+			}
 			let sql = `UPDATE sessions SET ${fields.join(", ")} WHERE session_id = ?`;
 			params.push(input.sessionId);
 			if (input.expectedStatusLock !== undefined) {

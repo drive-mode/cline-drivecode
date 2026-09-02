@@ -1349,17 +1349,15 @@ export async function handleCommand(
 			else merged[key] = value;
 		}
 		const backend = await resolveSessionBackend({ backendMode: "local" });
-		const result = await backend.updateSession({ sessionId, metadata: merged });
-		if (!result.updated) throw new Error(`Session ${sessionId} not found`);
-		// Annotating a session is not session activity. updateSession stamps
+		// Annotating a session is not session activity. updateSession would stamp
 		// updated_at, which clients sort and label rows by, so a favorite would
 		// otherwise make an old session look like it just ran.
-		if (existing?.updatedAt) {
-			store.run("UPDATE sessions SET updated_at = ? WHERE session_id = ?", [
-				existing.updatedAt,
-				sessionId,
-			]);
-		}
+		const result = await backend.updateSession({
+			sessionId,
+			metadata: merged,
+			preserveUpdatedAt: true,
+		});
+		if (!result.updated) throw new Error(`Session ${sessionId} not found`);
 		return merged;
 	}
 	if (command === "delete_chat_session" || command === "delete_cli_session") {
