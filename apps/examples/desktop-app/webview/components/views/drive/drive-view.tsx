@@ -44,6 +44,7 @@ function DriveSectionPane({
 	section: DriveSection;
 	onNavigateSection: (section: DriveSection, roomId?: string) => void;
 }) {
+	const { join } = useDriveHub();
 	switch (section) {
 		case "lobby":
 			return <LobbyView onNavigateSection={onNavigateSection} />;
@@ -60,8 +61,9 @@ function DriveSectionPane({
 		case "analytics":
 			return (
 				<AnalyticsView
-					onOpenRoom={(row) => {
-						if (row.roomId) {
+					onOpenRoom={async (row) => {
+						// Same contract as Lobby and Rooms: seat first, then show it.
+						if (row.roomId && (await join(row.roomId))) {
 							onNavigateSection("call", row.roomId);
 						}
 					}}

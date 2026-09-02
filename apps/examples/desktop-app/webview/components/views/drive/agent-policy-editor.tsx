@@ -16,7 +16,7 @@
 
 import type { DriveagentHomePatch } from "@cline/drive";
 import { Check, Loader2, Lock, TriangleAlert } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,8 +104,16 @@ export function AgentPolicyEditor({
 		draftFromProjection(home),
 	);
 	const [save, setSave] = useState<SaveState>({ status: "idle" });
+	// The home the editor already reflects. A `home` prop that is the very
+	// object our own save produced must not reset the draft or the "saved"
+	// confirmation; only a home that arrived from elsewhere does.
+	const loadedRef = useRef(home);
 
 	useEffect(() => {
+		if (loadedRef.current === home) {
+			return;
+		}
+		loadedRef.current = home;
 		setLoaded(home);
 		setDraft(draftFromProjection(home));
 		setSave({ status: "idle" });
@@ -143,6 +151,7 @@ export function AgentPolicyEditor({
 		setSave({ status: "saving" });
 		void onSave(built.patch)
 			.then((next) => {
+				loadedRef.current = next;
 				setLoaded(next);
 				setDraft(draftFromProjection(next));
 				setSave({ status: "saved", text: policySavedMessage(next.tier) });

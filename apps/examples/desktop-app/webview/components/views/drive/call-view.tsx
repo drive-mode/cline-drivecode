@@ -28,6 +28,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	useSyncExternalStore,
 } from "react";
 import {
 	AlertDialog,
@@ -105,6 +106,18 @@ function readSelectionText(): string | undefined {
 	}
 	const text = window.getSelection()?.toString().trim();
 	return text ? text : undefined;
+}
+
+function readNoSelection(): string | undefined {
+	return undefined;
+}
+
+function subscribeSelection(listener: () => void): () => void {
+	if (typeof document === "undefined") {
+		return () => {};
+	}
+	document.addEventListener("selectionchange", listener);
+	return () => document.removeEventListener("selectionchange", listener);
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -302,9 +315,16 @@ export function CallView({ onNavigateSection }: CallViewProps) {
 			: (participants.find((p) => p.id === nextSharer.participantId)
 					?.displayName ?? nextSharer.participantId)
 		: null;
+	// The selection is read live, not once per card change: a pin sent after a
+	// later highlight must carry that highlight, and the menu label must show it.
+	const selectionText = useSyncExternalStore(
+		subscribeSelection,
+		readSelectionText,
+		readNoSelection,
+	);
 	const pinDefaults = useMemo(
-		() => buildHumanPinDefaults(spotlight.cards, readSelectionText()),
-		[spotlight.cards],
+		() => buildHumanPinDefaults(spotlight.cards, selectionText),
+		[selectionText, spotlight.cards],
 	);
 	const elapsedMs = snapshot
 		? Math.max(0, nowMs - Date.parse(snapshot.createdAt))

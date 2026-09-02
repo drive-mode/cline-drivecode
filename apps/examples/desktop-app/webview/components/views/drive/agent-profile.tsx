@@ -174,7 +174,12 @@ export function AgentProfile({
 		}
 	}, [stored]);
 
+	// Only the newest read or write of the home may land: an older get that
+	// resolves after a source or slug change, or after a save, is dropped.
+	const homeGeneration = useRef(0);
 	const loadHome = useCallback(async () => {
+		const generation = ++homeGeneration.current;
+		const current = () => generation === homeGeneration.current;
 		if (!homeSlug) {
 			setHomeState({ status: "none" });
 			return;
@@ -182,6 +187,9 @@ export function AgentProfile({
 		setHomeState({ status: "loading" });
 		try {
 			const reply = await source.agentHome("get", { slug: homeSlug });
+			if (!current()) {
+				return;
+			}
 			const home = parseAgentHomeReply(reply);
 			if (!home) {
 				setHomeState({
@@ -192,6 +200,9 @@ export function AgentProfile({
 			}
 			setHomeState({ status: "ready", home });
 		} catch (error) {
+			if (!current()) {
+				return;
+			}
 			setHomeState({
 				status: "error",
 				message: parseDriveCommandError(error).text,
@@ -200,15 +211,10 @@ export function AgentProfile({
 	}, [homeSlug, source]);
 
 	useEffect(() => {
-		let cancelled = false;
-		void (async () => {
-			if (cancelled) {
-				return;
-			}
-			await loadHome();
-		})();
+		void loadHome();
 		return () => {
-			cancelled = true;
+			// Invalidate the read this effect started.
+			homeGeneration.current += 1;
 		};
 	}, [loadHome]);
 
@@ -293,6 +299,8 @@ export function AgentProfile({
 				"The hub saved the home but returned an unreadable reply.",
 			);
 		}
+		// The saved home supersedes any read still in flight.
+		homeGeneration.current += 1;
 		setHomeState({ status: "ready", home: next });
 		return next;
 	};

@@ -22,7 +22,7 @@ import {
 	Search,
 	TriangleAlert,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DriveMarkIcon } from "@/components/icons/drive-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -281,12 +281,19 @@ export function AgentsView() {
 		return () => clearInterval(timer);
 	}, []);
 
+	// Only the newest reload may apply: a slower earlier pair must not replace
+	// homes, profiles or the error flags with stale data.
+	const reloadGeneration = useRef(0);
 	const reload = useCallback(async () => {
+		const generation = ++reloadGeneration.current;
 		setLoad((previous) => ({ ...previous, loading: true }));
 		const [homesResult, profilesResult] = await Promise.allSettled([
 			source.agentHome("list"),
 			source.agentProfiles("get"),
 		]);
+		if (generation !== reloadGeneration.current) {
+			return;
+		}
 		const failures: string[] = [];
 		if (homesResult.status === "fulfilled") {
 			setHomes(parseAgentHomeListing(homesResult.value));
