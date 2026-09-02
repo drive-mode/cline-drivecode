@@ -35,10 +35,6 @@ export function DriveHubRoot({
 	useEffect(() => () => source.dispose(), [source]);
 	return (
 		<DriveHubProvider
-			// A source swap (demo opt-in, or the hydration pass settling on the
-			// stored prefs) remounts the provider so phase, room and cursors
-			// start over for the new source instead of carrying the old one's.
-			key={source.kind}
 			// The demo world has exactly one room; an unbound location lands
 			// there instead of on the hub's default room id.
 			roomId={useDemo ? (roomId ?? DEMO_ROOM_ID) : roomId}

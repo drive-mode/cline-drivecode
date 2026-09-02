@@ -190,6 +190,9 @@ export function DriveHubProvider({
 	const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const disposedRef = useRef(false);
 	const checkingRef = useRef<Promise<void> | null>(null);
+	// Bumped for every source; an in-flight hub check from the previous source
+	// must not apply its result (phase, hub info) to the new one.
+	const sourceGenerationRef = useRef(0);
 
 	const clearRetry = useCallback(() => {
 		if (retryTimerRef.current) {
@@ -298,11 +301,14 @@ export function DriveHubProvider({
 		if (checkingRef.current) {
 			return checkingRef.current;
 		}
+		const generation = sourceGenerationRef.current;
+		const stale = () =>
+			disposedRef.current || generation !== sourceGenerationRef.current;
 		const run = (async () => {
 			const checkedAt = new Date().toISOString();
 			try {
 				const status = await source.hubStatus();
-				if (disposedRef.current) {
+				if (stale()) {
 					return;
 				}
 				workspaceRootRef.current = status.workspaceRoot?.trim() || null;
@@ -330,7 +336,7 @@ export function DriveHubProvider({
 				setPhase("unreachable");
 				scheduleRetry(checkHub);
 			} catch (error) {
-				if (disposedRef.current) {
+				if (stale()) {
 					return;
 				}
 				setHub((previous) => ({
@@ -360,6 +366,10 @@ export function DriveHubProvider({
 	useEffect(() => {
 		disposedRef.current = false;
 		retryAttemptRef.current = 0;
+		sourceGenerationRef.current += 1;
+		checkingRef.current = null;
+		workspaceRootRef.current = null;
+		setRememberedHumanId(null);
 		setPhase("connecting");
 		setHub(EMPTY_HUB_INFO);
 		setRoom(resetDriveRoomState(roomIdRef.current));
