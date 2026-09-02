@@ -17,7 +17,6 @@ import {
 	type DriveInkChannel,
 	type DriveInkTheme,
 	defaultInkRef,
-	driveInkTheme,
 	type ResolvedInk,
 	resolveInk,
 } from "@cline/drive";
@@ -28,7 +27,9 @@ import {
 	type InkRef,
 	type Participant,
 } from "@cline/shared";
-import { useEffect, useState } from "react";
+
+// Shared with the Call surface: one profile key and one theme watcher.
+export { driveParticipantProfileId, useDriveInkTheme } from "./agent-ink";
 
 export { DRIVE_SCREEN_INK_THEME };
 
@@ -61,19 +62,6 @@ export const DRIVE_INK_PALETTE_LABELS: readonly string[] = [
 
 export function inkPaletteLabel(index: number): string {
 	return DRIVE_INK_PALETTE_LABELS[index] ?? `Palette ${index}`;
-}
-
-/**
- * Durable key an agent's appearance is stored under.
- *
- * `participant.ref` is authoritative when the seat recorded one. Legacy seats
- * have no ref, so the participant id stands in — stable per agent, which is
- * all the default hash needs, but not something a write can target.
- */
-export function driveParticipantProfileId(participant: Participant): string {
-	return participant.kind === "agent" && participant.ref
-		? agentProfileId(participant.ref)
-		: participant.id;
 }
 
 /**
@@ -271,36 +259,4 @@ export function agentRefLabel(ref: AgentRef | null): string {
 			return _exhaustive;
 		}
 	}
-}
-
-function readThemeMode(): "light" | "dark" {
-	if (typeof document === "undefined") {
-		return "dark";
-	}
-	return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
-/**
- * The active host theme as the resolver's input.
- *
- * `lib/theme.ts` toggles `.dark` on the root element, so the class is the
- * signal — watched rather than read once, because a theme flip has to
- * re-resolve every agent or half the directory ends up unreadable.
- */
-export function useDriveInkTheme(): DriveInkTheme {
-	const [mode, setMode] = useState<"light" | "dark">(readThemeMode);
-
-	useEffect(() => {
-		setMode(readThemeMode());
-		const observer = new MutationObserver(() => {
-			setMode(readThemeMode());
-		});
-		observer.observe(document.documentElement, {
-			attributeFilter: ["class"],
-			attributes: true,
-		});
-		return () => observer.disconnect();
-	}, []);
-
-	return driveInkTheme(mode);
 }

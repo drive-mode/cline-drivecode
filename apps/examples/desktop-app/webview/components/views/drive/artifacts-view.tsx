@@ -64,6 +64,7 @@ import {
 	PageFrame,
 	PageHeader,
 } from "@/components/views/page-layout";
+import { useDriveInkTheme } from "@/lib/drive/agent-ink";
 import {
 	ARTIFACT_KIND_LABELS,
 	ARTIFACT_SORTS,
@@ -96,7 +97,6 @@ import { useDriveHub } from "@/lib/drive/use-drive-hub";
 import { cn } from "@/lib/utils";
 import { ArtifactDetailSheet } from "./artifact-detail";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
-import { useDriveInkTheme } from "./use-drive-ink-theme";
 
 export type ArtifactsViewProps = {
 	/** Optional: lets the unbound state offer a jump to the Lobby. */

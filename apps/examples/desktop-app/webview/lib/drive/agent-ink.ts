@@ -32,7 +32,7 @@ import {
 	InkRefSchema,
 	type Participant,
 } from "@cline/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { DriveHubEvent } from "./drive-client";
 import type { DriveDataSource } from "./drive-source";
 
@@ -216,34 +216,47 @@ export function readAgentInkMap(reply: unknown): DriveInkMap {
 	return map;
 }
 
-function readThemeMode(): "light" | "dark" {
+type DriveThemeMode = "light" | "dark";
+
+function readThemeMode(): DriveThemeMode {
 	if (typeof document === "undefined") {
 		return "dark";
 	}
 	return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
+function serverThemeMode(): DriveThemeMode {
+	return "dark";
+}
+
+function subscribeThemeMode(listener: () => void): () => void {
+	if (
+		typeof document === "undefined" ||
+		typeof MutationObserver === "undefined"
+	) {
+		return () => {};
+	}
+	const observer = new MutationObserver(listener);
+	observer.observe(document.documentElement, {
+		attributeFilter: ["class"],
+		attributes: true,
+	});
+	return () => observer.disconnect();
+}
+
 /**
  * The active host theme, as the resolver's input. `lib/theme.ts` toggles
  * `.dark` on the root element, so the class is the signal — watched rather
  * than read once, because a mid-call theme flip has to re-resolve every
- * seated agent or half the roster ends up unreadable.
+ * seated agent or half the roster ends up unreadable. One implementation for
+ * every Drive surface (Call, Artifacts, Agents, Settings).
  */
 export function useDriveInkTheme(): DriveInkTheme {
-	const [mode, setMode] = useState<"light" | "dark">(readThemeMode);
-
-	useEffect(() => {
-		setMode(readThemeMode());
-		const observer = new MutationObserver(() => {
-			setMode(readThemeMode());
-		});
-		observer.observe(document.documentElement, {
-			attributeFilter: ["class"],
-			attributes: true,
-		});
-		return () => observer.disconnect();
-	}, []);
-
+	const mode = useSyncExternalStore(
+		subscribeThemeMode,
+		readThemeMode,
+		serverThemeMode,
+	);
 	return driveInkTheme(mode);
 }
 

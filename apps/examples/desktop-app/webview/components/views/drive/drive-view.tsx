@@ -52,13 +52,21 @@ function DriveSectionPane({
 		case "rooms":
 			return <RoomsView onNavigateSection={onNavigateSection} />;
 		case "artifacts":
-			return <ArtifactsView />;
+			return <ArtifactsView onNavigateSection={onNavigateSection} />;
 		case "tasks":
 			return <TasksView />;
 		case "status":
 			return <StatusView />;
 		case "analytics":
-			return <AnalyticsView />;
+			return (
+				<AnalyticsView
+					onOpenRoom={(row) => {
+						if (row.roomId) {
+							onNavigateSection("call", row.roomId);
+						}
+					}}
+				/>
+			);
 		case "agents":
 			return <AgentsView />;
 		case "settings":

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import { openExternalUrl } from "@/lib/desktop-client";
+import { useDriveInkTheme } from "@/lib/drive/agent-ink";
 import {
 	type ArtifactBody,
 	artifactEntryBodySource,
@@ -65,7 +66,6 @@ import { copyTextToClipboard } from "@/lib/drive/text-export";
 import { useDriveHub } from "@/lib/drive/use-drive-hub";
 import { cn } from "@/lib/utils";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
-import { useDriveInkTheme } from "./use-drive-ink-theme";
 
 export type ArtifactDetailSheetProps = {
 	entry: DriveArtifactDirectoryEntry | null;
