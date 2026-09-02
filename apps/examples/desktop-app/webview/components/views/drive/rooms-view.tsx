@@ -86,7 +86,7 @@ import { useDriveHub } from "@/lib/drive/use-drive-hub";
 import { cn } from "@/lib/utils";
 
 export type RoomsViewProps = {
-	onNavigateSection: (section: DriveSection) => void;
+	onNavigateSection: (section: DriveSection, roomId?: string) => void;
 };
 
 /** Live borrows the Status Hub's "running" ink; stopped rooms stay quiet. */
@@ -426,7 +426,7 @@ export function RoomsView({ onNavigateSection }: RoomsViewProps) {
 			try {
 				const ok = await join(roomId);
 				if (ok) {
-					onNavigateSection("call");
+					onNavigateSection("call", roomId);
 				}
 			} finally {
 				setOpeningRoomId(null);

@@ -380,9 +380,16 @@ export default function Home() {
 		},
 		[navigateWith],
 	);
-	const handleDriveSectionChange = useCallback((section: DriveSection) => {
-		dispatchApp({ type: "navigate-drive", section });
-	}, []);
+	const handleDriveSectionChange = useCallback(
+		(section: DriveSection, roomId?: string) => {
+			dispatchApp({
+				type: "navigate-drive",
+				section,
+				...(roomId === undefined ? {} : { roomId }),
+			});
+		},
+		[],
+	);
 	const handleOpenDriveLobby = useCallback(() => {
 		dispatchApp({ type: "navigate-drive", section: "lobby" });
 	}, []);

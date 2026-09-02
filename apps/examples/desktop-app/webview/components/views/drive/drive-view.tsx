@@ -34,7 +34,7 @@ export type DriveViewProps = {
 	roomId: string | null;
 	/** Composition-root decision: mount the labeled demo world. */
 	demoWorld: boolean;
-	onNavigateSection: (section: DriveSection) => void;
+	onNavigateSection: (section: DriveSection, roomId?: string) => void;
 };
 
 function DriveSectionPane({
@@ -42,7 +42,7 @@ function DriveSectionPane({
 	onNavigateSection,
 }: {
 	section: DriveSection;
-	onNavigateSection: (section: DriveSection) => void;
+	onNavigateSection: (section: DriveSection, roomId?: string) => void;
 }) {
 	switch (section) {
 		case "lobby":
@@ -79,7 +79,7 @@ function DriveSectionSwitch({
 	section: DriveSection;
 	demoForced: boolean;
 	onExploreDemo: () => void;
-	onNavigateSection: (section: DriveSection) => void;
+	onNavigateSection: (section: DriveSection, roomId?: string) => void;
 }) {
 	const { phase } = useDriveHub();
 	if (phase === "unreachable" && !demoForced) {

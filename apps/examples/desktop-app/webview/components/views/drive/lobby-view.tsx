@@ -52,7 +52,7 @@ import { cn } from "@/lib/utils";
 import { RoomPreviewCard } from "./room-preview-card";
 
 export type LobbyViewProps = {
-	onNavigateSection: (section: DriveSection) => void;
+	onNavigateSection: (section: DriveSection, roomId?: string) => void;
 };
 
 const SNAPSHOT_STATES: readonly StatusState[] = [
@@ -355,7 +355,7 @@ export function LobbyView({ onNavigateSection }: LobbyViewProps) {
 			try {
 				const ok = await join(targetRoomId);
 				if (ok) {
-					onNavigateSection("call");
+					onNavigateSection("call", targetRoomId);
 				}
 			} finally {
 				setJoining(false);
