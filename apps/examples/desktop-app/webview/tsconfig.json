@@ -4,6 +4,8 @@
 		"paths": {
 			"@/*": ["./*"],
 			"@cline/agents": ["../../../../sdk/packages/agents/src/index.ts"],
+			"@cline/drive": ["../../../../sdk/packages/drive/src/index.ts"],
+			"@cline/drivecode-demo": ["../../../../apps/drivecode-demo/src/index.ts"],
 			"@cline/core": ["../../../../sdk/packages/core/src/index.ts"],
 			"@cline/llms": ["../../../../sdk/packages/llms/src/index.ts"],
 			"@cline/shared": ["../../../../sdk/packages/shared/src/index.ts"],
