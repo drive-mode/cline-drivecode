@@ -327,7 +327,7 @@ export interface LocalRuntimeHostOptions {
 class SessionWriterLeaseFenceError extends Error {
 	constructor(
 		readonly sessionId: string,
-		readonly cause: unknown,
+		override readonly cause: unknown,
 	) {
 		super(
 			`Writer lease fence rejected transcript persistence for ${sessionId}`,
