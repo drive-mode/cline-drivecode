@@ -161,7 +161,10 @@ export function DriveHubProvider({
 	roomId?: string | null;
 	children: ReactNode;
 }) {
-	const roomId = roomIdProp?.trim() || DRIVE_DEFAULT_ROOM_ID;
+	const requestedRoomId = roomIdProp?.trim() || DRIVE_DEFAULT_ROOM_ID;
+	// The room this provider is bound to: the requested one until a join seats
+	// the user somewhere else, then that room (see `join`).
+	const [roomId, setRoomId] = useState(requestedRoomId);
 	const [phase, setPhase] = useState<DrivePhase>("connecting");
 	const [hub, setHub] = useState<DriveHubInfo>(EMPTY_HUB_INFO);
 	const [room, setRoom] = useState<DriveRoomState>(() =>
@@ -190,9 +193,16 @@ export function DriveHubProvider({
 	const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const disposedRef = useRef(false);
 	const checkingRef = useRef<Promise<void> | null>(null);
-	// Bumped for every source; an in-flight hub check from the previous source
-	// must not apply its result (phase, hub info) to the new one.
+	// Bumped for every source; an in-flight call from the previous source must
+	// not apply its result (phase, hub info, room, rooms, summary) to the new one.
 	const sourceGenerationRef = useRef(0);
+	// Capture at the start of an async operation; the returned predicate is
+	// true once the provider was disposed or the source swapped underneath it.
+	const beginOperation = useCallback(() => {
+		const generation = sourceGenerationRef.current;
+		return () =>
+			disposedRef.current || generation !== sourceGenerationRef.current;
+	}, []);
 
 	const clearRetry = useCallback(() => {
 		if (retryTimerRef.current) {
@@ -211,10 +221,11 @@ export function DriveHubProvider({
 			payload: DriveCommandPayload = {},
 			targetRoomId: string = roomIdRef.current,
 		): Promise<DriveCallReply | null> => {
+			const stale = beginOperation();
 			try {
 				const reply = await source.call(op, targetRoomId, payload);
-				if (disposedRef.current) {
-					return reply;
+				if (stale()) {
+					return null;
 				}
 				setRoom((previous) => applyCallReply(previous, reply));
 				const humanId = humanIdFromReply(reply);
@@ -223,19 +234,20 @@ export function DriveHubProvider({
 				}
 				return reply;
 			} catch (error) {
-				if (!disposedRef.current) {
+				if (!stale()) {
 					failWith(error);
 				}
 				return null;
 			}
 		},
-		[failWith, source],
+		[beginOperation, failWith, source],
 	);
 
 	const refreshRoom = useCallback(async () => {
+		const stale = beginOperation();
 		try {
 			const reply = await source.call("call_get_room", roomIdRef.current);
-			if (disposedRef.current) {
+			if (stale()) {
 				return;
 			}
 			setRoom((previous) => applyCallReply(previous, reply));
@@ -247,41 +259,43 @@ export function DriveHubProvider({
 			// A room that does not exist yet is not an error worth a banner;
 			// the next join creates it.
 		}
-	}, [source]);
+	}, [beginOperation, source]);
 
 	const refreshRooms = useCallback(async () => {
+		const stale = beginOperation();
 		setRoomsLoading(true);
 		try {
 			const reply = await source.listRooms(
 				workspaceRootRef.current ?? undefined,
 			);
-			if (disposedRef.current) {
+			if (stale()) {
 				return;
 			}
 			setRooms(isRoomDirectoryEntryArray(reply?.rooms) ? reply.rooms : []);
 			setRoomsError(null);
 		} catch (error) {
-			if (!disposedRef.current) {
+			if (!stale()) {
 				setRoomsError(parseDriveCommandError(error).text);
 			}
 		} finally {
-			if (!disposedRef.current) {
+			if (!stale()) {
 				setRoomsLoading(false);
 			}
 		}
-	}, [source]);
+	}, [beginOperation, source]);
 
 	const refreshSummary = useCallback(async () => {
+		const stale = beginOperation();
 		try {
 			const reply = await source.status<{ summary?: unknown }>("summary");
-			if (disposedRef.current) {
+			if (stale()) {
 				return;
 			}
 			setStatusSummary(isStatusSummary(reply?.summary) ? reply.summary : null);
 		} catch {
 			// Status Hub may not be provisioned; the section reports that itself.
 		}
-	}, [source]);
+	}, [beginOperation, source]);
 
 	const scheduleRetry = useCallback(
 		(check: () => Promise<void>) => {
@@ -301,9 +315,7 @@ export function DriveHubProvider({
 		if (checkingRef.current) {
 			return checkingRef.current;
 		}
-		const generation = sourceGenerationRef.current;
-		const stale = () =>
-			disposedRef.current || generation !== sourceGenerationRef.current;
+		const stale = beginOperation();
 		const run = (async () => {
 			const checkedAt = new Date().toISOString();
 			try {
@@ -349,11 +361,16 @@ export function DriveHubProvider({
 				scheduleRetry(checkHub);
 			}
 		})().finally(() => {
-			checkingRef.current = null;
+			// Only the check that owns the slot releases it; a check from the
+			// previous source must not clear the one the new source started.
+			if (checkingRef.current === run) {
+				checkingRef.current = null;
+			}
 		});
 		checkingRef.current = run;
 		return run;
 	}, [
+		beginOperation,
 		clearRetry,
 		refreshRoom,
 		refreshRooms,
@@ -432,6 +449,11 @@ export function DriveHubProvider({
 		});
 	}, [checkHub, source]);
 
+	// A new requested room (deep link, history, Rooms → Open) rebinds.
+	useEffect(() => {
+		setRoomId(requestedRoomId);
+	}, [requestedRoomId]);
+
 	// Switching rooms rebinds the fold; the next call reply fills it.
 	useEffect(() => {
 		setRoom((previous) =>
@@ -488,6 +510,10 @@ export function DriveHubProvider({
 				target,
 			);
 			if (reply) {
+				// The hub seated us in `target`: every later call_* / refresh
+				// must address that room, not the one the shell requested.
+				roomIdRef.current = target;
+				setRoomId(target);
 				void refreshRooms();
 			}
 			return reply !== null;
@@ -568,13 +594,14 @@ export function DriveHubProvider({
 				| "drive.presenter.revoke",
 			payload: DriveCommandPayload,
 		) => {
+			const stale = beginOperation();
 			try {
 				const reply = await source.command<{
 					snapshot?: unknown;
 					seq?: number;
 				}>(command, { roomId: roomIdRef.current, ...payload });
-				if (disposedRef.current) {
-					return true;
+				if (stale()) {
+					return false;
 				}
 				if (reply?.snapshot) {
 					setRoom((previous) =>
@@ -587,13 +614,13 @@ export function DriveHubProvider({
 				}
 				return true;
 			} catch (error) {
-				if (!disposedRef.current) {
+				if (!stale()) {
 					failWith(error);
 				}
 				return false;
 			}
 		},
-		[failWith, source],
+		[beginOperation, failWith, source],
 	);
 
 	const presenter = useMemo<DrivePresenterActions>(
