@@ -80,7 +80,7 @@ describe("drive prefs", () => {
 		).toEqual({
 			...DEFAULT_DRIVE_PREFS,
 			pipCorner: "top-left",
-			voice: { outputVolume: 1, captions: false },
+			voice: { outputVolume: 1, captions: false, speakerDeviceId: null },
 		});
 	});
 
@@ -96,7 +96,11 @@ describe("drive prefs", () => {
 			voice: { captions: false },
 		});
 		expect(written.reduceMotion).toBe(true);
-		expect(written.voice).toEqual({ outputVolume: 0.8, captions: false });
+		expect(written.voice).toEqual({
+			outputVolume: 0.8,
+			captions: false,
+			speakerDeviceId: null,
+		});
 		expect(
 			JSON.parse(store.get(DRIVE_PREFS_STORAGE_KEY) ?? "{}"),
 		).toMatchObject({
@@ -116,11 +120,63 @@ describe("drive prefs", () => {
 		expect(writeDrivePrefs({ demoOptIn: true }).demoOptIn).toBe(true);
 	});
 
+	it("parses the Status Hub lens and falls back to the board", () => {
+		expect(
+			parseDrivePrefs(JSON.stringify({ statusLens: "dependency-map" }))
+				.statusLens,
+		).toBe("dependency-map");
+		expect(
+			parseDrivePrefs(JSON.stringify({ statusLens: "timeline" })).statusLens,
+		).toBe("board");
+		expect(
+			mergeDrivePrefs(DEFAULT_DRIVE_PREFS, { statusLens: "changelog" })
+				.statusLens,
+		).toBe("changelog");
+	});
+
+	it("keeps the speaker device id local and nullable", () => {
+		expect(DEFAULT_DRIVE_PREFS.voice.speakerDeviceId).toBeNull();
+		expect(
+			parseDrivePrefs(JSON.stringify({ voice: { speakerDeviceId: "" } })).voice
+				.speakerDeviceId,
+		).toBeNull();
+		expect(
+			parseDrivePrefs(JSON.stringify({ voice: { speakerDeviceId: 42 } })).voice
+				.speakerDeviceId,
+		).toBeNull();
+		const chosen = mergeDrivePrefs(DEFAULT_DRIVE_PREFS, {
+			voice: { speakerDeviceId: "out-7f3a" },
+		});
+		expect(chosen.voice).toEqual({
+			outputVolume: 0.8,
+			captions: true,
+			speakerDeviceId: "out-7f3a",
+		});
+		expect(
+			mergeDrivePrefs(chosen, { voice: { speakerDeviceId: null } }).voice
+				.speakerDeviceId,
+		).toBeNull();
+	});
+
 	it("merges functional patches", () => {
 		expect(
 			mergeDrivePrefs(DEFAULT_DRIVE_PREFS, (previous) => ({
 				feedCollapsed: !previous.feedCollapsed,
 			})).feedCollapsed,
 		).toBe(true);
+	});
+});
+
+describe("drive prefs when storage rejects writes", () => {
+	it("keeps the in-memory patch for the session after a blocked write", () => {
+		const store = installFakeStorage();
+		const storage = (globalThis as unknown as { window: FakeWindow }).window
+			.localStorage;
+		storage.setItem = () => {
+			throw new Error("QuotaExceededError");
+		};
+		expect(writeDrivePrefs({ demoOptIn: true }).demoOptIn).toBe(true);
+		expect(readDrivePrefs().demoOptIn).toBe(true);
+		expect(store.has(DRIVE_PREFS_STORAGE_KEY)).toBe(false);
 	});
 });

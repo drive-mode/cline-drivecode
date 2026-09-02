@@ -226,6 +226,47 @@ function DriveLiveDot({ className }: { className?: string }) {
 	);
 }
 
+/**
+ * The Drive entry above the Sessions header. Its own row so the label, the
+ * live dot and the Demo badge never fight the Sessions title for width.
+ */
+function DriveEntryRow({
+	demoWorld,
+	onOpen,
+}: {
+	demoWorld: boolean;
+	onOpen: () => void;
+}) {
+	const driveHub = useOptionalDriveHub();
+	const live = driveHub?.callLive === true;
+	const demo = demoWorld || driveHub?.phase === "demo";
+	return (
+		<div
+			className="mb-2 flex h-8 items-center justify-between gap-2"
+			data-drive-phase={driveHub?.phase ?? "none"}
+		>
+			<button
+				aria-label={live ? "Drive (call live)" : "Drive"}
+				className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-sidebar-foreground"
+				onClick={onOpen}
+				title="Drive (⌘D)"
+				type="button"
+			>
+				<span className="relative inline-flex shrink-0">
+					<DriveMarkIcon className="size-4" />
+					{live ? <DriveLiveDot /> : null}
+				</span>
+				<span className="truncate">Drive</span>
+			</button>
+			{demo ? (
+				<Badge className="shrink-0" variant="secondary">
+					Demo
+				</Badge>
+			) : null}
+		</div>
+	);
+}
+
 function DriveSectionNavigation({
 	activeSection,
 	collapsed,
@@ -900,32 +941,18 @@ export function AgentSidebar({
 				) : (
 					<>
 						<div className="mt-5 shrink-0 pl-4 pr-2">
+							<DriveEntryRow demoWorld={driveDemoWorld} onOpen={openDrive} />
 							<div className="flex h-8 items-center justify-between gap-2">
-								<div className="flex min-w-0 items-center gap-1.5">
-									<button
-										aria-label="Drive"
-										className="flex min-w-0 shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-sidebar-foreground"
-										onClick={openDrive}
-										title="Drive (⌘D)"
-										type="button"
-									>
-										<DriveMarkIcon className="size-4 shrink-0" />
-										Drive
-									</button>
-									<span aria-hidden="true" className="text-muted-foreground/60">
-										·
-									</span>
-									<button
-										className={cn(
-											"min-w-0 truncate text-sm font-medium text-muted-foreground hover:text-sidebar-foreground",
-											view === "sessions" && "text-sidebar-foreground",
-										)}
-										onClick={openSessions}
-										type="button"
-									>
-										{sortMode === "time" ? "Sessions" : "Projects"}
-									</button>
-								</div>
+								<button
+									className={cn(
+										"min-w-0 truncate text-sm font-medium text-muted-foreground hover:text-sidebar-foreground",
+										view === "sessions" && "text-sidebar-foreground",
+									)}
+									onClick={openSessions}
+									type="button"
+								>
+									{sortMode === "time" ? "Sessions" : "Projects"}
+								</button>
 								<div className="flex shrink-0 items-center gap-0.5">
 									<Button
 										aria-label="Search sessions"

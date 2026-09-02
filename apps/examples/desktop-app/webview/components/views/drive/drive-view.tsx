@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * The Drive shell: one `DriveHubProvider`, the connection banner, and the
- * section switch. Sections are their own files so later work replaces a
+ * The Drive shell: the connection banner and the section switch under the
+ * shell-wide `DriveHubProvider` (mounted in `app/page.tsx`). Sections are their own files so later work replaces a
  * body without touching this file.
  *
  * `demoWorld` is decided by the composition root (`app/page.tsx`). This
@@ -11,15 +11,11 @@
  * is a local preference and is shown as such.
  */
 
-import { useEffect, useMemo } from "react";
-import { createDemoDriveSource, DEMO_ROOM_ID } from "@/lib/drive/demo-world";
+import type { ReactNode } from "react";
+import { DriveHubRoot } from "@/lib/drive/drive-hub-root";
 import { useDrivePrefs } from "@/lib/drive/drive-prefs";
 import type { DriveSection } from "@/lib/drive/drive-section";
-import {
-	createHubDriveSource,
-	type DriveDataSource,
-} from "@/lib/drive/drive-source";
-import { DriveHubProvider, useDriveHub } from "@/lib/drive/use-drive-hub";
+import { useDriveHub, useOptionalDriveHub } from "@/lib/drive/use-drive-hub";
 import { AgentsView } from "./agents-view";
 import { AnalyticsView } from "./analytics-view";
 import { ArtifactsView } from "./artifacts-view";
@@ -104,42 +100,70 @@ function DriveSectionSwitch({
 	);
 }
 
+function DriveShell({
+	section,
+	demoWorld,
+	onNavigateSection,
+}: Omit<DriveViewProps, "roomId">) {
+	const [, updatePrefs] = useDrivePrefs();
+	return (
+		<>
+			<DriveConnectionBanner
+				demoForced={demoWorld}
+				onLeaveDemo={() => updatePrefs({ demoOptIn: false })}
+			/>
+			<DriveSectionSwitch
+				demoForced={demoWorld}
+				onExploreDemo={() => updatePrefs({ demoOptIn: true })}
+				onNavigateSection={onNavigateSection}
+				section={section}
+			/>
+		</>
+	);
+}
+
+/**
+ * Uses the shell-wide provider from `app/page.tsx` when there is one, and
+ * mounts its own otherwise (tests, or a host that renders the view alone).
+ */
+function DriveHubBoundary({
+	demoWorld,
+	roomId,
+	children,
+}: {
+	demoWorld: boolean;
+	roomId: string | null;
+	children: ReactNode;
+}) {
+	const hub = useOptionalDriveHub();
+	if (hub) {
+		return children;
+	}
+	return (
+		<DriveHubRoot demoWorld={demoWorld} roomId={roomId}>
+			{children}
+		</DriveHubRoot>
+	);
+}
+
 export function DriveView({
 	section,
 	roomId,
 	demoWorld,
 	onNavigateSection,
 }: DriveViewProps) {
-	const [prefs, updatePrefs] = useDrivePrefs();
-	const useDemo = demoWorld || prefs.demoOptIn;
-	const source = useMemo<DriveDataSource>(
-		() => (useDemo ? createDemoDriveSource() : createHubDriveSource()),
-		[useDemo],
-	);
-	useEffect(() => () => source.dispose(), [source]);
-
 	return (
 		<div
 			className="cline-view-enter flex h-full min-h-0 flex-1 flex-col bg-background text-foreground"
 			data-drive-section={section}
 		>
-			<DriveHubProvider
-				// The demo world has exactly one room; an unbound location lands
-				// there instead of on the hub's default room id.
-				roomId={useDemo ? (roomId ?? DEMO_ROOM_ID) : roomId}
-				source={source}
-			>
-				<DriveConnectionBanner
-					demoForced={demoWorld}
-					onLeaveDemo={() => updatePrefs({ demoOptIn: false })}
-				/>
-				<DriveSectionSwitch
-					demoForced={demoWorld}
-					onExploreDemo={() => updatePrefs({ demoOptIn: true })}
+			<DriveHubBoundary demoWorld={demoWorld} roomId={roomId}>
+				<DriveShell
+					demoWorld={demoWorld}
 					onNavigateSection={onNavigateSection}
 					section={section}
 				/>
-			</DriveHubProvider>
+			</DriveHubBoundary>
 		</div>
 	);
 }

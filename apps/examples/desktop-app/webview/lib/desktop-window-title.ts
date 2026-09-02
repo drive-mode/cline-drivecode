@@ -11,6 +11,24 @@ export function buildDesktopWindowTitle(version: string | undefined): string {
 		: DEFAULT_DESKTOP_WINDOW_TITLE;
 }
 
+/**
+ * Native title writes are asynchronous (a sidecar round trip for the version,
+ * a dynamic import for the window API), so two calls can finish out of order:
+ * leaving one Drive section restores the default title while entering the
+ * next one sets its title, and whichever lands last wins. Each call takes a
+ * generation and only the newest one is allowed to write.
+ */
+let titleGeneration = 0;
+
+function nextTitleGeneration(): number {
+	titleGeneration += 1;
+	return titleGeneration;
+}
+
+function isCurrentTitleGeneration(generation: number): boolean {
+	return generation === titleGeneration;
+}
+
 async function readAppVersion(): Promise<string | undefined> {
 	const ctx = await desktopClient.invoke<ProcessContext>("get_process_context");
 	return ctx.appVersion?.trim() || undefined;
@@ -25,12 +43,16 @@ export async function syncDesktopWindowTitle(): Promise<void> {
 	if (!isTauriAvailable()) {
 		return;
 	}
+	const generation = nextTitleGeneration();
 	try {
 		const version = await readAppVersion();
-		if (!version) {
+		if (!version || !isCurrentTitleGeneration(generation)) {
 			return;
 		}
 		const { getCurrentWindow } = await import("@tauri-apps/api/window");
+		if (!isCurrentTitleGeneration(generation)) {
+			return;
+		}
 		await getCurrentWindow().setTitle(buildDesktopWindowTitle(version));
 	} catch {
 		// Keep the default static title if the sidecar or window API is unavailable.
@@ -56,8 +78,12 @@ export async function applyDesktopWindowTitle(
 		await syncDesktopWindowTitle();
 		return;
 	}
+	const generation = nextTitleGeneration();
 	try {
 		const { getCurrentWindow } = await import("@tauri-apps/api/window");
+		if (!isCurrentTitleGeneration(generation)) {
+			return;
+		}
 		await getCurrentWindow().setTitle(title);
 	} catch {
 		// The window API is unavailable; the document title still changed.

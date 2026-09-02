@@ -18,10 +18,24 @@ export type DrivePipCorner =
 	| "bottom-left"
 	| "bottom-right";
 
+/** Status Hub lenses; the id is what the tab bar and the pref store share. */
+export const DRIVE_STATUS_LENSES = [
+	"board",
+	"changelog",
+	"dependency-map",
+] as const;
+
+export type DriveStatusLens = (typeof DRIVE_STATUS_LENSES)[number];
+
 export type DriveVoicePrefs = {
 	/** 0..1 partner output volume for this listener only. */
 	outputVolume: number;
 	captions: boolean;
+	/**
+	 * `MediaDeviceInfo.deviceId` for audiooutput; null = system default.
+	 * Machine-specific, so it lives here and never in a durable Drive facet.
+	 */
+	speakerDeviceId: string | null;
 };
 
 export type DrivePrefs = {
@@ -33,6 +47,8 @@ export type DrivePrefs = {
 	voice: DriveVoicePrefs;
 	/** The person chose the labeled demo world while the hub was unreachable. */
 	demoOptIn: boolean;
+	/** The Status Hub lens last opened, so the section reopens where it left off. */
+	statusLens: DriveStatusLens;
 };
 
 export const DEFAULT_DRIVE_PREFS: DrivePrefs = {
@@ -41,8 +57,9 @@ export const DEFAULT_DRIVE_PREFS: DrivePrefs = {
 	reduceMotion: false,
 	pipHidden: false,
 	pipCorner: "bottom-right",
-	voice: { outputVolume: 0.8, captions: true },
+	voice: { outputVolume: 0.8, captions: true, speakerDeviceId: null },
 	demoOptIn: false,
+	statusLens: "board",
 };
 
 export type DrivePrefsPatch =
@@ -58,6 +75,15 @@ const PIP_CORNERS: readonly DrivePipCorner[] = [
 	"bottom-left",
 	"bottom-right",
 ];
+
+function readStatusLens(
+	value: unknown,
+	fallback: DriveStatusLens,
+): DriveStatusLens {
+	return DRIVE_STATUS_LENSES.includes(value as DriveStatusLens)
+		? (value as DriveStatusLens)
+		: fallback;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -111,8 +137,17 @@ export function parseDrivePrefs(raw: string | null): DrivePrefs {
 				DEFAULT_DRIVE_PREFS.voice.outputVolume,
 			),
 			captions: readBoolean(voice.captions, DEFAULT_DRIVE_PREFS.voice.captions),
+			speakerDeviceId:
+				typeof voice.speakerDeviceId === "string" &&
+				voice.speakerDeviceId.trim()
+					? voice.speakerDeviceId
+					: DEFAULT_DRIVE_PREFS.voice.speakerDeviceId,
 		},
 		demoOptIn: readBoolean(parsed.demoOptIn, DEFAULT_DRIVE_PREFS.demoOptIn),
+		statusLens: readStatusLens(
+			parsed.statusLens,
+			DEFAULT_DRIVE_PREFS.statusLens,
+		),
 	};
 }
 
@@ -154,15 +189,22 @@ function writeStorage(value: string): void {
 }
 
 // One cached snapshot so `useSyncExternalStore` sees a stable reference.
-let cache: { raw: string | null; prefs: DrivePrefs } | null = null;
+// `storedRaw` is what storage actually held after the last write; when a
+// write is blocked (private mode, quota, disabled storage) it differs from
+// `raw`, and the in-memory prefs stay authoritative for this session.
+let cache: {
+	raw: string | null;
+	storedRaw: string | null;
+	prefs: DrivePrefs;
+} | null = null;
 const listeners = new Set<() => void>();
 
 function snapshot(): DrivePrefs {
 	const raw = readStorage();
-	if (cache && cache.raw === raw) {
+	if (cache && (cache.raw === raw || cache.storedRaw === raw)) {
 		return cache.prefs;
 	}
-	cache = { raw, prefs: parseDrivePrefs(raw) };
+	cache = { raw, storedRaw: raw, prefs: parseDrivePrefs(raw) };
 	return cache.prefs;
 }
 
@@ -179,8 +221,8 @@ export function readDrivePrefs(): DrivePrefs {
 export function writeDrivePrefs(patch: DrivePrefsPatch): DrivePrefs {
 	const next = mergeDrivePrefs(snapshot(), patch);
 	const raw = JSON.stringify(next);
-	cache = { raw, prefs: next };
 	writeStorage(raw);
+	cache = { raw, storedRaw: readStorage(), prefs: next };
 	notify();
 	return next;
 }

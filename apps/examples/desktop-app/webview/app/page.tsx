@@ -63,6 +63,7 @@ import {
 	keepDocumentTitle,
 	syncDesktopWindowTitle,
 } from "@/lib/desktop-window-title";
+import { DriveHubRoot } from "@/lib/drive/drive-hub-root";
 import {
 	type DriveSection,
 	driveWindowTitle,
@@ -503,98 +504,100 @@ export default function Home() {
 	return (
 		<AccountProvider>
 			<SidebarProvider>
-				<div
-					aria-hidden={showOnboarding ? true : undefined}
-					className="flex h-screen w-full overflow-hidden bg-background text-foreground"
-					// The onboarding overlay is opaque and sits on top of the whole
-					// shell; hiding the shell keeps its aurora + animations from
-					// being composited every frame underneath while it still mounts
-					// and loads (providers, history, transport) in the background.
-					// `inert` additionally keeps the covered controls out of the
-					// keyboard tab order and assistive tech while it is hidden.
-					inert={showOnboarding ? true : undefined}
-					style={showOnboarding ? { visibility: "hidden" } : undefined}
-				>
-					<Sidebar
-						className="border-r border-sidebar-border"
-						collapsible="icon"
+				<DriveHubRoot demoWorld={driveDemoWorld} roomId={driveRoomId}>
+					<div
+						aria-hidden={showOnboarding ? true : undefined}
+						className="flex h-screen w-full overflow-hidden bg-background text-foreground"
+						// The onboarding overlay is opaque and sits on top of the whole
+						// shell; hiding the shell keeps its aurora + animations from
+						// being composited every frame underneath while it still mounts
+						// and loads (providers, history, transport) in the background.
+						// `inert` additionally keeps the covered controls out of the
+						// keyboard tab order and assistive tech while it is hidden.
+						inert={showOnboarding ? true : undefined}
+						style={showOnboarding ? { visibility: "hidden" } : undefined}
 					>
-						<AgentSidebar
-							activeSessionId={activeHistorySessionId}
-							driveDemoWorld={driveDemoWorld}
-							driveSection={driveSection}
-							onDriveSectionChange={handleDriveSectionChange}
-							onHome={handleHome}
-							onNavigateBack={handleNavigateBack}
-							onNavigateForward={handleNavigateForward}
-							onNewThread={handleNewThread}
-							onSettingsSectionChange={handleSettingsSectionChange}
-							sessionHistory={sessionHistory}
-							setView={handleViewChange}
-							settingsSection={settingsSection}
-							view={view}
-							canNavigateBack={navigation.back.length > 0}
-							canNavigateForward={navigation.forward.length > 0}
-						/>
-						<SidebarRail />
-					</Sidebar>
-					<SidebarInset className="min-h-0 min-w-0 overflow-hidden">
-						<SidebarTrigger className="absolute left-20 top-0 z-40 md:hidden" />
-						{view === "drive" ? (
-							<DriveView
-								demoWorld={driveDemoWorld}
-								onNavigateSection={handleDriveSectionChange}
-								roomId={driveRoomId}
-								section={driveSection}
-							/>
-						) : view === "sessions" ? (
-							<SessionsView
+						<Sidebar
+							className="border-r border-sidebar-border"
+							collapsible="icon"
+						>
+							<AgentSidebar
 								activeSessionId={activeHistorySessionId}
-								history={sessionHistory}
+								driveDemoWorld={driveDemoWorld}
+								driveSection={driveSection}
+								onDriveSectionChange={handleDriveSectionChange}
+								onHome={handleHome}
+								onNavigateBack={handleNavigateBack}
+								onNavigateForward={handleNavigateForward}
+								onNewThread={handleNewThread}
+								onSettingsSectionChange={handleSettingsSectionChange}
+								sessionHistory={sessionHistory}
+								setView={handleViewChange}
+								settingsSection={settingsSection}
+								view={view}
+								canNavigateBack={navigation.back.length > 0}
+								canNavigateForward={navigation.forward.length > 0}
 							/>
-						) : activeThread ? (
-							<div
-								aria-hidden={view === "settings" ? true : undefined}
-								className="flex min-h-0 flex-1 flex-col"
-								inert={view === "settings" ? true : undefined}
-							>
-								<ChatThreadPane
-									key={activeThread.id}
-									historySession={activeThread.historySession}
-									initialPromptDraft={activeThread.initialPromptDraft}
-									knownWorkspacePaths={historyWorkspacePaths}
-									onInitialPromptDraftConsumed={
-										handleInitialPromptDraftConsumed
-									}
-									onUpdateSessionMetadata={handleUpdateSessionMetadata}
-									threadId={activeThread.id}
-									onDeleteSession={handleDeleteSession}
-									onNewThread={handleNewThread}
-									onOpenSession={handleOpenSession}
-									onOpenSessionById={handleOpenSessionById}
-									onOpenSetup={handleOpenSetup}
-									onOpenModelSettings={() =>
-										handleSettingsSectionChange("Models")
-									}
-									parentSession={activeParentSession}
-									onOpenVoiceInputSettings={() =>
-										handleSettingsSectionChange("Models")
-									}
-									onThreadStarted={handleThreadStarted}
+							<SidebarRail />
+						</Sidebar>
+						<SidebarInset className="min-h-0 min-w-0 overflow-hidden">
+							<SidebarTrigger className="absolute left-20 top-0 z-40 md:hidden" />
+							{view === "drive" ? (
+								<DriveView
+									demoWorld={driveDemoWorld}
+									onNavigateSection={handleDriveSectionChange}
+									roomId={driveRoomId}
+									section={driveSection}
 								/>
-							</div>
-						) : null}
-						{view === "settings" ? (
-							<div className="absolute inset-0 z-30 bg-background text-foreground">
-								<SettingsView
-									onNavigateSection={handleSettingsSectionChange}
-									onOpenSession={handleOpenSessionById}
-									section={settingsSection}
+							) : view === "sessions" ? (
+								<SessionsView
+									activeSessionId={activeHistorySessionId}
+									history={sessionHistory}
 								/>
-							</div>
-						) : null}
-					</SidebarInset>
-				</div>
+							) : activeThread ? (
+								<div
+									aria-hidden={view === "settings" ? true : undefined}
+									className="flex min-h-0 flex-1 flex-col"
+									inert={view === "settings" ? true : undefined}
+								>
+									<ChatThreadPane
+										key={activeThread.id}
+										historySession={activeThread.historySession}
+										initialPromptDraft={activeThread.initialPromptDraft}
+										knownWorkspacePaths={historyWorkspacePaths}
+										onInitialPromptDraftConsumed={
+											handleInitialPromptDraftConsumed
+										}
+										onUpdateSessionMetadata={handleUpdateSessionMetadata}
+										threadId={activeThread.id}
+										onDeleteSession={handleDeleteSession}
+										onNewThread={handleNewThread}
+										onOpenSession={handleOpenSession}
+										onOpenSessionById={handleOpenSessionById}
+										onOpenSetup={handleOpenSetup}
+										onOpenModelSettings={() =>
+											handleSettingsSectionChange("Models")
+										}
+										parentSession={activeParentSession}
+										onOpenVoiceInputSettings={() =>
+											handleSettingsSectionChange("Models")
+										}
+										onThreadStarted={handleThreadStarted}
+									/>
+								</div>
+							) : null}
+							{view === "settings" ? (
+								<div className="absolute inset-0 z-30 bg-background text-foreground">
+									<SettingsView
+										onNavigateSection={handleSettingsSectionChange}
+										onOpenSession={handleOpenSessionById}
+										section={settingsSection}
+									/>
+								</div>
+							) : null}
+						</SidebarInset>
+					</div>
+				</DriveHubRoot>
 			</SidebarProvider>
 			{showOnboarding ? (
 				<div className="fixed inset-0 z-50">
