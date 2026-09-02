@@ -21,6 +21,13 @@ describes repository topology and ownership, not claim status.
 > **Placement note.** This document describes repository strategy. It lives in
 > `docs/drivecode/` and moves with that tree if its visibility changes.
 
+> **2026-09-02.** `drivemode-mcp` moved in-tree as `apps/drivemode-mcp`. It
+> depends on `@cline/drive` and `@cline/shared` as workspace packages, so the
+> generated `@drive-mode/drive-kernel` distribution and the sibling `file:`
+> link it existed for no longer have a consumer here; the standalone
+> repository is frozen and public. The table below records the topology this
+> initiative started from.
+
 ## Scope
 
 **In scope — the Cline Drive Mode line:**

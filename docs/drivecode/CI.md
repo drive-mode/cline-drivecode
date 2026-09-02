@@ -49,6 +49,7 @@ In branch protection / rulesets, require the check named **`drive-ci`** (the gat
 | Hub | `apps/cline-hub/**`, demo, `sdk/packages/{drive,core,llms,shared}/**` |
 | Drive kernel | `sdk/packages/{drive,shared}/**`, Driveagent example homes |
 | Demo | `apps/drivecode-demo/**`, `sdk/packages/shared/**` |
+| MCP writer | `apps/drivemode-mcp/**`, `sdk/packages/drive/**`, `sdk/packages/shared/**` |
 | CLI | `apps/cli/**` plus hub/demo/drive/core/shared (Status / Drive TUI deps) |
 
 Force all jobs: `workflow_dispatch`, `workflow_call` with `force: true`, or label `ci/drive`.
@@ -91,6 +92,7 @@ bun run test:drivecode-docs
 bun -F @cline/drive typecheck && bun -F @cline/drive test
 bun -F @cline/cline-hub typecheck && bun -F @cline/cline-hub test && bun -F @cline/cline-hub build:webview
 bun -F @cline/drivecode-demo typecheck && bun -F @cline/drivecode-demo test
+bun -F @cline/drivemode-mcp typecheck && bun -F @cline/drivemode-mcp test
 bun -F @cline/cli build && bun -F @cline/cli typecheck && bun -F @cline/cli test:unit
 ```
 

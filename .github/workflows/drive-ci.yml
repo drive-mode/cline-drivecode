@@ -56,6 +56,7 @@ jobs:
             drive: ${{ steps.force.outputs.run_all == 'true' || steps.filter.outputs.drive == 'true' }}
             demo: ${{ steps.force.outputs.run_all == 'true' || steps.filter.outputs.demo == 'true' }}
             cli: ${{ steps.force.outputs.run_all == 'true' || steps.filter.outputs.cli == 'true' }}
+            mcp: ${{ steps.force.outputs.run_all == 'true' || steps.filter.outputs.mcp == 'true' }}
         steps:
             # Force all Drive jobs for dispatch, reusable call with force, or ci/drive label.
             # Split steps so `inputs.*` is only evaluated on workflow_call.
@@ -138,6 +139,14 @@ jobs:
                           - 'apps/drivecode-demo/**'
                           - 'sdk/packages/drive/**'
                           - 'sdk/packages/core/**'
+                          - 'sdk/packages/shared/**'
+                          - 'package.json'
+                          - 'bun.lock'
+                          - '.github/workflows/drive-ci.yml'
+
+                      mcp:
+                          - 'apps/drivemode-mcp/**'
+                          - 'sdk/packages/drive/**'
                           - 'sdk/packages/shared/**'
                           - 'package.json'
                           - 'bun.lock'
@@ -245,10 +254,30 @@ jobs:
             - name: Unit test CLI
               run: bun -F @cline/cli test:unit
 
+    mcp:
+        needs: detect-changes
+        if: needs.detect-changes.outputs.mcp == 'true'
+        runs-on: ubuntu-latest
+        name: MCP writer (@cline/drivemode-mcp)
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Bun workspace
+              uses: ./.github/actions/setup-bun-workspace
+
+            - name: Build SDK packages
+              run: bun run build:sdk
+
+            - name: Typecheck MCP writer, packs and viewer
+              run: bun -F @cline/drivemode-mcp typecheck
+
+            - name: Test MCP writer
+              run: bun -F @cline/drivemode-mcp test
+
     # Single required check for Drive Mode. Always runs; fails if detect-changes
     # or a needed package job failed/cancelled. Skipped package jobs are fine.
     drive-ci:
-        needs: [detect-changes, hub, drive, demo, cli]
+        needs: [detect-changes, hub, drive, demo, cli, mcp]
         if: always()
         runs-on: ubuntu-latest
         name: drive-ci
@@ -265,9 +294,10 @@ jobs:
                   drive="${{ needs.drive.result }}"
                   demo="${{ needs.demo.result }}"
                   cli="${{ needs.cli.result }}"
-                  echo "hub=$hub drive=$drive demo=$demo cli=$cli"
+                  mcp="${{ needs.mcp.result }}"
+                  echo "hub=$hub drive=$drive demo=$demo cli=$cli mcp=$mcp"
                   fail=0
-                  for result in "$hub" "$drive" "$demo" "$cli"; do
+                  for result in "$hub" "$drive" "$demo" "$cli" "$mcp"; do
                     if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
                       fail=1
                     fi

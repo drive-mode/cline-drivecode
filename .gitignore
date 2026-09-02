@@ -107,3 +107,6 @@ apps/examples/desktop-app/webview/next-env.d.ts
 __pycache__/
 
 apps/examples/desktop-app/.cursor/settings.json
+
+# The MCP demo stack records which services it started, per machine.
+apps/drivemode-mcp/demo/.stack.json
