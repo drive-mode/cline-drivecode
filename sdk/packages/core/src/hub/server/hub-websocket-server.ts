@@ -1088,7 +1088,18 @@ export async function startHubWebSocketServer(
 			res.setHeader("content-type", "application/json");
 			res.end(JSON.stringify({ ok: true }));
 			queueMicrotask(() => {
-				void closeServer();
+				try {
+					void Promise.resolve(options.onShutdownRequested?.()).catch(
+						() => undefined,
+					);
+				} catch {
+					// The accepted request still closes the server if owner
+					// notification fails.
+				} finally {
+					// Closing is memoized, so the daemon coordinator and this
+					// safety path converge on the same teardown operation.
+					closeServer().catch(() => undefined);
+				}
 			});
 			return;
 		}

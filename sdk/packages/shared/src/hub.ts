@@ -592,6 +592,7 @@ export type HubCommandName =
 	| "drive_config_get"
 	| "drive_config_put"
 	| "drive_config_upsert_profile"
+	| "drive_project_map_get"
 	| "drive_catalog_get"
 	| "drive_catalog_put"
 	| "drive_privacy_put"
