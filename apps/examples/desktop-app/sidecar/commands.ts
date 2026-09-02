@@ -68,6 +68,7 @@ import {
 	ensureSharedHubClient,
 	resolveSidecarAskQuestion,
 } from "./context";
+import { handleDriveCommand, isDriveDesktopCommand } from "./drive";
 import {
 	installMarketplaceEntryForDesktopCommand,
 	listMarketplaceInstalledEntries,
@@ -2137,6 +2138,11 @@ export async function handleCommand(
 				: undefined;
 		const editor = await openFileInCodeEditor(filePath, requestedEditor);
 		return { path: filePath, editor };
+	}
+
+	// ── Drive Mode (shared Hub rooms, Spotlight, Status Hub) ────────────
+	if (isDriveDesktopCommand(command)) {
+		return await handleDriveCommand(ctx, command, args);
 	}
 
 	throw new Error(`unsupported desktop command: ${command}`);

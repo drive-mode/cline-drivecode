@@ -18,6 +18,7 @@ sidecar/
 ├── context.ts            # SidecarContext type and factory
 ├── commands.ts           # Command router
 ├── chat-session.ts       # Shared-Hub chat session adapter
+├── drive.ts              # Drive Mode: allowlisted Hub command bridge + drive_hub_event fan-out
 ├── session-data/         # Shared discovery, messages, artifacts, search helpers
 ├── paths.ts              # Path resolution
 ├── types.ts              # Shared types
@@ -171,6 +172,32 @@ Supported commands:
 | `list_user_instruction_configs` | Direct core API |
 | `pick_workspace_directory` | OS native dialog |
 | `open_mcp_settings_file` | OS `open` command |
+| `drive_hub_status` | `ensureSharedHubClient` raced against a 3s timeout; never throws (`{ connected, url, error, workspaceRoot }`) |
+| `drive_call` | shared Hub `call_*` op (allowlisted `op`) → `{ roomId, snapshot, seq?, callSessionId?, whileAwayNote?, handoffNarration?, ended? }` |
+| `drive_rooms_list` | shared Hub `call_list_rooms` → `{ rooms }` |
+| `drive_command` | allowlisted `drive.*` Hub command → reply payload verbatim |
+| `drive_status` | shared Hub `status.<op>` → reply payload verbatim |
+| `drive_bank` | shared Hub `drive_bank_<op>` → reply payload verbatim |
+| `drive_session_rollups` | shared Hub `drive_session_rollups` → `{ sessions: StatusSessionRow[], dump }` (privacy-gated rows) |
+| `drive_agent_home` | shared Hub `drive_agent_home_<op>`; prompt fields stripped before the reply crosses to the webview |
+| `drive_agent_profiles` | shared Hub `drive_config_get` (profiles lane) / `drive_config_upsert_profile` + read-back → `{ profiles }` |
+| `drive_config` | shared Hub `drive_config_<op>` → reply payload verbatim |
+
+Every `drive_*` failure is thrown as `DriveCommandError`, whose message is
+`"<code>: <message>"` so the webview can recover the Hub error code from the
+transport error string. Hub command names are never forwarded verbatim — each
+command validates its `op` / `command` against an allowlist in `drive.ts`.
+
+## Event Map
+
+Sidecar → webview events (`{ "type": "event", "event": { "name", "payload" } }`):
+
+| Event | Source |
+|-------|--------|
+| `chat_event`, `chat_text`, `chat_reasoning`, `chat_media`, … | `ClineCore` session stream (`handleCoreSessionEvent` / `handleHubLiveEvent`) |
+| `tool_approval_state` | in-memory pending approvals |
+| `hub_build_mismatch` | managed Hub build check, replayed to late webviews |
+| `drive_hub_event` | every Hub event named `room.*`, `drive.*`, or `status.updated`, forwarded by `forwardDriveHubEvent` as `{ event, payload, seq?, timestamp? }` (`seq` lifted from `payload.seq`) |
 
 ## Dev Workflow
 

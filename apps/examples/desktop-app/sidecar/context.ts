@@ -22,6 +22,7 @@ import {
 	markQueuedAttachmentsSubmitted,
 	reconcileQueuedAttachments,
 } from "./attachments";
+import { forwardDriveHubEvent } from "./drive";
 import { sessionLogPath } from "./paths";
 import type {
 	LiveSession,
@@ -724,8 +725,12 @@ export function handleHubLiveEvent(
 		event: string;
 		sessionId?: string;
 		payload?: Record<string, unknown>;
+		timestamp?: number | string;
 	},
 ): void {
+	// Room / Drive / Status Hub events are not session-scoped; fan them out to
+	// the webview as `drive_hub_event` before the session early-return.
+	forwardDriveHubEvent(ctx, event);
 	const sessionId = typeof event.sessionId === "string" ? event.sessionId : "";
 	if (!sessionId) {
 		return;
