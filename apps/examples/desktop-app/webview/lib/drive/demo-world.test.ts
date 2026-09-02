@@ -282,6 +282,33 @@ describe("demo world", () => {
 		);
 	});
 
+	it("stores an id-less appearance profile under its ref id and broadcasts it", async () => {
+		const { source } = makeSource();
+		const events: string[] = [];
+		const unsubscribe = source.subscribe((event) => {
+			events.push(event.event);
+		});
+		const reply = await source.agentProfiles<{
+			profiles: { id: string; nameInk: unknown }[];
+		}>("put", {
+			profile: {
+				ref: { kind: "driveagent", slug: "riley" },
+				displayName: "Riley",
+				nameInk: { kind: "palette", index: 3 },
+				bodyInk: { kind: "token", token: "muted" },
+			},
+		});
+		unsubscribe();
+		const riley = reply.profiles.find(
+			(profile) => profile.id === "driveagent.riley",
+		);
+		expect(riley?.nameInk).toEqual({ kind: "palette", index: 3 });
+		expect(events).toContain("drive.profile.changed");
+		await expect(
+			source.agentProfiles("put", { profile: { displayName: "nope" } }),
+		).rejects.toThrow(/profile is required/);
+	});
+
 	it("reports unsupported ops with a parseable code", async () => {
 		const { source } = makeSource();
 		try {

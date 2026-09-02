@@ -30,6 +30,7 @@ import {
 import {
 	type AgentProfile,
 	type AgentTitleGrant,
+	agentProfileId,
 	createEmptyDriveRoomLiveState,
 	type DriveEvent,
 	type DriveRoomLiveState,
@@ -1828,17 +1829,25 @@ export function createDemoDriveSource(
 			if (op === "get") {
 				return { profiles: [...profiles.values()] } as T;
 			}
-			const profile = payload.profile as AgentProfile | undefined;
-			if (!profile || typeof profile.id !== "string") {
+			// Mirrors the sidecar: the wire carries the profile without its id
+			// (the id is the ref flattened), but a caller that sends one is fine.
+			const draft = payload.profile as
+				| (Omit<AgentProfile, "id"> & { id?: string })
+				| undefined;
+			if (!draft?.ref || !draft.nameInk || !draft.bodyInk) {
 				throw demoError("invalid_payload", "profile is required");
 			}
+			const profile: AgentProfile = {
+				...draft,
+				id: typeof draft.id === "string" ? draft.id : agentProfileId(draft.ref),
+			};
 			profiles.set(profile.id, profile);
 			emit({
 				event: "drive.profile.changed",
 				payload: { profile },
 				timestamp: nowIso(),
 			});
-			return { profile } as T;
+			return { profiles: [...profiles.values()] } as T;
 		},
 		config: async <T>(op: string, payload: DriveCommandPayload = {}) => {
 			switch (op) {
