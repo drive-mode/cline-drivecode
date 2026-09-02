@@ -4,9 +4,12 @@
  * Every field here is one the read path actually shows. The prompt, provider
  * and model are stripped before this component ever sees the home, so they are
  * not rendered, not drafted, and not sent — the save is a patch, and the hub
- * merges it onto `.driveagent/<slug>/` on disk. Editing a permission ceiling
- * is meaningful because `capPreset` enforces it at the approval point; the
- * copy below says so rather than implying this screen is the enforcement.
+ * merges it onto `.driveagent/<slug>/` on disk. The permission ceiling is
+ * recorded on the seat as `capPreset`, and nothing reads it yet — no approval
+ * point consumes it (ADR-0025 instance #1, delivery D1). The copy below says
+ * "not yet enforced" for that reason: ADR-0027 decision 2 forbids a product
+ * surface describing an unenforced ceiling as a permission boundary. Restore
+ * the stronger wording when D1 lands a reader, not before.
  *
  * All draft/diff logic lives in `agentPolicyDraft.ts` so it is testable — the
  * hub's vitest project is node-env and never collects `.tsx`.
@@ -189,8 +192,8 @@ export function AgentPolicyEditor({
 					))}
 				</select>
 				<p className="text-[11px] text-muted-foreground">
-					A ceiling, not a grant — a delegated agent's authority is capped by
-					its parent's at the approval point.
+					A ceiling, not a grant — it records the authority a delegated agent
+					may not exceed. Not yet enforced at the approval point.
 				</p>
 			</div>
 

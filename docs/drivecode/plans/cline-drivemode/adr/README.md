@@ -65,6 +65,7 @@ See ADR-0000 § Change control.
 | [ADR-0053](ADR-0053-trusted-managed-manual-compaction.md) | Trusted managed manual compaction authority | **Proposed** | [cross-session-chat-management](../initiatives/cross-session-chat-management/) |
 | [ADR-0054](ADR-0054-adr-planner-install-attestation.md) | ADR Planner reproducible install and upgrade attestation | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
 | [ADR-0055](ADR-0055-fresh-process-managed-session-reattach.md) | Fresh-process managed-session reattach | **Proposed** — gate-off implementation complete; owner acceptance pending | [cross-session-chat-management](../initiatives/cross-session-chat-management/) |
+| [ADR-0040](ADR-0040-parked-host-rejoin.md) | The parked hosts rejoin by consuming, not by renaming | **Proposed** (answers D3) | [repo-ownership](../initiatives/repo-ownership/) |
 
 Impl honesty lives on the [status board](ADR-0000-status-board.md) (**Impl** column). Accepted ≠ shipped.
 

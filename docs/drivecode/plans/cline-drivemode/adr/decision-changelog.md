@@ -32,6 +32,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
 - 2026-08-14 — ADR-0046 Accepted; ADR Planner Milestone 0 benchmark and governance artifacts opened.
 - 2026-08-23 — DEC-licence-visibility Open: repo-ownership step 7 inventory; no visibility or SPDX moves.
+- 2026-09-02 — ADR-0040 parked-host rejoin (Proposed); answers D3 by correcting its premise — Agent Titles are not the counterparty (ADR-0027 decision 6), `Participant.role` and `capPreset` are already published, `PermissionPreset` has already converged across three hosts, and the only refusal path on that ceiling is `cursor-drive`'s, not this repository's. Fills the unused 0038-0045 gap rather than extending past 0057.
 
 ---
 
@@ -555,3 +556,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## DEC-licence-visibility
 
 - 2026-08-23 — Open. Inventory of public/private and licence metadata mismatches; no moves until an owner picks a row.
+
+## ADR-0040 · Parked-host rejoin
+
+- 2026-09-02 — Proposed (answers D3 by re-pointing it: reading all three codebases showed the premise named the wrong collision. Agent Titles sit on a different axis from role and neither parked host has any title concept, while `Participant.role` (`partner|specialist|recorder`) and `Participant.capPreset` are already published structurally in `@drive-mode/drive-kernel` — so the live collision is `DriveAgentRole` vs `OperatorRole`, which ADR-0034 already owns and which stays blocked on delivery D1. Two measured findings drive the decisions: `PermissionPreset` (`readonly|standard|full`, min-cascade) is identical in all three implementations and needs naming rather than reconciling, and the only non-test refusal path on that ceiling is `cursor-drive`'s four call sites — this repository computes `capPreset`, stores it, and never reads it, which is ADR-0025 instance #1 still open. Rejoining is therefore defined as consuming the published kernel, not renaming roles; releases are not gated on D3; and D3 closes on evidence — a live `capPreset` reader, a merged `drivemode-mcp` repoint, and one parked host consuming the artifact. Originally drafted 2026-08-20 on a stack behind the D1b/D2 drafts; rebuilt on `main` after those were superseded by ADR-0056 and ADR-0057).
