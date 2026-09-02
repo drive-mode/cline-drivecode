@@ -1220,6 +1220,7 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | Late-join / return catch-up | [ADR-0035](ADR-0035-late-join-catch-up.md) | Paper |
 | Operator next-action layer (+ first training-label corpus grant) | [ADR-0036](ADR-0036-next-action-triad.md) | Paper |
 | Desktop signal source + sensing consent surface | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) (amends ADR-0036 1/12) | Paper |
+| Parked-host rejoin terms (`cursor-drive`, `claude-drive`) | [ADR-0040](ADR-0040-parked-host-rejoin.md) (answers D3) | Paper; decision 5 (`PermissionPresetSchema` in the published surface) is the only clause buildable before delivery D1 |
 
 ### Still Open (product gaps — not holes in the ADR sense, but undecided product detail)
 
@@ -1250,5 +1251,6 @@ Former holes now have **Proposed** records (Paper until Accepted). Clause detail
 | **0034** | After delivery D1; unified seat role writes only |
 | **0035** | Catch-up line on leave/return + snapshot gap path |
 | **0036** | Triad on tip **and** a kept-rate being measured — not when the hint renders |
+| **0040** | D1 refusal path live **and** one parked host consuming `@cline/drive` (the MCP writer already does, in-tree) |
 | **DEC-multi-device-parity** | MATRIX Tier 1 rows green on primary devices (or explicit lite) |
 | **DEC-codebase-map-firewall** | Skill + AGENTS refuse path; no write side channel |

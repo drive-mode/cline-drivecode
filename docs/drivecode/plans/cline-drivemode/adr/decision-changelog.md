@@ -32,6 +32,7 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 - 2026-08-16 — ADR-0037 invocation-scoped sensing (Proposed); amends ADR-0036 decisions 1 and 12 to permit desktop context read only inside a hotkey-bracketed window.
 - 2026-08-14 — ADR-0046 Accepted; ADR Planner Milestone 0 benchmark and governance artifacts opened.
 - 2026-08-23 — DEC-licence-visibility Open: repo-ownership step 7 inventory; no visibility or SPDX moves.
+- 2026-09-02 — ADR-0040 parked-host rejoin (Proposed); answers D3 by correcting its premise — Agent Titles are not the counterparty (ADR-0027 decision 6), `Participant.role` and `capPreset` are already published, `PermissionPreset` has already converged across three hosts, and the one refusal path either side has shipped is `cursor-drive`'s, not this repository's. Drafted 2026-08-20; re-landed with in-tree kernel references.
 
 ---
 
@@ -258,6 +259,11 @@ heading (`- YYYY-MM-DD — …`, newest last). Do not put `## Changelog` inside 
 ## ADR-0037 · Invocation-scoped sensing
 
 - 2026-08-17 — Decision 7 re-pointed after ADR-0036 Open 6 was answered: the gate is `prepareToolExecution` in `@cline/agents`, the resolution is the canonical `resolveToolPolicy` in `@cline/shared` (private duplicate deleted by the next-action-triad initiative). Open 8 added to record constraint C2 as inherited and undecided here.
+
+## ADR-0040 · Parked-host rejoin
+
+- 2026-08-20 — Proposed (answers D3 by re-pointing it: reading all three codebases showed the premise named the wrong collision. Agent Titles sit on a different axis from role and neither parked host has any title concept, while `Participant.role` (`partner|specialist|recorder`) and `Participant.capPreset` are already published structurally by the kernel — so the live collision is `DriveAgentRole` vs `OperatorRole`, which ADR-0034 already owns and which stays blocked on delivery D1. Two measured findings drive the decisions: `PermissionPreset` (`readonly|standard|full`, min-cascade) is byte-identical across all three implementations and needs naming rather than reconciling, and the only non-test refusal path on that ceiling is `cursor-drive`'s four call sites — this repository computes `capPreset`, stores it, and never reads it, which is ADR-0025 instance #1 still open. Rejoining is therefore defined as consuming the published kernel, not renaming roles; releases are not gated on D3; and D3 closes on evidence — a live `capPreset` reader, a kernel-consuming MCP writer, and one parked host consuming the artifact).
+- 2026-09-02 — Re-landed after ADR-0056/ADR-0057 closed D1b/D2 and the MCP writer moved in-tree: related-ADR pointers now name ADR-0056/0057, the consumed artifact is `@cline/drive` rather than the retired `@drive-mode/drive-kernel` bundle, drift protection is `drive-ci` typechecking in-tree consumers rather than `check:drive-kernel`, and closure condition (b) is recorded as met. Decisions unchanged in substance.
 
 ## ADR-0046 · ADR Planner plugin boundary
 

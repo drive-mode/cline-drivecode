@@ -55,6 +55,7 @@ See ADR-0000 § Change control.
 | [ADR-0035](ADR-0035-late-join-catch-up.md) | Late-join and return catch-up | **Proposed** | [DRV-LEAVE-END](../features/DRV-LEAVE-END.md) |
 | [ADR-0036](ADR-0036-next-action-triad.md) | Next-action prediction is a three-verb operator triad | **Proposed** | [DRV-GATES](../features/DRV-GATES.md), [DRV-PRIVACY](../features/DRV-PRIVACY.md) |
 | [ADR-0037](ADR-0037-invocation-scoped-sensing.md) | Desktop sensing is invocation-scoped, or it does not happen | **Proposed** (amends ADR-0036) | [DRV-PRIVACY](../features/DRV-PRIVACY.md), [DRV-EVENTS](../features/DRV-EVENTS.md) |
+| [ADR-0040](ADR-0040-parked-host-rejoin.md) | The parked hosts rejoin by consuming, not by renaming | **Proposed** (answers D3) | [DRV-TEAM-OPT](../features/DRV-TEAM-OPT.md) |
 | [ADR-0046](ADR-0046-adr-planner-plugin-boundary.md) | ADR Planner plugin ownership and installation boundary | **Accepted** | [adr-planner](../initiatives/adr-planner/) |
 | [ADR-0047](ADR-0047-adr-planner-package-contract.md) | ADR Planner production package and invocation contract | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
 | [ADR-0048](ADR-0048-adr-planner-evidence-trust-boundary.md) | ADR Planner repository-evidence trust boundary | **Proposed** | [adr-planner](../initiatives/adr-planner/) |
