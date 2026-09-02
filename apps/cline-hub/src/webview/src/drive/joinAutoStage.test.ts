@@ -47,6 +47,7 @@ function sampleRoomSnapshot(
 		addressSet: { mode: "everyone" },
 		muteByParticipantId: {},
 		raisedHandByParticipantId: {},
+		profilesByParticipantId: {},
 		appliedEventIds: [],
 		...overrides,
 	};
