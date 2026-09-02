@@ -331,6 +331,7 @@ export {
 	createMcpTools,
 	type DefaultMcpServerClientFactoryOptions,
 	getMcpServerOAuthState,
+	getMcpServerOAuthStatus,
 	hasMcpSettingsFile,
 	InMemoryMcpManager,
 	type LoadMcpSettingsOptions,
@@ -360,9 +361,12 @@ export {
 	type McpToolDescriptor,
 	type McpToolNameTransform,
 	type McpToolProvider,
+	parseMcpServerRegistration,
+	probeMcpServerConnection,
 	type RegisterMcpServersFromSettingsOptions,
 	registerMcpServersFromSettingsFile,
 	resolveDefaultMcpSettingsPath,
+	resolveMcpServerRegistration,
 	resolveMcpServerRegistrations,
 	type SetMcpServerDisabledOptions,
 	setMcpServerDisabled,
@@ -541,10 +545,6 @@ export {
 	probeProcessStartToken,
 	probeProcessStartTokenAsync,
 } from "./runtime/process-start-token";
-export type {
-	SessionDisplayMessage,
-} from "./session/display-messages";
-export { projectSessionMessagesForDisplay } from "./session/display-messages";
 export {
 	formatRulesForSystemPrompt,
 	isRuleEnabled,
@@ -617,6 +617,7 @@ export {
 	setCompactionStrategyGlobally,
 	setDisabledPlugin,
 	setDisabledTools,
+	setModelToolEnabledGlobally,
 	setPlanActModeGlobally,
 	setTelemetryOptOutGlobally,
 	setToolAutoApproveGlobally,
@@ -716,6 +717,7 @@ export {
 } from "./services/providers/local-provider-registry";
 export {
 	addLocalProvider,
+	createConfiguredStreamingTranscriptionSession,
 	type DeleteLocalProviderRequest,
 	deleteLocalProvider,
 	ensureCustomProvidersLoaded,
@@ -729,6 +731,8 @@ export {
 	resolveLocalClineAuthToken,
 	saveLocalProviderOAuthCredentials,
 	saveLocalProviderSettings,
+	saveVoiceInputSettings,
+	transcribeConfiguredVoiceInput,
 	type UpdateLocalProviderRequest,
 	updateLocalProvider,
 } from "./services/providers/local-provider-service";
@@ -778,6 +782,7 @@ export {
 	captureAgentUnexpectedReasoningTokens,
 	captureAuthFailed,
 	captureAuthLoggedOut,
+	captureAuthRefreshSoftFailure,
 	captureAuthStarted,
 	captureAuthSucceeded,
 	captureCompactionExecuted,
@@ -860,6 +865,8 @@ export {
 	readSessionCheckpointHistory,
 	trimMessagesBeforeUserRun,
 } from "./session/checkpoint-restore";
+export type { SessionDisplayMessage } from "./session/display-messages";
+export { projectSessionMessagesForDisplay } from "./session/display-messages";
 export {
 	deriveSubsessionStatus,
 	makeSubSessionId,
@@ -1027,6 +1034,7 @@ export {
 	getCoreBuiltinToolCatalog,
 	getCoreDefaultEnabledToolIds,
 	getCoreHeadlessToolNames,
+	isSkillsToolAvailable,
 	MAX_COMMAND_OUTPUT_CHARS,
 	PATCH_MARKERS,
 	PatchActionType,
