@@ -1,0 +1,83 @@
+:root {
+	--bg0: #0e1210;
+	--bg1: #161c19;
+	--bg2: #1e2823;
+	--ink: #e8f0ea;
+	--muted: #8fa396;
+	--accent: #3dcf8e;
+	--accent-dim: #1f7a52;
+	--warn: #e6b35c;
+	--danger: #e07070;
+	--line: rgba(232, 240, 234, 0.08);
+	--glow: rgba(61, 207, 142, 0.25);
+	--font: "DM Sans", system-ui, sans-serif;
+	--mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+	margin: 0;
+	min-height: 100%;
+	height: 100%;
+}
+
+body {
+	font-family: var(--font);
+	color: var(--ink);
+	background:
+		radial-gradient(
+			1200px 600px at 10% -10%,
+			rgba(61, 207, 142, 0.12),
+			transparent 55%
+		),
+		radial-gradient(
+			900px 500px at 100% 0%,
+			rgba(230, 179, 92, 0.08),
+			transparent 50%
+		),
+		linear-gradient(180deg, var(--bg0), #0a0d0b 80%);
+}
+
+button {
+	font: inherit;
+	cursor: pointer;
+}
+
+@keyframes joinIn {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes spotlightSwap {
+	0% {
+		opacity: 0.4;
+		transform: scale(0.985);
+		filter: saturate(0.8);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+		filter: saturate(1);
+	}
+}
+
+@keyframes handPulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 var(--glow);
+	}
+	50% {
+		box-shadow: 0 0 0 10px transparent;
+	}
+}

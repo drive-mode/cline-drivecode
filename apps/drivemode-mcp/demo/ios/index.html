@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drive — iOS client (web recreation)</title>
+<link rel="stylesheet" href="ios.css">
+</head>
+<body>
+
+<div class="frame-wrap">
+	<div class="label">
+		<b>Drive for iPhone</b>
+		<span>Web recreation of the SwiftUI client — same wire, same fold, same tokens.
+		The Swift app itself needs Xcode and cannot be built on Linux.</span>
+	</div>
+
+	<div class="phone">
+		<div class="screen">
+			<div class="statusbar">
+				<span>9:41</span>
+				<span class="sb-right">
+					<span id="statusdot"></span>
+					<span id="statustext">connecting</span>
+				</span>
+			</div>
+
+			<header class="appbar">
+				<div class="appbar-left">
+					<span class="mark">◎</span>
+					<div>
+						<div class="appbar-title">Presenter audit trail</div>
+						<div class="appbar-sub">cline-drivecode · <span id="submode">idle</span></div>
+					</div>
+				</div>
+				<div class="pill" id="presenter-pill"></div>
+			</header>
+
+			<main id="body"></main>
+
+			<nav class="tabs">
+				<button type="button" class="tab on" data-surface="spotlight"><i>◎</i><span>Spotlight</span></button>
+				<button type="button" class="tab" data-surface="work"><i>▤</i><span>Work</span></button>
+				<button type="button" class="tab" data-surface="artifacts"><i>◇</i><span>Artifacts</span></button>
+				<button type="button" class="tab" data-surface="agents"><i>❖</i><span>Agents</span></button>
+				<button type="button" class="tab" data-surface="activity"><i>≡</i><span>Activity</span></button>
+			</nav>
+		</div>
+	</div>
+</div>
+
+<script>
+	// The recording stage embeds this page in a shorter pane; see `.embed` in
+	// ios.css. Applied before the module runs so there is no visible reflow.
+	if (new URLSearchParams(location.search).has("embed")) {
+		document.body.classList.add("embed");
+	}
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

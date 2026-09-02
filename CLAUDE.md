@@ -32,13 +32,14 @@ service.
 |---|---|
 | **cline-drivecode** (this) | Cline fork + Drive product: hub, CLI, VS Code, SDK |
 | [`collaboration-harness`](https://github.com/drive-mode/collaboration-harness) | Portable room protocol + pure kernel (an independent implementation of the same fold) |
-| [`drivemode-mcp`](https://github.com/drive-mode/drivemode-mcp) | MCP writer + viewer built on that harness |
+| `apps/drivemode-mcp` (in-tree; formerly [`drivemode-mcp`](https://github.com/drive-mode/drivemode-mcp)) | MCP writer + reference viewer over the kernel, for hosts without a Hub |
 | [`drive-ios`](https://github.com/drive-mode/drive-ios) | SwiftUI iPhone/iPad client (the App Store candidate) |
 | [`site`](https://github.com/drive-mode/site) | drivemode.ai |
 
-The harness and MCP repos are **not** consumers of `@cline/*`. They mirror this
-repo's coordinator semantics (`control.end`, Presenter leave/revoke) rather than
-sharing code. When you change the room fold here, check them.
+The harness repo is **not** a consumer of `@cline/*`; it mirrors this repo's
+coordinator semantics (`control.end`, Presenter leave/revoke) rather than
+sharing code. The MCP writer now lives in-tree (`apps/drivemode-mcp`) and
+imports the kernel directly, so a fold change here is typechecked against it.
 
 ## Read these first
 
@@ -89,6 +90,7 @@ apps/cline-hub/   # @cline/cline-hub — hub daemon + React dashboard (src/webvi
 apps/vscode/      # claude-dev — the VS Code extension (+ webview-ui, proto codegen)
 apps/kanban/      # kanban — multi-agent task board (has its own AGENTS.md/CLAUDE.md)
 apps/drivecode-demo/  # @cline/drivecode-demo — demo adapters + fixtures, edge-wired only
+apps/drivemode-mcp/   # @cline/drivemode-mcp — MCP writer + viewer for hosts without a Hub (own CLAUDE.md)
 apps/vscode-rollout/  # A/B rollout stitching for the extension
 apps/examples/    # runnable SDK examples incl. desktop-app (Tauri + Next.js + Bun sidecar)
 docs/             # Mintlify product docs (docs.json) + docs/drivecode/ (the Drive nest)
@@ -173,6 +175,7 @@ unrepresentable.
 | Status Hub / Analytics views | `apps/cline-hub/src/webview/src/components/views/status-view.tsx`, `analytics-view.tsx` |
 | TUI Status Hub + Drive | `apps/cli/src/tui/status/`, `apps/cli/src/tui/drive/` |
 | Demo adapters + fixtures | `apps/drivecode-demo/` |
+| MCP writer, stdio proxy, packs, reference viewer | `apps/drivemode-mcp/` |
 
 **Ports discipline:** product views depend on ports only (`StatusSnapshotSource`
 in the CLI, `StatusTeamsSource` in the hub). Live hub adapters implement them;
@@ -256,6 +259,7 @@ bun -F @cline/drive typecheck && bun -F @cline/drive test
 bun -F @cline/cline-hub typecheck && bun -F @cline/cline-hub test && bun -F @cline/cline-hub build:webview
 bun -F @cline/drivecode-demo typecheck && bun -F @cline/drivecode-demo test
 bun -F @cline/cli build && bun -F @cline/cli typecheck && bun -F @cline/cli test:unit
+bun -F @cline/drivemode-mcp typecheck && bun -F @cline/drivemode-mcp test
 ```
 
 ### Test runner is decided by the import
@@ -389,6 +393,6 @@ bun run check                  # or the focused Drive parity block above
 bun run check:drivecode-docs   # if you touched docs/drivecode/
 ```
 
-Then: does this diff need a matching change in `collaboration-harness` or
-`drivemode-mcp` (room fold semantics), or in `sdk/ARCHITECTURE.md` (hub,
-bootstrap, session, or title flows)?
+Then: does this diff need a matching change in `collaboration-harness` (room
+fold semantics; `apps/drivemode-mcp` is typechecked in-tree), or in
+`sdk/ARCHITECTURE.md` (hub, bootstrap, session, or title flows)?

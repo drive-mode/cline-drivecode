@@ -1,0 +1,535 @@
+/*
+ * Tokens are the DT set from drive-ios `Sources/Theme.swift` — violet
+ * 0x9F58FA, well 0x0D0D10, raised 0x12131A, surface2 0x1B1D24, live 0x4ADE80,
+ * danger 0xF53969, radii 9 / 13.5 / 16. The app is dark-only, so there is no
+ * light palette to swap.
+ */
+:root {
+	--violet: #9f58fa;
+	--violet-hi: #ac6bff;
+	--violet-text: #b98aff;
+	--danger: #f53969;
+	--page: #0a0a0a;
+	--well: #0d0d10;
+	--raised: #12131a;
+	--surface2: #1b1d24;
+	--live: #4ade80;
+	--ink: #e6edf3;
+	--ink-2: #8b949e;
+	--ink-3: #6e7681;
+	--r-control: 9px;
+	--r-card: 13.5px;
+	--r-hero: 16px;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: #06070a;
+	color: var(--ink);
+	font:
+		14px / 1.45 -apple-system,
+		"SF Pro Text",
+		"IBM Plex Sans",
+		system-ui,
+		sans-serif;
+	min-height: 100vh;
+	display: grid;
+	place-items: center;
+	padding: 28px 16px;
+}
+
+.frame-wrap {
+	display: grid;
+	gap: 16px;
+	justify-items: center;
+}
+
+.label {
+	max-width: 420px;
+	text-align: center;
+	color: var(--ink-2);
+	font-size: 12px;
+}
+.label b {
+	display: block;
+	color: var(--ink);
+	font-size: 14px;
+	margin-bottom: 3px;
+	letter-spacing: 0.2px;
+}
+
+/* --- device ---------------------------------------------------------- */
+.phone {
+	width: var(--phone-w, 393px);
+	height: var(--phone-h, 812px);
+	background: #000;
+	border-radius: 46px;
+	padding: 11px;
+	box-shadow:
+		0 0 0 2px #23252c,
+		0 30px 70px rgba(0, 0, 0, 0.75);
+	position: relative;
+}
+.phone::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 20px;
+	width: 108px;
+	height: 26px;
+	background: #000;
+	border-radius: 14px;
+	z-index: 5;
+}
+.screen {
+	width: 100%;
+	height: 100%;
+	background: var(--page);
+	border-radius: 36px;
+	overflow: hidden;
+	display: grid;
+	grid-template-rows: auto auto 1fr auto;
+}
+
+.statusbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 13px 26px 4px;
+	font-size: 11px;
+	color: var(--ink-2);
+	font-weight: 600;
+}
+.sb-right {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+#statusdot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--ink-3);
+	display: inline-block;
+}
+#statusdot.dot-live {
+	background: var(--live);
+	box-shadow: 0 0 7px var(--live);
+}
+#statusdot.dot-offline {
+	background: var(--danger);
+}
+
+/* --- app bar --------------------------------------------------------- */
+.appbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 8px 18px 12px;
+	border-bottom: 1px solid #1a1c22;
+}
+.appbar-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+.mark {
+	width: 30px;
+	height: 30px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--r-control);
+	font-size: 15px;
+	background: linear-gradient(145deg, var(--violet), #8b45e8);
+	color: #fff;
+}
+.appbar-title {
+	font-size: 15px;
+	font-weight: 650;
+	letter-spacing: -0.1px;
+}
+.appbar-sub {
+	font-size: 11px;
+	color: var(--ink-2);
+}
+.pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	background: var(--surface2);
+	border: 1px solid #262a32;
+	border-radius: 999px;
+	padding: 4px 9px 4px 5px;
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+main {
+	overflow-y: auto;
+	padding: 14px;
+}
+main::-webkit-scrollbar {
+	width: 0;
+}
+
+/* --- spotlight ------------------------------------------------------- */
+.stage {
+	background: linear-gradient(160deg, #14121c, var(--raised) 55%);
+	border: 1px solid #262233;
+	border-radius: var(--r-hero);
+	padding: 15px;
+}
+.stage-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 9px;
+}
+.beat-count {
+	font-size: 10.5px;
+	color: var(--ink-3);
+	letter-spacing: 0.3px;
+}
+.stage-title {
+	font-size: 18px;
+	line-height: 1.25;
+	font-weight: 660;
+	letter-spacing: -0.3px;
+}
+.stage-steps {
+	margin: 12px 0 4px;
+	display: grid;
+	gap: 5px;
+}
+.step {
+	background: #0f1015;
+	border: 1px solid #1e2028;
+	border-radius: var(--r-control);
+	padding: 7px 10px;
+	font:
+		11.5px / 1.35 "SF Mono",
+		ui-monospace,
+		monospace;
+	color: #c9d1d9;
+}
+.step.accent {
+	border-color: var(--violet);
+	color: #fff;
+	background: #191327;
+}
+.stage-caption {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 12px;
+	font-size: 12px;
+	color: var(--ink-2);
+}
+.rail {
+	display: flex;
+	gap: 4px;
+	margin-top: 13px;
+}
+.rail i {
+	height: 3px;
+	flex: 1;
+	border-radius: 2px;
+	background: #23252c;
+}
+.rail i.on {
+	background: var(--violet);
+}
+.rail i.past {
+	background: #4a3a6b;
+}
+
+.presenter-strip {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 11px;
+	padding: 10px 12px;
+	background: var(--raised);
+	border: 1px solid #1e2028;
+	border-radius: var(--r-card);
+	font-size: 11.5px;
+}
+
+/* --- lists ----------------------------------------------------------- */
+.list {
+	display: grid;
+	gap: 9px;
+}
+.row {
+	background: var(--raised);
+	border: 1px solid #1e2028;
+	border-radius: var(--r-card);
+	padding: 11px 12px;
+	display: grid;
+	gap: 7px;
+}
+.row-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.row-title {
+	font-size: 13px;
+	font-weight: 560;
+	letter-spacing: -0.1px;
+}
+.row-title.struck {
+	text-decoration: line-through;
+	color: var(--ink-3);
+}
+.row-meta {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11px;
+	color: var(--ink-2);
+	flex-wrap: wrap;
+}
+.dot {
+	color: var(--ink-3);
+}
+.deps {
+	color: var(--violet-text);
+}
+.status-line {
+	font-size: 11.5px;
+	color: #c9d1d9;
+}
+.muted {
+	color: var(--ink-3);
+}
+
+.bar {
+	height: 4px;
+	background: #1e2028;
+	border-radius: 3px;
+	overflow: hidden;
+}
+.bar i {
+	display: block;
+	height: 100%;
+	background: var(--violet);
+}
+
+.state,
+.kind,
+.tag,
+.life,
+.status-chip,
+.title-chip {
+	font-size: 10px;
+	font-weight: 640;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	padding: 2.5px 7px;
+	border-radius: 999px;
+	white-space: nowrap;
+}
+.state {
+	background: #23252c;
+	color: var(--ink-2);
+}
+.s-running {
+	background: #14304a;
+	color: #4c9aff;
+}
+.s-done {
+	background: #123021;
+	color: var(--live);
+}
+.s-blocked {
+	background: #3a1420;
+	color: var(--danger);
+}
+.s-review {
+	background: #2b2340;
+	color: var(--violet-text);
+}
+
+.kind {
+	background: #23252c;
+	color: var(--ink-2);
+}
+.kind-plan {
+	background: #2b2340;
+	color: var(--violet-text);
+}
+.kind-decision {
+	background: #33280f;
+	color: #d29922;
+}
+.kind-edit,
+.kind-diff {
+	background: #14304a;
+	color: #4c9aff;
+}
+.kind-test,
+.kind-metric {
+	background: #123021;
+	color: var(--live);
+}
+.kind-replay {
+	background: #2b2340;
+	color: var(--violet-text);
+}
+
+.life {
+	text-transform: none;
+	letter-spacing: 0;
+	background: #16181e;
+	color: var(--ink-2);
+	font-weight: 500;
+}
+.life.ephemeral {
+	color: #d29922;
+}
+.status-chip {
+	background: #23252c;
+	color: var(--ink-3);
+}
+.title-chip {
+	background: var(--violet);
+	color: #fff;
+}
+
+.ev {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	font-size: 12px;
+	padding: 7px 2px;
+	border-bottom: 1px solid #17191f;
+}
+.tag {
+	background: #23252c;
+	color: var(--ink-3);
+	flex-shrink: 0;
+}
+.tag-title {
+	background: #2b2340;
+	color: var(--violet-text);
+}
+.tag-session {
+	background: #14304a;
+	color: #4c9aff;
+}
+.tag-interrupt {
+	background: #3a1420;
+	color: var(--danger);
+}
+
+.note {
+	margin-top: 12px;
+	font-size: 10.5px;
+	line-height: 1.5;
+	color: var(--ink-3);
+}
+
+.empty {
+	display: grid;
+	place-items: center;
+	gap: 6px;
+	padding: 60px 20px;
+	text-align: center;
+}
+.empty-mark {
+	font-size: 30px;
+	color: #23252c;
+}
+.empty-title {
+	font-weight: 600;
+}
+.empty-sub {
+	font-size: 11.5px;
+	color: var(--ink-3);
+	max-width: 230px;
+}
+
+/* --- avatars --------------------------------------------------------- */
+.av {
+	display: inline-grid;
+	place-items: center;
+	border-radius: 50%;
+	flex-shrink: 0;
+	background: color-mix(in srgb, var(--ink) 18%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.av.human {
+	background: #23252c;
+	color: var(--ink);
+	font-weight: 650;
+	border-color: #33363e;
+}
+
+/* --- tab bar --------------------------------------------------------- */
+.tabs {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	border-top: 1px solid #1a1c22;
+	background: var(--well);
+	padding: 7px 4px 22px;
+}
+.tab {
+	background: none;
+	border: 0;
+	cursor: pointer;
+	color: var(--ink-3);
+	display: grid;
+	gap: 2px;
+	justify-items: center;
+	font-size: 9.5px;
+	font-family: inherit;
+	padding: 4px 0;
+}
+.tab i {
+	font-style: normal;
+	font-size: 16px;
+	line-height: 1;
+}
+.tab.on {
+	color: var(--violet-text);
+}
+
+/*
+ * Embed mode (`?embed=1`): the device inside the recording stage.
+ *
+ * The stage pane is shorter than a full-height iPhone, and a tab bar that falls
+ * below the fold cannot be tapped — or filmed. The device shrinks to fit rather
+ * than being scaled with a transform, so on-screen coordinates stay exact and a
+ * recorded tap lands where the pointer is drawn. The stage's own pane header
+ * carries the "web recreation" label, so the page-level one is redundant here.
+ */
+body.embed {
+	padding: 6px 0 0;
+	align-content: start;
+}
+body.embed .label {
+	display: none;
+}
+body.embed .frame-wrap {
+	gap: 0;
+}
+body.embed .phone {
+	--phone-h: 742px;
+	border-radius: 42px;
+	padding: 9px;
+}
+body.embed .screen {
+	border-radius: 33px;
+}
+body.embed .tabs {
+	padding-bottom: 12px;
+}

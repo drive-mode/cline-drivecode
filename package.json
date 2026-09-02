@@ -14,7 +14,9 @@
         "apps/examples/vscode/src/webview",
         "sdk/examples",
         "sdk/examples/plugins/*",
-        "plugins/*"
+        "plugins/*",
+        "apps/drivemode-mcp/apps/*",
+        "apps/drivemode-mcp/packages/*"
     ],
     "scripts": {
         "prepare": "husky",

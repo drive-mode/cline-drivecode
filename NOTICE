@@ -10,6 +10,7 @@ Drive Mode portions: Copyright 2026 Harrison Halperin.
   (sdk/packages/shared/src/drive, src/status), the hub Drive surfaces and
   collaboration coordinator, the CLI Drive and Status Hub views, the
   desktop-app Drive view and sidecar bridge, @cline/drivecode-demo, the
+  Drive Mode MCP writer, packs and reference viewer (apps/drivemode-mcp), the
   generated drive-kernel distribution, and docs/drivecode.
   Licensed under the Apache License, Version 2.0.
 

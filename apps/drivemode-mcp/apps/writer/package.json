@@ -1,0 +1,29 @@
+{
+	"name": "@drivemode/writer",
+	"version": "0.1.0",
+	"type": "module",
+	"bin": {
+		"drivemode-mcp": "./src/cli.ts"
+	},
+	"scripts": {
+		"start": "bun run src/cli.ts",
+		"mcp": "bun run src/mcp-stdio.ts",
+		"typecheck": "bun x tsc -p tsconfig.json --noEmit",
+		"build": "bun x tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@cline/drive": "workspace:*",
+		"@cline/shared": "workspace:*",
+		"@drivemode/packs-artifacts": "workspace:*",
+		"@drivemode/packs-coding": "workspace:*",
+		"@drivemode/packs-demo-ops": "workspace:*",
+		"@drivemode/packs-direction": "workspace:*",
+		"@drivemode/packs-tasks": "workspace:*",
+		"@modelcontextprotocol/sdk": "^1.17.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.19",
+		"typescript": "^5.9.2"
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"name": "@cline/drivemode-mcp",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Drive Mode MCP: the agent-to-stage write path (MCP writer + reference viewer) over @cline/drive",
+	"type": "module",
+	"scripts": {
+		"typecheck": "bun x tsc -p tsconfig.json --noEmit && bun x tsc -p apps/viewer/tsconfig.json --noEmit",
+		"test": "bun test tests",
+		"check": "bun run typecheck && bun run test",
+		"writer": "bun run --cwd apps/writer start",
+		"mcp": "bun run --cwd apps/writer mcp",
+		"viewer": "bun run --cwd apps/viewer dev",
+		"dev": "bun run writer"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"license": "Apache-2.0",
+	"devDependencies": {
+		"@types/bun": "^1.2.19"
+	}
+}

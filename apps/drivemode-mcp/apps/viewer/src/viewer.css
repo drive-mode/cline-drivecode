@@ -1,0 +1,278 @@
+.shell {
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
+}
+
+.top {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.brand {
+	display: flex;
+	gap: 0.9rem;
+	align-items: center;
+}
+
+.brand .mark {
+	width: 2.4rem;
+	height: 2.4rem;
+	border-radius: 0.7rem;
+	background:
+		linear-gradient(145deg, var(--accent), var(--accent-dim)), var(--bg2);
+	box-shadow:
+		0 0 0 1px var(--line),
+		0 12px 40px var(--glow);
+}
+
+.brand h1 {
+	margin: 0;
+	font-size: clamp(1.6rem, 3vw, 2.2rem);
+	letter-spacing: -0.03em;
+	font-weight: 700;
+}
+
+.brand p {
+	margin: 0.15rem 0 0;
+	color: var(--muted);
+	font-size: 0.95rem;
+}
+
+.meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.pill {
+	border: 1px solid var(--line);
+	background: rgba(255, 255, 255, 0.03);
+	padding: 0.35rem 0.65rem;
+	border-radius: 999px;
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	color: var(--muted);
+}
+
+.pill.ok {
+	color: var(--accent);
+	border-color: rgba(61, 207, 142, 0.35);
+}
+
+.pill.bad {
+	color: var(--danger);
+	border-color: rgba(224, 112, 112, 0.35);
+}
+
+.connect {
+	display: grid;
+	gap: 0.4rem;
+	max-width: 40rem;
+}
+
+.connect label {
+	display: grid;
+	gap: 0.35rem;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.connect input {
+	border: 1px solid var(--line);
+	background: var(--bg1);
+	color: var(--ink);
+	border-radius: 0.65rem;
+	padding: 0.7rem 0.85rem;
+	font-family: var(--mono);
+	font-size: 0.85rem;
+}
+
+.err {
+	margin: 0;
+	color: var(--danger);
+	font-size: 0.85rem;
+}
+
+.stage {
+	display: grid;
+	grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr) minmax(
+			12rem,
+			18rem
+		);
+	gap: 1rem;
+	align-items: stretch;
+	flex: 1;
+}
+
+@media (max-width: 900px) {
+	.stage {
+		grid-template-columns: 1fr;
+	}
+}
+
+.roster,
+.feed,
+.spotlight {
+	border: 1px solid var(--line);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 40%),
+		var(--bg1);
+	border-radius: 1rem;
+	padding: 1rem;
+	min-height: 22rem;
+}
+
+.roster h2,
+.feed h2,
+.spotlight-head h2 {
+	margin: 0;
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--muted);
+}
+
+.spotlight-head p {
+	margin: 0.35rem 0 1rem;
+	color: var(--ink);
+}
+
+.roster ul,
+.feed ul {
+	list-style: none;
+	margin: 0.85rem 0 0;
+	padding: 0;
+	display: grid;
+	gap: 0.55rem;
+}
+
+.seat {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	padding: 0.55rem 0.45rem;
+	border-radius: 0.7rem;
+	border: 1px solid transparent;
+}
+
+.seat:hover {
+	border-color: var(--line);
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.seat strong {
+	display: block;
+	font-size: 0.95rem;
+}
+
+.seat small,
+.feed small,
+.card small {
+	color: var(--muted);
+	font-family: var(--mono);
+	font-size: 0.72rem;
+}
+
+.dot {
+	width: 0.65rem;
+	height: 0.65rem;
+	border-radius: 50%;
+	background: var(--muted);
+	flex: 0 0 auto;
+}
+
+.dot[data-kind="agent"] {
+	background: var(--accent);
+	box-shadow: 0 0 12px var(--glow);
+}
+
+.dot[data-kind="human"] {
+	background: var(--warn);
+}
+
+.hand-flag {
+	margin-left: auto;
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 50%;
+	background: var(--warn);
+	box-shadow: 0 0 0 4px rgba(230, 179, 92, 0.15);
+}
+
+.empty {
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+.card {
+	border: 1px solid rgba(61, 207, 142, 0.25);
+	background:
+		radial-gradient(
+			600px 200px at 0% 0%,
+			rgba(61, 207, 142, 0.12),
+			transparent 60%
+		),
+		var(--bg2);
+	border-radius: 1rem;
+	padding: 1.25rem;
+	min-height: 12rem;
+}
+
+.card.empty-card {
+	border-style: dashed;
+	border-color: var(--line);
+	background: var(--bg2);
+}
+
+.card .cat {
+	display: inline-block;
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--accent);
+	margin-bottom: 0.6rem;
+}
+
+.card h3 {
+	margin: 0;
+	font-size: 1.45rem;
+	letter-spacing: -0.02em;
+}
+
+.card p {
+	margin: 0.55rem 0 0;
+	color: var(--muted);
+	line-height: 1.45;
+}
+
+.raise {
+	margin-top: 1rem;
+	border: 1px solid var(--line);
+	background: transparent;
+	color: var(--ink);
+	border-radius: 999px;
+	padding: 0.7rem 1.1rem;
+}
+
+.raise.on {
+	border-color: rgba(230, 179, 92, 0.5);
+	color: var(--warn);
+	background: rgba(230, 179, 92, 0.08);
+}
+
+.feed li {
+	padding: 0.55rem 0;
+	border-bottom: 1px solid var(--line);
+}
+
+.feed p {
+	margin: 0.2rem 0 0;
+	line-height: 1.4;
+}

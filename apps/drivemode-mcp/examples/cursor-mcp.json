@@ -1,0 +1,14 @@
+{
+	"mcpServers": {
+		"drivemode": {
+			"command": "bun",
+			"args": [
+				"run",
+				"/ABS/PATH/TO/drivemode-mcp/apps/writer/src/mcp-stdio.ts"
+			],
+			"env": {
+				"DRIVEMODE_WRITER_URL": "http://127.0.0.1:REPLACE_WITH_PRINTED_PORT"
+			}
+		}
+	}
+}
