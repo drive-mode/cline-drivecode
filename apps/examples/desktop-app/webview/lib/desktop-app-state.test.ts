@@ -99,4 +99,68 @@ describe("desktopAppReducer", () => {
 		state = desktopAppReducer(state, deletion);
 		expect(desktopAppReducer(state, deletion)).toBe(state);
 	});
+
+	it("navigates into Drive sections without losing the active thread", () => {
+		let state = createDesktopAppState("welcome", settingsSection);
+		expect(state.navigation.current.driveSection).toBe("lobby");
+		expect(state.navigation.current.driveRoomId).toBeNull();
+
+		state = desktopAppReducer(state, { type: "navigate-drive" });
+		expect(state.navigation.current).toMatchObject({
+			view: "drive",
+			driveSection: "lobby",
+			activeThreadId: "welcome",
+		});
+
+		state = desktopAppReducer(state, {
+			type: "navigate-drive",
+			section: "call",
+			roomId: "router-fix",
+		});
+		expect(state.navigation.current).toMatchObject({
+			view: "drive",
+			driveSection: "call",
+			driveRoomId: "router-fix",
+		});
+		expect(state.navigation.back).toHaveLength(2);
+
+		// Same destination twice is a no-op, not a history entry.
+		expect(
+			desktopAppReducer(state, {
+				type: "navigate-drive",
+				section: "call",
+				roomId: "router-fix",
+			}),
+		).toBe(state);
+
+		state = desktopAppReducer(state, { type: "back" });
+		expect(state.navigation.current.driveSection).toBe("lobby");
+		expect(state.navigation.current.driveRoomId).toBeNull();
+	});
+
+	it("keeps drive locations when the session they were opened from is deleted", () => {
+		let state = createDesktopAppState("welcome", settingsSection);
+		state = desktopAppReducer(state, {
+			type: "open-session",
+			session: createSession("session-a"),
+		});
+		state = desktopAppReducer(state, {
+			type: "navigate-drive",
+			section: "status",
+		});
+		state = desktopAppReducer(state, {
+			type: "delete-session",
+			deletedSessionId: "session-a",
+			fallbackThreadId: "fallback-a",
+		});
+
+		expect(state.navigation.current).toMatchObject({
+			view: "drive",
+			driveSection: "status",
+			activeThreadId: "fallback-a",
+		});
+		expect(state.navigation.back).not.toContainEqual(
+			expect.objectContaining({ activeThreadId: "session_session-a" }),
+		);
+	});
 });

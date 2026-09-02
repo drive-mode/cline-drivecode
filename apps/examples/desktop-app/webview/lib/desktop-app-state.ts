@@ -1,3 +1,4 @@
+import type { DriveSection } from "./drive/drive-section";
 import {
 	createNavigationHistory,
 	type NavigationHistory,
@@ -5,7 +6,7 @@ import {
 } from "./navigation-history";
 import type { SessionHistoryItem, SessionMetadata } from "./session-history";
 
-export type DesktopAppView = "chat" | "sessions" | "settings";
+export type DesktopAppView = "chat" | "sessions" | "settings" | "drive";
 
 export type DesktopThread = {
 	id: string;
@@ -18,6 +19,9 @@ export type DesktopAppLocation<SettingsSection extends string> = {
 	activeThreadId: string;
 	settingsSection: SettingsSection;
 	view: DesktopAppView;
+	driveSection: DriveSection;
+	/** Hub room the Drive view is bound to; null = the default room. */
+	driveRoomId: string | null;
 };
 
 export type DesktopAppState<SettingsSection extends string> = {
@@ -29,6 +33,11 @@ export type DesktopAppAction<SettingsSection extends string> =
 	| { type: "navigate"; destination: DesktopAppLocation<SettingsSection> }
 	| { type: "back" }
 	| { type: "forward" }
+	| {
+			type: "navigate-drive";
+			section?: DriveSection;
+			roomId?: string | null;
+	  }
 	| { type: "new-thread"; threadId: string }
 	| {
 			type: "open-session";
@@ -56,7 +65,9 @@ function areLocationsEqual<SettingsSection extends string>(
 	return (
 		a.activeThreadId === b.activeThreadId &&
 		a.settingsSection === b.settingsSection &&
-		a.view === b.view
+		a.view === b.view &&
+		a.driveSection === b.driveSection &&
+		a.driveRoomId === b.driveRoomId
 	);
 }
 
@@ -70,6 +81,8 @@ export function createDesktopAppState<SettingsSection extends string>(
 			activeThreadId: initialThreadId,
 			settingsSection: initialSettingsSection,
 			view: "chat",
+			driveSection: "lobby",
+			driveRoomId: null,
 		}),
 	};
 }
@@ -96,6 +109,27 @@ export function desktopAppReducer<SettingsSection extends string>(
 				...state,
 				navigation: navigationHistoryReducer(state.navigation, action),
 			};
+		case "navigate-drive": {
+			const destination: DesktopAppLocation<SettingsSection> = {
+				...state.navigation.current,
+				view: "drive",
+				driveSection: action.section ?? state.navigation.current.driveSection,
+				driveRoomId:
+					action.roomId === undefined
+						? state.navigation.current.driveRoomId
+						: action.roomId,
+			};
+			if (areLocationsEqual(state.navigation.current, destination)) {
+				return state;
+			}
+			return {
+				...state,
+				navigation: navigationHistoryReducer(state.navigation, {
+					type: "navigate",
+					destination,
+				}),
+			};
+		}
 		case "new-thread":
 			return {
 				threads: [...state.threads, { id: action.threadId }],

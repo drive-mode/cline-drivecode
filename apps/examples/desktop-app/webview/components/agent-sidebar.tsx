@@ -38,6 +38,7 @@ import {
 } from "react";
 import { AppUpdateIndicator } from "@/components/app-update-indicator";
 import { ClineLogo } from "@/components/cline-logo";
+import { DriveMarkIcon } from "@/components/icons/drive-mark";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -90,7 +91,10 @@ import {
 	isBetaVersion,
 	productNameForVersion,
 } from "@/lib/app-channel";
+import type { DesktopAppView } from "@/lib/desktop-app-state";
 import { desktopClient } from "@/lib/desktop-client";
+import { DRIVE_SECTIONS, type DriveSection } from "@/lib/drive/drive-section";
+import { useOptionalDriveHub } from "@/lib/drive/use-drive-hub";
 import {
 	ALL_SESSION_SOURCES,
 	filterSessionsBySource,
@@ -105,7 +109,6 @@ import {
 import { cn } from "@/lib/utils";
 
 type Thread = SessionThread;
-type AppView = "chat" | "sessions" | "settings";
 
 const filterOptions = ["All", "Running", "Schedules", "Favorites"] as const;
 type FilterOption = (typeof filterOptions)[number];
@@ -209,9 +212,99 @@ function SettingsSectionNavigation({
 	);
 }
 
+/** Small live dot for the Call entry; decorative — the label carries the state. */
+function DriveLiveDot({ className }: { className?: string }) {
+	return (
+		<span
+			aria-hidden="true"
+			className={cn(
+				"absolute -right-0.5 -top-0.5 size-2 rounded-full bg-emerald-500 ring-2 ring-sidebar",
+				className,
+			)}
+			data-drive-live
+		/>
+	);
+}
+
+function DriveSectionNavigation({
+	activeSection,
+	collapsed,
+	demoWorld,
+	onSelect,
+}: {
+	activeSection: DriveSection;
+	collapsed: boolean;
+	demoWorld: boolean;
+	onSelect: (section: DriveSection) => void;
+}) {
+	// Null outside a DriveHubProvider — the sidebar is always mounted, the
+	// provider only while the Drive view is. Badges simply stay off then.
+	const driveHub = useOptionalDriveHub();
+	const callLive = driveHub?.callLive ?? false;
+	const demo = demoWorld || driveHub?.phase === "demo";
+
+	return (
+		<nav
+			aria-label="Drive sections"
+			className={cn(
+				"flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden",
+				collapsed ? "w-full items-start" : "w-full",
+			)}
+		>
+			{!collapsed ? (
+				<div className="flex items-center gap-2 px-2 pb-2">
+					<p className="text-sm font-medium text-muted-foreground">Drive</p>
+					{demo ? (
+						<Badge
+							className="px-1.5 py-0 text-[10px] uppercase tracking-wide"
+							title="Labeled demo world — nothing here touches a real hub"
+							variant="secondary"
+						>
+							Demo
+						</Badge>
+					) : null}
+				</div>
+			) : null}
+			{DRIVE_SECTIONS.map((section) => {
+				const Icon = section.icon;
+				const live = section.id === "call" && callLive;
+				const label = live ? `${section.label} (live)` : section.label;
+				return (
+					<Button
+						aria-current={activeSection === section.id ? "page" : undefined}
+						aria-label={label}
+						className={cn(
+							"min-w-0 justify-start",
+							activeSection === section.id &&
+								"bg-surface-hover text-sidebar-foreground",
+							collapsed && "size-9 justify-center px-0",
+						)}
+						key={section.id}
+						onClick={() => onSelect(section.id)}
+						title={label}
+						type="button"
+						variant="sidebarItem"
+					>
+						<span className="relative flex shrink-0">
+							<Icon className="size-4 shrink-0" />
+							{live ? <DriveLiveDot /> : null}
+						</span>
+						{!collapsed ? (
+							<span className="truncate">{section.label}</span>
+						) : null}
+					</Button>
+				);
+			})}
+		</nav>
+	);
+}
+
 export function AgentSidebar({
 	canNavigateBack = false,
 	canNavigateForward = false,
+	driveDemoWorld = false,
+	driveSection = "lobby",
+	onDriveSectionChange,
 	onHome,
 	onNavigateBack,
 	onNavigateForward,
@@ -225,14 +318,18 @@ export function AgentSidebar({
 }: {
 	canNavigateBack?: boolean;
 	canNavigateForward?: boolean;
+	/** The composition root mounted the labeled demo world. */
+	driveDemoWorld?: boolean;
+	driveSection?: DriveSection;
+	onDriveSectionChange?: (section: DriveSection) => void;
 	onHome: () => void;
 	onNavigateBack?: () => void;
 	onNavigateForward?: () => void;
 	onNewThread?: () => void;
 	onSettingsSectionChange: (section: SettingsSection) => void;
-	setView: (view: AppView) => void;
+	setView: (view: DesktopAppView) => void;
 	settingsSection: SettingsSection;
-	view: AppView;
+	view: DesktopAppView;
 	activeSessionId?: string | null;
 	sessionHistory: UseSessionHistoryResult;
 }) {
@@ -379,6 +476,21 @@ export function AgentSidebar({
 		setView("settings");
 		closeMobileSidebar();
 	}, [closeMobileSidebar, setView]);
+	const openDrive = useCallback(() => {
+		setView("drive");
+		closeMobileSidebar();
+	}, [closeMobileSidebar, setView]);
+	const openDriveSection = useCallback(
+		(section: DriveSection) => {
+			if (onDriveSectionChange) {
+				onDriveSectionChange(section);
+			} else {
+				setView("drive");
+			}
+			closeMobileSidebar();
+		},
+		[closeMobileSidebar, onDriveSectionChange, setView],
+	);
 	const openSettingsSection = useCallback(
 		(section: SettingsSection) => {
 			onSettingsSectionChange(section);
@@ -727,7 +839,25 @@ export function AgentSidebar({
 								collapsed
 								onSelect={openSettingsSection}
 							/>
-						) : null}
+						) : view === "drive" ? (
+							<DriveSectionNavigation
+								activeSection={driveSection}
+								collapsed
+								demoWorld={driveDemoWorld}
+								onSelect={openDriveSection}
+							/>
+						) : (
+							<Button
+								aria-label="Drive"
+								className="size-9 justify-center px-0"
+								onClick={openDrive}
+								title="Drive"
+								type="button"
+								variant="sidebarItem"
+							>
+								<DriveMarkIcon className="size-4" />
+							</Button>
+						)}
 						<Button
 							aria-label="Expand sidebar"
 							className="mt-auto size-9 justify-center px-0"
@@ -747,20 +877,55 @@ export function AgentSidebar({
 							onSelect={openSettingsSection}
 						/>
 					</div>
+				) : view === "drive" ? (
+					<div className="mt-5 flex min-h-0 flex-1 flex-col">
+						<div className="flex h-8 shrink-0 items-center gap-2 pl-4 pr-2">
+							<button
+								className="min-w-0 truncate text-sm font-medium text-muted-foreground hover:text-sidebar-foreground"
+								onClick={openSessions}
+								type="button"
+							>
+								{sortMode === "time" ? "Sessions" : "Projects"}
+							</button>
+						</div>
+						<div className="mt-1 min-h-0 flex-1 px-3">
+							<DriveSectionNavigation
+								activeSection={driveSection}
+								collapsed={false}
+								demoWorld={driveDemoWorld}
+								onSelect={openDriveSection}
+							/>
+						</div>
+					</div>
 				) : (
 					<>
 						<div className="mt-5 shrink-0 pl-4 pr-2">
 							<div className="flex h-8 items-center justify-between gap-2">
-								<button
-									className={cn(
-										"min-w-0 truncate text-sm font-medium text-muted-foreground",
-										view === "sessions" && "text-sidebar-foreground",
-									)}
-									onClick={openSessions}
-									type="button"
-								>
-									{sortMode === "time" ? "Sessions" : "Projects"}
-								</button>
+								<div className="flex min-w-0 items-center gap-1.5">
+									<button
+										aria-label="Drive"
+										className="flex min-w-0 shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-sidebar-foreground"
+										onClick={openDrive}
+										title="Drive (⌘D)"
+										type="button"
+									>
+										<DriveMarkIcon className="size-4 shrink-0" />
+										Drive
+									</button>
+									<span aria-hidden="true" className="text-muted-foreground/60">
+										·
+									</span>
+									<button
+										className={cn(
+											"min-w-0 truncate text-sm font-medium text-muted-foreground hover:text-sidebar-foreground",
+											view === "sessions" && "text-sidebar-foreground",
+										)}
+										onClick={openSessions}
+										type="button"
+									>
+										{sortMode === "time" ? "Sessions" : "Projects"}
+									</button>
+								</div>
 								<div className="flex shrink-0 items-center gap-0.5">
 									<Button
 										aria-label="Search sessions"
