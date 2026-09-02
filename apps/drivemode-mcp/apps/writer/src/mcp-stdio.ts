@@ -128,6 +128,14 @@ async function main() {
 			payload: z.record(z.string(), z.unknown()),
 			actorId: z.string().optional(),
 			narrate: z.boolean().optional(),
+			opId: z
+				.string()
+				.min(1)
+				.max(128)
+				.optional()
+				.describe(
+					"Retry key: reuse the same opId when retrying and the writer replays the recorded result instead of appending a duplicate.",
+				),
 		},
 	);
 	tool(
@@ -192,6 +200,14 @@ async function main() {
 	tool(server, "conversation_publish", "Short conversation / narration.", {
 		text: z.string().min(1).max(500),
 		actorId: z.string().optional(),
+		opId: z
+			.string()
+			.min(1)
+			.max(128)
+			.optional()
+			.describe(
+				"Retry key: reuse the same opId when retrying and the writer replays the recorded result instead of appending a duplicate.",
+			),
 	});
 	tool(server, "room_invite", "Invite a participant to a working session.", {
 		inviterId: z.string().min(1),

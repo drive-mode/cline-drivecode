@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Participant = {
 	id: string;
@@ -39,25 +39,58 @@ type FeedItem = {
 
 type SnapshotResponse = {
 	seq: number;
+	logId?: string;
 	room: RoomSnapshot;
 	activePackId: string;
 	conversationFeed: FeedItem[];
 };
 
-type SsePayload = {
-	type: string;
-	snapshot?: RoomSnapshot;
-	entry?: {
-		seq: number;
-		event: {
-			type: string;
-			track?: string;
-			text?: string;
-			at?: string;
-			actorId?: string;
-		};
+type SseEntry = {
+	seq: number;
+	event: {
+		type: string;
+		track?: string;
+		text?: string;
+		at?: string;
+		actorId?: string;
 	};
 };
+
+type SsePayload = {
+	type: string;
+	logId?: string;
+	snapshot?: RoomSnapshot;
+	backlog?: SseEntry[];
+	entry?: SseEntry;
+};
+
+/**
+ * Fold log entries into the feed. Delivery is at-least-once — a reconnect's
+ * hello backlog can overlap entries the live stream already delivered — so
+ * the fold is idempotent: seq identifies an entry, and one already folded is
+ * skipped, not appended twice.
+ */
+function foldFeed(prev: FeedItem[], entries: SseEntry[]): FeedItem[] {
+	const seen = new Set(prev.map((item) => item.seq));
+	const additions = entries
+		.filter(
+			(entry) =>
+				(entry.event.type === "conversation.message" ||
+					entry.event.type === "conversation.narration") &&
+				!seen.has(entry.seq),
+		)
+		.map((entry) => ({
+			seq: entry.seq,
+			at: entry.event.at ?? new Date().toISOString(),
+			actorId: entry.event.actorId,
+			text: entry.event.text ?? "",
+			kind:
+				entry.event.type === "conversation.narration"
+					? ("narration" as const)
+					: ("message" as const),
+		}));
+	return additions.length ? [...prev, ...additions] : prev;
+}
 
 function defaultWriterUrl(): string {
 	if (typeof window === "undefined") {
@@ -79,6 +112,12 @@ export function App() {
 	const [feed, setFeed] = useState<FeedItem[]>([]);
 	const [spotlightKey, setSpotlightKey] = useState(0);
 	const [error, setError] = useState<string | null>(null);
+	// Bumped when the writer's logId changes mid-stream: an in-memory writer
+	// that restarted is a *different* log whose seqs restart at 1, so folding
+	// its events onto state from the previous one would splice two histories.
+	// The bump tears the whole connection down and rebuilds from /snapshot.
+	const [connectNonce, setConnectNonce] = useState(0);
+	const logIdRef = useRef<string | null>(null);
 
 	const humanId = useMemo(() => {
 		const human = room?.participants.find((p) => p.kind === "human");
@@ -91,6 +130,7 @@ export function App() {
 		localStorage.setItem("drivemode.writerUrl", writerUrl);
 	}, [writerUrl]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: connectNonce is a reconnect trigger, bumped when the writer's logId changes mid-stream
 	useEffect(() => {
 		let es: EventSource | null = null;
 		let cancelled = false;
@@ -108,6 +148,7 @@ export function App() {
 				if (cancelled) {
 					return;
 				}
+				logIdRef.current = snap.logId ?? null;
 				setRoom(snap.room);
 				setSeq(snap.seq);
 				setPackId(snap.activePackId);
@@ -124,7 +165,19 @@ export function App() {
 					setError(null);
 					const payload = JSON.parse(msg.data) as SsePayload;
 					if (payload.type === "hello" && payload.snapshot) {
+						if (
+							payload.logId &&
+							logIdRef.current &&
+							payload.logId !== logIdRef.current
+						) {
+							setConnectNonce((n) => n + 1);
+							return;
+						}
+						logIdRef.current = payload.logId ?? logIdRef.current;
 						setRoom(payload.snapshot);
+						// On a reconnect, entries missed during the outage arrive
+						// only in this backlog — the live stream resumes after it.
+						setFeed((prev) => foldFeed(prev, payload.backlog ?? []));
 						return;
 					}
 					if (payload.type === "event" && payload.snapshot && payload.entry) {
@@ -133,26 +186,8 @@ export function App() {
 						if (payload.entry.event.track === "work") {
 							setSpotlightKey((k) => k + 1);
 						}
-						if (
-							payload.entry.event.type === "conversation.message" ||
-							payload.entry.event.type === "conversation.narration"
-						) {
-							const text = payload.entry.event.text ?? "";
-							const entry = payload.entry;
-							setFeed((prev) => [
-								...prev,
-								{
-									seq: entry.seq,
-									at: entry.event.at ?? new Date().toISOString(),
-									actorId: entry.event.actorId,
-									text,
-									kind:
-										entry.event.type === "conversation.narration"
-											? "narration"
-											: "message",
-								},
-							]);
-						}
+						const entry = payload.entry;
+						setFeed((prev) => foldFeed(prev, [entry]));
 					}
 				};
 				es.onerror = () => {
@@ -172,7 +207,7 @@ export function App() {
 			cancelled = true;
 			es?.close();
 		};
-	}, [writerUrl]);
+	}, [writerUrl, connectNonce]);
 
 	async function raiseHand() {
 		await fetch(`${writerUrl.replace(/\/$/, "")}/api/raise-hand`, {

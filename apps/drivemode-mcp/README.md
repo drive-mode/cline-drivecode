@@ -27,7 +27,7 @@ DRIVEMODE_WRITER_URL=http://127.0.0.1:<printed-port> bun -F @cline/drivemode-mcp
 ```
 
 The writer also writes `~/.drivemode/writer.json` (`url`, `port`, `roomId`,
-`pid`, `startedAt`) so clients such as the Drive iOS app can discover it.
+`logId`, `pid`, `startedAt`) so clients such as the Drive iOS app can discover it.
 Sample host configs are in `examples/`.
 
 ## Verify
@@ -38,6 +38,25 @@ node demo/demo.mjs doctor               # what the recorded demo still needs
 node demo/demo.mjs record               # film the reference viewer beside the phone recreation
 ```
 
+## Wire contract: resume, restarts, retries
+
+- `seq` is the resume cursor, and `logId` names the log incarnation that
+  issued it. The in-memory writer restarts as a *different* log whose `seq`
+  also starts at 1, so clients compare the `logId` on `/health`, `/snapshot`,
+  `events_since`, and the SSE `hello`, and resync from the top when it
+  changes — `latestSeq < cursor` alone misses a fresh log that has already
+  grown past the old cursor.
+- SSE messages carry `id: <logId>:<seq>`; on auto-reconnect the writer honors
+  `Last-Event-ID` so the stream resumes at the true cursor instead of
+  replaying the connect-time backlog. Consumers that stop reading are shed
+  once their unread queue passes a bound — safe, because the replayable log
+  lets them reconnect and resume.
+- `stage_publish_work` and `conversation_publish` accept an optional `opId`
+  retry key: replaying the same `opId` returns the recorded result instead of
+  appending a visible duplicate.
+
+The reasoning is recorded in [`docs/DDIA-LESSONS.md`](docs/DDIA-LESSONS.md).
+
 ## Layout
 
 | Path | What |
@@ -45,7 +64,8 @@ node demo/demo.mjs record               # film the reference viewer beside the p
 | `apps/writer/` | The single-room writer: store, room service, HTTP + SSE, MCP tool definitions, stdio proxy |
 | `apps/viewer/` | React + Vite reference viewer (roster, Spotlight, feed) |
 | `packages/packs-*/` | Zod validators for `work.*` payloads: coding, demo-ops, tasks, artifacts, direction |
-| `tests/` | Acceptance, pack and subscriber-isolation tests (`bun:test`) |
+| `tests/` | Acceptance, pack, subscriber-isolation, log-identity, idempotent-publish and SSE wire tests (`bun:test`) |
+| `docs/` | `DDIA-LESSONS.md` — why the wire is shaped like this |
 | `demo/` | The end-to-end demo and its recorder ([demo/README.md](demo/README.md)) |
 | `examples/` | MCP host configs for Cursor and Claude Desktop |
 

@@ -3,8 +3,9 @@
  *
  * Polling mirrors `WriterClient.pollWire()`: one `events_since` call carrying
  * a strictly-after cursor, an adaptive cadence, and a resync-from-zero when
- * `latestSeq` goes backwards (a restarted writer). Events are keyed by id, so
- * a replay lands idempotently.
+ * the writer's `logId` changes (a restarted writer is a different log) or —
+ * against writers that predate `logId` — when `latestSeq` goes backwards.
+ * Events are keyed by id, so a replay lands idempotently.
  */
 
 import {
@@ -29,6 +30,7 @@ let state = emptyState();
 let surface = "spotlight";
 let beatCursor = 0;
 let lastEventAt = Date.now();
+let wireLogId = null;
 
 /** Adaptive cadence, mirroring the Swift tiers. */
 function cadenceMs() {
@@ -50,9 +52,22 @@ async function poll() {
 		});
 		const { result } = await res.json();
 
+		if (result.logId && wireLogId && result.logId !== wireLogId) {
+			// A different logId is a different log: the writer restarted, and
+			// our cursor belongs to the previous incarnation. This catches the
+			// case `latestSeq` cannot — a fresh log that has already grown past
+			// the old cursor, where resuming would silently splice histories.
+			state = emptyState();
+			beatCursor = 0;
+			wireLogId = result.logId;
+			return;
+		}
+		wireLogId = result.logId ?? wireLogId;
+
 		if (result.latestSeq < state.seq) {
-			// The writer restarted with a fresh log — our strictly-after cursor
-			// would never see it. Resync from the top.
+			// Fallback for writers that predate logId: the writer restarted
+			// with a shorter fresh log — our strictly-after cursor would never
+			// see it. Resync from the top.
 			state = emptyState();
 			beatCursor = 0;
 			return;

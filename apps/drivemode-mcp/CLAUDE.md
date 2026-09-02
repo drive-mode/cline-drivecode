@@ -88,7 +88,7 @@ DRIVEMODE_WRITER_URL=http://127.0.0.1:<printed-port> bun run mcp
 
 Sample host configs: `examples/cursor-mcp.json`, `examples/claude-desktop.json`.
 On start the writer also drops a discovery file at `~/.drivemode/writer.json`
-(`url`, `port`, `roomId`, `pid`, `startedAt`).
+(`url`, `port`, `roomId`, `logId`, `pid`, `startedAt`).
 
 ## Layout
 
@@ -102,8 +102,10 @@ apps/writer/src/
   mcp-stdio.ts    # stdio façade that proxies every tool to a running writer's /rpc
 apps/viewer/src/  # React 19 + Vite reference UI (roster + Spotlight + feed)
 packages/packs-*/ # per-domain Zod validators for work payloads
-tests/            # acceptance.test.ts, packs-fleet.test.ts, subscriber-isolation.test.ts
+tests/            # acceptance.test.ts, packs-fleet.test.ts, subscriber-isolation.test.ts,
+                  # log-identity.test.ts, idempotent-publish.test.ts, sse-wire.test.ts
 demo/             # end-to-end demo: scenario, iPhone recreation, recorder
+docs/             # DDIA-LESSONS.md — the data-intensity rationale for the wire
 examples/         # MCP host configs
 ```
 
@@ -118,6 +120,19 @@ assigns the next `seq`, pushes a room `DriveLogEnvelope`, folds it with the
 kernel's `reduceRoom`, and notifies subscribers. `seq` is the resume cursor —
 clients call `events_since` / `GET /events?since=N` and never guess from a wall
 clock.
+
+`seq` is only meaningful **relative to a log incarnation**: the store mints a
+`logId` per creation, and every read surface names it (`/health`, `/snapshot`,
+`events_since`, the SSE `hello`, the discovery file). Clients resync when it
+changes — that is what catches a restarted writer whose fresh log has already
+grown past an old cursor. SSE messages are addressed `id: <logId>:<seq>` and
+reconnects honor `Last-Event-ID`; consumers whose unread queue passes
+`sseMaxBufferedMessages` are shed (the replayable log makes that safe).
+`stage_publish_work` / `conversation_publish` accept an optional `opId` retry
+key that replays the recorded result instead of appending a duplicate. The
+reasoning for all of this lives in `docs/DDIA-LESSONS.md` — keep new wire
+fields additive, and keep event envelopes untouched (identity rides on
+responses, not in the log).
 
 `control.end` is **idempotent** until a successful `control.join` reopens the
 room; that mirrors the Cline coordinator so folds agree across hosts. Keep it
@@ -230,7 +245,9 @@ one, the demo stops being evidence of anything.
   SDK's tool typings compare two zod instances and TypeScript never finishes
   (`Type instantiation is excessively deep`).
 - **The writer is in-memory.** It resets on restart; there is no SQLite log.
-  Cross-restart durability is not a v0 goal.
+  Cross-restart durability is not a v0 goal. A restart is a *new* `logId` —
+  clients detect it by comparison, so never carry a `logId` (or an `opId`
+  memory) across store incarnations.
 - `bun test` from this directory runs `tests/` only. The viewer has no test
   suite — its typecheck is part of `bun run typecheck`.
 - README examples show an ephemeral port placeholder; do not copy a literal port

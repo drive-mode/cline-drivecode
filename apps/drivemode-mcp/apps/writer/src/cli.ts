@@ -33,6 +33,7 @@ async function main() {
 				url,
 				port,
 				roomId: store.roomId,
+				logId: store.logId,
 				pid: process.pid,
 				startedAt: new Date().toISOString(),
 			},

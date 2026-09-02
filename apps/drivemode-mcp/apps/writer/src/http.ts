@@ -7,6 +7,13 @@ export type HttpWriterOptions = {
 	service: RoomService;
 	port?: number;
 	host?: string;
+	/**
+	 * Shed an SSE consumer once this many messages sit unread in its stream
+	 * queue. Dropping is safe *because* the log is replayable: a shed client
+	 * reconnects and resumes from its cursor, whereas buffering for a stuck
+	 * one grows without bound (each message carries a full snapshot).
+	 */
+	sseMaxBufferedMessages?: number;
 };
 
 /**
@@ -147,6 +154,7 @@ async function dispatchRpc(
 				payload: (args.payload as Record<string, unknown>) ?? {},
 				actorId: args.actorId as string | undefined,
 				narrate: args.narrate as boolean | undefined,
+				opId: args.opId as string | undefined,
 			});
 			return {
 				seq: result.seq,
@@ -250,6 +258,7 @@ async function dispatchRpc(
 			const result = service.publishConversation(
 				String(args.text),
 				args.actorId as string | undefined,
+				args.opId as string | undefined,
 			);
 			return { seq: result.seq, event: result.event };
 		}
@@ -304,7 +313,7 @@ async function dispatchRpc(
 			const sinceSeq = Number(args.sinceSeq ?? 0);
 			const events = service.eventsSince(sinceSeq);
 			const snap = service.snapshot();
-			return { sinceSeq, latestSeq: snap.seq, events };
+			return { sinceSeq, latestSeq: snap.seq, logId: snap.logId, events };
 		}
 		case "pack_set":
 			return service.setActivePack(String(args.packId));
@@ -347,7 +356,14 @@ export async function startHttpWriter(options: HttpWriterOptions): Promise<{
 		}
 
 		if (url.pathname === "/health") {
-			return Response.json({ ok: true, roomId: options.store.roomId });
+			return Response.json({
+				ok: true,
+				roomId: options.store.roomId,
+				logId: options.store.logId,
+				latestSeq: options.service.snapshot().seq,
+				subscribers: options.store.subscriberCount(),
+				idempotency: options.service.idempotencyStats(),
+			});
 		}
 
 		if (url.pathname === "/snapshot") {
@@ -370,10 +386,33 @@ export async function startHttpWriter(options: HttpWriterOptions): Promise<{
 		}
 
 		if (url.pathname === "/events") {
-			const sinceSeq = Number(url.searchParams.get("since") ?? "0");
-			const backlog = options.service.eventsSince(
-				Number.isFinite(sinceSeq) ? sinceSeq : 0,
-			);
+			const requestedSince = Number(url.searchParams.get("since") ?? "0");
+			let sinceSeq = Number.isFinite(requestedSince) ? requestedSince : 0;
+
+			// Every message on this stream carries `id: <logId>:<seq>`, and
+			// EventSource echoes the last id it saw as `Last-Event-ID` when it
+			// auto-reconnects. That header — not the frozen `since` from the
+			// connect-time URL — is the client's real cursor, so honoring it is
+			// what stops a reconnect from replaying (and double-appending)
+			// everything since the session began. The embedded logId fences the
+			// cursor to the incarnation that issued it: a cursor minted by a
+			// previous writer is foreign here, and resuming it against this log
+			// would splice two histories — replay this log from the top instead
+			// and let the hello's changed logId tell the client to reset.
+			const lastEventId = req.headers.get("Last-Event-ID");
+			if (lastEventId) {
+				const [idLogId, idSeq] = lastEventId.split(":");
+				const parsedSeq = Number(idSeq);
+				sinceSeq =
+					idLogId === options.store.logId && Number.isFinite(parsedSeq)
+						? parsedSeq
+						: 0;
+			}
+
+			const backlog = options.service.eventsSince(sinceSeq);
+			const helloSnapshot = options.service.snapshot();
+			const sseId = (seq: number) => `${options.store.logId}:${seq}`;
+			const maxBuffered = options.sseMaxBufferedMessages ?? 1024;
 
 			let unsubscribe: (() => void) | null = null;
 			let heartbeat: ReturnType<typeof setInterval> | null = null;
@@ -400,14 +439,34 @@ export async function startHttpWriter(options: HttpWriterOptions): Promise<{
 					const write = (chunk: string) => {
 						try {
 							controller.enqueue(encoder.encode(chunk));
-							return true;
 						} catch {
 							teardown();
 							return false;
 						}
+						// desiredSize sinks below zero as enqueued messages sit
+						// unread. A consumer that far behind is stuck, not slow —
+						// and each queued message holds a full snapshot, so the
+						// buffer for one dead reader grows without bound. Shed it:
+						// the replayable log is what makes this safe, because a
+						// live client reconnects and resumes from its cursor.
+						if (
+							controller.desiredSize !== null &&
+							controller.desiredSize < -maxBuffered
+						) {
+							teardown();
+							try {
+								controller.close();
+							} catch {
+								// Already closed or errored — shedding still holds.
+							}
+							return false;
+						}
+						return true;
 					};
-					const send = (payload: unknown) =>
-						write(`data: ${JSON.stringify(payload)}\n\n`);
+					const send = (payload: unknown, id?: string) =>
+						write(
+							`${id ? `id: ${id}\n` : ""}data: ${JSON.stringify(payload)}\n\n`,
+						);
 
 					// A room can be quiet for minutes at a time, and the server
 					// closes a connection that carries nothing — so without this
@@ -423,14 +482,21 @@ export async function startHttpWriter(options: HttpWriterOptions): Promise<{
 					// below deliver it. Sending the /snapshot envelope
 					// here instead would hand the first message a
 					// different shape than every message after it.
-					send({
-						type: "hello",
-						roomId: options.store.roomId,
-						snapshot: options.service.snapshot().room,
-						backlog,
-					});
+					// The hello's id marks the position the backlog folds the
+					// client up to, so a drop straight after it still resumes
+					// past the delivered backlog instead of replaying it.
+					send(
+						{
+							type: "hello",
+							roomId: options.store.roomId,
+							logId: options.store.logId,
+							snapshot: helloSnapshot.room,
+							backlog,
+						},
+						sseId(helloSnapshot.seq),
+					);
 					unsubscribe = options.store.subscribe((entry, snapshot) => {
-						send({ type: "event", entry, snapshot });
+						send({ type: "event", entry, snapshot }, sseId(entry.seq));
 					});
 				},
 				cancel() {

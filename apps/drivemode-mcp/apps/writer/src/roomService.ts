@@ -20,7 +20,7 @@ import { codingPack } from "@drivemode/packs-coding";
 import { demoOpsPack } from "@drivemode/packs-demo-ops";
 import { directionPack } from "@drivemode/packs-direction";
 import { tasksPack } from "@drivemode/packs-tasks";
-import type { WriterStore } from "./store.js";
+import type { WriterAppendResult, WriterStore } from "./store.js";
 
 let eventCounter = 0;
 function mintId(prefix: string): string {
@@ -46,7 +46,55 @@ export function listPackIds(): PackId[] {
 	return Object.keys(packs) as PackId[];
 }
 
+/**
+ * Recorded outcomes of publishes that carried a client `opId`, so an
+ * at-least-once caller (an MCP host that retries a call whose response was
+ * lost after the append landed) gets the original outcome back instead of a
+ * second, visibly duplicated card or message in the append-only log. Retries
+ * cannot be deduplicated below this layer — only the caller knows two
+ * requests are the same operation — so the id rides end-to-end and the single
+ * writer keeps the memory. The cache shares fate with the log on purpose: a
+ * restarted writer is a new log, and replaying a previous incarnation's
+ * responses against it would be exactly the confusion `logId` exists to stop.
+ */
+const IDEMPOTENCY_CACHE_CAP = 512;
+
 export function createRoomService(store: WriterStore) {
+	const recordedPublishes = new Map<string, WriterAppendResult>();
+	let recordedPublishReplays = 0;
+
+	/**
+	 * Replay the recorded result for `key`, or run `perform` and record it.
+	 * Only successful appends are recorded — a thrown validation error never
+	 * reached the log, so retrying it is harmless and should re-attempt.
+	 * `perform` must be synchronous: check-then-record stays atomic on the
+	 * event loop, so two racing duplicates cannot both append.
+	 */
+	function withIdempotency(
+		key: string | undefined,
+		perform: () => WriterAppendResult,
+	): WriterAppendResult {
+		if (!key) {
+			return perform();
+		}
+		const recorded = recordedPublishes.get(key);
+		if (recorded) {
+			recordedPublishReplays += 1;
+			return recorded;
+		}
+		const result = perform();
+		recordedPublishes.set(key, result);
+		if (recordedPublishes.size > IDEMPOTENCY_CACHE_CAP) {
+			// Oldest-inserted first; a retry arrives seconds after the
+			// original, not hundreds of publishes later.
+			const oldest = recordedPublishes.keys().next().value;
+			if (oldest !== undefined) {
+				recordedPublishes.delete(oldest);
+			}
+		}
+		return result;
+	}
+
 	function base(actorId?: string) {
 		return {
 			schemaVersion: 1 as const,
@@ -77,9 +125,18 @@ export function createRoomService(store: WriterStore) {
 			const state = store.getState();
 			return {
 				seq: Math.max(0, state.nextSeq - 1),
+				logId: store.logId,
 				room: state.snapshot,
 				activePackId: state.activePackId,
 				conversationFeed: state.conversationFeed,
+			};
+		},
+
+		/** Operability readout for /health; not for room logic. */
+		idempotencyStats() {
+			return {
+				recorded: recordedPublishes.size,
+				replays: recordedPublishReplays,
 			};
 		},
 
@@ -384,6 +441,8 @@ export function createRoomService(store: WriterStore) {
 			payload: unknown;
 			actorId?: string;
 			narrate?: boolean;
+			/** Client retry key: same opId replays the recorded result. */
+			opId?: string;
 		}) {
 			const packId = input.packId ?? store.getState().activePackId;
 			const pack = packs[packId as PackId];
@@ -613,27 +672,35 @@ export function createRoomService(store: WriterStore) {
 				throw new Error(`No event mapping for pack: ${packId}`);
 			}
 
-			const result = store.append(event);
+			// The narration side effect lives inside the idempotency window:
+			// a replayed publish must not append a second card *or* a second
+			// narration line.
+			return withIdempotency(
+				input.opId ? `work:${input.opId}` : undefined,
+				() => {
+					const result = store.append(event);
 
-			if (input.narrate !== false) {
-				const state = store.getState();
-				const nowMs = Date.now();
-				if (allowNarrationByRate(state.lastNarrationAtMs, nowMs)) {
-					const candidate = narrate(event, "decision-points");
-					if (candidate) {
-						store.markNarration(nowMs);
-						store.append({
-							...base(input.actorId),
-							type: "conversation.narration",
-							track: "conversation",
-							text: candidate.text,
-							relatedWorkEventId: candidate.relatedWorkEventId,
-						});
+					if (input.narrate !== false) {
+						const state = store.getState();
+						const nowMs = Date.now();
+						if (allowNarrationByRate(state.lastNarrationAtMs, nowMs)) {
+							const candidate = narrate(event, "decision-points");
+							if (candidate) {
+								store.markNarration(nowMs);
+								store.append({
+									...base(input.actorId),
+									type: "conversation.narration",
+									track: "conversation",
+									text: candidate.text,
+									relatedWorkEventId: candidate.relatedWorkEventId,
+								});
+							}
+						}
 					}
-				}
-			}
 
-			return result;
+					return result;
+				},
+			);
 		},
 
 		/** Invite someone to a working session — invited, never "called". */
@@ -722,7 +789,7 @@ export function createRoomService(store: WriterStore) {
 			return store.append(event);
 		},
 
-		publishConversation(text: string, actorId?: string) {
+		publishConversation(text: string, actorId?: string, opId?: string) {
 			const trimmed = text.trim();
 			if (!trimmed) {
 				throw new Error("conversation text must be non-empty");
@@ -730,12 +797,14 @@ export function createRoomService(store: WriterStore) {
 			if (trimmed.length > 500) {
 				throw new Error("conversation text capped at 500 chars (density)");
 			}
-			return store.append({
-				...base(actorId),
-				type: "conversation.message",
-				track: "conversation",
-				text: trimmed,
-			});
+			return withIdempotency(opId ? `conversation:${opId}` : undefined, () =>
+				store.append({
+					...base(actorId),
+					type: "conversation.message",
+					track: "conversation",
+					text: trimmed,
+				}),
+			);
 		},
 	};
 }

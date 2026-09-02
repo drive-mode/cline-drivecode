@@ -31,6 +31,15 @@ export type WriterRoomState = {
 
 export type WriterStore = {
 	readonly roomId: string;
+	/**
+	 * Identity of this log incarnation, minted once per store. The writer is
+	 * in-memory, so a restart is a *different* log that also starts `seq` at 1
+	 * — a client's cursor is only meaningful relative to the log that issued
+	 * it. `latestSeq < cursor` catches a restart only until the fresh log
+	 * grows past the old cursor; after that, resuming silently splices two
+	 * histories. Clients compare `logId` instead and resync on change.
+	 */
+	readonly logId: string;
 	getState(): WriterRoomState;
 	append(event: DriveEvent): WriterAppendResult;
 	eventsSince(sinceSeq: number): WriterLogEntry[];
@@ -39,6 +48,8 @@ export type WriterStore = {
 	subscribe(
 		handler: (entry: WriterLogEntry, snapshot: RoomSnapshot) => void,
 	): () => void;
+	/** Live subscriber count — an operability readout, not an API for logic. */
+	subscriberCount(): number;
 };
 
 export type WriterAppendResult = {
@@ -52,6 +63,7 @@ export function createWriterStore(input?: {
 	activePackId?: string;
 }): WriterStore {
 	const roomId = input?.roomId ?? "default";
+	const logId = crypto.randomUUID();
 	const listeners = new Set<
 		(entry: WriterLogEntry, snapshot: RoomSnapshot) => void
 	>();
@@ -71,6 +83,7 @@ export function createWriterStore(input?: {
 
 	return {
 		roomId,
+		logId,
 		getState() {
 			return state;
 		},
@@ -135,7 +148,17 @@ export function createWriterStore(input?: {
 			return result;
 		},
 		eventsSince(sinceSeq) {
-			return state.log.filter((entry) => entry.seq > sinceSeq);
+			// `seq` is dense and 1-based — every append assigns `nextSeq++` and
+			// pushes exactly one entry, so the entry with seq `s` sits at index
+			// `s - 1`. The strictly-after suffix is therefore a slice, not a
+			// full-log scan: O(returned) per poll instead of O(log), which is
+			// what keeps a 1s-cadence poller cheap as the room ages. Non-finite
+			// cursors keep the old filter behavior (no events) rather than
+			// replaying the world at a garbage cursor.
+			if (!Number.isFinite(sinceSeq)) {
+				return [];
+			}
+			return state.log.slice(Math.max(0, Math.floor(sinceSeq)));
 		},
 		setActivePack(packId) {
 			state.activePackId = packId;
@@ -148,6 +171,9 @@ export function createWriterStore(input?: {
 			return () => {
 				listeners.delete(handler);
 			};
+		},
+		subscriberCount() {
+			return listeners.size;
 		},
 	};
 }
