@@ -1,0 +1,17 @@
+cline-drivecode
+
+This repository is a fork of Cline.
+  Cline: Copyright 2026 Cline Bot Inc. Licensed under the Apache License,
+  Version 2.0. See LICENSE.
+
+Drive Mode portions: Copyright 2026 Harrison Halperin.
+  The Drive product layer added in this fork, including the @cline/drive
+  kernel (sdk/packages/drive), the Drive schemas in @cline/shared
+  (sdk/packages/shared/src/drive, src/status), the hub Drive surfaces and
+  collaboration coordinator, the CLI Drive and Status Hub views, the
+  desktop-app Drive view and sidecar bridge, @cline/drivecode-demo, the
+  generated drive-kernel distribution, and docs/drivecode.
+  Licensed under the Apache License, Version 2.0.
+
+Trademarks. "Cline" and the Cline logo are trademarks of Cline Bot Inc. and
+are not licensed under the Apache License.
