@@ -1,0 +1,179 @@
+/*
+ * Drive Mode call surface — token definitions and motion.
+ *
+ * This file IS the token definition, so raw colour values are allowed here
+ * and nowhere else in the Drive views.
+ *
+ * Agent ink ramp (DRV-AGENT-PROFILE): copied 1:1 from
+ * `apps/cline-hub/src/webview/src/index.css`. Hue and chroma are the agent's
+ * identity; lightness is theme-derived, which is why the `.dark` block
+ * restates every entry at a higher lightness. The source of truth these
+ * mirror is `sdk/packages/drive/src/facets/resolve.ts` (DRIVE_INK_PALETTE);
+ * `lib/drive/agent-ink.ts` maps a resolved palette index onto `--drive-ink-N`.
+ *
+ * `--drive-ink-5` is Cline's accent violet. It stays selectable but is never a
+ * default — accent is product chrome, not an agent identity colour.
+ */
+
+:root {
+	--drive-ink-well: var(--background);
+	--drive-ink-0: oklch(0.52 0.0861 186.39);
+	--drive-ink-1: oklch(0.52 0.2172 264.38);
+	--drive-ink-2: oklch(0.52 0.1396 49);
+	--drive-ink-3: oklch(0.52 0.1978 16.93);
+	--drive-ink-4: oklch(0.52 0.1049 165.61);
+	--drive-ink-5: oklch(0.52 0.1073 277.02);
+	--drive-ink-6: oklch(0.52 0.0936 223.13);
+	--drive-ink-7: oklch(0.52 0.1034 61.91);
+
+	/*
+	 * The shared screen is fixed-dark in both host themes: a share reads as a
+	 * screen, not as a themed panel. These mirror `DRIVE_SCREEN_INK_THEME.well`
+	 * and the hub's `SCREEN_SURFACE` ladder (`drive/Spotlight.tsx`).
+	 */
+	--drive-screen-well: #0e0f13;
+	--drive-screen-card: #171923;
+	--drive-screen-muted: #1b1d26;
+	--drive-screen-line: rgb(255 255 255 / 8%);
+	--drive-screen-text: #e4e4e7;
+	--drive-screen-text-muted: #a1a1aa;
+	--drive-screen-text-dim: #71717a;
+	/* Human share frame — the amber a hand-held pin is drawn in on every surface. */
+	--drive-share: oklch(0.8 0.15 80);
+}
+
+.dark {
+	--drive-ink-0: oklch(0.78 0.0861 186.39);
+	--drive-ink-1: oklch(0.78 0.1111 264.38);
+	--drive-ink-2: oklch(0.78 0.141 49);
+	--drive-ink-3: oklch(0.78 0.1293 16.93);
+	--drive-ink-4: oklch(0.78 0.1049 165.61);
+	--drive-ink-5: oklch(0.78 0.1073 277.02);
+	--drive-ink-6: oklch(0.78 0.0936 223.13);
+	--drive-ink-7: oklch(0.78 0.1034 61.91);
+}
+
+/*
+ * The screen re-pins the shadcn surface ladder for its subtree so artifact
+ * bodies sit on the screen, not on app chrome. Pair with the `dark` class so
+ * every `dark:` variant inside resolves to the dark palette in both themes.
+ */
+.drive-screen {
+	--background: var(--drive-screen-well);
+	--card: var(--drive-screen-card);
+	--muted: var(--drive-screen-muted);
+	--popover: var(--drive-screen-card);
+	--secondary: var(--drive-screen-muted);
+	--foreground: var(--drive-screen-text);
+	--muted-foreground: var(--drive-screen-text-muted);
+	--border: var(--drive-screen-line);
+	background-color: var(--drive-screen-well);
+	color: var(--drive-screen-text);
+}
+
+/* Faint dot grid — the display reads as a surface, not as empty space. */
+.drive-screen-body {
+	background-image: radial-gradient(rgb(255 255 255 / 5%) 1px, transparent 1px);
+	background-size: 18px 18px;
+}
+
+/* ── motion ─────────────────────────────────────────────────────────────── */
+
+@keyframes drive-beat-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes drive-card-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes drive-frame-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes drive-live-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 45%, transparent);
+	}
+	70% {
+		box-shadow: 0 0 0 5px transparent;
+	}
+}
+
+@keyframes drive-speaking-ring {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 40%, transparent);
+	}
+	60% {
+		box-shadow: 0 0 0 4px transparent;
+	}
+}
+
+.drive-beat-in {
+	animation: drive-beat-in 260ms ease-out both;
+}
+
+.drive-card-in {
+	animation: drive-card-in 240ms ease-out both;
+}
+
+.drive-frame-in {
+	animation: drive-frame-in 320ms ease-out both;
+}
+
+.drive-live-dot {
+	animation: drive-live-pulse 2s ease-out infinite;
+}
+
+.drive-speaking {
+	animation: drive-speaking-ring 1.6s ease-out infinite;
+}
+
+/*
+ * Both stills: the OS setting and the in-app Drive preference
+ * (`useDrivePrefs().reduceMotion`, stamped as `data-drive-reduce-motion`).
+ */
+@media (prefers-reduced-motion: reduce) {
+	.drive-beat-in,
+	.drive-card-in,
+	.drive-frame-in,
+	.drive-live-dot,
+	.drive-speaking {
+		animation: none;
+	}
+}
+
+[data-drive-reduce-motion="true"] .drive-beat-in,
+[data-drive-reduce-motion="true"] .drive-card-in,
+[data-drive-reduce-motion="true"] .drive-frame-in,
+[data-drive-reduce-motion="true"] .drive-live-dot,
+[data-drive-reduce-motion="true"] .drive-speaking {
+	animation: none;
+}
+
+/* Thin, quiet scrollbars inside the call panes. */
+.drive-scroll {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border) transparent;
+}
