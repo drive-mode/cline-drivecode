@@ -217,9 +217,26 @@ Ordered so each step removes duplication permanently rather than relocating it.
 - **D2 — resolved 2026-08-23:
   [ADR-0057](../../adr/ADR-0057-room-state-authority.md).** Hub is the
   Cline-line writer. MCP writer is a no-Hub profile. Hub wins if both are live.
-- **D3 — when do the parked hosts rejoin?** Every release that ships Agent Titles
-  without them widens the gap that reconciling `OperatorRole` will eventually
-  have to close.
+- **D3 — proposed 2026-08-20, re-landed 2026-09-02:
+  [ADR-0040](../../adr/ADR-0040-parked-host-rejoin.md) corrects the premise
+  before answering it.** Agent Titles sit on a different axis from role
+  ([ADR-0027](../../adr/ADR-0027-role-tiers.md) decision 6) and neither parked
+  host has any title concept, while `Participant.role` and
+  `Participant.capPreset` are already published by the kernel. So the live
+  collision is `DriveAgentRole` vs `OperatorRole` — which
+  [ADR-0034](../../adr/ADR-0034-role-vocabulary.md) already owns and which stays
+  blocked on delivery D1 — and releasing Agent Titles does not widen it.
+  `PermissionPreset` is identical in all three implementations and needs
+  *naming*, not reconciling; the only non-test refusal path on that ceiling is
+  `cursor-drive`'s, because this repository computes `capPreset`, stores it, and
+  never reads it. Rejoining is therefore defined as **consuming the kernel, not
+  renaming roles**; releases are not gated on D3; D3 closes on evidence (a live
+  `capPreset` reader, the MCP writer consuming the kernel — now true in-tree —
+  and one parked host consuming `@cline/drive`). Original framing follows.
+
+  When do the parked hosts rejoin? Every release that ships Agent Titles without
+  them widens the gap that reconciling `OperatorRole` will eventually have to
+  close.
 
 ## Non-goals
 
