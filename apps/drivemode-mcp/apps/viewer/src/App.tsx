@@ -64,6 +64,12 @@ type SsePayload = {
 	entry?: SseEntry;
 };
 
+/** The writer addresses every SSE frame `id: <logId>:<seq>`; recover the logId. */
+function logIdFromSseId(id: string): string | null {
+	const cut = id.lastIndexOf(":");
+	return cut > 0 ? id.slice(0, cut) : null;
+}
+
 /**
  * Fold log entries into the feed. Delivery is at-least-once — a reconnect's
  * hello backlog can overlap entries the live stream already delivered — so
@@ -157,22 +163,35 @@ export function App() {
 
 				es = new EventSource(`${base}/events?since=${snap.seq}`);
 				es.onmessage = (msg) => {
+					if (cancelled) {
+						return;
+					}
+					const payload = JSON.parse(msg.data) as SsePayload;
+					// Every frame is addressed `id: <logId>:<seq>`, so the log
+					// incarnation is known before anything is folded — on the
+					// hello and on every live event alike. A frame from a
+					// different incarnation means the writer restarted: stop
+					// reading this stream right here (a closed EventSource
+					// delivers nothing more) and rebuild from /snapshot, so not
+					// one event of the new log is folded onto the old one.
+					const frameLogId = payload.logId ?? logIdFromSseId(msg.lastEventId);
+					if (
+						frameLogId &&
+						logIdRef.current &&
+						frameLogId !== logIdRef.current
+					) {
+						cancelled = true;
+						es?.close();
+						setConnectNonce((n) => n + 1);
+						return;
+					}
 					// EventSource reconnects on its own. A message arriving is
 					// proof the stream is healthy again, so clear the error the
 					// previous drop left on screen — otherwise a recovered
 					// viewer keeps claiming it is disconnected.
 					setConnected(true);
 					setError(null);
-					const payload = JSON.parse(msg.data) as SsePayload;
 					if (payload.type === "hello" && payload.snapshot) {
-						if (
-							payload.logId &&
-							logIdRef.current &&
-							payload.logId !== logIdRef.current
-						) {
-							setConnectNonce((n) => n + 1);
-							return;
-						}
 						logIdRef.current = payload.logId ?? logIdRef.current;
 						setRoom(payload.snapshot);
 						// On a reconnect, entries missed during the outage arrive
