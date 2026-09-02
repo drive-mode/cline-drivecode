@@ -1,6 +1,6 @@
 # drive-desktop · Drive Mode inside the Cline desktop app
 
-**Status:** active (implementation landing on PR #42)
+**Status:** landed on PR #42 (desktop Drive surfaces complete; review pending)
 **Product parent:** [multi-device](../multi-device/) (desktop lane)
 **Sibling client plans:** [drive-web](../drive-web/), [ios-native-client](../ios-native-client/)
 **Code:** `apps/examples/desktop-app/` (`@cline/code`, Tauri + Bun sidecar + Next.js webview)
@@ -89,15 +89,32 @@ bun run typecheck        # sidecar
 |---|---|---|
 | Sidecar bridge | `sidecar/drive.ts`, `commands.ts`, `context.ts`, `ARCHITECTURE.md` | landed |
 | Webview foundation + navigation + demo world | `webview/lib/drive/*`, `app/page.tsx`, `components/agent-sidebar.tsx`, `components/views/drive/drive-view.tsx` | landed |
-| Lobby + Rooms | `views/drive/lobby-view.tsx`, `rooms-view.tsx` | in progress |
-| Call + Spotlight (roster, Presenter, feed) | `views/drive/call-view.tsx`, `spotlight.tsx`, `roster.tsx`, … | in progress |
-| Status Hub + Tasks (board, changelog, dependency map) | `views/drive/status-view.tsx`, `tasks-view.tsx`, `dependency-map.tsx` | in progress |
-| Analytics + Artifacts | `views/drive/analytics-view.tsx`, `artifacts-view.tsx` | in progress |
-| Agents + Drive Settings | `views/drive/agents-view.tsx`, `drive-settings-view.tsx` | in progress |
+| Lobby + Rooms | `views/drive/lobby-view.tsx`, `rooms-view.tsx`, `room-preview-card.tsx` | landed |
+| Call + Spotlight (strip, roster, Presenter, feed, show rail, work deck) | `views/drive/call-view.tsx`, `call-strip.tsx`, `spotlight.tsx`, `roster.tsx`, `participant-sheet.tsx`, `presenter-controls.tsx`, `room-feed.tsx`, `drive.css` | landed |
+| Status Hub + Tasks (board, changelog, dependency map) | `views/drive/status-view.tsx`, `status-row.tsx`, `status-filters.tsx`, `tasks-view.tsx`, `dependency-map.tsx` | landed |
+| Analytics + Artifacts | `views/drive/analytics-view.tsx`, `sessions-panel.tsx`, `artifacts-view.tsx`, `artifact-detail.tsx` | landed |
+| Agents + Drive Settings | `views/drive/agents-view.tsx`, `agent-profile.tsx`, `agent-appearance-editor.tsx`, `agent-policy-editor.tsx`, `drive-settings-view.tsx` | landed |
+
+Every section walks headless in both the demo world and against a live
+hub with no console errors; the pure-logic modules under
+`webview/lib/drive/` carry 300+ Vitest cases, and `sidecar/drive.test.ts`
+covers the bridge.
 
 Out of scope for this slice: native menu/tray entries for Drive, a separate
 Drive window, voice transport (WebRTC), and any persistence the hub does not
 already have.
+
+## What it looks like
+
+Demo world (labeled fixture, no hub) unless noted; captured headless at 1440×900.
+
+| | |
+|---|---|
+| ![Lobby](../../../../assets/demos/desktop-drive-lobby.png) Lobby | ![Call + Spotlight](../../../../assets/demos/desktop-drive-call-spotlight.png) Call + Spotlight |
+| ![Rooms](../../../../assets/demos/desktop-drive-rooms.png) Rooms | ![Artifacts](../../../../assets/demos/desktop-drive-artifacts.png) Artifacts (detail sheet) |
+| ![Tasks](../../../../assets/demos/desktop-drive-tasks.png) Tasks (dependency map) | ![Status Hub](../../../../assets/demos/desktop-drive-status-hub.png) Status Hub (board) |
+| ![Analytics](../../../../assets/demos/desktop-drive-analytics.png) Analytics (drill-down) | ![Agent profile](../../../../assets/demos/desktop-drive-agent-profile.png) Agents (profile) |
+| ![Drive Settings](../../../../assets/demos/desktop-drive-settings-wire.png) Drive Settings (wire diagnostics) | ![Live lobby](../../../../assets/demos/desktop-drive-live-lobby.png) Lobby against a live hub |
 
 ## Upstream-sync debt this track paid down
 
