@@ -31,7 +31,6 @@ import {
 	CLINE,
 	down,
 	PORTS,
-	REPO,
 	startFreshWriter,
 	status,
 	up,
