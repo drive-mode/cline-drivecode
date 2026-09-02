@@ -22,3 +22,4 @@ with purpose, linked DRV ids, and status (`active` | `reference` | `done`).
 | [adr-planner](adr-planner/) | active (M1–M4 private proofs) | Pre-plan and plan plugin, benchmark, and [ADR-0046](../adr/ADR-0046-adr-planner-plugin-boundary.md) |
 | [cross-session-chat-management](cross-session-chat-management/) | active (production convergence; gate off) | Core-owned chat lifecycle and [ADR-0051](../adr/ADR-0051-cross-session-chat-catalog-authority.md) |
 | [integrations-vcs](integrations-vcs/) | active (plan) | VCS + comms as adapters — git substrate, GitHub/GitLab/Entire.io/Cursor Origin capability matrix, Slack-first interrupts, [ADR-0021](../adr/ADR-0021-drive-credential-onboarding.md) credential reuse |
+| [drive-desktop](drive-desktop/) | active (landing on PR #42) | Drive Mode inside the upstream Cline desktop app — sidecar bridge, folded room state, labeled demo world, every Drive section |
